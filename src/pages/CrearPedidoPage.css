@@ -134,9 +134,15 @@
     margin: 0;
     width: 100%;
   }
-
-
-  #pedido-preview {
+  
+  .formFlexLabel{
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  
+  /*PEDIDO IMAGEN */  
+  #pedido-preview{
     display: none;
     padding: 20px;
     background: white;
@@ -145,8 +151,79 @@
     font-family: Arial, sans-serif;
   }
 
-  .formFlexLabel{
+  .logoPedido{
+    width: 250px;
+  }
+  .headerPedido{
+     display: flex;
+     justify-content: space-between;
+  }
+
+  .numPedido{
+    height: 60px;
+    width: 130px;
+    padding: 10px 0;
+  }
+  .numPedido h2{
+    margin: o auto;
+    text-align: right;
+    margin-top: 0 !important;
+  }
+  .numPedido p{
+    margin-right: auto;
+    text-align: right;
+    font-size: 18px;
+    font-weight: bold;
+    color: rgb(223, 63, 63);
+  }
+  .proveedorPedido{
+    margin-top: 0;
+  }
+  .fechaPedido{
+    text-align: right;
+    margin-top: 10px;
+    font-size: 17px;
+  }
+  .proveedorFechaPedido{
+    padding-top: 10px;
     display: flex;
     justify-content: space-between;
   }
-  
+  .proveedorFechaPedido p{
+    font-size: 17px;
+  }
+.notaPedido{
+  padding-top: 10px;
+  font-size: 17px;
+}
+
+.productoTituloPedidos{
+  margin-top: 15px;
+}
+.tablaPedidosFoto th, 
+.tablaPedidosFoto td{
+  background-color: unset;
+  border: none;
+  text-align: center;
+}
+.descTablaPedidos{
+  width: 950%;
+}
+
+.descTablaPedidosTD{
+  text-align: left !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

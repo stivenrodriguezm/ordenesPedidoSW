@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar";
 import "./CrearPedidoPage.css";
 import { FaCircleUser } from "react-icons/fa6";
 import html2canvas from "html2canvas";
+import logoFinal from "../assets/logoFinal.png";
 
 function CrearPedidoPage() {
   const [proveedores, setProveedores] = useState([]);
@@ -16,6 +17,7 @@ function CrearPedidoPage() {
     nota: "",
     productos: [{ cantidad: "", referencia: "", descripcion: "" }],
   });
+  const [numeroOP, setNumeroOP] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,6 +52,23 @@ function CrearPedidoPage() {
     fetchUser();
     fetchProveedores();
   }, []);
+
+  const getFormattedDate = () => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0"); // Mes comienza desde 0
+    const year = today.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
 
   const handleProveedorChange = async (e) => {
     const proveedorId = e.target.value;
@@ -93,7 +112,7 @@ function CrearPedidoPage() {
     const token = localStorage.getItem("accessToken");
 
     try {
-      await axios.post(
+      const response = await axios.post(
         "http://127.0.0.1:8000/api/ordenes/",
         {
           proveedor: pedido.proveedor,
@@ -108,23 +127,34 @@ function CrearPedidoPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const pedidoPreview = document.getElementById("pedido-preview");
-      pedidoPreview.style.display = "block";
-
-      const canvas = await html2canvas(pedidoPreview);
-      pedidoPreview.style.display = "none";
-
-      const image = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = image;
-      link.download = "pedido.png";
-      link.click();
-
-      navigate("/");
+      setNumeroOP(response.data.id);
     } catch (error) {
       console.error("Error creating order:", error.response?.data || error);
     }
   };
+
+  useEffect(() => {
+    if (numeroOP) {
+      const renderImage = async () => {
+        const pedidoPreview = document.getElementById("pedido-preview");
+        if (pedidoPreview) {
+          pedidoPreview.style.display = "block";
+          const canvas = await html2canvas(pedidoPreview);
+          pedidoPreview.style.display = "none";
+
+          const image = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = image;
+          link.download = `pedido_${numeroOP}.png`;
+          link.click();
+
+          navigate("/");
+        }
+      };
+
+      renderImage();
+    }
+  }, [numeroOP]);
 
   return (
     <div className="crear-pedido-page">
@@ -155,7 +185,7 @@ function CrearPedidoPage() {
             </select>
           </div>
           <div className="formFlexLabel">
-          <label>Fecha esperada:</label>
+            <label>Fecha esperada:</label>
             <input
               type="date"
               name="fecha"
@@ -183,13 +213,13 @@ function CrearPedidoPage() {
                   required
                   placeholder="Cantidad"
                   className="prodsCantidad"
-                  />
+                />
                 <select
                   className="refCantidad"
                   value={producto.referencia}
                   onChange={(e) => handleChange(e, index, "referencia")}
                   required
-                  >
+                >
                   <option value="">- Selecciona una referencia -</option>
                   {referencias.map((ref) => (
                     <option key={ref.id} value={ref.id}>
@@ -212,21 +242,47 @@ function CrearPedidoPage() {
           </button>
           <button type="submit">Enviar</button>
         </form>
-        <div id="pedido-preview" style={{ display: "none" }}>
-          <h2>Pedido</h2>
-          <p>Proveedor: {proveedores.find((p) => p.id === pedido.proveedor)?.nombre_empresa || ""}</p>
-          <p>Fecha esperada: {pedido.fecha}</p>
-          <p>Nota: {pedido.nota}</p>
-          <h3>Productos</h3>
-          <ul>
-            {pedido.productos.map((producto, index) => (
-              <li key={index}>
-                <p>Cantidad: {producto.cantidad}</p>
-                <p>Referencia: {referencias.find((r) => r.id === producto.referencia)?.nombre || ""}</p>
-                <p>Descripción: {producto.descripcion}</p>
-              </li>
-            ))}
-          </ul>
+        <div id="pedido-preview" style={{ display: "block" }}>
+          <div className="headerPedido">
+            <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
+            <div className="numPedido">
+              <h2>Pedido No.</h2>
+              <p className="numeroOP">{numeroOP || "..."}</p>
+            </div>
+          </div>
+          <div className="proveedorFechaPedido">
+            <p className="proveedorPedido">
+              Proveedor: {proveedores.length > 0 && pedido.proveedor
+                ? proveedores.find((p) => String(p.id) === String(pedido.proveedor))?.nombre_empresa || "No seleccionado"
+                : "Cargando..."}
+            </p>
+            <p className="fechaActual">Fecha: {getFormattedDate()}</p>
+          </div>
+          <p className="fechaPedido">Fecha pedido: {formatDate(pedido.fecha)}</p>
+          <p className="notaPedido">Nota: {pedido.nota}</p>
+          <h3 className="productoTituloPedidos">Productos</h3>
+          <table className="tablaPedidosFoto">
+            <thead>
+              <tr>
+                <th>Cantidad</th>
+                <th>Referencia</th>
+                <th className="descTablaPedidos">Descripción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pedido.productos.map((producto, index) => (
+                <tr key={index}>
+                  <td>{producto.cantidad}</td>
+                  <td>
+                    {referencias.length > 0 && producto.referencia
+                      ? referencias.find((r) => String(r.id) === String(producto.referencia))?.nombre || "No seleccionado"
+                      : "Cargando..."}
+                  </td>
+                  <td className="descTablaPedidosTD">{producto.descripcion}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </main>
     </div>
