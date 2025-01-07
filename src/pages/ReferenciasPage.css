@@ -47,8 +47,8 @@ main {
 
 .formReferencias input,
 .formReferencias select {
-  padding: 10px;
-  font-size: 1rem;
+  padding: 0 0 0 5px;
+  font-size: 0.9rem;
   border: 1px solid #ccc;
   border-radius: 5px;
   width: 35%;
@@ -98,4 +98,5 @@ main {
 
 .editButton{
   background-color: unset !important;
+  padding: 0 !important;
 }

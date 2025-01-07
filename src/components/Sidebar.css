@@ -1,48 +1,66 @@
 .sidebar {
-    width: 250px;
-    height: 100vh;
-    background-color: #000;
-    color: #ffffff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-  }
-  
-  .sidebar h1 {
-    font-size: 2.5rem;
-    color:#fff;
-    font-family: "Audiowide", serif;
-    font-weight: 400;
-    font-style: normal;
-  }
-  
-  .sidebar ul {
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  .sidebar li {
-    margin: 20px 0;
-  }
-  
-  .sidebar li a {
-    color: #fff;
-    text-decoration: none;
-  }
-  
-  .sidebar button {
-    margin-top: auto;
-    background-color: rgb(212, 212, 212);
-    color: #000000;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    width: 60%;
-  }
+  position: fixed; /* Fija el sidebar en la pantalla */
+  top: 0; /* Asegura que quede pegado al borde superior */
+  left: 0; /* Asegura que quede pegado al borde izquierdo */
+  width: 250px;
+  height: 100vh; /* Ocupa toda la altura de la ventana */
+  background-color: #000;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  z-index: 1000; /* Asegura que el sidebar esté por encima de otros elementos */
+  overflow-y: auto; /* Permite desplazarse dentro del sidebar si hay mucho contenido */
+}
 
-  .sidebar button:hover{
-    background-color: rgb(141, 147, 163);
-    color: #ffffff;
-  }
-  
+.sidebar h1 {
+  font-size: 2.5rem;
+  color: #fff;
+  font-family: "Audiowide", serif;
+  font-weight: 400;
+  font-style: normal;
+  margin-bottom: 30px;
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+  width: 100%; /* Asegura que los elementos se alineen correctamente */
+}
+
+.sidebar li {
+  margin: 0;
+  text-align: left; /* Centra los enlaces */
+}
+
+.sidebar li a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1rem;
+  display: inline-block;
+  width: 100%;
+  padding: 10px 0;
+
+}
+
+.sidebar li a:hover {
+  background-color: rgba(255, 255, 255, 0.1); /* Resalta al pasar el cursor */
+}
+
+.sidebar button {
+  margin-top: auto;
+  background-color: rgb(212, 212, 212);
+  color: #000000;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  width: 60%;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.sidebar button:hover {
+  background-color: rgb(141, 147, 163);
+  color: #ffffff;
+}

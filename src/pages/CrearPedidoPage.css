@@ -46,8 +46,6 @@
     justify-content: space-between;
     align-items: center;
   }
- 
-
   
   input,
   select,
@@ -122,18 +120,19 @@
     width: 100px;
   }
 
-  .prodsCantidad input{
-    margin: 0 5px 0 5px;
+  .prodsCantidad{
+    margin: 0 5px 0 0;
+    width: 100px;
   }
 
-  .refCantidad select{
-    margin: 0 0 0 5px;
-    width: 183px;
+  .refCantidad{
+    margin: 0 0 5px 0;
+    width: 350px;
   }
 
-  .descProducto input{
-    margin: 5px 0 0 5px;
-    width: 383px;
+  .descProducto{
+    margin: 0;
+    width: 100%;
   }
 
 
@@ -144,5 +143,10 @@
     border: 1px solid #ddd;
     width: 600px;
     font-family: Arial, sans-serif;
+  }
+
+  .formFlexLabel{
+    display: flex;
+    justify-content: space-between;
   }
   
