@@ -1,0 +1,148 @@
+.crear-pedido-page {
+    display: flex;
+  }
+  
+  
+  .barraSuperior {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+    padding: 0 25px;
+    border-bottom: 1px dotted rgb(158, 158, 158);
+  }
+  
+  .barraSuperior h1 {
+    margin: 0;
+  }
+  
+  .usuarioBarra {
+    display: flex;
+    align-items: center;
+  }
+  
+  .usuarioBarra p {
+    margin-right: 10px;
+  }
+  
+  .usuarioBarra svg {
+    font-size: 30px;
+  }
+  
+  .formPedido {
+    margin: 40px auto;
+    width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    border: 1px solid black;
+    padding: 25px;
+  }
+  
+  label {
+    display: flex;
+    flex-direction: row;
+    font-size: 1rem;
+    justify-content: space-between;
+    align-items: center;
+  }
+ 
+
+  
+  input,
+  select,
+  textarea {
+    padding: 5px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 300px;
+    margin: 0;
+  }
+
+  input,
+  select{
+    height: 30px;
+  }
+  
+  textarea {
+    resize: none;
+  }
+  
+  h2 {
+    margin-top: 15px;
+    font-size: 1.2rem;
+  }
+  
+  .producto {
+    /* display: flex; */
+    gap: 10px;
+    /* align-items: center; */
+  }
+  
+  .cantRef{
+    display: flex;
+  }
+  .addProductBtn {
+    padding: 10px 20px;
+    font-size: 1rem;
+    background-color: #000;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .addProductBtn:hover {
+    background-color: #232324;
+  }
+  
+  .formButtons {
+    display: flex;
+    gap: 10px;
+  }
+  
+  button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    background-color: #000;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #232324;
+  }
+  
+  .labelProductos input,
+  .labelProductos select,
+  .labelProductos textarea {
+    width: 100px;
+  }
+
+  .prodsCantidad input{
+    margin: 0 5px 0 5px;
+  }
+
+  .refCantidad select{
+    margin: 0 0 0 5px;
+    width: 183px;
+  }
+
+  .descProducto input{
+    margin: 5px 0 0 5px;
+    width: 383px;
+  }
+
+
+  #pedido-preview {
+    display: none;
+    padding: 20px;
+    background: white;
+    border: 1px solid #ddd;
+    width: 600px;
+    font-family: Arial, sans-serif;
+  }
+  

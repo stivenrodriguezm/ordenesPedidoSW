@@ -1,0 +1,98 @@
+.ordenes-page {
+  display: flex;
+}
+
+main {
+  flex: 1;
+  padding: 20px;
+}
+
+.barraSuperior {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+  padding: 0 25px;
+  border-bottom: 1px dotted rgb(158, 158, 158);
+}
+
+.barraSuperior h1 {
+  margin: 0;
+}
+
+.usuarioBarra {
+  display: flex;
+  align-items: center;
+}
+
+.usuarioBarra p {
+  margin-right: 10px;
+}
+
+.usuarioBarra svg {
+  font-size: 30px;
+}
+
+.principal {
+  padding: 25px;
+}
+
+.botones {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.crearPedidoBtn,
+.mostrarPedidosBtn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: #000;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.crearPedidoBtn:hover,
+.mostrarPedidosBtn:hover {
+  background-color: #232324;
+}
+
+.tablaOrdenes {
+  width: 75%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  margin-top: 40px;
+}
+
+.tablaOrdenes th,
+.tablaOrdenes td {
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.tablaOrdenes th {
+  background-color: #f4f4f4;
+  text-align: center;
+}
+
+.tablaOrdenes td {
+  text-align: left;
+}
+
+.tablaOrdenes .eliminarIcono {
+  text-align: center;
+}
+
+.tablaOrdenes .deleteButton {
+  background: none;
+  border: none;
+  color: rgb(0, 0, 0);
+  cursor: pointer;
+}
+
+.tablaOrdenes .deleteButton:hover {
+  background-color: unset;
+}

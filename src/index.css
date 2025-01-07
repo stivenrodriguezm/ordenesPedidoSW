@@ -1,0 +1,64 @@
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Estilo general del body */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #ccc;
+}
+
+th {
+  background-color: #f4f4f4;
+}
+
+button {
+  cursor: pointer;
+}
+
+main{
+  padding: 0;
+}
+
+.barraSuperior{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+  padding: 0 25px;
+  border-bottom: 1px dotted rgb(158, 158, 158);
+}
+
+.barraSuperior h1{
+  margin: 0;
+}
+.usuarioBarra{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.usuarioBarra p{
+  margin-right: 12px;
+}
+.usuarioBarra svg{
+  font-size: 30px;
+}
+
+.principal {
+  padding: 25px;
+}

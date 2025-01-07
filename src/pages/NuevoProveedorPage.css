@@ -1,0 +1,68 @@
+.nuevo-proveedor-page {
+    display: flex;
+  }
+  
+  main {
+    flex: 1;
+    padding: 0 20px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+  
+  label {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  input {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  button[type="submit"] {
+    background-color: #000000;
+    color: white;
+  }
+  
+  button[type="submit"]:hover {
+    background-color: #232324;
+  }
+  
+  button[type="button"] {
+    background-color: #ccc;
+    color: black;
+  }
+  
+  button[type="button"]:hover {
+    background-color: #aaa;
+  }
+  
+
+  .formNuevoProveedor{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 300px;
+    margin: 40px auto;
+    border: 1px solid black;
+    padding: 30px;
+  }
