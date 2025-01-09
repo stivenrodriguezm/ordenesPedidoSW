@@ -19,7 +19,7 @@ function ReferenciasPage() {
 
     const fetchUser = async () => {
       try {
-        const response = await axios.get("https://api.muebleslottus.com:8000/api/user/", {
+        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -34,7 +34,7 @@ function ReferenciasPage() {
     const fetchReferencias = async () => {
       try {
         const response = await axios.get(
-          "https://api.muebleslottus.com:8000/api/referencias/",
+          "https://api.muebleslottus.com/api/referencias/",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -58,7 +58,7 @@ function ReferenciasPage() {
     const fetchProveedores = async () => {
       try {
         const response = await axios.get(
-          "https://api.muebleslottus.com:8000/api/proveedores/",
+          "https://api.muebleslottus.com/api/proveedores/",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -86,7 +86,7 @@ function ReferenciasPage() {
       if (isEditing) {
         // Editar referencia existente
         await axios.put(
-          `https://api.muebleslottus.com:8000/api/referencias/${editingId}/`,
+          `https://api.muebleslottus.com/api/referencias/${editingId}/`,
           {
             nombre: referencia,
             proveedor: proveedorId,
@@ -98,7 +98,7 @@ function ReferenciasPage() {
       } else {
         // Crear nueva referencia
         await axios.post(
-          "https://api.muebleslottus.com:8000/api/referencias/",
+          "https://api.muebleslottus.com/api/referencias/",
           {
             nombre: referencia,
             proveedor: proveedorId,
@@ -116,7 +116,7 @@ function ReferenciasPage() {
       setEditingId(null);
 
       const updatedReferencias = await axios.get(
-        "https://api.muebleslottus.com:8000/api/referencias/",
+        "https://api.muebleslottus.com/api/referencias/",
         {
           headers: { Authorization: `Bearer ${token}` },
         }

@@ -23,33 +23,45 @@ function CrearPedidoPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-
+  
     const fetchUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com:8000/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-        });
-      } catch (error) {
-        console.error("Error fetching user info:", error);
+      const cachedUser = sessionStorage.getItem("user");
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser));
+      } else {
+        try {
+          const response = await axios.get("https://api.muebleslottus.com/api/user/", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          sessionStorage.setItem("user", JSON.stringify(response.data));
+          setUser({
+            first_name: response.data.first_name,
+            last_name: response.data.last_name,
+          });
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
       }
     };
-
+  
     const fetchProveedores = async () => {
-      try {
-        const response = await axios.get(
-          "https://api.muebleslottus.com:8000/api/proveedores/",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setProveedores(response.data);
-      } catch (error) {
-        console.error("Error fetching providers:", error);
+      const cachedProveedores = sessionStorage.getItem("proveedores");
+      if (cachedProveedores) {
+        setProveedores(JSON.parse(cachedProveedores));
+      } else {
+        try {
+          const response = await axios.get(
+            "https://api.muebleslottus.com/api/proveedores/",
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          sessionStorage.setItem("proveedores", JSON.stringify(response.data));
+          setProveedores(response.data);
+        } catch (error) {
+          console.error("Error fetching providers:", error);
+        }
       }
     };
-
+  
     fetchUser();
     fetchProveedores();
   }, []);
@@ -74,17 +86,23 @@ function CrearPedidoPage() {
   const handleProveedorChange = async (e) => {
     const proveedorId = e.target.value;
     setPedido({ ...pedido, proveedor: proveedorId });
-
+  
     if (proveedorId) {
-      const token = localStorage.getItem("accessToken");
-      try {
-        const response = await axios.get(
-          `https://api.muebleslottus.com:8000/api/referencias/?proveedor=${proveedorId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setReferencias(response.data);
-      } catch (error) {
-        console.error("Error fetching references:", error);
+      const cachedReferencias = sessionStorage.getItem(`referencias_${proveedorId}`);
+      if (cachedReferencias) {
+        setReferencias(JSON.parse(cachedReferencias));
+      } else {
+        const token = localStorage.getItem("accessToken");
+        try {
+          const response = await axios.get(
+            `https://api.muebleslottus.com/api/referencias/?proveedor=${proveedorId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          sessionStorage.setItem(`referencias_${proveedorId}`, JSON.stringify(response.data));
+          setReferencias(response.data);
+        } catch (error) {
+          console.error("Error fetching references:", error);
+        }
       }
     } else {
       setReferencias([]);
@@ -114,7 +132,7 @@ function CrearPedidoPage() {
 
     try {
       const response = await axios.post(
-        "https://api.muebleslottus.com:8000/api/ordenes/",
+        "https://api.muebleslottus.com/api/ordenes/",
         {
           proveedor: pedido.proveedor,
           fecha_esperada: pedido.fecha,

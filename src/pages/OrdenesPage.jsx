@@ -15,72 +15,93 @@ function OrdenesPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-
+  
     // Fetch user info
     const fetchUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com:8000/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-          is_staff: response.data.is_staff,
-        });
-      } catch (error) {
-        console.error("Error fetching user info:", error);
+      const cachedUser = sessionStorage.getItem("user");
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser));
+      } else {
+        try {
+          const response = await axios.get("https://api.muebleslottus.com/api/user/", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const userData = {
+            first_name: response.data.first_name,
+            last_name: response.data.last_name,
+            is_staff: response.data.is_staff,
+          };
+          sessionStorage.setItem("user", JSON.stringify(userData));
+          setUser(userData);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
       }
     };
-
+  
     // Fetch proveedores
     const fetchProveedores = async () => {
-      try {
-        const response = await axios.get(
-          "https://api.muebleslottus.com:8000/api/proveedores/",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setProveedores(response.data);
-      } catch (error) {
-        console.error("Error fetching providers:", error);
+      const cachedProveedores = sessionStorage.getItem("proveedores");
+      if (cachedProveedores) {
+        setProveedores(JSON.parse(cachedProveedores));
+      } else {
+        try {
+          const response = await axios.get(
+            "https://api.muebleslottus.com/api/proveedores/",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          sessionStorage.setItem("proveedores", JSON.stringify(response.data));
+          setProveedores(response.data);
+        } catch (error) {
+          console.error("Error fetching providers:", error);
+        }
       }
     };
-
+  
     // Fetch ordenes
     const fetchOrdenes = async () => {
-      try {
-        const endpoint = showAllOrders
-          ? "https://api.muebleslottus.com:8000/api/ordenes/"
-          : "https://api.muebleslottus.com:8000/api/ordenes/?estado=pendiente";
-        const response = await axios.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        // Mapear las órdenes para obtener los nombres de proveedor y vendedor
-        const ordenesWithNames = response.data.map((orden) => {
-          const proveedor = proveedores.find((prov) => prov.id === orden.proveedor);
-          return {
-            ...orden,
-            proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
-            vendedor_name: orden.usuario_first_name || "Desconocido",
-          };
-        });
-
-        setOrdenes(ordenesWithNames);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
+      const cacheKey = showAllOrders ? "ordenes_todas" : "ordenes_pendientes";
+      const cachedOrdenes = sessionStorage.getItem(cacheKey);
+  
+      if (cachedOrdenes) {
+        setOrdenes(JSON.parse(cachedOrdenes));
+      } else {
+        try {
+          const endpoint = showAllOrders
+            ? "https://api.muebleslottus.com/api/ordenes/"
+            : "https://api.muebleslottus.com/api/ordenes/?estado=pendiente";
+  
+          const response = await axios.get(endpoint, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+  
+          const ordenesWithNames = response.data.map((orden) => {
+            const proveedor = proveedores.find((prov) => prov.id === orden.proveedor);
+            return {
+              ...orden,
+              proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
+              vendedor_name: orden.usuario_first_name || "Desconocido",
+            };
+          });
+  
+          sessionStorage.setItem(cacheKey, JSON.stringify(ordenesWithNames));
+          setOrdenes(ordenesWithNames);
+        } catch (error) {
+          console.error("Error fetching orders:", error);
+        }
       }
     };
-
+  
     const fetchData = async () => {
       await fetchProveedores();
       await fetchUser();
       await fetchOrdenes();
     };
-
+  
     fetchData();
-  }, [showAllOrders, proveedores]);
+  }, [showAllOrders]);
 
   const toggleShowAllOrders = () => {
     setShowAllOrders(!showAllOrders);
@@ -95,7 +116,7 @@ function OrdenesPage() {
 
     if (window.confirm("¿Estás seguro de que deseas eliminar este pedido?")) {
       try {
-        await axios.delete(`https://127.0.0.1:8000/api/ordenes/${id}/`, {
+        await axios.delete(`https://127.0.0.1/api/ordenes/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrdenes(ordenes.filter((orden) => orden.id !== id));
