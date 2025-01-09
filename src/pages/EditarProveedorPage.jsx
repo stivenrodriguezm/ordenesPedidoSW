@@ -1,34 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom"; // Para redirección y obtención de parámetros
 import axios from "axios";
-import Sidebar from "../components/Sidebar";
 import "./NuevoProveedorPage.css";
-import { FaCircleUser } from "react-icons/fa6";
 
 function EditarProveedorPage() {
-  const { id } = useParams(); // Obtiene el ID del proveedor desde la URL
+  const { id } = useParams(); 
   const [empresa, setEmpresa] = useState("");
   const [encargado, setEncargado] = useState("");
   const [contacto, setContacto] = useState("");
-  const [user, setUser] = useState({ first_name: "", last_name: "" });
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-        });
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-      }
-    };
 
     const fetchProveedor = async () => {
       try {
@@ -46,7 +29,6 @@ function EditarProveedorPage() {
       }
     };
 
-    fetchUser();
     fetchProveedor();
   }, [id]);
 
@@ -74,15 +56,7 @@ function EditarProveedorPage() {
 
   return (
     <div className="nuevo-proveedor-page">
-      <Sidebar />
       <main>
-        <div className="barraSuperior">
-          <h1>Editar proveedor</h1>
-          <div className="usuarioBarra">
-            <p>{`${user.first_name} ${user.last_name}`}</p>
-            <FaCircleUser />
-          </div>
-        </div>
         <form className="formNuevoProveedor" onSubmit={handleSubmit}>
           <label>
             Empresa:

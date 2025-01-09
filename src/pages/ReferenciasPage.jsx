@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import Sidebar from "../components/Sidebar";
 import "./ReferenciasPage.css";
-import { FaCircleUser } from "react-icons/fa6";
 import { CiEdit } from "react-icons/ci";
 
 function ReferenciasPage() {
@@ -10,95 +8,67 @@ function ReferenciasPage() {
   const [proveedores, setProveedores] = useState([]);
   const [referencia, setReferencia] = useState("");
   const [proveedorId, setProveedorId] = useState("");
-  const [user, setUser] = useState({ first_name: "", last_name: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  const token = localStorage.getItem("accessToken");
+
+  // Función para obtener la lista de proveedores
+  const fetchProveedores = async () => {
+    try {
+      const response = await axios.get(
+        "https://api.muebleslottus.com/api/proveedores/",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setProveedores(response.data);
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+    }
+  };
+
+  // Función para obtener la lista de referencias
+  const fetchReferencias = async () => {
+    try {
+      const response = await axios.get(
+        "https://api.muebleslottus.com/api/referencias/",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const referenciasWithProveedorName = response.data.map((ref) => {
+        const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
+        return {
+          ...ref,
+          proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
+        };
+      });
+
+      setReferencias(referenciasWithProveedorName);
+    } catch (error) {
+      console.error("Error fetching references:", error);
+    }
+  };
+
+  // Cargar datos iniciales
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-  
-    const fetchUser = async () => {
-      const cachedUser = sessionStorage.getItem("user");
-      if (cachedUser) {
-        setUser(JSON.parse(cachedUser));
-      } else {
-        try {
-          const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const userData = {
-            first_name: response.data.first_name,
-            last_name: response.data.last_name,
-          };
-          sessionStorage.setItem("user", JSON.stringify(userData));
-          setUser(userData);
-        } catch (error) {
-          console.error("Error fetching user info:", error);
-        }
-      }
-    };
-  
-    const fetchProveedores = async () => {
-      const cachedProveedores = sessionStorage.getItem("proveedores");
-      if (cachedProveedores) {
-        setProveedores(JSON.parse(cachedProveedores));
-      } else {
-        try {
-          const response = await axios.get(
-            "https://api.muebleslottus.com/api/proveedores/",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          sessionStorage.setItem("proveedores", JSON.stringify(response.data));
-          setProveedores(response.data);
-        } catch (error) {
-          console.error("Error fetching providers:", error);
-        }
-      }
-    };
-  
-    const fetchReferencias = async () => {
-      const cachedReferencias = sessionStorage.getItem("referencias");
-      if (cachedReferencias) {
-        setReferencias(JSON.parse(cachedReferencias));
-      } else {
-        try {
-          const response = await axios.get(
-            "https://api.muebleslottus.com/api/referencias/",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-  
-          const referenciasWithProveedorName = response.data.map((ref) => {
-            const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
-            return {
-              ...ref,
-              proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
-            };
-          });
-  
-          sessionStorage.setItem("referencias", JSON.stringify(referenciasWithProveedorName));
-          setReferencias(referenciasWithProveedorName);
-        } catch (error) {
-          console.error("Error fetching references:", error);
-        }
-      }
-    };
-  
     const fetchData = async () => {
       await fetchProveedores();
-      await fetchReferencias();
-      await fetchUser();
     };
-  
     fetchData();
-  }, []);  
+  }, []);
+
+  // Actualizar referencias después de cargar proveedores
+  useEffect(() => {
+    if (proveedores.length > 0) {
+      fetchReferencias();
+    }
+  }, [proveedores]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("accessToken");
 
     try {
       if (isEditing) {
@@ -132,14 +102,7 @@ function ReferenciasPage() {
       setProveedorId("");
       setIsEditing(false);
       setEditingId(null);
-
-      const updatedReferencias = await axios.get(
-        "https://api.muebleslottus.com/api/referencias/",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setReferencias(updatedReferencias.data);
+      fetchReferencias(); // Actualiza las referencias después de crear/editar
     } catch (error) {
       console.error("Error handling reference:", error);
     }
@@ -147,22 +110,14 @@ function ReferenciasPage() {
 
   const handleEdit = (referencia) => {
     setReferencia(referencia.nombre);
-    setProveedorId(referencia.proveedor); // Establece correctamente el proveedor asociado
+    setProveedorId(referencia.proveedor);
     setIsEditing(true);
     setEditingId(referencia.id);
   };
 
   return (
     <div className="referencias-page">
-      <Sidebar />
       <main>
-        <div className="barraSuperior">
-          <h1>Referencias</h1>
-          <div className="usuarioBarra">
-            <p>{`${user.first_name} ${user.last_name}`}</p>
-            <FaCircleUser />
-          </div>
-        </div>
         <form className="formReferencias" onSubmit={handleSubmit}>
           <input
             type="text"
@@ -219,5 +174,3 @@ function ReferenciasPage() {
 }
 
 export default ReferenciasPage;
-
-

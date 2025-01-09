@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import Sidebar from "../components/Sidebar";
 import "./CrearPedidoPage.css";
-import { FaCircleUser } from "react-icons/fa6";
 import html2canvas from "html2canvas";
 import logoFinal from "../assets/logoFinal.png";
 
@@ -69,16 +67,18 @@ function CrearPedidoPage() {
   const getFormattedDate = () => {
     const today = new Date();
     const day = String(today.getDate()).padStart(2, "0");
-    const month = String(today.getMonth() + 1).padStart(2, "0"); // Mes comienza desde 0
+    const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+    const month = monthNames[today.getMonth()]; // Mes comienza desde 0
     const year = today.getFullYear();
     return `${day}-${month}-${year}`;
   };
-
+  
   const formatDate = (date) => {
     if (!date) return "";
     const d = new Date(date);
-    const day = String(d.getDate() + 1).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+    const month = monthNames[d.getMonth()]; // Mes comienza desde 0
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
   };
@@ -178,15 +178,7 @@ function CrearPedidoPage() {
 
   return (
     <div className="crear-pedido-page">
-      <Sidebar />
       <main>
-        <div className="barraSuperior">
-          <h1>Crear pedido</h1>
-          <div className="usuarioBarra">
-            <p>{`${user.first_name} ${user.last_name}`}</p>
-            <FaCircleUser />
-          </div>
-        </div>
         <form className="formPedido" onSubmit={handleSubmit}>
           <div className="formFlexLabel">
             <label>Proveedor:</label>
@@ -273,7 +265,7 @@ function CrearPedidoPage() {
           </button>
           <button type="submit">Enviar</button>
         </form>
-        <div id="pedido-preview" style={{ display: "none" }}>
+        <div id="pedido-preview" style={{ display: "block" }}>
           <div className="headerPedido">
             <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
             <div className="numPedido">
@@ -290,8 +282,8 @@ function CrearPedidoPage() {
             <p className="fechaActual">Fecha pedido: {getFormattedDate()}</p>
           </div>
           <div className="proveedorFechaPedido">
-            <p className="proveedorPedido">Vendedor: {`${user.first_name} ${user.last_name}`}</p>
-            <p className="fechaActual">Fecha entrega: {formatDate(pedido.fecha)}</p>
+            <p className="vendedorPedido">Vendedor: {`${user.first_name} ${user.last_name}`}</p>
+            <p className="fechaActual">Fecha entrega: <b>{formatDate(pedido.fecha)}</b></p>
           </div>
           <p className="ordenCompraPedido">Orden de compra: {pedido.ordenCompra || "No especificado"}</p>
           <p className="notaPedido">Nota: {pedido.nota}</p>

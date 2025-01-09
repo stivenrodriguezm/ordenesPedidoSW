@@ -7,6 +7,7 @@ function Sidebar() {
 
   const handleLogout = () => {
     localStorage.clear(); // Elimina todos los tokens y datos
+    sessionStorage.clear();
     navigate("/login");
   };
 
@@ -16,7 +17,7 @@ function Sidebar() {
       <nav>
         <ul>
           <li>
-            <Link to="/">Órdenes de Pedido</Link>
+            <Link to="//">Órdenes de Pedido</Link>
           </li>
           {isAdmin && (
             <>
