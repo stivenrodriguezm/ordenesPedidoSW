@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://147.93.43.111:8000/api/", // Asegúrate de que termina con una barra
+  baseURL: "https://api.muebleslottus.com/api/", // Asegúrate de que termina con una barra
 });
 
 API.interceptors.request.use((config) => {

@@ -26,7 +26,7 @@ function CrearPedidoPage() {
 
     const fetchUser = async () => {
       try {
-        const response = await axios.get("https://147.93.43.111:8000/api/user/", {
+        const response = await axios.get("https://api.muebleslottus.com:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -41,7 +41,7 @@ function CrearPedidoPage() {
     const fetchProveedores = async () => {
       try {
         const response = await axios.get(
-          "https://147.93.43.111:8000/api/proveedores/",
+          "https://api.muebleslottus.com:8000/api/proveedores/",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setProveedores(response.data);
@@ -79,7 +79,7 @@ function CrearPedidoPage() {
       const token = localStorage.getItem("accessToken");
       try {
         const response = await axios.get(
-          `https://147.93.43.111:8000/api/referencias/?proveedor=${proveedorId}`,
+          `https://api.muebleslottus.com:8000/api/referencias/?proveedor=${proveedorId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setReferencias(response.data);
@@ -114,7 +114,7 @@ function CrearPedidoPage() {
 
     try {
       const response = await axios.post(
-        "https://147.93.43.111:8000/api/ordenes/",
+        "https://api.muebleslottus.com:8000/api/ordenes/",
         {
           proveedor: pedido.proveedor,
           fecha_esperada: pedido.fecha,

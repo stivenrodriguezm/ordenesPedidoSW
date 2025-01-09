@@ -19,7 +19,7 @@ function OrdenesPage() {
     // Fetch user info
     const fetchUser = async () => {
       try {
-        const response = await axios.get("https://147.93.43.111:8000/api/user/", {
+        const response = await axios.get("https://api.muebleslottus.com:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -36,7 +36,7 @@ function OrdenesPage() {
     const fetchProveedores = async () => {
       try {
         const response = await axios.get(
-          "https://147.93.43.111:8000/api/proveedores/",
+          "https://api.muebleslottus.com:8000/api/proveedores/",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -51,8 +51,8 @@ function OrdenesPage() {
     const fetchOrdenes = async () => {
       try {
         const endpoint = showAllOrders
-          ? "https://147.93.43.111:8000/api/ordenes/"
-          : "https://147.93.43.111:8000/api/ordenes/?estado=pendiente";
+          ? "https://api.muebleslottus.com:8000/api/ordenes/"
+          : "https://api.muebleslottus.com:8000/api/ordenes/?estado=pendiente";
         const response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
