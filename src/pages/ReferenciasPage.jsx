@@ -16,67 +16,85 @@ function ReferenciasPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-
+  
     const fetchUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-        });
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-      }
-    };
-
-    const fetchReferencias = async () => {
-      try {
-        const response = await axios.get(
-          "https://api.muebleslottus.com/api/referencias/",
-          {
+      const cachedUser = sessionStorage.getItem("user");
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser));
+      } else {
+        try {
+          const response = await axios.get("https://api.muebleslottus.com/api/user/", {
             headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        // Mapear las referencias para incluir el nombre del proveedor
-        const referenciasWithProveedorName = response.data.map((ref) => {
-          const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
-          return {
-            ...ref,
-            proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
+          });
+          const userData = {
+            first_name: response.data.first_name,
+            last_name: response.data.last_name,
           };
-        });
-
-        setReferencias(referenciasWithProveedorName);
-      } catch (error) {
-        console.error("Error fetching references:", error);
+          sessionStorage.setItem("user", JSON.stringify(userData));
+          setUser(userData);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+        }
       }
     };
-
+  
     const fetchProveedores = async () => {
-      try {
-        const response = await axios.get(
-          "https://api.muebleslottus.com/api/proveedores/",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setProveedores(response.data);
-      } catch (error) {
-        console.error("Error fetching providers:", error);
+      const cachedProveedores = sessionStorage.getItem("proveedores");
+      if (cachedProveedores) {
+        setProveedores(JSON.parse(cachedProveedores));
+      } else {
+        try {
+          const response = await axios.get(
+            "https://api.muebleslottus.com/api/proveedores/",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          sessionStorage.setItem("proveedores", JSON.stringify(response.data));
+          setProveedores(response.data);
+        } catch (error) {
+          console.error("Error fetching providers:", error);
+        }
       }
     };
-
+  
+    const fetchReferencias = async () => {
+      const cachedReferencias = sessionStorage.getItem("referencias");
+      if (cachedReferencias) {
+        setReferencias(JSON.parse(cachedReferencias));
+      } else {
+        try {
+          const response = await axios.get(
+            "https://api.muebleslottus.com/api/referencias/",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+  
+          const referenciasWithProveedorName = response.data.map((ref) => {
+            const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
+            return {
+              ...ref,
+              proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
+            };
+          });
+  
+          sessionStorage.setItem("referencias", JSON.stringify(referenciasWithProveedorName));
+          setReferencias(referenciasWithProveedorName);
+        } catch (error) {
+          console.error("Error fetching references:", error);
+        }
+      }
+    };
+  
     const fetchData = async () => {
       await fetchProveedores();
       await fetchReferencias();
       await fetchUser();
     };
-
+  
     fetchData();
-  }, [proveedores]);
+  }, []);  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
