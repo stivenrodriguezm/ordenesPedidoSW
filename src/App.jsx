@@ -10,7 +10,7 @@ import CrearPedidoPage from "./pages/CrearPedidoPage";
 
 function App() {
   return (
-    <Router>
+    <Router basename="/ordenesPedidoSW">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route

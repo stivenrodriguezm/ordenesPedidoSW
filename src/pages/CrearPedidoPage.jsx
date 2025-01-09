@@ -16,6 +16,7 @@ function CrearPedidoPage() {
     fecha: "",
     nota: "",
     productos: [{ cantidad: "", referencia: "", descripcion: "" }],
+    ordenCompra: "", 
   });
   const [numeroOP, setNumeroOP] = useState(null);
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ function CrearPedidoPage() {
 
     const fetchUser = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/user/", {
+        const response = await axios.get("https://147.93.43.111:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -40,7 +41,7 @@ function CrearPedidoPage() {
     const fetchProveedores = async () => {
       try {
         const response = await axios.get(
-          "http://127.0.0.1:8000/api/proveedores/",
+          "https://147.93.43.111:8000/api/proveedores/",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setProveedores(response.data);
@@ -64,7 +65,7 @@ function CrearPedidoPage() {
   const formatDate = (date) => {
     if (!date) return "";
     const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, "0");
+    const day = String(d.getDate() + 1).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
@@ -78,7 +79,7 @@ function CrearPedidoPage() {
       const token = localStorage.getItem("accessToken");
       try {
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/referencias/?proveedor=${proveedorId}`,
+          `https://147.93.43.111:8000/api/referencias/?proveedor=${proveedorId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setReferencias(response.data);
@@ -113,11 +114,12 @@ function CrearPedidoPage() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/ordenes/",
+        "https://147.93.43.111:8000/api/ordenes/",
         {
           proveedor: pedido.proveedor,
           fecha_esperada: pedido.fecha,
           notas: pedido.nota,
+          orden_compra: pedido.ordenCompra,
           detalles: pedido.productos.map((producto) => ({
             cantidad: producto.cantidad,
             referencia: producto.referencia,
@@ -185,6 +187,17 @@ function CrearPedidoPage() {
             </select>
           </div>
           <div className="formFlexLabel">
+            <label>Orden de compra:</label>
+            <input
+              type="text"
+              name="ordenCompra"
+              value={pedido.ordenCompra || ""}
+              onChange={(e) => handleChange(e)}
+              placeholder="Número de orden de compra"
+              required
+            />
+          </div>
+          <div className="formFlexLabel">
             <label>Fecha esperada:</label>
             <input
               type="date"
@@ -242,7 +255,7 @@ function CrearPedidoPage() {
           </button>
           <button type="submit">Enviar</button>
         </form>
-        <div id="pedido-preview" style={{ display: "block" }}>
+        <div id="pedido-preview" style={{ display: "none" }}>
           <div className="headerPedido">
             <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
             <div className="numPedido">
@@ -256,9 +269,13 @@ function CrearPedidoPage() {
                 ? proveedores.find((p) => String(p.id) === String(pedido.proveedor))?.nombre_empresa || "No seleccionado"
                 : "Cargando..."}
             </p>
-            <p className="fechaActual">Fecha: {getFormattedDate()}</p>
+            <p className="fechaActual">Fecha pedido: {getFormattedDate()}</p>
           </div>
-          <p className="fechaPedido">Fecha pedido: {formatDate(pedido.fecha)}</p>
+          <div className="proveedorFechaPedido">
+            <p className="proveedorPedido">Vendedor: {`${user.first_name} ${user.last_name}`}</p>
+            <p className="fechaActual">Fecha entrega: {formatDate(pedido.fecha)}</p>
+          </div>
+          <p className="ordenCompraPedido">Orden de compra: {pedido.ordenCompra || "No especificado"}</p>
           <p className="notaPedido">Nota: {pedido.nota}</p>
           <h3 className="productoTituloPedidos">Productos</h3>
           <table className="tablaPedidosFoto">

@@ -152,7 +152,8 @@
   }
 
   .logoPedido{
-    width: 250px;
+    width: 220px;
+    height: min-content !important;
   }
   .headerPedido{
      display: flex;
@@ -162,7 +163,6 @@
   .numPedido{
     height: 60px;
     width: 130px;
-    padding: 10px 0;
   }
   .numPedido h2{
     margin: o auto;
@@ -214,7 +214,10 @@
   text-align: left !important;
 }
 
-
+.ordenCompraPedido{
+  margin-top: 10px;
+  font-size: 17px;
+}
 
 
 

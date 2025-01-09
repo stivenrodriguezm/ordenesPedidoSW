@@ -16,7 +16,7 @@ function ProveedoresPage() {
 
     const fetchUser = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/user/", {
+        const response = await axios.get("https://147.93.43.111:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -31,7 +31,7 @@ function ProveedoresPage() {
     const fetchProveedores = async () => {
       try {
         const response = await axios.get(
-          "http://127.0.0.1:8000/api/proveedores/",
+          "https://147.93.43.111:8000/api/proveedores/",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
