@@ -41,7 +41,6 @@ function ProveedoresPage() {
           <table className="tablaProveedores">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Empresa</th>
                 <th>Encargado</th>
                 <th>Contacto</th>
@@ -51,7 +50,6 @@ function ProveedoresPage() {
             <tbody>
               {proveedores.map((proveedor) => (
                 <tr key={proveedor.id}>
-                  <td>{proveedor.id}</td>
                   <td>{proveedor.nombre_empresa}</td>
                   <td>{proveedor.nombre_encargado}</td>
                   <td>{proveedor.contacto}</td>
