@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom"; // Para la redirección
 import axios from "axios";
 import "./ProveedoresPage.css";
 import { CiEdit } from "react-icons/ci";
+import { Link } from "react-router-dom";
+
 
 function ProveedoresPage() {
   const [proveedores, setProveedores] = useState([]);
@@ -54,9 +56,9 @@ function ProveedoresPage() {
                   <td>{proveedor.nombre_encargado}</td>
                   <td>{proveedor.contacto}</td>
                   <td className="editarIcono">
-                    <a href={`/ordenesPedidoSW/editar-proveedor/${proveedor.id}`}>
+                    <Link to={`/editar-proveedor/${proveedor.id}`}>
                       <CiEdit />
-                    </a>
+                    </Link>
                   </td>
                 </tr>
               ))}

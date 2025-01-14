@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redirection</title>
     <script>
-        // Redirigir todas las rutas a index.html
-        var redirectTo = window.location.pathname;
-        window.location.replace("/ordenesPedidoSW" + "/#" + redirectTo);
+        // Eliminar el duplicado del basename
+        var redirectTo = window.location.pathname.replace("/ordenesPedidoSW", "");
+        window.location.replace("/ordenesPedidoSW/#" + redirectTo);
     </script>
 </head>
 <body></body>

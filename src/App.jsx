@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import OrdenesPage from "./pages/OrdenesPage";
 import ReferenciasPage from "./pages/ReferenciasPage";
@@ -26,7 +26,7 @@ function Layout({ children }) {
 
 function App() {
   return (
-    <Router basename="/ordenesPedidoSW">
+    <Router>
       <Layout>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
