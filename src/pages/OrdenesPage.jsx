@@ -5,78 +5,54 @@ import "./OrdenesPage.css";
 
 function OrdenesPage() {
   const [ordenes, setOrdenes] = useState([]);
-  const [proveedores, setProveedores] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
-  const [user, setUser] = useState({ first_name: "", last_name: "", is_staff: false });
+  const [user, setUser] = useState({ first_name: "", last_name: "", is_staff: false, id: null });
   const [showAllOrders, setShowAllOrders] = useState(false);
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-
-    const fetchProveedores = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/proveedores/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setProveedores(response.data);
-      } catch (error) {
-        console.error("Error fetching providers:", error);
-      }
-    };
-
-    
-    const fetchUsuarios = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/usuarios/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsuarios(response.data);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-
-    const fetchOrdenes = async () => {
-      try {
-        const endpoint = showAllOrders
-          ? "https://api.muebleslottus.com/api/ordenes/"
-          : "https://api.muebleslottus.com/api/ordenes/?estado=pendiente";
-
-        const response = await axios.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        setOrdenes(response.data);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      }
-    };
-
     const fetchData = async () => {
-      await fetchProveedores();
-      await fetchUsuarios();
-      await fetchOrdenes();
+      setLoading(true);
+      setError(null);
+    
+      const token = localStorage.getItem("accessToken");
+    
+      try {
+        // Fetch user info
+        const userResponse = await axios.get("https://api.muebleslottus.com/api/user/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const userData = userResponse.data;
+        setUser(userData);
+    
+        // Construir el endpoint con los filtros adecuados
+        let endpoint = "https://api.muebleslottus.com/api/listar-pedidos/";
+    
+        if (!userData.is_staff) {
+          // Si es vendedor, incluir su ID como filtro
+          endpoint += `?usuario_id=${userData.id}`;
+        } else if (!showAllOrders) {
+          // Si es administrador y no muestra todos, filtrar por "en_proceso"
+          endpoint += "?estado=en_proceso";
+        }
+    
+        // Fetch orders
+        const ordersResponse = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setOrdenes(ordersResponse.data);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Error al cargar los pedidos. Por favor, intenta nuevamente.");
+      } finally {
+        setLoading(false);
+      }
     };
+    
 
     fetchData();
   }, [showAllOrders]);
-
-  const enhanceOrdenes = () => {
-    // Mapear las órdenes para incluir el nombre del proveedor y vendedor
-    return ordenes.map((orden) => {
-      const proveedor = proveedores.find((prov) => prov.id === orden.proveedor);
-      const vendedor = usuarios.find((usuario) => usuario.id === orden.usuario);
-
-      return {
-        ...orden,
-        proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
-        vendedor_name: vendedor
-          ? `${vendedor.first_name} ${vendedor.last_name}`
-          : "Desconocido",
-      };
-    });
-  };
 
   const toggleShowAllOrders = () => {
     setShowAllOrders(!showAllOrders);
@@ -86,7 +62,13 @@ function OrdenesPage() {
     navigate("/crear-pedido");
   };
 
-  const ordenesEnhanced = enhanceOrdenes();
+  if (loading) {
+    return <div>Cargando pedidos...</div>;
+  }
+
+  if (error) {
+    return <div className="error">{error}</div>;
+  }
 
   return (
     <div className="ordenes-page">
@@ -108,22 +90,22 @@ function OrdenesPage() {
                 <th>ID</th>
                 <th>Proveedor</th>
                 <th>Vendedor</th>
-                <th>Estado</th>
                 <th>Fecha Pedido</th>
                 <th>Fecha Llegada</th>
+                <th>Estado</th>
                 <th>Nota</th>
               </tr>
             </thead>
             <tbody>
-              {ordenesEnhanced.map((orden) => (
-                <tr key={orden.id}>
-                  <td>{orden.id}</td>
-                  <td>{orden.proveedor_name}</td>
-                  <td>{orden.vendedor_name}</td>
-                  <td>{orden.estado}</td>
+              {ordenes.map((orden, index) => (
+                <tr key={index}>
+                  <td>{orden.id_orden}</td>
+                  <td>{orden.proveedor}</td>
+                  <td>{orden.vendedor}</td>
                   <td>{orden.fecha_creacion}</td>
                   <td>{orden.fecha_esperada}</td>
-                  <td>{orden.notas}</td>
+                  <td>{orden.estado}</td>
+                  <td>{orden.nota}</td>
                 </tr>
               ))}
             </tbody>
@@ -135,4 +117,3 @@ function OrdenesPage() {
 }
 
 export default OrdenesPage;
-
