@@ -267,7 +267,7 @@ function CrearPedidoPage() {
           </div>
           <button type="submit">Enviar</button>
         </form>
-        <div id="pedido-preview" style={{ display: "block" }}>
+        <div id="pedido-preview" style={{ display: "none" }}>
           <div className="headerPedido">
             <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
             <div className="numPedido">
