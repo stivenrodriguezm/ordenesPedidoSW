@@ -26,7 +26,7 @@ function Layout({ children }) {
 
 function App() {
   return (
-    <Router basename="/ordenesPedidoSW/">
+    <Router basename="/ordenesPedidoSW">
       <Layout>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
