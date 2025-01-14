@@ -22,7 +22,6 @@
     font-size: 1rem;
     border: 1px solid #ccc;
     border-radius: 5px;
-    width: 140px !important;
   }
   
   .buttons {
@@ -66,4 +65,8 @@
     margin: 40px auto;
     border: 1px solid black;
     padding: 30px;
+  }
+
+  .labelNuevoProveedor input{
+    width: 150px;
   }

@@ -217,14 +217,6 @@ function CrearPedidoPage() {
               required
             />
           </div>
-          <div className="formFlexLabel">
-            <label>Nota:</label>
-            <textarea
-              name="nota"
-              value={pedido.nota}
-              onChange={(e) => handleChange(e)}
-            ></textarea>
-          </div>
           <h2>Productos</h2>
           {pedido.productos.map((producto, index) => (
             <div key={index} className="producto">
@@ -251,21 +243,31 @@ function CrearPedidoPage() {
                   ))}
                 </select>
               </div>
-              <input
+              <textarea
                 className="descProducto"
                 type="text"
                 value={producto.descripcion}
                 onChange={(e) => handleChange(e, index, "descripcion")}
-                placeholder="Descripción"
+                placeholder="Descripción del producto"
               />
             </div>
+            
           ))}
           <button type="button" onClick={handleAddProduct}>
             Agregar producto
           </button>
+          <div className="formFlexRowLabel">
+            <label><b>Observación:</b></label>
+            <textarea
+              name="nota"
+              value={pedido.nota}
+              onChange={(e) => handleChange(e)}
+              placeholder="Observación general del pedido"
+            ></textarea>
+          </div>
           <button type="submit">Enviar</button>
         </form>
-        <div id="pedido-preview" style={{ display: "block" }}>
+        <div id="pedido-preview" style={{ display: "none" }}>
           <div className="headerPedido">
             <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
             <div className="numPedido">
@@ -286,7 +288,6 @@ function CrearPedidoPage() {
             <p className="fechaActual">Fecha entrega: <b>{formatDate(pedido.fecha)}</b></p>
           </div>
           <p className="ordenCompraPedido">Orden de compra: {pedido.ordenCompra || "No especificado"}</p>
-          <p className="notaPedido">Nota: {pedido.nota}</p>
           <h3 className="productoTituloPedidos">Productos</h3>
           <table className="tablaPedidosFoto">
             <thead>
@@ -310,6 +311,14 @@ function CrearPedidoPage() {
               ))}
             </tbody>
           </table>
+          <p className="notaPedido">
+            <b>Observación:</b>{" "}
+            <span
+              dangerouslySetInnerHTML={{
+                __html: pedido.nota.replace(/\n/g, "<br />"),
+              }}
+            />
+          </p>
         </div>
       </main>
     </div>

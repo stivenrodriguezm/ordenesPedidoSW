@@ -36,7 +36,7 @@ function NuevoProveedorPage() {
     <div className="nuevo-proveedor-page">
       <main>
         <form className="formNuevoProveedor" onSubmit={handleSubmit}>
-          <label>
+          <label className="labelNuevoProveedor">
             Empresa:
             <input
               type="text"
@@ -45,7 +45,7 @@ function NuevoProveedorPage() {
               required
             />
           </label>
-          <label>
+          <label className="labelNuevoProveedor">
             Encargado:
             <input
               type="text"
@@ -54,7 +54,7 @@ function NuevoProveedorPage() {
               required
             />
           </label>
-          <label>
+          <label className="labelNuevoProveedor">
             Contacto:
             <input
               type="text"

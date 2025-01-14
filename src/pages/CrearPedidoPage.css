@@ -30,7 +30,7 @@
   }
   
   .formPedido {
-    margin: 40px auto;
+    margin: 90px auto;
     width: 500px;
     display: flex;
     flex-direction: column;
@@ -51,21 +51,27 @@
   select,
   textarea {
     padding: 5px;
-    font-size: 15px;
+    font-size: 14px;
     border: 1px solid #ccc;
     border-radius: 5px;
     width: 300px;
     margin: 0;
+    font-family: sans-serif;
   }
 
   input,
   select{
     height: 30px;
   }
-  
+
   textarea {
-    resize: none;
+    max-width: 100%;
+    min-width: 100%;
+    height: 50px;
+    min-height: 50px;
+    max-height: 150px;
   }
+
   
   h2 {
     margin-top: 15px;
@@ -112,12 +118,6 @@
   
   button:hover {
     background-color: #232324;
-  }
-  
-  .labelProductos input,
-  .labelProductos select,
-  .labelProductos textarea {
-    width: 100px;
   }
 
   .prodsCantidad{
@@ -220,7 +220,13 @@
 }
 
 
+.formFlexRowLabel{
+  margin-top: 5px;
+}
 
+.formFlexRowLabel label{
+  margin-bottom: 5px;
+}
 
 
 

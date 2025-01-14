@@ -58,7 +58,7 @@ function EditarProveedorPage() {
     <div className="nuevo-proveedor-page">
       <main>
         <form className="formNuevoProveedor" onSubmit={handleSubmit}>
-          <label>
+          <label className="labelNuevoProveedor">
             Empresa:
             <input
               type="text"
@@ -67,7 +67,7 @@ function EditarProveedorPage() {
               required
             />
           </label>
-          <label> 
+          <label className="labelNuevoProveedor"> 
             Encargado:
             <input
               type="text"
@@ -76,7 +76,7 @@ function EditarProveedorPage() {
               required
             />
           </label>
-          <label>
+          <label className="labelNuevoProveedor">
             Contacto:
             <input
               type="text"
