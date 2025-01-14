@@ -61,25 +61,24 @@ main {
 }
 
 .tablaOrdenes {
-  width: 75%;
+  width: 1180px;
   border-collapse: collapse;
   margin: 0 auto;
   margin-top: 40px;
+  max-width: 90%;
+  table-layout: fixed;      /* Mantiene el ancho fijo para las columnas */
 }
 
 .tablaOrdenes th,
 .tablaOrdenes td {
   padding: 10px;
   border: 1px solid #ccc;
+  overflow: hidden;  
 }
 
 .tablaOrdenes th {
   background-color: #f4f4f4;
   text-align: center;
-}
-
-.tablaOrdenes td {
-  text-align: left;
 }
 
 .tablaOrdenes .eliminarIcono {
@@ -95,4 +94,90 @@ main {
 
 .tablaOrdenes .deleteButton:hover {
   background-color: unset;
+}
+
+.opTablaOrdenes,
+.ventaTablaOrdenes{
+  width: 70px;
+  max-width: 70px;
+}
+.opTablaOrdenesTD,
+.ventaTablaOrdenesTD{
+  text-align: center;
+  margin: 0 auto;
+  overflow: hidden;         /* Oculta el contenido que excede el ancho */
+  text-overflow: ellipsis;  /* Agrega puntos suspensivos para texto truncado */
+  white-space: nowrap;      /* Evita el salto de línea */
+}
+.proveedorTablaOrdenes{
+  width: 155px;
+}
+.vendedorTablaOrdenes{
+  width: 90px;
+}
+.fechasTablaOrdenes{
+  width: 135px;
+}
+.estadoTablaOrdenes{
+  width: 130px;
+}
+.notaTablaOrdenes{
+  width: 200px;
+  max-height: 20px;
+
+}
+.notaTablaOrdenesTD{
+  max-width: 350px;         /* Ancho máximo */
+  max-height: 40px;         /* Altura máxima */
+  overflow: hidden;         /* Oculta el contenido que excede el ancho */
+  text-overflow: ellipsis;  /* Agrega puntos suspensivos para texto truncado */
+  white-space: nowrap;      /* Evita el salto de línea */
+}
+
+.costoTablaOrdenes{
+  width: 130px;
+}
+.costoTablaOrdenesTD,
+.ventaTablaOrdenesTD{
+  text-align: center;
+  margin: 0 auto;
+}
+
+.opcionesTablaOrdenesTD{
+  text-align: center;
+  font-size: 20px;
+}
+
+.centradoEnTabla{
+  text-align: center;
+  margin: 0 auto;
+}
+
+.filtro-form {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.selectFiltro {
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  height: 35px;
+}
+
+.filtrarBtn {
+  padding: 8px 20px;
+  font-size: 1rem;
+  background-color: #000;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.filtrarBtn:hover {
+  background-color: #232324;
 }

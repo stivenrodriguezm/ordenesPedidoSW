@@ -47,6 +47,22 @@ function ReferenciasPage() {
       });
 
       setReferencias(referenciasWithProveedorName);
+
+      // Actualizar sessionStorage para las referencias de cada proveedor
+      const referenciasPorProveedor = {};
+      referenciasWithProveedorName.forEach((ref) => {
+        if (!referenciasPorProveedor[ref.proveedor]) {
+          referenciasPorProveedor[ref.proveedor] = [];
+        }
+        referenciasPorProveedor[ref.proveedor].push(ref);
+      });
+
+      Object.keys(referenciasPorProveedor).forEach((proveedorId) => {
+        sessionStorage.setItem(
+          `referencias_${proveedorId}`,
+          JSON.stringify(referenciasPorProveedor[proveedorId])
+        );
+      });
     } catch (error) {
       console.error("Error fetching references:", error);
     }
@@ -174,3 +190,4 @@ function ReferenciasPage() {
 }
 
 export default ReferenciasPage;
+

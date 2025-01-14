@@ -66,7 +66,7 @@ function CrearPedidoPage() {
 
   const getFormattedDate = () => {
     const today = new Date();
-    const day = String(today.getDate()).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0"); // Aquí está bien, no necesita +1
     const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const month = monthNames[today.getMonth()]; // Mes comienza desde 0
     const year = today.getFullYear();
@@ -75,12 +75,13 @@ function CrearPedidoPage() {
   
   const formatDate = (date) => {
     if (!date) return "";
-    const d = new Date(date);
-    const day = String(d.getDate()+1).padStart(2, "0");
+    const [year, month, day] = date.split("-"); // Dividir la fecha en partes
+    const localDate = new Date(year, month - 1, day); // Crear la fecha como local
+    const formattedDay = String(localDate.getDate()).padStart(2, "0");
     const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    const month = monthNames[d.getMonth()]; // Mes comienza desde 0
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    const formattedMonth = monthNames[localDate.getMonth()];
+    const formattedYear = localDate.getFullYear();
+    return `${formattedDay}-${formattedMonth}-${formattedYear}`;
   };
 
   const handleProveedorChange = async (e) => {
@@ -137,7 +138,7 @@ function CrearPedidoPage() {
           proveedor: pedido.proveedor,
           fecha_esperada: pedido.fecha,
           notas: pedido.nota,
-          orden_compra: pedido.ordenCompra,
+          orden_venta: pedido.ordenCompra,
           detalles: pedido.productos.map((producto) => ({
             cantidad: producto.cantidad,
             referencia: producto.referencia,
