@@ -76,7 +76,7 @@ function CrearPedidoPage() {
   const formatDate = (date) => {
     if (!date) return "";
     const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, "0");
+    const day = String(d.getDate()+1).padStart(2, "0");
     const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const month = monthNames[d.getMonth()]; // Mes comienza desde 0
     const year = d.getFullYear();
@@ -267,7 +267,7 @@ function CrearPedidoPage() {
           </div>
           <button type="submit">Enviar</button>
         </form>
-        <div id="pedido-preview" style={{ display: "none" }}>
+        <div id="pedido-preview" style={{ display: "block" }}>
           <div className="headerPedido">
             <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
             <div className="numPedido">
