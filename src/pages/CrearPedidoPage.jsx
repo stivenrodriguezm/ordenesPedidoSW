@@ -21,62 +21,52 @@ function CrearPedidoPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-  
-    const fetchUser = async () => {
-      const cachedUser = sessionStorage.getItem("user");
-      if (cachedUser) {
-        setUser(JSON.parse(cachedUser));
-      } else {
-        try {
-          const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          sessionStorage.setItem("user", JSON.stringify(response.data));
-          setUser({
-            first_name: response.data.first_name,
-            last_name: response.data.last_name,
-          });
-        } catch (error) {
-          console.error("Error fetching user info:", error);
-        }
+
+    const fetchAndUpdateUser = async () => {
+      try {
+        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        sessionStorage.setItem("user", JSON.stringify(response.data));
+        setUser({
+          first_name: response.data.first_name,
+          last_name: response.data.last_name,
+        });
+      } catch (error) {
+        console.error("Error fetching user info:", error);
       }
     };
-  
-    const fetchProveedores = async () => {
-      const cachedProveedores = sessionStorage.getItem("proveedores");
-      if (cachedProveedores) {
-        setProveedores(JSON.parse(cachedProveedores));
-      } else {
-        try {
-          const response = await axios.get(
-            "https://api.muebleslottus.com/api/proveedores/",
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          sessionStorage.setItem("proveedores", JSON.stringify(response.data));
-          setProveedores(response.data);
-        } catch (error) {
-          console.error("Error fetching providers:", error);
-        }
+
+    const fetchAndUpdateProveedores = async () => {
+      try {
+        const response = await axios.get(
+          "https://api.muebleslottus.com/api/proveedores/",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        sessionStorage.setItem("proveedores", JSON.stringify(response.data));
+        setProveedores(response.data);
+      } catch (error) {
+        console.error("Error fetching providers:", error);
       }
     };
-  
-    fetchUser();
-    fetchProveedores();
+
+    fetchAndUpdateUser();
+    fetchAndUpdateProveedores();
   }, []);
 
   const getFormattedDate = () => {
     const today = new Date();
-    const day = String(today.getDate()).padStart(2, "0"); // Aquí está bien, no necesita +1
+    const day = String(today.getDate()).padStart(2, "0");
     const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    const month = monthNames[today.getMonth()]; // Mes comienza desde 0
+    const month = monthNames[today.getMonth()];
     const year = today.getFullYear();
     return `${day}-${month}-${year}`;
   };
   
   const formatDate = (date) => {
     if (!date) return "";
-    const [year, month, day] = date.split("-"); // Dividir la fecha en partes
-    const localDate = new Date(year, month - 1, day); // Crear la fecha como local
+    const [year, month, day] = date.split("-");
+    const localDate = new Date(year, month - 1, day);
     const formattedDay = String(localDate.getDate()).padStart(2, "0");
     const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const formattedMonth = monthNames[localDate.getMonth()];
@@ -176,7 +166,7 @@ function CrearPedidoPage() {
       renderImage();
     }
   }, [numeroOP]);
-
+  
   return (
     <div className="crear-pedido-page">
       <main>

@@ -10,7 +10,7 @@ function OrdenesPage() {
   const [proveedores, setProveedores] = useState([]);
   const [vendedores, setVendedores] = useState([]);
   const [estados, setEstados] = useState(["en_proceso", "anulado", "recibido"]);
-  const [filtros, setFiltros] = useState({ proveedor: "", vendedor: "", estado: "" });
+  const [filtros, setFiltros] = useState({ proveedor: "", vendedor: "", estado: "en_proceso" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
