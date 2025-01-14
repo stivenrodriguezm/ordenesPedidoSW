@@ -67,7 +67,7 @@ function EditarProveedorPage() {
               required
             />
           </label>
-          <label>
+          <label> 
             Encargado:
             <input
               type="text"
