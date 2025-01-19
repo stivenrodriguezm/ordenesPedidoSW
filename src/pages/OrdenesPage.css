@@ -65,8 +65,7 @@ main {
   border-collapse: collapse;
   margin: 0 auto;
   margin-top: 40px;
-  max-width: 90%;
-  table-layout: fixed;      /* Mantiene el ancho fijo para las columnas */
+  max-width: 90%;  /* Mantiene el ancho fijo para las columnas */
 }
 
 .tablaOrdenes th,
@@ -180,4 +179,45 @@ main {
 
 .filtrarBtn:hover {
   background-color: #232324;
+}
+
+.formularioActualizacion{
+  display: flex;
+  justify-content: space-between;
+  width: 700px;
+  margin: 10px auto 15px;
+  align-items: center;
+}
+
+.formularioActualizacion input,
+.formularioActualizacion button,
+.formularioActualizacion select {
+  margin: 0;
+  height: 35px !important;
+}
+
+.tablaInternaDescPedidos{
+  width: 1000px;
+  margin: 0 auto;
+}
+.tituloProductos{
+  margin-left: 85px;
+  margin-bottom: 15px;
+}
+.tablaInternaDescPedidos th{
+  background-color: unset;
+  border: none;
+}
+
+.tablaInternaDescPedidos td{
+  border: none;
+}
+
+.tdCentrar{
+  text-align: center;
+  width: 150px;
+}
+
+.tdDescripcion{
+  width: 700px;
 }
