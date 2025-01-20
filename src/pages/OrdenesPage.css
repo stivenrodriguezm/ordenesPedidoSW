@@ -109,7 +109,7 @@ main {
   white-space: nowrap;      /* Evita el salto de línea */
 }
 .proveedorTablaOrdenes{
-  width: 155px;
+  width: 200px;
 }
 .vendedorTablaOrdenes{
   width: 90px;
@@ -121,12 +121,12 @@ main {
   width: 130px;
 }
 .notaTablaOrdenes{
-  width: 200px;
+  width: 320px;
   max-height: 20px;
 
 }
 .notaTablaOrdenesTD{
-  max-width: 350px;         /* Ancho máximo */
+  max-width: 310px;         /* Ancho máximo */
   max-height: 40px;         /* Altura máxima */
   overflow: hidden;         /* Oculta el contenido que excede el ancho */
   text-overflow: ellipsis;  /* Agrega puntos suspensivos para texto truncado */
@@ -220,4 +220,44 @@ main {
 
 .tdDescripcion{
   width: 700px;
+}
+
+.btnIconoTabla{
+  background-color: unset;
+  color: black;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-size: 21px;
+  margin: 0 auto;
+}
+.btnIconoTabla:hover{
+  background-color: unset;
+}
+
+.btnIconoTabla svg{
+  margin: 0 auto;
+}
+
+.descargarExcelBtn {
+  background-color: unset;
+  color: rgb(0, 0, 0);
+  border: none;
+  padding: 0;
+  margin-left: 0;
+  font-size: 24px;
+  background-color: unset;
+  width: 40px;
+  display: flex;
+  align-items: center;
+}
+.descargarExcelBtn svg{
+  margin: 0 auto;
+}
+
+.descargarExcelBtn:hover {
+  background-color: unset;
+  cursor: pointer;
 }

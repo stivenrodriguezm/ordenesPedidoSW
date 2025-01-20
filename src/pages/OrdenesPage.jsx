@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { AiOutlineCreditCard } from "react-icons/ai";
+import { TbLayoutNavbarExpand } from "react-icons/tb";
 import "./OrdenesPage.css";
+import * as XLSX from "xlsx";
+import { MdOutlineFileDownload } from "react-icons/md";
+
 
 function OrdenesPage() {
   const [ordenes, setOrdenes] = useState([]);
@@ -134,7 +137,7 @@ function OrdenesPage() {
       setExpandedOrderId(orderId);
       await fetchProductos(orderId);
       const order = ordenes.find((o) => o.id_orden === orderId);
-      setFormCosto((prev) => ({ ...prev, [orderId]: order.costo }));
+      setFormCosto((prev) => ({ ...prev, [orderId]: parseFloat(order.costo) }));
       setFormEstado((prev) => ({ ...prev, [orderId]: order.estado }));
     }
   };
@@ -160,6 +163,43 @@ function OrdenesPage() {
     return <div className="error">{error}</div>;
   }
 
+  const formatCurrency = (value) => {
+    if (value == null || isNaN(value)) return "$0"; // Manejar null o undefined
+    return `$${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+  };
+  
+  const handleDescargarExcel = () => {
+    if (ordenes.length === 0) {
+      alert("No hay datos para descargar.");
+      return;
+    }
+  
+    // Define las columnas y las filas del Excel
+    const datos = ordenes.map((orden) => ({
+      "O.P.": orden.id_orden,
+      Proveedor: orden.proveedor || "N/A",
+      Vendedor: orden.vendedor || "N/A",
+      Venta: orden.orden_venta || "N/A",
+      "Fecha Pedido": orden.fecha_creacion || "N/A",
+      "Fecha Llegada": orden.fecha_esperada || "N/A",
+      Estado: orden.estado || "N/A",
+      Nota: orden.nota || "N/A",
+      Costo: orden.costo != null
+        ? `$${orden.costo.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+        : "$0",
+    }));
+  
+    // Crea la hoja de cálculo
+    const hoja = XLSX.utils.json_to_sheet(datos);
+  
+    // Crea el libro de Excel
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, "Ordenes");
+  
+    // Genera el archivo Excel
+    XLSX.writeFile(libro, "ordenes_filtradas.xlsx");
+  };
+  
   const handleActualizarPedido = async (id) => {
     const token = localStorage.getItem("accessToken");
     const costo = parseFloat(formCosto[id]);
@@ -198,11 +238,11 @@ function OrdenesPage() {
     <div className="ordenes-page">
       <main>
         <div className="principal">
-          <div className="botones">
-            <button className="crearPedidoBtn" onClick={handleCrearPedido}>
-              Crear pedido
-            </button>
-          </div>
+        <div className="botones">
+          <button className="crearPedidoBtn" onClick={handleCrearPedido}>
+            Crear pedido
+          </button>
+        </div>
           <div className="filtro-form">
             <select
               name="proveedor"
@@ -259,9 +299,13 @@ function OrdenesPage() {
                 <th className="fechasTablaOrdenes">Fecha Pedido</th>
                 <th className="fechasTablaOrdenes">Fecha Llegada</th>
                 <th className="estadoTablaOrdenes">Estado</th>
-                <th className="notaTablaOrdenes">Nota</th>
+                <th className="notaTablaOrdenes">Observación</th>
                 {user.is_staff && <th className="costoTablaOrdenes">Costo</th>}
-                <th></th>
+                <th>
+                  <button className="descargarExcelBtn" onClick={handleDescargarExcel}>
+                    <MdOutlineFileDownload />
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -277,11 +321,11 @@ function OrdenesPage() {
                     <td className="centradoEnTabla">{orden.estado}</td>
                     <td className="notaTablaOrdenesTD">{orden.nota}</td>
                     {user.is_staff && (
-                      <td className="costoTablaOrdenesTD">{orden.costo}</td>
+                      <td className="costoTablaOrdenesTD">{formatCurrency(orden.costo)}</td>
                     )}
                     <td className="opcionesTablaOrdenesTD">
-                      <button onClick={() => handleToggleProductos(orden.id_orden)}>
-                        <AiOutlineCreditCard />
+                      <button className="btnIconoTabla" onClick={() => handleToggleProductos(orden.id_orden)}>
+                        <TbLayoutNavbarExpand />
                       </button>
                     </td>
                   </tr>
@@ -294,12 +338,15 @@ function OrdenesPage() {
                               type="number"
                               placeholder="Costo"
                               value={formCosto[orden.id_orden] || ""}
-                              onChange={(e) =>
-                                setFormCosto((prev) => ({
-                                  ...prev,
-                                  [orden.id_orden]: e.target.value,
-                                }))
-                              }
+                              onChange={(e) => {
+                                const rawValue = e.target.value.replace(/\./g, ""); // Remover puntos
+                                if (!isNaN(rawValue)) {
+                                  setFormCosto((prev) => ({
+                                    ...prev,
+                                    [orden.id_orden]: parseFloat(rawValue),
+                                  }));
+                                }
+                              }}
                             />
                             <select
                               value={formEstado[orden.id_orden] || ""}
