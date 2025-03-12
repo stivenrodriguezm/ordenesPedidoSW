@@ -24,7 +24,7 @@ function CrearPedidoPage() {
 
     const fetchAndUpdateUser = async () => {
       try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
+        const response = await axios.get("http://127.0.0.1:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         sessionStorage.setItem("user", JSON.stringify(response.data));
@@ -40,7 +40,7 @@ function CrearPedidoPage() {
     const fetchAndUpdateProveedores = async () => {
       try {
         const response = await axios.get(
-          "https://api.muebleslottus.com/api/proveedores/",
+          "http://127.0.0.1:8000/api/proveedores/",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         sessionStorage.setItem("proveedores", JSON.stringify(response.data));
@@ -86,7 +86,7 @@ function CrearPedidoPage() {
         const token = localStorage.getItem("accessToken");
         try {
           const response = await axios.get(
-            `https://api.muebleslottus.com/api/referencias/?proveedor=${proveedorId}`,
+            `http://127.0.0.1:8000/api/referencias/?proveedor=${proveedorId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           sessionStorage.setItem(`referencias_${proveedorId}`, JSON.stringify(response.data));
@@ -123,7 +123,7 @@ function CrearPedidoPage() {
 
     try {
       const response = await axios.post(
-        "https://api.muebleslottus.com/api/ordenes/",
+        "http://127.0.0.1:8000/api/ordenes/",
         {
           proveedor: pedido.proveedor,
           fecha_esperada: pedido.fecha,

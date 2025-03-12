@@ -32,7 +32,7 @@ function OrdenesPage() {
 
       try {
         // Fetch user info
-        const userResponse = await axios.get("https://api.muebleslottus.com/api/user/", {
+        const userResponse = await axios.get("http://127.0.0.1:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const userData = userResponse.data;
@@ -57,7 +57,7 @@ function OrdenesPage() {
 
   const fetchProveedores = async (token) => {
     try {
-      const response = await axios.get("https://api.muebleslottus.com/api/proveedores/", {
+      const response = await axios.get("http://127.0.0.1:8000/api/proveedores/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProveedores(response.data);
@@ -68,7 +68,7 @@ function OrdenesPage() {
 
   const fetchVendedores = async (token) => {
     try {
-      const response = await axios.get("https://api.muebleslottus.com/api/vendedores/", {
+      const response = await axios.get("http://127.0.0.1:8000/api/vendedores/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const vendedoresFiltrados = response.data.filter(
@@ -81,29 +81,29 @@ function OrdenesPage() {
   };
 
   const fetchOrdenes = async (userData, token) => {
-    let endpoint = "https://api.muebleslottus.com/api/listar-pedidos/";
+    let endpoint = "http://127.0.0.1:8000/api/listar-pedidos/";
     const params = [];
-
-    if (!userData.is_staff) {
+  
+    if (userData.rol === "Vendedor") {
       params.push(`usuario_id=${userData.id}`);
     }
-
+  
     if (filtros.proveedor) {
       params.push(`id_proveedor=${filtros.proveedor}`);
     }
-
+  
     if (filtros.vendedor) {
       params.push(`id_vendedor=${filtros.vendedor}`);
     }
-
+  
     if (filtros.estado) {
       params.push(`estado=${filtros.estado}`);
     }
-
+  
     if (params.length > 0) {
       endpoint += `?${params.join("&")}`;
     }
-
+  
     try {
       const response = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
@@ -118,7 +118,7 @@ function OrdenesPage() {
     const token = localStorage.getItem("accessToken");
     try {
       const response = await axios.get(
-        `https://api.muebleslottus.com/api/detalles-pedido/${orderId}/`,
+        `http://127.0.0.1:8000/api/detalles-pedido/${orderId}/`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setProductos(response.data);
@@ -217,7 +217,7 @@ function OrdenesPage() {
   
     try {
       await axios.put(
-        `https://api.muebleslottus.com/api/ordenes/${id}/`,
+        `http://127.0.0.1:8000/api/ordenes/${id}/`,
         { costo, estado },
         { headers: { Authorization: `Bearer ${token}` } }
       );

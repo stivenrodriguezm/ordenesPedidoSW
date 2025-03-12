@@ -17,7 +17,7 @@ function ReferenciasPage() {
   const fetchProveedores = async () => {
     try {
       const response = await axios.get(
-        "https://api.muebleslottus.com/api/proveedores/",
+        "http://127.0.0.1:8000/api/proveedores/",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -32,7 +32,7 @@ function ReferenciasPage() {
   const fetchReferencias = async () => {
     try {
       const response = await axios.get(
-        "https://api.muebleslottus.com/api/referencias/",
+        "http://127.0.0.1:8000/api/referencias/",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -90,7 +90,7 @@ function ReferenciasPage() {
       if (isEditing) {
         // Editar referencia existente
         await axios.put(
-          `https://api.muebleslottus.com/api/referencias/${editingId}/`,
+          `http://127.0.0.1:8000/api/referencias/${editingId}/`,
           {
             nombre: referencia,
             proveedor: proveedorId,
@@ -102,7 +102,7 @@ function ReferenciasPage() {
       } else {
         // Crear nueva referencia
         await axios.post(
-          "https://api.muebleslottus.com/api/referencias/",
+          "http://127.0.0.1:8000/api/referencias/",
           {
             nombre: referencia,
             proveedor: proveedorId,

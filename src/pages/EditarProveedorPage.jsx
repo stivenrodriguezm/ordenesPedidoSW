@@ -16,7 +16,7 @@ function EditarProveedorPage() {
     const fetchProveedor = async () => {
       try {
         const response = await axios.get(
-          `https://api.muebleslottus.com/api/proveedores/${id}/`,
+          `http://127.0.0.1:8000/api/proveedores/${id}/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

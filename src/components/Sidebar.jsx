@@ -3,7 +3,7 @@ import "./Sidebar.css";
 
 function Sidebar() {
   const navigate = useNavigate();
-  const isAdmin = localStorage.getItem("isAdmin") === "true";
+  const userRole = localStorage.getItem("userRole");
 
   const handleLogout = () => {
     localStorage.clear(); // Elimina todos los tokens y datos
@@ -17,9 +17,9 @@ function Sidebar() {
       <nav>
         <ul>
           <li>
-            <Link to="//">Órdenes de Pedido</Link>
+            <Link to="/">Órdenes de Pedido</Link>
           </li>
-          {isAdmin && (
+          {(userRole === "ADMINISTRADOR" || userRole === "AUXILIAR") && (
             <>
               <li>
                 <Link to="/referencias">Referencias</Link>

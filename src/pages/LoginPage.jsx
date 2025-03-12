@@ -21,8 +21,8 @@ function LoginPage() {
 
       // Obtener información del usuario para determinar el rol
       const userResponse = await API.get("user/");
-      const isAdmin = userResponse.data.is_staff;
-      localStorage.setItem("isAdmin", isAdmin);
+      const role = userResponse.data.role;
+      localStorage.setItem("userRole", role);
 
       // Redirigir a la página principal
       navigate("/");
