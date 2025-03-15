@@ -22,7 +22,7 @@ function LoginPage() {
       // Obtener información del usuario para determinar el rol
       const userResponse = await API.get("user/");
       const role = userResponse.data.role;
-      localStorage.setItem("userRole", role);
+      localStorage.setItem("userRole", role); 
 
       // Redirigir a la página principal
       navigate("/");

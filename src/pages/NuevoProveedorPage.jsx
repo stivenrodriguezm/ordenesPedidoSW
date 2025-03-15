@@ -16,7 +16,7 @@ function NuevoProveedorPage() {
 
     try {
       await axios.post(
-        "http://127.0.0.1:8000/api/proveedores/",
+        "https://api.muebleslottus.com/api/proveedores/",
         {
           nombre_empresa: empresa,
           nombre_encargado: encargado,
@@ -26,7 +26,7 @@ function NuevoProveedorPage() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      navigate("/proveedores"); // Redirige a la página de proveedores
+      navigate("/ordenesPedidoSW/proveedores"); // Redirige a la página de proveedores
     } catch (error) {
       console.error("Error creating provider:", error);
     }
@@ -65,7 +65,7 @@ function NuevoProveedorPage() {
           </label>
           <div className="buttons">
             <button type="submit">Enviar</button>
-            <button type="button" onClick={() => navigate("/proveedores")}>
+            <button type="button" onClick={() => navigate("/ordenesPedidoSW/proveedores")}>
               Cancelar
             </button>
           </div>

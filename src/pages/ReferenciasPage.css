@@ -39,10 +39,11 @@ main {
   justify-content: space-between;
   align-items: center;
   margin: 40px auto;
-  width: 800px;
+  width: 800px !important;
   gap: 10px;
   border: 1px solid black;
   padding: 18px;
+  max-width: 800px;
 }
 
 .formReferencias input,
@@ -100,3 +101,4 @@ main {
   background-color: unset !important;
   padding: 0 !important;
 }
+

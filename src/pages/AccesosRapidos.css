@@ -1,0 +1,29 @@
+.accesosRapidos {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 120px;
+    margin-left: 250px;
+  }
+  
+  .tarjetaAcceso {
+    padding: 20px;
+    background: black;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    width: 200px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+  }
+
+  .tarjetaAcceso p{
+    margin: 0 auto;
+  }
+  
+  .tarjetaAcceso:hover {
+    background: #232324;
+  }
+  

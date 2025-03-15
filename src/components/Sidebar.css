@@ -23,6 +23,11 @@
   margin-bottom: 30px;
 }
 
+.sidebar h1 a{
+  color: white;
+  text-decoration: none;
+}
+
 .sidebar ul {
   list-style-type: none;
   padding: 0;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./ReferenciasPage.css";
 import { CiEdit } from "react-icons/ci";
@@ -11,125 +11,78 @@ function ReferenciasPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  const token = localStorage.getItem("accessToken");
-
-  // Función para obtener la lista de proveedores
-  const fetchProveedores = async () => {
-    try {
-      const response = await axios.get(
-        "http://127.0.0.1:8000/api/proveedores/",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setProveedores(response.data);
-    } catch (error) {
-      console.error("Error fetching providers:", error);
-    }
-  };
-
-  // Función para obtener la lista de referencias
-  const fetchReferencias = async () => {
-    try {
-      const response = await axios.get(
-        "http://127.0.0.1:8000/api/referencias/",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const referenciasWithProveedorName = response.data.map((ref) => {
-        const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
-        return {
-          ...ref,
-          proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido",
-        };
-      });
-
-      setReferencias(referenciasWithProveedorName);
-
-      // Actualizar sessionStorage para las referencias de cada proveedor
-      const referenciasPorProveedor = {};
-      referenciasWithProveedorName.forEach((ref) => {
-        if (!referenciasPorProveedor[ref.proveedor]) {
-          referenciasPorProveedor[ref.proveedor] = [];
-        }
-        referenciasPorProveedor[ref.proveedor].push(ref);
-      });
-
-      Object.keys(referenciasPorProveedor).forEach((proveedorId) => {
-        sessionStorage.setItem(
-          `referencias_${proveedorId}`,
-          JSON.stringify(referenciasPorProveedor[proveedorId])
-        );
-      });
-    } catch (error) {
-      console.error("Error fetching references:", error);
-    }
-  };
-
   // Cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
-      await fetchProveedores();
+      try {
+        const token = localStorage.getItem("accessToken");
+        const [proveedoresRes, referenciasRes] = await Promise.all([
+          axios.get("https://api.muebleslottus.com/api/proveedores/", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("https://api.muebleslottus.com/api/referencias/", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        setProveedores(proveedoresRes.data);
+        
+        const referenciasWithProveedorName = referenciasRes.data.map((ref) => {
+          const proveedor = proveedoresRes.data.find((prov) => prov.id === ref.proveedor);
+          return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
+        });
+
+        setReferencias(referenciasWithProveedorName);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     };
+
     fetchData();
   }, []);
 
-  // Actualizar referencias después de cargar proveedores
-  useEffect(() => {
-    if (proveedores.length > 0) {
-      fetchReferencias();
-    }
-  }, [proveedores]);
-
-  const handleSubmit = async (e) => {
+  // Manejo de formulario
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem("accessToken");
 
     try {
       if (isEditing) {
-        // Editar referencia existente
         await axios.put(
-          `http://127.0.0.1:8000/api/referencias/${editingId}/`,
-          {
-            nombre: referencia,
-            proveedor: proveedorId,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          `https://api.muebleslottus.com/api/referencias/${editingId}/`,
+          { nombre: referencia, proveedor: proveedorId },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        // Crear nueva referencia
         await axios.post(
-          "http://127.0.0.1:8000/api/referencias/",
-          {
-            nombre: referencia,
-            proveedor: proveedorId,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          "https://api.muebleslottus.com/api/referencias/",
+          { nombre: referencia, proveedor: proveedorId },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       }
 
-      // Reiniciar formulario y recargar referencias
       setReferencia("");
       setProveedorId("");
       setIsEditing(false);
       setEditingId(null);
-      fetchReferencias(); // Actualiza las referencias después de crear/editar
+      
+      // Recargar referencias
+      const referenciasRes = await axios.get("https://api.muebleslottus.com/api/referencias/", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setReferencias(referenciasRes.data);
     } catch (error) {
       console.error("Error handling reference:", error);
     }
-  };
+  }, [isEditing, editingId, referencia, proveedorId]);
 
-  const handleEdit = (referencia) => {
+  const handleEdit = useCallback((referencia) => {
     setReferencia(referencia.nombre);
     setProveedorId(referencia.proveedor);
     setIsEditing(true);
     setEditingId(referencia.id);
-  };
+  }, []);
 
   return (
     <div className="referencias-page">
@@ -190,4 +143,5 @@ function ReferenciasPage() {
 }
 
 export default ReferenciasPage;
+
 

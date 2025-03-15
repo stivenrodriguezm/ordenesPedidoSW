@@ -2,51 +2,42 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { TbLayoutNavbarExpand } from "react-icons/tb";
-import "./OrdenesPage.css";
-import * as XLSX from "xlsx";
 import { MdOutlineFileDownload } from "react-icons/md";
-
+import * as XLSX from "xlsx";
+import "./OrdenesPage.css";
 
 function OrdenesPage() {
   const [ordenes, setOrdenes] = useState([]);
   const [user, setUser] = useState({ first_name: "", last_name: "", is_staff: false, id: null });
   const [proveedores, setProveedores] = useState([]);
   const [vendedores, setVendedores] = useState([]);
-  const [estados, setEstados] = useState(["en_proceso", "anulado", "recibido"]);
+  const [estados] = useState(["en_proceso", "anulado", "recibido"]);
   const [filtros, setFiltros] = useState({ proveedor: "", vendedor: "", estado: "en_proceso" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [expandedOrderId, setExpandedOrderId] = useState(null); // Para rastrear la orden expandida
-  const [productos, setProductos] = useState([]); // Productos de la orden expandida
-  const navigate = useNavigate();
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [productos, setProductos] = useState([]);
   const [formCosto, setFormCosto] = useState({});
   const [formEstado, setFormEstado] = useState({});
-
+  
+  const navigate = useNavigate();
+  const API_BASE_URL = "https://api.muebleslottus.com/api";
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-
       const token = localStorage.getItem("accessToken");
 
       try {
-        // Fetch user info
-        const userResponse = await axios.get("http://127.0.0.1:8000/api/user/", {
+        const userResponse = await axios.get(`${API_BASE_URL}/user/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const userData = userResponse.data;
-        setUser(userData);
+        setUser(userResponse.data);
 
-        // Fetch options for filtros
-        await fetchProveedores(token);
-        await fetchVendedores(token);
-
-        // Fetch orders
-        await fetchOrdenes(userData, token);
+        await Promise.all([fetchProveedores(token), fetchVendedores(token), fetchOrdenes(userResponse.data, token)]);
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Error al cargar los datos. Por favor, intenta nuevamente.");
+        setError("Error al cargar los datos. Intenta nuevamente.");
       } finally {
         setLoading(false);
       }
@@ -57,7 +48,7 @@ function OrdenesPage() {
 
   const fetchProveedores = async (token) => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/proveedores/", {
+      const response = await axios.get(`${API_BASE_URL}/proveedores/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProveedores(response.data);
@@ -68,42 +59,26 @@ function OrdenesPage() {
 
   const fetchVendedores = async (token) => {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/api/vendedores/", {
+      const response = await axios.get(`${API_BASE_URL}/vendedores/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const vendedoresFiltrados = response.data.filter(
-        (vend) => vend.first_name && vend.first_name.trim() !== ""
-      );
-      setVendedores(vendedoresFiltrados);
+      setVendedores(response.data.filter((vend) => vend.first_name && vend.first_name.trim() !== ""));
     } catch (err) {
       console.error("Error fetching vendedores:", err);
     }
   };
 
   const fetchOrdenes = async (userData, token) => {
-    let endpoint = "http://127.0.0.1:8000/api/listar-pedidos/";
+    let endpoint = `${API_BASE_URL}/listar-pedidos/`;
     const params = [];
-  
-    if (userData.rol === "Vendedor") {
-      params.push(`usuario_id=${userData.id}`);
-    }
-  
-    if (filtros.proveedor) {
-      params.push(`id_proveedor=${filtros.proveedor}`);
-    }
-  
-    if (filtros.vendedor) {
-      params.push(`id_vendedor=${filtros.vendedor}`);
-    }
-  
-    if (filtros.estado) {
-      params.push(`estado=${filtros.estado}`);
-    }
-  
-    if (params.length > 0) {
-      endpoint += `?${params.join("&")}`;
-    }
-  
+
+    if (userData.rol === "Vendedor") params.push(`usuario_id=${userData.id}`);
+    if (filtros.proveedor) params.push(`id_proveedor=${filtros.proveedor}`);
+    if (filtros.vendedor) params.push(`id_vendedor=${filtros.vendedor}`);
+    if (filtros.estado) params.push(`estado=${filtros.estado}`);
+
+    if (params.length) endpoint += `?${params.join("&")}`;
+
     try {
       const response = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
@@ -117,10 +92,9 @@ function OrdenesPage() {
   const fetchProductos = async (orderId) => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get(
-        `http://127.0.0.1:8000/api/detalles-pedido/${orderId}/`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.get(`${API_BASE_URL}/detalles-pedido/${orderId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setProductos(response.data);
     } catch (err) {
       console.error("Error fetching products:", err);
@@ -137,8 +111,8 @@ function OrdenesPage() {
       setExpandedOrderId(orderId);
       await fetchProductos(orderId);
       const order = ordenes.find((o) => o.id_orden === orderId);
-      setFormCosto((prev) => ({ ...prev, [orderId]: parseFloat(order.costo) }));
-      setFormEstado((prev) => ({ ...prev, [orderId]: order.estado }));
+      setFormCosto({ [orderId]: parseFloat(order.costo) });
+      setFormEstado({ [orderId]: order.estado });
     }
   };
 
@@ -147,34 +121,47 @@ function OrdenesPage() {
     await fetchOrdenes(user, token);
   };
 
-  const handleCrearPedido = () => {
-    navigate("/crear-pedido");
-  };
-
   const handleFiltroChange = (e) => {
-    setFiltros({ ...filtros, [e.target.name]: e.target.value });
-  };
-
-  if (loading) {
-    return <div>Cargando pedidos...</div>;
-  }
-
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-
-  const formatCurrency = (value) => {
-    if (value == null || isNaN(value)) return "$0"; // Manejar null o undefined
-    return `$${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+    const { name, value } = e.target;
+    setFiltros((prevFiltros) => ({
+      ...prevFiltros,
+      [name]: value,
+    }));
   };
   
+
+  const handleActualizarPedido = async (id) => {
+    const token = localStorage.getItem("accessToken");
+    const costo = parseFloat(formCosto[id]);
+    const estado = formEstado[id];
+
+    if (!estado || isNaN(costo)) {
+      alert("Datos inválidos. Revisa el costo y el estado.");
+      return;
+    }
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/ordenes/${id}/`,
+        { costo, estado },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Pedido actualizado correctamente");
+      setOrdenes((prev) =>
+        prev.map((orden) => (orden.id_orden === id ? { ...orden, costo, estado } : orden))
+      );
+    } catch (error) {
+      console.error("Error al actualizar el pedido:", error);
+      alert("Error al actualizar el pedido");
+    }
+  };
+
   const handleDescargarExcel = () => {
     if (ordenes.length === 0) {
       alert("No hay datos para descargar.");
       return;
     }
-  
-    // Define las columnas y las filas del Excel
+
     const datos = ordenes.map((orden) => ({
       "O.P.": orden.id_orden,
       Proveedor: orden.proveedor || "N/A",
@@ -184,64 +171,23 @@ function OrdenesPage() {
       "Fecha Llegada": orden.fecha_esperada || "N/A",
       Estado: orden.estado || "N/A",
       Nota: orden.nota || "N/A",
-      Costo: orden.costo != null
-        ? `$${orden.costo.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
-        : "$0",
+      Costo: orden.costo ? `$${orden.costo.toLocaleString()}` : "$0",
     }));
-  
-    // Crea la hoja de cálculo
+
     const hoja = XLSX.utils.json_to_sheet(datos);
-  
-    // Crea el libro de Excel
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, "Ordenes");
-  
-    // Genera el archivo Excel
     XLSX.writeFile(libro, "ordenes_filtradas.xlsx");
   };
-  
-  const handleActualizarPedido = async (id) => {
-    const token = localStorage.getItem("accessToken");
-    const costo = parseFloat(formCosto[id]);
-    const estado = formEstado[id];
-  
-    if (!estado) {
-      alert("Selecciona un estado válido.");
-      return;
-    }
-  
-    if (isNaN(costo)) {
-      alert("El costo debe ser un número válido.");
-      return;
-    }
-  
-    try {
-      await axios.put(
-        `http://127.0.0.1:8000/api/ordenes/${id}/`,
-        { costo, estado },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Pedido actualizado correctamente");
-      setOrdenes((prev) =>
-        prev.map((orden) =>
-          orden.id_orden === id ? { ...orden, costo, estado } : orden
-        )
-      );
-    } catch (error) {
-      console.error("Error al actualizar el pedido:", error);
-      alert("Error al actualizar el pedido");
-    }
-  };
-  
 
+  if (loading) return <div>Cargando pedidos...</div>;
+  if (error) return <div className="error">{error}</div>;
   return (
     <div className="ordenes-page">
       <main>
         <div className="principal">
         <div className="botones">
-          <button className="crearPedidoBtn" onClick={handleCrearPedido}>
-            Crear pedido
-          </button>
+          <button className="crearPedidoBtn" onClick={() => navigate("/crear-pedido")}>Crear pedido</button>
         </div>
           <div className="filtro-form">
             <select
@@ -257,7 +203,7 @@ function OrdenesPage() {
                 </option>
               ))}
             </select>
-            {user.is_staff && (
+            {(user.role === "ADMINISTRADOR" || user.role === "AUXILIAR") && (
               <select
                 name="vendedor"
                 value={filtros.vendedor}
@@ -285,9 +231,7 @@ function OrdenesPage() {
                 </option>
               ))}
             </select>
-            <button className="filtrarBtn" onClick={handleFiltrar}>
-              Filtrar
-            </button>
+            <button className="filtrarBtn" onClick={handleFiltrar}>Filtrar</button>
           </div>
           <table className="tablaOrdenes">
             <thead>
