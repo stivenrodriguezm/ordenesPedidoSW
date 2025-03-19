@@ -1,61 +1,52 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import "./ReferenciasPage.css";
 import { CiEdit } from "react-icons/ci";
+import { AppContext } from "../AppContext";
 
 function ReferenciasPage() {
+  const { proveedores } = useContext(AppContext);
   const [referencias, setReferencias] = useState([]);
-  const [proveedores, setProveedores] = useState([]);
   const [referencia, setReferencia] = useState("");
   const [proveedorId, setProveedorId] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [refresh, setRefresh] = useState(false); //  Estado ficticio para forzar la re-renderización
+  const token = localStorage.getItem("accessToken");
 
-  // Cargar datos iniciales
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchReferencias = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
-        const [proveedoresRes, referenciasRes] = await Promise.all([
-          axios.get("https://api.muebleslottus.com/api/proveedores/", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get("https://api.muebleslottus.com/api/referencias/", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+        const res = await axios.get("http://127.0.0.1:8000/api/referencias/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        setProveedores(proveedoresRes.data);
-        
-        const referenciasWithProveedorName = referenciasRes.data.map((ref) => {
-          const proveedor = proveedoresRes.data.find((prov) => prov.id === ref.proveedor);
+        const referenciasWithProveedorName = res.data.map((ref) => {
+          const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
           return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
         });
 
         setReferencias(referenciasWithProveedorName);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error cargando referencias:", error);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchReferencias();
+  }, [token, proveedores, refresh]); //  Dependencia de refresh
 
-  // Manejo de formulario
-  const handleSubmit = useCallback(async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("accessToken");
-
     try {
       if (isEditing) {
         await axios.put(
-          `https://api.muebleslottus.com/api/referencias/${editingId}/`,
+          `http://127.0.0.1:8000/api/referencias/${editingId}/`,
           { nombre: referencia, proveedor: proveedorId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
         await axios.post(
-          "https://api.muebleslottus.com/api/referencias/",
+          "http://127.0.0.1:8000/api/referencias/",
           { nombre: referencia, proveedor: proveedorId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -65,24 +56,29 @@ function ReferenciasPage() {
       setProveedorId("");
       setIsEditing(false);
       setEditingId(null);
-      
-      // Recargar referencias
-      const referenciasRes = await axios.get("https://api.muebleslottus.com/api/referencias/", {
+
+      const res = await axios.get("http://127.0.0.1:8000/api/referencias/", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setReferencias(referenciasRes.data);
-    } catch (error) {
-      console.error("Error handling reference:", error);
-    }
-  }, [isEditing, editingId, referencia, proveedorId]);
+      const referenciasWithProveedorName = res.data.map((ref) => {
+        const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
+        return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
+      });
 
-  const handleEdit = useCallback((referencia) => {
+      setReferencias(referenciasWithProveedorName);
+      setRefresh(!refresh); //  Forzamos la re-renderización
+    } catch (error) {
+      console.error("Error en la referencia:", error);
+    }
+  };
+
+  const handleEdit = (referencia) => {
     setReferencia(referencia.nombre);
     setProveedorId(referencia.proveedor);
     setIsEditing(true);
     setEditingId(referencia.id);
-  }, []);
+  };
 
   return (
     <div className="referencias-page">
@@ -143,5 +139,3 @@ function ReferenciasPage() {
 }
 
 export default ReferenciasPage;
-
-

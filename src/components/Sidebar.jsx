@@ -8,7 +8,7 @@ function Sidebar() {
   const handleLogout = () => {
     localStorage.clear(); // Elimina todos los tokens y datos
     sessionStorage.clear();
-    navigate("/login");
+    navigate("/ordenesPedidoSW/login");
   };
 
   return (

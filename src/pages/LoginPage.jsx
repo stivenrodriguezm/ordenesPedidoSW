@@ -1,30 +1,27 @@
-import { useState } from "react";
+// LoginPage.jsx
+import { useState, useContext } from "react"; // Importa useContext
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import "./LoginPage.css";
+import { AppContext } from "../AppContext"; // Importa AppContext
 
 function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setUsuario } = useContext(AppContext); // Obtiene setUsuario del contexto
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Solicitar tokens
       const response = await API.post("token/", { username, password });
-
-      // Guardar los tokens en localStorage
       localStorage.setItem("accessToken", response.data.access);
       localStorage.setItem("refreshToken", response.data.refresh);
-
-      // Obtener información del usuario para determinar el rol
       const userResponse = await API.get("user/");
       const role = userResponse.data.role;
-      localStorage.setItem("userRole", role); 
-
-      // Redirigir a la página principal
+      localStorage.setItem("userRole", role);
+      setUsuario(userResponse.data); // Actualiza el estado del usuario en el contexto
       navigate("/");
     } catch (err) {
       setError("Credenciales inválidas. Intenta de nuevo.");

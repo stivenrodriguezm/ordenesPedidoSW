@@ -31,12 +31,13 @@
   
   .formPedido {
     margin: 90px auto;
-    width: 500px;
+    width: 500px !important;
     display: flex;
     flex-direction: column;
     gap: 15px;
     border: 1px solid black;
     padding: 25px;
+    max-width: 500px;
   }
   
   label {

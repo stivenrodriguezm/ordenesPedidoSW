@@ -14,7 +14,8 @@ import HomePage from './pages/HomePage';
 
 function AppLayout() {
   const location = useLocation();
-  const isLoginPage = location.pathname === "/login";
+  const isLoginPage = location.pathname === "/ordenesPedidoSW/login"; // Ruta corregida
+
 
   return (
     <div className="app-container">
@@ -22,7 +23,7 @@ function AppLayout() {
       <div className="main-content">
         {!isLoginPage && <Header />}
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/ordenesPedidoSW/login" element={<LoginPage />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/ordenesPedidoSW/referencias" element={<PrivateRoute component={ReferenciasPage} />} />
           <Route path="/ordenesPedidoSW/proveedores" element={<PrivateRoute component={ProveedoresPage} />} />

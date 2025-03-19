@@ -16,7 +16,7 @@ function ProveedoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("https://api.muebleslottus.com/api/proveedores/", {
+      const response = await axios.get("http://127.0.0.1:8000/api/proveedores/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProveedores(response.data);

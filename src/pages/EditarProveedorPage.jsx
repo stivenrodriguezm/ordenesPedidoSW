@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom"; // Para redirección y obtención de parámetros
+import { useState, useEffect, useContext } from "react"; // Importamos useContext
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./NuevoProveedorPage.css";
+import { AppContext } from "../AppContext"; // Importamos AppContext
 
 function EditarProveedorPage() {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const [empresa, setEmpresa] = useState("");
   const [encargado, setEncargado] = useState("");
   const [contacto, setContacto] = useState("");
   const navigate = useNavigate();
+  const { updateProveedores } = useContext(AppContext); // Usamos updateProveedores del Contexto
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -16,7 +18,7 @@ function EditarProveedorPage() {
     const fetchProveedor = async () => {
       try {
         const response = await axios.get(
-          `https://api.muebleslottus.com/api/proveedores/${id}/`,
+          `http://127.0.0.1:8000/api/proveedores/${id}/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -38,7 +40,7 @@ function EditarProveedorPage() {
 
     try {
       await axios.put(
-        `https://api.muebleslottus.com/api/proveedores/${id}/`,
+        `http://127.0.0.1:8000/api/proveedores/${id}/`,
         {
           nombre_empresa: empresa,
           nombre_encargado: encargado,
@@ -48,6 +50,7 @@ function EditarProveedorPage() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      await updateProveedores(); // Actualizamos el AppContext después de editar el proveedor
       navigate("/ordenesPedidoSW/proveedores");
     } catch (error) {
       console.error("Error updating provider:", error);
@@ -67,7 +70,7 @@ function EditarProveedorPage() {
               required
             />
           </label>
-          <label className="labelNuevoProveedor"> 
+          <label className="labelNuevoProveedor">
             Encargado:
             <input
               type="text"
@@ -87,7 +90,7 @@ function EditarProveedorPage() {
           </label>
           <div className="buttons">
             <button type="submit">Guardar cambios</button>
-            <button type="button" onClick={() => navigate("/proveedores")}>
+            <button type="button" onClick={() => navigate("/ordenesPedidoSW/proveedores")}>
               Cancelar
             </button>
           </div>

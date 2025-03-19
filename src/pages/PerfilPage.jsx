@@ -17,7 +17,7 @@ function PerfilPage() {
 
     const fetchUser = async () => {
       try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
+        const response = await axios.get("http://127.0.0.1:8000/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -47,7 +47,7 @@ function PerfilPage() {
 
     try {
       const response = await axios.post(
-        "https://api.muebleslottus.com/api/cambiar-contrasena/",
+        "http://127.0.0.1:8000/api/cambiar-contrasena/",
         {
           old_password: passwords.actual,
           new_password: passwords.nueva,
@@ -72,7 +72,7 @@ function PerfilPage() {
       <h3>Cambiar Contraseña</h3>
       {mensaje && <p className="mensaje">{mensaje}</p>}
       
-      <form onSubmit={handleSubmit}>
+      <form className="formPerfil" onSubmit={handleSubmit}>
         <label>Contraseña Actual:</label>
         <input type="password" name="actual" value={passwords.actual} onChange={handleChange} required />
 
