@@ -18,7 +18,7 @@ function EditarProveedorPage() {
     const fetchProveedor = async () => {
       try {
         const response = await axios.get(
-          `http://127.0.0.1:8000/api/proveedores/${id}/`,
+          `https://api.muebleslottus.com/api/proveedores/${id}/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -40,7 +40,7 @@ function EditarProveedorPage() {
 
     try {
       await axios.put(
-        `http://127.0.0.1:8000/api/proveedores/${id}/`,
+        `https://api.muebleslottus.com/api/proveedores/${id}/`,
         {
           nombre_empresa: empresa,
           nombre_encargado: encargado,

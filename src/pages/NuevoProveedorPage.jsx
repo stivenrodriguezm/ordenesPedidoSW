@@ -18,7 +18,7 @@ function NuevoProveedorPage() {
 
     try {
       await axios.post(
-        "http://127.0.0.1:8000/api/proveedores/",
+        "https://api.muebleslottus.com/api/proveedores/",
         {
           nombre_empresa: empresa,
           nombre_encargado: encargado,

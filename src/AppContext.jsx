@@ -10,7 +10,7 @@ export function AppProvider({ children }) {
 
   const fetchProveedores = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/proveedores/", {
+      const res = await axios.get("https://api.muebleslottus.com/api/proveedores/", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProveedores(res.data);
@@ -28,7 +28,7 @@ export function AppProvider({ children }) {
     fetchProveedores();
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/user/", {
+        const res = await axios.get("https://api.muebleslottus.com/api/user/", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsuario(res.data);
@@ -50,7 +50,7 @@ export function AppProvider({ children }) {
     setProveedores,
     usuario,
     setUsuario,
-    updateProveedores, // Asegúrate de que updateProveedores esté aquí
+    updateProveedores,
   };
 
   return (

@@ -17,7 +17,7 @@ function ReferenciasPage() {
   useEffect(() => {
     const fetchReferencias = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/referencias/", {
+        const res = await axios.get("https://api.muebleslottus.com/api/referencias/", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -40,13 +40,13 @@ function ReferenciasPage() {
     try {
       if (isEditing) {
         await axios.put(
-          `http://127.0.0.1:8000/api/referencias/${editingId}/`,
+          `https://api.muebleslottus.com/api/referencias/${editingId}/`,
           { nombre: referencia, proveedor: proveedorId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
         await axios.post(
-          "http://127.0.0.1:8000/api/referencias/",
+          "https://api.muebleslottus.com/api/referencias/",
           { nombre: referencia, proveedor: proveedorId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -57,7 +57,7 @@ function ReferenciasPage() {
       setIsEditing(false);
       setEditingId(null);
 
-      const res = await axios.get("http://127.0.0.1:8000/api/referencias/", {
+      const res = await axios.get("https://api.muebleslottus.com/api/referencias/", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
