@@ -32,7 +32,7 @@ function AppLayout() {
           <Route path="/ordenesPedidoSW/proveedores/editar/:id" element={<PrivateRoute component={EditarProveedorPage} />} />
           <Route path="/ordenesPedidoSW/ordenes/nuevo" element={<PrivateRoute component={CrearPedidoPage} />} />
           <Route path="/ordenesPedidoSW/ordenes" element={<OrdenesPage />} />
-          <Route path="/ordenesPedidoSW/perfil" element={<PerfilPage />} /> {/* Nueva ruta */}
+          <Route path="/ordenesPedidoSW/perfil" element={<PerfilPage />} /> 
         </Routes>
       </div>
     </div>

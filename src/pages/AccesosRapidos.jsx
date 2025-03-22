@@ -3,7 +3,7 @@ import "./AccesosRapidos.css";
 
 function AccesosRapidos({ userRole }) {
   const accesos = [
-    { nombre: "Crear pedido", ruta: "/ordenesPedidoSW/nuevo-pedido" },
+    { nombre: "Crear pedido", ruta: "/ordenesPedidoSW/ordenes/nuevo" },
     { nombre: "Ver pedidos", ruta: "/ordenesPedidoSW/ordenes" },
   ];
 
