@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redirecting...</title>
     <script>
-        // Obtener la URL sin la parte del dominio
+        // Obtener el path sin el dominio
         var path = window.location.pathname;
 
-        // Si la URL no es la raíz, redirigir correctamente
-        if (!path.endsWith("index.html")) {
+        // Evitar que se agregue "/ordenesPedidoSW/" repetidamente
+        if (!path.startsWith("/ordenesPedidoSW/")) {
             var newUrl = "/ordenesPedidoSW" + path;
             window.location.replace(newUrl);
         }
