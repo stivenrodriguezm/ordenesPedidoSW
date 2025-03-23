@@ -5,13 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redirecting...</title>
     <script>
-        // Obtener la URL actual
-        var pathname = window.location.pathname;
-
-        // Si la URL ya está en el formato correcto, no hacer nada
-        if (pathname.startsWith("/ordenesPedidoSW/") && !pathname.endsWith("404.html")) {
-            window.location.replace("/ordenesPedidoSW/");
-        }
+        window.location.replace("/ordenesPedidoSW/#" + window.location.pathname.replace("/ordenesPedidoSW", ""));
     </script>
 </head>
 <body>
