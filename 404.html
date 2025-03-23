@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Not Found</title>
+    <title>Redirecting...</title>
     <script>
-        var pathname = window.location.pathname.replace('/ordenesPedidoSW', '');
-        window.location.replace('/ordenesPedidoSW' + pathname);
+        // Obtener la URL sin la parte del dominio
+        var path = window.location.pathname;
+
+        // Si la URL no es la raíz, redirigir correctamente
+        if (!path.endsWith("index.html")) {
+            var newUrl = "/ordenesPedidoSW" + path;
+            window.location.replace(newUrl);
+        }
     </script>
 </head>
 <body>
