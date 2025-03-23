@@ -3,23 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirigiendo...</title>
+    <title>Page Not Found</title>
     <script>
-        (function() {
-            var path = window.location.pathname.replace('/ordenesPedidoSW', '');
-            var newUrl = '/ordenesPedidoSW/index.html' + window.location.search + window.location.hash;
-
-            // Evitar bucles infinitos
-            if (!path.includes('index.html')) {
-                window.location.replace(newUrl);
-            }
-        })();
+        var pathname = window.location.pathname.replace('/ordenesPedidoSW', '');
+        window.location.replace('/ordenesPedidoSW' + pathname);
     </script>
 </head>
 <body>
-    <p>Redirigiendo... Si no eres redirigido automáticamente, <a id="redirectLink" href="#">haz clic aquí</a>.</p>
-    <script>
-        document.getElementById("redirectLink").href = window.location.origin + "/ordenesPedidoSW/index.html";
-    </script>
+    <p>Redirigiendo...</p>
 </body>
 </html>
