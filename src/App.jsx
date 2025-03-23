@@ -25,6 +25,7 @@ function AppLayout() {
         <Routes>
           <Route path="/ordenesPedidoSW/login" element={<LoginPage />} />
           <Route path="/" element={<HomePage />} />
+          <Route path="/ordenesPedidoSW/" element={<HomePage />} />
           <Route path="/ordenesPedidoSW/referencias" element={<PrivateRoute component={ReferenciasPage} />} />
           <Route path="/ordenesPedidoSW/proveedores" element={<PrivateRoute component={ProveedoresPage} />} />
           <Route path="/ordenesPedidoSW/ordenes" element={<PrivateRoute component={OrdenesPage} />} />
