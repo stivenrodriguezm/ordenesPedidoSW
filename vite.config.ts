@@ -3,11 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/ordenesPedidoSW/",
+  base: "/ordenesPedidoSW/",  // 👈 Base correctamente definida
   build: {
-    outDir: "build",
-  },
-  server: {
-    historyApiFallback: true, // Asegura que las rutas sean manejadas por React
+    outDir: "dist",
   },
 });

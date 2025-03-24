@@ -38,7 +38,7 @@ function ProveedoresPage() {
         <div className="principal">
           <button
             className="nuevoProveedorBtn"
-            onClick={() => navigate("/ordenesPedidoSW/proveedores/nuevo")}
+            onClick={() => navigate("/proveedores/nuevo")}
             aria-label="Agregar nuevo proveedor"
           >
             Nuevo proveedor

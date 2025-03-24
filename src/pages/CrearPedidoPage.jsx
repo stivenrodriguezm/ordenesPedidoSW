@@ -159,7 +159,7 @@ function CrearPedidoPage() {
           link.download = `pedido_${numeroOP}.png`;
           link.click();
 
-          navigate("/ordenesPedidoSW/ordenes");
+          navigate("/ordenes");
         }
       };
 

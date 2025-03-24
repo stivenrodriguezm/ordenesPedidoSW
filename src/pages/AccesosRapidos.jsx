@@ -3,14 +3,14 @@ import "./AccesosRapidos.css";
 
 function AccesosRapidos({ userRole }) {
   const accesos = [
-    { nombre: "Crear pedido", ruta: "/ordenesPedidoSW/ordenes/nuevo" },
-    { nombre: "Ver pedidos", ruta: "/ordenesPedidoSW/ordenes" },
+    { nombre: "Crear pedido", ruta: "/ordenes/nuevo" },
+    { nombre: "Ver pedidos", ruta: "/ordenes" },
   ];
 
   if (userRole === "ADMINISTRADOR" || userRole === "AUXILIAR") {
     accesos.push(
-      { nombre: "Proveedores", ruta: "/ordenesPedidoSW/proveedores" },
-      { nombre: "Referencias", ruta: "/ordenesPedidoSW/referencias" }
+      { nombre: "Proveedores", ruta: "/proveedores" },
+      { nombre: "Referencias", ruta: "/referencias" }
     );
   }
 

@@ -29,7 +29,7 @@ function NuevoProveedorPage() {
         }
       );
       await updateProveedores(); // Actualizamos el AppContext después de crear el proveedor
-      navigate("/ordenesPedidoSW/proveedores"); // Redirige a la página de proveedores
+      navigate("/proveedores"); // Redirige a la página de proveedores
     } catch (error) {
       console.error("Error creating provider:", error);
     }
@@ -68,7 +68,7 @@ function NuevoProveedorPage() {
           </label>
           <div className="buttons">
             <button type="submit">Enviar</button>
-            <button type="button" onClick={() => navigate("/ordenesPedidoSW/proveedores")}>
+            <button type="button" onClick={() => navigate("/proveedores")}>
               Cancelar
             </button>
           </div>

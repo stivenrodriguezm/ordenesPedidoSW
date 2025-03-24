@@ -6,9 +6,9 @@ function Sidebar() {
   const userRole = localStorage.getItem("userRole");
 
   const handleLogout = () => {
-    localStorage.clear(); // Elimina todos los tokens y datos
+    localStorage.clear();
     sessionStorage.clear();
-    navigate("/ordenesPedidoSW/login");
+    navigate("/login");
   };
 
   return (
@@ -17,15 +17,15 @@ function Sidebar() {
       <nav>
         <ul>
           <li>
-            <Link to="/ordenesPedidoSW/ordenes">Órdenes de Pedido</Link>
+            <Link to="/ordenes">Órdenes de Pedido</Link>
           </li>
           {(userRole === "ADMINISTRADOR" || userRole === "AUXILIAR") && (
             <>
               <li>
-                <Link to="/ordenesPedidoSW/referencias">Referencias</Link>
+                <Link to="/referencias">Referencias</Link>
               </li>
               <li>
-                <Link to="/ordenesPedidoSW/proveedores">Proveedores</Link>
+                <Link to="/proveedores">Proveedores</Link>
               </li>
             </>
           )}

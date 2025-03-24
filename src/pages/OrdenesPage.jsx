@@ -59,6 +59,8 @@ function OrdenesPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setVendedores(vendedoresResponse.data.filter((user) => user.first_name && user.first_name.trim() !== ""));
+        console.log("vendedores")
+        console.log(vendedores)
         await fetchOrdenes();
       } catch (err) {
         setError("Error al cargar los datos iniciales.");
@@ -175,9 +177,9 @@ function OrdenesPage() {
       <main>
         <div className="principal">
           <div className="botones">
-            <button className="crearPedidoBtn" onClick={() => navigate("/ordenesPedidoSW/ordenes/nuevo")}>
-              Crear pedido
-            </button>
+          <button className="crearPedidoBtn" onClick={() => navigate("/ordenes/nuevo")}>
+            Crear pedido
+          </button>
           </div>
           <div className="filtro-form">
             <select

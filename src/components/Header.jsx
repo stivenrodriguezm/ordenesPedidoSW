@@ -6,7 +6,7 @@ import { FaCircleUser } from "react-icons/fa6";
 function Header() {
   const [user, setUser] = useState({ first_name: "", last_name: "" });
   const location = useLocation();
-  const navigate = useNavigate(); // Permite redirigir a otra página
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -28,18 +28,22 @@ function Header() {
     fetchUser();
   }, []);
 
-  // Determinar el título según la ruta actual
+  // Determinar el título según la ruta actual en HashRouter
   const getTitle = () => {
-    if (location.pathname.includes("/ordenesPedidoSW/ordenes")) return "Órdenes de pedido";
-    if (location.pathname.includes("/ordenesPedidoSW/referencias")) return "Referencias";
-    if (location.pathname.includes("/ordenesPedidoSW/proveedores")) return "Proveedores";
+    const path = location.hash ? location.hash.replace("#", "") : location.pathname;
+    console.log("Final path used:", path);
+  
+    if (path.startsWith("/ordenes")) return "Órdenes de pedido";
+    if (path.startsWith("/referencias")) return "Referencias";
+    if (path.startsWith("/proveedores")) return "Proveedores";
     return "Inicio";
   };
+  
 
   return (
     <div className="barraSuperior">
       <h1>{getTitle()}</h1>
-      <div className="usuarioBarra" onClick={() => navigate("/ordenesPedidoSW/perfil")} style={{ cursor: "pointer" }}>
+      <div className="usuarioBarra" onClick={() => navigate("/perfil")} style={{ cursor: "pointer" }}>
         <p>{`${user.first_name} ${user.last_name}`}</p>
         <FaCircleUser />
       </div>
