@@ -1,29 +1,137 @@
 .accesosRapidos {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin-top: 120px;
-    margin-left: 250px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  justify-content: center;
+  align-items: center; /* Asegura que las tarjetas estén centradas verticalmente dentro del contenedor */
+}
+
+/* Estilo base para las tarjetas */
+.tarjetaAcceso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 180px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+  border-radius: 15px;
+  box-shadow: 0 6px 12px var(--shadow-color);
+  text-decoration: none;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: 600;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  opacity: 0;
+  animation: slideIn 0.5s ease forwards;
+}
+
+/* Animación de entrada para las tarjetas */
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
   }
-  
-  .tarjetaAcceso {
-    padding: 20px;
-    background: black;
-    color: white;
-    text-decoration: none;
-    border-radius: 10px;
-    font-size: 1.2rem;
-    width: 200px;
-    height: 100px;
-    display: flex;
-    align-items: center;
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ícono de la tarjeta */
+.tarjeta-icono {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  color: var(--color-primario);
+  transition: color 0.3s ease;
+}
+
+/* Texto de la tarjeta */
+.tarjetaAcceso p {
+  margin: 0;
+  text-align: center;
+}
+
+/* Efecto hover para las tarjetas */
+.tarjetaAcceso:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Estilos personalizados para cada tarjeta */
+.tarjetaAcceso.crear-pedido {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.tarjetaAcceso.crear-pedido .tarjeta-icono {
+  color: white;
+}
+
+.tarjetaAcceso.crear-pedido:hover {
+  background: linear-gradient(135deg, #3e8ed0 0%, #00c4cc 100%);
+}
+
+.tarjetaAcceso.ver-pedidos {
+  background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+  color: white;
+}
+
+.tarjetaAcceso.ver-pedidos .tarjeta-icono {
+  color: white;
+}
+
+.tarjetaAcceso.ver-pedidos:hover {
+  background: linear-gradient(135deg, #e06b50 0%, #e09b6a 100%);
+}
+
+.tarjetaAcceso.proveedores {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+}
+
+.tarjetaAcceso.proveedores .tarjeta-icono {
+  color: white;
+}
+
+.tarjetaAcceso.proveedores:hover {
+  background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
+}
+
+.tarjetaAcceso.referencias {
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+  color: white;
+}
+
+.tarjetaAcceso.referencias .tarjeta-icono {
+  color: white;
+}
+
+.tarjetaAcceso.referencias:hover {
+  background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%);
+}
+
+/* Ajustes para pantallas pequeñas */
+@media (max-width: 768px) {
+  .accesosRapidos {
+    gap: 20px;
   }
 
-  .tarjetaAcceso p{
-    margin: 0 auto;
+  .tarjetaAcceso {
+    width: 180px;
+    height: 150px;
+    font-size: 1rem;
   }
-  
-  .tarjetaAcceso:hover {
-    background: #232324;
+
+  .tarjeta-icono {
+    font-size: 2rem;
   }
-  
+}
+
+@media (max-width: 480px) {
+  .tarjetaAcceso {
+    width: 100%;
+    max-width: 300px;
+    height: 120px;
+  }
+}

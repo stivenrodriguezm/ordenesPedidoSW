@@ -8,7 +8,7 @@
 /* Estilo general del body */
 body {
   font-family: "Roboto", serif;
-  background-color: #f9f9f9;
+  background-color: rgb(240, 242, 245);
   color: #333;
 }
 
@@ -17,52 +17,26 @@ h1 {
   margin-bottom: 20px;
 }
 
-th, td {
-  padding: 10px;
-  text-align: left;
-  border: 1px solid #ccc;
-}
-
-th {
-  background-color: #f4f4f4;
-}
-
 button {
   cursor: pointer;
 }
 
-main{
+/* Estilo para el contenedor principal de las páginas con sidebar y header */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  width: calc(100% - 270px); /* Asegura que el ancho sea correcto */
+  margin-left: 270px; /* Deja espacio para el sidebar */
+  padding: 0 30px;
+  background-color: rgb(240, 242, 245);
+  min-height: 100vh; /* Asegura que ocupe toda la altura */
+}
+
+/* Aseguramos que main no tenga padding innecesario */
+main {
   padding: 0;
-  padding-left: 250px;
-}
-
-.barraSuperior{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 50px;
-  padding: 0 25px;
-  border-bottom: 1px dotted rgb(158, 158, 158);
-  width: calc(100% - 250px);
-  margin-left: 250px;
-}
-
-.barraSuperior h1{
-  margin: 0;
-  font-size: 23px;
-}
-.usuarioBarra{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.usuarioBarra p{
-  margin-right: 12px;
-}
-.usuarioBarra svg{
-  font-size: 30px;
-}
-
-.principal {
-  padding: 25px;
+  width: 100%; /* Asegura que main ocupe todo el ancho disponible */
 }

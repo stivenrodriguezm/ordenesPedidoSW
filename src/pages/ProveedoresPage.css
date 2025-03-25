@@ -1,3 +1,8 @@
+:root {
+  --color-primario: #131931; /* Azul principal */
+  --hover-btn: #393e50;
+}
+
 .proveedores-page {
   display: flex;
 }
@@ -7,54 +12,188 @@ main {
   padding: 20px;
 }
 
-h1 {
-  font-size: 2rem;
+/* Contenedor de los botones */
+.botonesContainer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 20px;
-  color: #333;
 }
 
-.tablaProveedores {
-  width: 75%;
-  border-collapse: collapse;
-  margin: 40px auto;
-}
-
-th, td {
-  padding: 10px;
-  text-align: left;
-  border: 1px solid #ccc;
-}
-
-th {
-  background-color: #f4f4f4;
-  text-align: center !important;
-}
-
-td {
-  color: #555;
-}
-
-.nuevoProveedorBtn {
-  margin-bottom: 20px;
+/* Botones */
+.nuevoProveedorBtn,
+.exportarBtn {
   padding: 10px 20px;
-  background-color: #000000;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
   font-size: 1rem;
-  display: block;
-  margin-left: auto;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Botón Nuevo Proveedor */
+.nuevoProveedorBtn {
+  background-color: var(--color-primario);
+  color: white;
 }
 
 .nuevoProveedorBtn:hover {
-  background-color: #232324;
+  background-color: var(--hover-btn);
 }
 
+/* Botón Exportar */
+.exportarBtn {
+  background-color: var(--color-primario);
+  color: white;
+}
+
+.exportarBtn:hover {
+  background-color: var(--hover-btn);
+}
+
+/* Contenedor de la tabla */
+.tabla-contenedor {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow-x: auto;
+  min-height: 300px; /* Mantiene el espacio aunque la tabla esté vacía */
+}
+
+/* Estilos de la tabla */
+.tablaProveedores {
+  width: 1100px;
+  border-collapse: collapse;
+  margin: 20px auto;
+  table-layout: fixed; /* Fija el ancho de las columnas */
+}
+
+/* Estilos de los encabezados */
+.tablaProveedores th {
+  color: var(--color-primario);
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: left;
+  padding: 12px 15px;
+  white-space: nowrap;
+  border-bottom: 2px solid #d1d1d1; /* Borde grueso gris como en ReferenciasPage */
+}
+
+/* Asignación de anchos fijos a las columnas */
+.tablaProveedores th:nth-child(1),
+.tablaProveedores td:nth-child(1) {
+  width: 30%;
+}
+
+.tablaProveedores th:nth-child(2),
+.tablaProveedores td:nth-child(2) {
+  width: 30%;
+}
+
+.tablaProveedores th:nth-child(3),
+.tablaProveedores td:nth-child(3) {
+  width: 30%;
+}
+
+.tablaProveedores th:nth-child(4),
+.tablaProveedores td:nth-child(4) {
+  width: 10%;
+  text-align: center;
+}
+
+/* Estilos de filas */
+.tablaProveedores tr {
+  border-bottom: 1px solid #d1d1d1; /* Borde gris más grueso como en ReferenciasPage */
+}
+
+.tablaProveedores tr:last-child {
+  border-bottom: none; /* Elimina el borde de la última fila */
+}
+
+/* Estilos de celdas */
+.tablaProveedores td {
+  padding: 12px 15px;
+  color: #555;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid #d1d1d1; /* Borde gris para las celdas */
+}
+
+/* Efecto hover en filas */
+.tablaProveedores tr:hover {
+  background-color: #ececec;
+}
+
+/* Ícono de edición */
 .editarIcono {
-  text-align: center; /* Centrar el ícono */
+  text-align: center;
 }
 
-.editarIcono svg{
+.editarIcono svg {
   color: #000000;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.editarIcono svg:hover {
+  color: var(--color-primario);
+}
+
+/* ---- Loader ---- */
+.loading-container {
+  text-align: center;
+  padding: 20px;
+  text-align: center !important;
+  width: 1000px;
+  min-height: 100px; /* Mantiene el espacio aunque la carga sea rápida */
+}
+
+/* Círculo giratorio */
+.loader {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(25, 34, 66, 0.3);
+  border-top-color: var(--color-primario);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+/* Animación del loader */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mensaje de carga */
+.loading-container p {
+  color: var(--color-primario);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 768px) {
+  .tabla-contenedor {
+    width: 100%;
+    overflow-x: scroll;
+  }
+
+  .botonesContainer {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .nuevoProveedorBtn,
+  .exportarBtn {
+    width: 100%;
+    text-align: center;
+  }
 }

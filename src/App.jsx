@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 import LoginPage from "./pages/LoginPage";
 import ReferenciasPage from "./pages/ReferenciasPage";
@@ -11,19 +11,17 @@ import PerfilPage from "./pages/PerfilPage";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import HomePage from "./pages/HomePage";
+import { AppProvider } from "./AppContext"; // Asegúrate de envolver la app con el proveedor
 
-function AppLayout() {
-  const location = useLocation();
-  const isLoginPage = location.pathname === "/login";
-
+// Layout para páginas con sidebar y header
+const MainLayout = () => {
   return (
     <div className="app-container">
-      {!isLoginPage && <Sidebar />}
+      <Sidebar />
       <div className="main-content">
-        {!isLoginPage && <Header />}
+        <Header />
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/ordenes" element={<PrivateRoute component={OrdenesPage} />} />
           <Route path="/referencias" element={<PrivateRoute component={ReferenciasPage} />} />
           <Route path="/proveedores" element={<PrivateRoute component={ProveedoresPage} />} />
@@ -35,16 +33,21 @@ function AppLayout() {
       </div>
     </div>
   );
-}
+};
 
 function App() {
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <AppProvider>
+      <Router>
+        <Routes>
+          {/* Ruta para la página de login, sin sidebar ni header */}
+          <Route path="/login" element={<LoginPage />} />
+          {/* Rutas con sidebar y header */}
+          <Route path="/*" element={<MainLayout />} />
+        </Routes>
+      </Router>
+    </AppProvider>
   );
 }
 
 export default App;
-
-

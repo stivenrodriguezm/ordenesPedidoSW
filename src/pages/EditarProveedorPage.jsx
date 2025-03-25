@@ -1,8 +1,8 @@
-import { useState, useEffect, useContext } from "react"; // Importamos useContext
+import { useState, useEffect, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./NuevoProveedorPage.css";
-import { AppContext } from "../AppContext"; // Importamos AppContext
+import { AppContext } from "../AppContext";
 
 function EditarProveedorPage() {
   const { id } = useParams();
@@ -10,7 +10,7 @@ function EditarProveedorPage() {
   const [encargado, setEncargado] = useState("");
   const [contacto, setContacto] = useState("");
   const navigate = useNavigate();
-  const { updateProveedores } = useContext(AppContext); // Usamos updateProveedores del Contexto
+  const { updateProveedores } = useContext(AppContext);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -50,7 +50,7 @@ function EditarProveedorPage() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      await updateProveedores(); // Actualizamos el AppContext después de editar el proveedor
+      await updateProveedores();
       navigate("/ordenesPedidoSW/proveedores");
     } catch (error) {
       console.error("Error updating provider:", error);
@@ -59,43 +59,46 @@ function EditarProveedorPage() {
 
   return (
     <div className="nuevo-proveedor-page">
-      <main>
-        <form className="formNuevoProveedor" onSubmit={handleSubmit}>
-          <label className="labelNuevoProveedor">
-            Empresa:
-            <input
-              type="text"
-              value={empresa}
-              onChange={(e) => setEmpresa(e.target.value)}
-              required
-            />
-          </label>
-          <label className="labelNuevoProveedor">
-            Encargado:
-            <input
-              type="text"
-              value={encargado}
-              onChange={(e) => setEncargado(e.target.value)}
-              required
-            />
-          </label>
-          <label className="labelNuevoProveedor">
-            Contacto:
-            <input
-              type="text"
-              value={contacto}
-              onChange={(e) => setContacto(e.target.value)}
-              required
-            />
-          </label>
-          <div className="buttons">
-            <button type="submit">Guardar cambios</button>
-            <button type="button" onClick={() => navigate("/ordenesPedidoSW/proveedores")}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </main>
+      <form className="formNuevoProveedor" onSubmit={handleSubmit}>
+        <h1>Editar Proveedor</h1>
+
+        <label className="labelNuevoProveedor">
+          <span>Empresa:</span>
+          <input
+            type="text"
+            value={empresa}
+            onChange={(e) => setEmpresa(e.target.value)}
+            required
+          />
+        </label>
+
+        <label className="labelNuevoProveedor">
+          <span>Encargado:</span>
+          <input
+            type="text"
+            value={encargado}
+            onChange={(e) => setEncargado(e.target.value)}
+            required
+          />
+        </label>
+
+        <label className="labelNuevoProveedor">
+          <span>Contacto:</span>
+          <input
+            type="text"
+            value={contacto}
+            onChange={(e) => setContacto(e.target.value)}
+            required
+          />
+        </label>
+
+        <div className="buttons">
+          <button type="submit">Guardar cambios</button>
+          <button type="button" onClick={() => navigate("/proveedores")}>
+            Cancelar
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

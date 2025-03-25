@@ -1,72 +1,93 @@
+:root {
+  --color-primario: #192242; /* Azul principal */
+  --hover-btn: #2a396e;
+}
+
 .nuevo-proveedor-page {
-    display: flex;
-  }
-  
-  main {
-    flex: 1;
-    padding: 0 20px;
-  }
-  
-  h1 {
-    font-size: 2rem;
-    margin-bottom: 20px;
-  }
-  
-  label {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  input {
-    padding: 10px;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-  }
-  
-  .buttons {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  
-  button {
-    padding: 10px 20px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  button[type="submit"] {
-    background-color: #000000;
-    color: white;
-  }
-  
-  button[type="submit"]:hover {
-    background-color: #232324;
-  }
-  
-  button[type="button"] {
-    background-color: #ccc;
-    color: black;
-  }
-  
-  button[type="button"]:hover {
-    background-color: #aaa;
-  }
-  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 100px;
+}
 
-  .formNuevoProveedor{
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 300px;
-    margin: 40px auto;
-    border: 1px solid black;
-    padding: 30px;
-  }
+.formNuevoProveedor {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px; /* Aumentamos el ancho */
+}
 
-  .labelNuevoProveedor input{
-    width: 150px;
-  }
+h1 {
+  font-size: 1.5rem;
+  color: var(--color-primario);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Nueva estructura para los labels e inputs */
+.labelNuevoProveedor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.labelNuevoProveedor span {
+  width: 30%; /* Controla el espacio del label */
+}
+
+.labelNuevoProveedor input {
+  width: 65%; /* Los inputs ocupan más espacio */
+  padding: 12px;
+  border: none;
+  border-bottom: 2px solid #ddd;
+  outline: none;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  height: 30px;
+}
+
+.labelNuevoProveedor input:focus {
+  border-bottom: 2px solid var(--color-primario);
+}
+
+/* Estilo de los botones */
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.formNuevoProveedor button {
+  width: 48%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.formNuevoProveedor button[type="submit"] {
+  background-color: var(--color-primario);
+  color: white;
+}
+
+.formNuevoProveedor button[type="submit"]:hover {
+  background-color: var(--hover-btn);
+}
+
+.formNuevoProveedor button[type="button"] {
+  background-color: #ccc;
+  color: black;
+}
+
+.formNuevoProveedor button[type="button"]:hover {
+  background-color: var(--color-primario);
+  color: white;
+}

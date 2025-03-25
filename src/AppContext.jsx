@@ -20,27 +20,29 @@ export function AppProvider({ children }) {
     }
   };
 
+  const fetchUser = async () => {
+    try {
+      const res = await axios.get("https://api.muebleslottus.com/api/user/", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsuario(res.data);
+    } catch (error) {
+      console.error("Error cargando usuario:", error);
+      setUsuario(null);
+    }
+  };
+
   const updateProveedores = async () => {
     await fetchProveedores();
   };
 
   useEffect(() => {
-    fetchProveedores();
-    const fetchUser = async () => {
-      try {
-        const res = await axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsuario(res.data);
-      } catch (error) {
-        console.error("Error cargando usuario:", error);
-        setUsuario(null);
-      }
-    };
-
+    // Solo ejecuta las solicitudes si hay un token
     if (token) {
+      fetchProveedores();
       fetchUser();
     } else {
+      setProveedores([]);
       setUsuario(null);
     }
   }, [token]);

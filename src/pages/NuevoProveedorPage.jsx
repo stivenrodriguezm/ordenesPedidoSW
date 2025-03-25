@@ -1,16 +1,15 @@
-import { useState, useContext } from "react"; // Importamos useContext
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./NuevoProveedorPage.css";
-import { FaCircleUser } from "react-icons/fa6";
-import { AppContext } from "../AppContext"; // Importamos AppContext
+import { AppContext } from "../AppContext";
 
 function NuevoProveedorPage() {
   const [empresa, setEmpresa] = useState("");
   const [encargado, setEncargado] = useState("");
   const [contacto, setContacto] = useState("");
   const navigate = useNavigate();
-  const { updateProveedores } = useContext(AppContext); // Usamos useContext para acceder a updateProveedores
+  const { updateProveedores } = useContext(AppContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,8 +27,8 @@ function NuevoProveedorPage() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      await updateProveedores(); // Actualizamos el AppContext después de crear el proveedor
-      navigate("/proveedores"); // Redirige a la página de proveedores
+      await updateProveedores();
+      navigate("/proveedores");
     } catch (error) {
       console.error("Error creating provider:", error);
     }
@@ -37,43 +36,46 @@ function NuevoProveedorPage() {
 
   return (
     <div className="nuevo-proveedor-page">
-      <main>
-        <form className="formNuevoProveedor" onSubmit={handleSubmit}>
-          <label className="labelNuevoProveedor">
-            Empresa:
-            <input
-              type="text"
-              value={empresa}
-              onChange={(e) => setEmpresa(e.target.value)}
-              required
-            />
-          </label>
-          <label className="labelNuevoProveedor">
-            Encargado:
-            <input
-              type="text"
-              value={encargado}
-              onChange={(e) => setEncargado(e.target.value)}
-              required
-            />
-          </label>
-          <label className="labelNuevoProveedor">
-            Contacto:
-            <input
-              type="text"
-              value={contacto}
-              onChange={(e) => setContacto(e.target.value)}
-              required
-            />
-          </label>
-          <div className="buttons">
-            <button type="submit">Enviar</button>
-            <button type="button" onClick={() => navigate("/proveedores")}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </main>
+      <form className="formNuevoProveedor" onSubmit={handleSubmit}>
+        <h1>Nuevo Proveedor</h1>
+  
+        <label className="labelNuevoProveedor">
+          <span>Empresa:</span>
+          <input
+            type="text"
+            value={empresa}
+            onChange={(e) => setEmpresa(e.target.value)}
+            required
+          />
+        </label>
+  
+        <label className="labelNuevoProveedor">
+          <span>Encargado:</span>
+          <input
+            type="text"
+            value={encargado}
+            onChange={(e) => setEncargado(e.target.value)}
+            required
+          />
+        </label>
+  
+        <label className="labelNuevoProveedor">
+          <span>Contacto:</span>
+          <input
+            type="text"
+            value={contacto}
+            onChange={(e) => setContacto(e.target.value)}
+            required
+          />
+        </label>
+  
+        <div className="buttons">
+          <button type="submit">Agregar</button>
+          <button type="button" onClick={() => navigate("/proveedores")}>
+            Cancelar
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

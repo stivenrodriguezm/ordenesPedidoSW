@@ -11,6 +11,10 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.2.5",
+    "@mui/material": "^6.4.8",
     "axios": "^1.7.9",
     "clipboard": "^2.0.11",
     "date-fns": "^4.1.0",

@@ -11,12 +11,14 @@ function ReferenciasPage() {
   const [proveedorId, setProveedorId] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [refresh, setRefresh] = useState(false); //  Estado ficticio para forzar la re-renderización
+  const [refresh, setRefresh] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Estado para el loader
   const token = localStorage.getItem("accessToken");
 
   useEffect(() => {
     const fetchReferencias = async () => {
       try {
+        setIsLoading(true); // Activar el loader
         const res = await axios.get("https://api.muebleslottus.com/api/referencias/", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -29,11 +31,13 @@ function ReferenciasPage() {
         setReferencias(referenciasWithProveedorName);
       } catch (error) {
         console.error("Error cargando referencias:", error);
+      } finally {
+        setIsLoading(false); // Desactivar el loader
       }
     };
 
     fetchReferencias();
-  }, [token, proveedores, refresh]); //  Dependencia de refresh
+  }, [token, proveedores, refresh]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,18 +60,7 @@ function ReferenciasPage() {
       setProveedorId("");
       setIsEditing(false);
       setEditingId(null);
-
-      const res = await axios.get("https://api.muebleslottus.com/api/referencias/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const referenciasWithProveedorName = res.data.map((ref) => {
-        const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
-        return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
-      });
-
-      setReferencias(referenciasWithProveedorName);
-      setRefresh(!refresh); //  Forzamos la re-renderización
+      setRefresh(!refresh);
     } catch (error) {
       console.error("Error en la referencia:", error);
     }
@@ -83,28 +76,35 @@ function ReferenciasPage() {
   return (
     <div className="referencias-page">
       <main>
-        <form className="formReferencias" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Referencia"
-            value={referencia}
-            onChange={(e) => setReferencia(e.target.value)}
-            required
-          />
-          <select
-            value={proveedorId}
-            onChange={(e) => setProveedorId(e.target.value)}
-            required
-          >
-            <option value="">Selecciona un proveedor</option>
-            {proveedores.map((proveedor) => (
-              <option key={proveedor.id} value={proveedor.id}>
-                {proveedor.nombre_empresa}
-              </option>
-            ))}
-          </select>
-          <button type="submit">
-            {isEditing ? "Editar referencia" : "Agregar referencia"}
+        <form className="form-referencias" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Referencia:</label>
+            <input
+              type="text"
+              className="referenciaInput"
+              placeholder="Referencia"
+              value={referencia}
+              onChange={(e) => setReferencia(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Proveedor:</label>
+            <select
+              value={proveedorId}
+              onChange={(e) => setProveedorId(e.target.value)}
+              required
+            >
+              <option value="">Selecciona un proveedor</option>
+              {proveedores.map((proveedor) => (
+                <option key={proveedor.id} value={proveedor.id}>
+                  {proveedor.nombre_empresa}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn-primary">
+            {isEditing ? "Editar" : "Agregar"}
           </button>
         </form>
         <table className="tablaReferencias">
@@ -116,21 +116,36 @@ function ReferenciasPage() {
             </tr>
           </thead>
           <tbody>
-            {referencias.map((referencia) => (
-              <tr key={referencia.id}>
-                <td>{referencia.nombre}</td>
-                <td>{referencia.proveedor_name}</td>
-                <td className="editarIcono">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(referencia)}
-                    className="editButton"
-                  >
-                    <CiEdit />
-                  </button>
+            {isLoading ? (
+              <tr>
+                <td colSpan="3" className="loading-container">
+                  <div className="loader"></div>
+                  <p>Cargando Referencias...</p>
                 </td>
               </tr>
-            ))}
+            ) : referencias.length === 0 ? (
+              <tr>
+                <td colSpan="3" className="no-data-message">
+                  No hay referencias disponibles.
+                </td>
+              </tr>
+            ) : (
+              referencias.map((referencia) => (
+                <tr key={referencia.id}>
+                  <td>{referencia.nombre}</td>
+                  <td>{referencia.proveedor_name}</td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(referencia)}
+                      className="btn-edit"
+                    >
+                      <CiEdit />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </main>

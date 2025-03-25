@@ -1,5 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
+import { FiGitPullRequest } from "react-icons/fi";
+import { MdRoomPreferences } from "react-icons/md";
+import { GrUserWorker } from "react-icons/gr";
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -17,21 +20,20 @@ function Sidebar() {
       <nav>
         <ul>
           <li>
-            <Link to="/ordenes">Órdenes de Pedido</Link>
+            <Link to="/ordenes"><FiGitPullRequest /><p>Órdenes de Pedido</p></Link>
           </li>
           {(userRole === "ADMINISTRADOR" || userRole === "AUXILIAR") && (
             <>
               <li>
-                <Link to="/referencias">Referencias</Link>
+                <Link to="/referencias"><MdRoomPreferences /> <p>Referencias</p></Link>
               </li>
               <li>
-                <Link to="/proveedores">Proveedores</Link>
+                <Link to="/proveedores"><GrUserWorker /><p>Proveedores</p> </Link>
               </li>
             </>
           )}
         </ul>
       </nav>
-      <button onClick={handleLogout}>Salir</button>
     </div>
   );
 }

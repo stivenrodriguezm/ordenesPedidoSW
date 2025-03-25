@@ -1,0 +1,22 @@
+:root {
+    --color-primario: #131931;
+    --hover-btn: #393e50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  .homepage {
+    display: flex;
+    justify-content: center; /* Centrado horizontal */
+    align-items: center; /* Centrado vertical */
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 250px;
+  }
+  
+  /* Ajustes para pantallas pequeñas */
+  @media (max-width: 768px) {
+    .homepage {
+      padding: 10px;
+    }
+  }

@@ -4,6 +4,7 @@ import axios from "axios";
 import "./CrearPedidoPage.css";
 import html2canvas from "html2canvas";
 import logoFinal from "../assets/logoFinal.png";
+import { IoIosClose } from "react-icons/io";
 
 function CrearPedidoPage() {
   const [proveedores, setProveedores] = useState([]);
@@ -14,7 +15,7 @@ function CrearPedidoPage() {
     fecha: "",
     nota: "",
     productos: [{ cantidad: "", referencia: "", descripcion: "" }],
-    ordenCompra: "", 
+    ordenCompra: "",
   });
   const [numeroOP, setNumeroOP] = useState(null);
   const navigate = useNavigate();
@@ -62,7 +63,7 @@ function CrearPedidoPage() {
     const year = today.getFullYear();
     return `${day}-${month}-${year}`;
   };
-  
+
   const formatDate = (date) => {
     if (!date) return "";
     const [year, month, day] = date.split("-");
@@ -77,7 +78,7 @@ function CrearPedidoPage() {
   const handleProveedorChange = async (e) => {
     const proveedorId = e.target.value;
     setPedido({ ...pedido, proveedor: proveedorId });
-  
+
     if (proveedorId) {
       const cachedReferencias = sessionStorage.getItem(`referencias_${proveedorId}`);
       if (cachedReferencias) {
@@ -117,6 +118,11 @@ function CrearPedidoPage() {
     });
   };
 
+  const handleRemoveProduct = (index) => {
+    const updatedProductos = pedido.productos.filter((_, i) => i !== index);
+    setPedido({ ...pedido, productos: updatedProductos });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("accessToken");
@@ -150,7 +156,11 @@ function CrearPedidoPage() {
         const pedidoPreview = document.getElementById("pedido-preview");
         if (pedidoPreview) {
           pedidoPreview.style.display = "block";
-          const canvas = await html2canvas(pedidoPreview);
+          const canvas = await html2canvas(pedidoPreview, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+          });
           pedidoPreview.style.display = "none";
 
           const image = canvas.toDataURL("image/png");
@@ -165,151 +175,174 @@ function CrearPedidoPage() {
 
       renderImage();
     }
-  }, [numeroOP]);
-  
+  }, [numeroOP, navigate]);
+
   return (
     <div className="crear-pedido-page">
       <main>
+        <div className="botonesContainer">
+          <button className="cancelarBtn" onClick={() => navigate(-1)} aria-label="Cancelar y volver atrás">
+            Cancelar
+          </button>
+        </div>
         <form className="formPedido" onSubmit={handleSubmit}>
-          <div className="formFlexLabel">
-            <label>Proveedor:</label>
-            <select
-              name="proveedor"
-              value={pedido.proveedor}
-              onChange={handleProveedorChange}
-              required
-            >
-              <option value="">- Elige un proveedor -</option>
-              {proveedores.map((proveedor) => (
-                <option key={proveedor.id} value={proveedor.id}>
-                  {proveedor.nombre_empresa}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="formFlexLabel">
-            <label>Orden de compra:</label>
-            <input
-              type="text"
-              name="ordenCompra"
-              value={pedido.ordenCompra || ""}
-              onChange={(e) => handleChange(e)}
-              placeholder="Número de orden de compra"
-              required
-            />
-          </div>
-          <div className="formFlexLabel">
-            <label>Fecha esperada:</label>
-            <input
-              type="date"
-              name="fecha"
-              value={pedido.fecha}
-              onChange={(e) => handleChange(e)}
-              required
-            />
-          </div>
-          <h2>Productos</h2>
-          {pedido.productos.map((producto, index) => (
-            <div key={index} className="producto">
-              <div className="formFlexLabel">
-                <input
-                  type="number"
-                  value={producto.cantidad}
-                  onChange={(e) => handleChange(e, index, "cantidad")}
-                  required
-                  placeholder="Cantidad"
-                  className="prodsCantidad"
-                />
-                <select
-                  className="refCantidad"
-                  value={producto.referencia}
-                  onChange={(e) => handleChange(e, index, "referencia")}
-                  required
-                >
-                  <option value="">- Selecciona una referencia -</option>
-                  {referencias.map((ref) => (
-                    <option key={ref.id} value={ref.id}>
-                      {ref.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <textarea
-                className="descProducto"
+          <div className="form-container">
+            <h2 className="tituloForm">Crear Nuevo Pedido</h2>
+            <div className="form-group">
+              <label>Proveedor:</label>
+              <select
+                name="proveedor"
+                value={pedido.proveedor}
+                onChange={handleProveedorChange}
+                required
+              >
+                <option value="">- Elige un proveedor -</option>
+                {proveedores.map((proveedor) => (
+                  <option key={proveedor.id} value={proveedor.id}>
+                    {proveedor.nombre_empresa}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Orden de compra:</label>
+              <input
                 type="text"
-                value={producto.descripcion}
-                onChange={(e) => handleChange(e, index, "descripcion")}
-                placeholder="Descripción del producto"
+                name="ordenCompra"
+                value={pedido.ordenCompra || ""}
+                onChange={(e) => handleChange(e)}
+                placeholder="Número de orden de compra"
+                required
               />
             </div>
-            
-          ))}
-          <button type="button" onClick={handleAddProduct}>
-            Agregar producto
-          </button>
-          <div className="formFlexRowLabel">
-            <label><b>Observación:</b></label>
-            <textarea
-              name="nota"
-              value={pedido.nota}
-              onChange={(e) => handleChange(e)}
-              placeholder="Observación general del pedido"
-            ></textarea>
-          </div>
-          <button type="submit">Enviar</button>
-        </form>
-        <div id="pedido-preview" style={{ display: "none" }}>
-          <div className="headerPedido">
-            <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
-            <div className="numPedido">
-              <h2>Pedido No.</h2>
-              <p className="numeroOP">{numeroOP || "..."}</p>
+            <div className="form-group">
+              <label>Fecha esperada:</label>
+              <input
+                type="date"
+                name="fecha"
+                value={pedido.fecha}
+                onChange={(e) => handleChange(e)}
+                required
+              />
+            </div>
+            <h3 className="tituloProductos">Productos:</h3>
+            {pedido.productos.map((producto, index) => (
+              <div key={index} className="producto-group">
+                {index > 0 && (
+                  <button
+                    type="button"
+                    className="remove-product-btn"
+                    onClick={() => handleRemoveProduct(index)}
+                    aria-label="Eliminar producto"
+                  >
+                    <IoIosClose />
+                  </button>
+                )}
+                <div className="producto-row">
+                  <input
+                    type="number"
+                    value={producto.cantidad}
+                    onChange={(e) => handleChange(e, index, "cantidad")}
+                    required
+                    placeholder="Cantidad"
+                    className="input-cantidad"
+                  />
+                  <select
+                    value={producto.referencia}
+                    onChange={(e) => handleChange(e, index, "referencia")}
+                    required
+                    className="select-referencia"
+                  >
+                    <option value="">- Selecciona una referencia -</option>
+                    {referencias.map((ref) => (
+                      <option key={ref.id} value={ref.id}>
+                        {ref.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <textarea
+                  value={producto.descripcion}
+                  onChange={(e) => handleChange(e, index, "descripcion")}
+                  placeholder="Descripción del producto"
+                  className="textarea-descripcion"
+                />
+              </div>
+            ))}
+            <div className="form-buttons">
+              <button type="button" className="agregarProductoBtn" onClick={handleAddProduct}>
+                Agregar producto
+              </button>
+            </div>
+            <div className="form-group nota-group">
+              <label>Observación:</label>
+              <textarea
+                name="nota"
+                value={pedido.nota}
+                onChange={(e) => handleChange(e)}
+                placeholder="Observación general del pedido"
+                className="textarea-nota"
+              />
+            </div>
+            <div className="form-buttons">
+              <button type="submit" className="enviarBtn">Enviar</button>
             </div>
           </div>
-          <div className="proveedorFechaPedido">
-            <p className="proveedorPedido">
-              Proveedor: {proveedores.length > 0 && pedido.proveedor
-                ? proveedores.find((p) => String(p.id) === String(pedido.proveedor))?.nombre_empresa || "No seleccionado"
-                : "Cargando..."}
-            </p>
-            <p className="fechaActual">Fecha pedido: {getFormattedDate()}</p>
-          </div>
-          <div className="proveedorFechaPedido">
-            <p className="vendedorPedido">Vendedor: {`${user.first_name} ${user.last_name}`}</p>
-            <p className="fechaActual">Fecha entrega: <b>{formatDate(pedido.fecha)}</b></p>
-          </div>
-          <p className="ordenCompraPedido">Orden de compra: {pedido.ordenCompra || "No especificado"}</p>
-          <h3 className="productoTituloPedidos">Productos</h3>
-          <table className="tablaPedidosFoto">
-            <thead>
-              <tr>
-                <th>Cantidad</th>
-                <th>Referencia</th>
-                <th className="descTablaPedidos">Descripción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pedido.productos.map((producto, index) => (
-                <tr key={index}>
-                  <td>{producto.cantidad}</td>
-                  <td>
-                    {referencias.length > 0 && producto.referencia
-                      ? referencias.find((r) => String(r.id) === String(producto.referencia))?.nombre || "No seleccionado"
-                      : "Cargando..."}
-                  </td>
-                  <td className="descTablaPedidosTD">{producto.descripcion}</td>
+        </form>
+        <div id="pedido-preview" style={{ display: "none" }}>
+          <div className="preview-container">
+            <div className="preview-header">
+              <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
+              <div className="numPedido">
+                <h2>Orden de Pedido</h2>
+                <p className="numeroOP">No. {numeroOP || "..."}</p>
+              </div>
+            </div>
+            <div className="preview-info">
+              <div className="info-column">
+                <p><strong>Proveedor:</strong> {proveedores.length > 0 && pedido.proveedor
+                  ? proveedores.find((p) => String(p.id) === String(pedido.proveedor))?.nombre_empresa || "No seleccionado"
+                  : "Cargando..."}</p>
+                <p><strong>Vendedor:</strong> {`${user.first_name} ${user.last_name}`}</p>
+                <p><strong>Orden de compra:</strong> {pedido.ordenCompra || "No especificado"}</p>
+              </div>
+              <div className="info-column">
+                <p><strong>Fecha pedido:</strong> {getFormattedDate()}</p>
+                <p><strong>Fecha entrega:</strong> {formatDate(pedido.fecha)}</p>
+              </div>
+            </div>
+            <h3 className="preview-productos-title">Productos:</h3>
+            <table className="preview-productos-table">
+              <thead>
+                <tr>
+                  <th>Cantidad</th>
+                  <th>Referencia</th>
+                  <th>Descripción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="notaPedido">
-            <b>Observación:</b>{" "}
-            <span
-              dangerouslySetInnerHTML={{
-                __html: pedido.nota.replace(/\n/g, "<br />"),
-              }}
-            />
-          </p>
+              </thead>
+              <tbody>
+                {pedido.productos.map((producto, index) => (
+                  <tr key={index}>
+                    <td>{producto.cantidad}</td>
+                    <td>
+                      {referencias.length > 0 && producto.referencia
+                        ? referencias.find((r) => String(r.id) === String(producto.referencia))?.nombre || "No seleccionado"
+                        : "Cargando..."}
+                    </td>
+                    <td className="desc-preview">{producto.descripcion}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="preview-nota">
+              <h3>Observación:</h3>
+              <p
+                dangerouslySetInnerHTML={{
+                  __html: pedido.nota ? pedido.nota.replace(/\n/g, "<br />") : "Sin observaciones",
+                }}
+              />
+            </div>
+          </div>
         </div>
       </main>
     </div>
@@ -317,4 +350,3 @@ function CrearPedidoPage() {
 }
 
 export default CrearPedidoPage;
-

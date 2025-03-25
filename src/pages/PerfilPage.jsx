@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { FaCircleUser } from "react-icons/fa6";
-import "./PerfilPage.css"; // Puedes agregar estilos aquí
+import "./PerfilPage.css";
 
 function PerfilPage() {
   const [user, setUser] = useState({ first_name: "", last_name: "" });
@@ -11,6 +11,7 @@ function PerfilPage() {
     confirmar: "",
   });
   const [mensaje, setMensaje] = useState("");
+  const [isError, setIsError] = useState(false); // Nuevo estado para manejar si el mensaje es de error o éxito
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -40,6 +41,7 @@ function PerfilPage() {
     e.preventDefault();
     if (passwords.nueva !== passwords.confirmar) {
       setMensaje("Las contraseñas nuevas no coinciden.");
+      setIsError(true);
       return;
     }
 
@@ -57,33 +59,72 @@ function PerfilPage() {
         }
       );
       setMensaje("Contraseña actualizada correctamente.");
+      setIsError(false);
+      // Limpiar los campos después de un cambio exitoso
+      setPasswords({ actual: "", nueva: "", confirmar: "" });
     } catch (error) {
       setMensaje("Error al actualizar la contraseña. Verifica los datos.");
+      setIsError(true);
       console.error("Error cambiando la contraseña:", error);
     }
   };
 
   return (
-    <div className="perfil-container">
-      <h2>Perfil de Usuario</h2>
-      <FaCircleUser size={80} />
-      <p>{`${user.first_name} ${user.last_name}`}</p>
+    <div className="perfil-page">
+      <main>
+        <div className="perfil-container">
+          <h2>Perfil de Usuario</h2>
+          <div className="user-icon">
+            <FaCircleUser size={80} />
+          </div>
+          <p className="user-name">{`${user.first_name} ${user.last_name}`}</p>
 
-      <h3>Cambiar Contraseña</h3>
-      {mensaje && <p className="mensaje">{mensaje}</p>}
-      
-      <form className="formPerfil" onSubmit={handleSubmit}>
-        <label>Contraseña Actual:</label>
-        <input type="password" name="actual" value={passwords.actual} onChange={handleChange} required />
+          <h3>Cambiar Contraseña</h3>
+          {mensaje && (
+            <p className={`mensaje ${isError ? "error" : "exito"}`}>{mensaje}</p>
+          )}
 
-        <label>Nueva Contraseña:</label>
-        <input type="password" name="nueva" value={passwords.nueva} onChange={handleChange} required />
+          <form className="formPerfil" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="actual">Contraseña Actual:</label>
+              <input
+                type="password"
+                id="actual"
+                name="actual"
+                value={passwords.actual}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        <label>Confirmar Nueva Contraseña:</label>
-        <input type="password" name="confirmar" value={passwords.confirmar} onChange={handleChange} required />
+            <div className="form-group">
+              <label htmlFor="nueva">Nueva Contraseña:</label>
+              <input
+                type="password"
+                id="nueva"
+                name="nueva"
+                value={passwords.nueva}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        <button type="submit">Actualizar Contraseña</button>
-      </form>
+            <div className="form-group">
+              <label htmlFor="confirmar">Confirmar Nueva Contraseña:</label>
+              <input
+                type="password"
+                id="confirmar"
+                name="confirmar"
+                value={passwords.confirmar}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button type="submit">Actualizar Contraseña</button>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }
