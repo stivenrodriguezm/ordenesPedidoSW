@@ -77,7 +77,7 @@ function ReferenciasPage() {
     <div className="referencias-page">
       <main>
         <form className="form-referencias" onSubmit={handleSubmit}>
-          <div className="form-group">
+          <div className="form-group-refs">
             <label>Referencia:</label>
             <input
               type="text"
@@ -88,7 +88,7 @@ function ReferenciasPage() {
               required
             />
           </div>
-          <div className="form-group">
+          <div className="form-group-refs">
             <label>Proveedor:</label>
             <select
               value={proveedorId}

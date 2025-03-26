@@ -23,6 +23,8 @@ main {
   border-radius: 10px;
   padding: 30px;
   box-shadow: 0 4px 12px var(--shadow-color); /* Sombra suave */
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 /* Estilo para los encabezados */

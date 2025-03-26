@@ -16,7 +16,7 @@
   border-radius: 10px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 600px; /* Aumentamos el ancho */
+  max-width: 600px;
 }
 
 h1 {
@@ -33,7 +33,8 @@ h1 {
   align-items: center;
   font-weight: 600;
   color: #555;
-  margin-bottom: 15px;
+  margin-bottom: 35px;
+  height: 40px;
 }
 
 .labelNuevoProveedor span {

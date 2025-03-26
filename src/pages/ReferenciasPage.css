@@ -28,20 +28,21 @@ main {
   box-shadow: 0 2px 8px var(--shadow-color);
 }
 
-.form-group {
+.form-group-refs {
   display: flex;
   align-items: center;
+  margin-bottom: 0;
 }
 
-.form-group label {
+.form-group-refs label {
   font-size: 1rem;
   color: #333;
   font-weight: 500;
   width: 100px;
 }
 
-.form-group input,
-.form-group select {
+.form-group-refs input,
+.form-group-refs select {
   padding: 8px;
   font-size: 14px;
   border: 1px solid #e0e0e0;
@@ -51,8 +52,8 @@ main {
   transition: border-color 0.3s ease;
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.form-group-refs input:focus,
+.form-group-refs select:focus {
   border-color: var(--color-primario);
   outline: none;
 }
@@ -207,17 +208,17 @@ main {
     padding: 15px;
   }
 
-  .form-group {
+  .form-group-refs {
     width: 100%;
     margin-bottom: 0;
   }
 
-  .form-group label {
+  .form-group-refs label {
     width: 100px;
   }
 
-  .form-group input,
-  .form-group select {
+  .form-group-refs input,
+  .form-group-refs select {
     width: 100%;
     max-width: none;
   }
