@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://stivenrodriguezm.github.io/ordenesPedidoSW",
+  "homepage": "https://app.muebleslottus.com",
   "scripts": {
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",

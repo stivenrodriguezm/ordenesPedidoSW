@@ -51,7 +51,7 @@ function EditarProveedorPage() {
         }
       );
       await updateProveedores();
-      navigate("/ordenesPedidoSW/proveedores");
+      navigate("/proveedores");
     } catch (error) {
       console.error("Error updating provider:", error);
     }

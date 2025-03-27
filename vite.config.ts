@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/ordenesPedidoSW/",  // 👈 Base correctamente definida
+  base: "/",  // 👈 Base correctamente definida
   build: {
     outDir: "dist",
   },

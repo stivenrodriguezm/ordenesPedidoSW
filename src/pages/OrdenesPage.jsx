@@ -149,7 +149,7 @@ function OrdenesPage() {
 
   // Nueva función para determinar el estado visual del botón
   const getEstadoButton = (estado, fechaEsperada) => {
-    const today = new Date("2025-03-25"); // Fecha actual (25 de marzo de 2025)
+    const today = new Date(); // Fecha actual (25 de marzo de 2025)
     let fechaEsperadaDate;
 
     if (fechaEsperada) {
