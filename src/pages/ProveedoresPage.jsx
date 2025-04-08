@@ -12,6 +12,7 @@ function ProveedoresPage() {
   const navigate = useNavigate();
   const token = localStorage.getItem("accessToken");
 
+  // Peticion a API para obtener proveedores en cada renderizado
   const fetchProveedores = async () => {
     setLoading(true);
     setError(null);

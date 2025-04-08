@@ -13,6 +13,7 @@ function PerfilPage() {
   const [mensaje, setMensaje] = useState("");
   const [isError, setIsError] = useState(false); // Nuevo estado para manejar si el mensaje es de error o éxito
 
+  // Peticion a API para obtener nombre y apellido del usuario en cada renderizado
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
 

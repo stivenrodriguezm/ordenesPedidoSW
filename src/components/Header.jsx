@@ -15,6 +15,7 @@ function Header() {
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
 
+    // peticion a API para obtener el primer nombre y primer apellido del usuario activo
     const fetchUser = async () => {
       try {
         const response = await axios.get("https://api.muebleslottus.com/api/user/", {

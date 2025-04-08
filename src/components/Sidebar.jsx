@@ -5,14 +5,7 @@ import { MdRoomPreferences } from "react-icons/md";
 import { GrUserWorker } from "react-icons/gr";
 
 function Sidebar() {
-  const navigate = useNavigate();
   const userRole = localStorage.getItem("userRole");
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/login");
-  };
 
   return (
     <div className="sidebar">

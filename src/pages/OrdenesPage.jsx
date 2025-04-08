@@ -25,6 +25,7 @@ function OrdenesPage() {
   const API_BASE_URL = "https://api.muebleslottus.com/api";
   const token = localStorage.getItem("accessToken");
 
+  // Peticion a API para obtener listado de ordenes de pedido en cada renderizado
   const fetchOrdenes = async () => {
     try {
       setIsFetching(true);
@@ -46,7 +47,7 @@ function OrdenesPage() {
       setIsFetching(false);
     }
   };
-
+  // Peticion a API para obtener los vendedores en cada renderizado
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -70,6 +71,7 @@ function OrdenesPage() {
     fetchOrdenes();
   }, [filtros, token, user]);
 
+  // Peticion a API para obtener detalles de pedido en cada renderizado
   const fetchProductos = async (orderId) => {
     try {
       setIsLoadingProductos(true);
@@ -90,6 +92,7 @@ function OrdenesPage() {
     }
   };
 
+  
   const handleToggleProductos = async (orderId) => {
     if (expandedOrderId === orderId) {
       setExpandedOrderId(null);

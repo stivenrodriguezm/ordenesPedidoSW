@@ -15,6 +15,7 @@ function ReferenciasPage() {
   const [isLoading, setIsLoading] = useState(true); // Estado para el loader
   const token = localStorage.getItem("accessToken");
 
+  // Peticion a API para obtener referencias en cada renderizado
   useEffect(() => {
     const fetchReferencias = async () => {
       try {
