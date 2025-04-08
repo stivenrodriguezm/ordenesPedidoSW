@@ -416,3 +416,15 @@ main {
     align-items: flex-end;
   }
 }
+.checkbox-tela {
+  width: 20px !important;
+  height: 20px !important;
+  margin-left: 0 !important;
+  margin-right: 10px !important;
+}
+.labelTelas{
+  width: 165px !important;
+}
+.textoTela{
+  font-size: 15px;
+}

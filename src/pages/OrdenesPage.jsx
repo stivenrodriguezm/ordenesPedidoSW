@@ -18,6 +18,7 @@ function OrdenesPage() {
   const [productos, setProductos] = useState([]);
   const [formCosto, setFormCosto] = useState({});
   const [formEstado, setFormEstado] = useState({});
+  const [formTela, setFormTela] = useState({});
   const [isLoadingProductos, setIsLoadingProductos] = useState(false);
 
   const navigate = useNavigate();
@@ -95,13 +96,15 @@ function OrdenesPage() {
       setProductos([]);
       setFormCosto({});
       setFormEstado({});
+      setFormTela({});
     } else {
       setExpandedOrderId(orderId);
-      setProductos([]); // Limpia productos mientras carga
+      setProductos([]);
       await fetchProductos(orderId);
       const order = ordenes.find((o) => o.id_orden === orderId);
       setFormCosto({ [orderId]: parseFloat(order.costo) });
       setFormEstado({ [orderId]: order.estado });
+      setFormTela({ [orderId]: order.tela });
     }
   };
 
@@ -115,21 +118,22 @@ function OrdenesPage() {
   const handleActualizarPedido = async (id) => {
     const costo = parseFloat(formCosto[id]);
     const estado = formEstado[id];
-
+    const tela = formTela[id]; // Obtener el valor de la tela del estado del formulario
+  
     if (!estado || isNaN(costo)) {
-      alert("Datos inválidas. Revisa el costo y el estado.");
+      alert("Datos inválidos. Revisa el costo y el estado.");
       return;
     }
-
+  
     try {
       await axios.put(
         `${API_BASE_URL}/ordenes/${id}/`,
-        { costo, estado },
+        { costo, estado, tela }, // Incluir el campo tela en el objeto de datos
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("Pedido actualizado correctamente");
       setOrdenes((prev) =>
-        prev.map((orden) => (orden.id_orden === id ? { ...orden, costo, estado } : orden))
+        prev.map((orden) => (orden.id_orden === id ? { ...orden, costo, estado, tela } : orden))
       );
     } catch (error) {
       console.error("Error al actualizar el pedido:", error);
@@ -147,9 +151,8 @@ function OrdenesPage() {
     return `${day}-${month}-${year}`;
   }
 
-  // Nueva función para determinar el estado visual del botón
   const getEstadoButton = (estado, fechaEsperada) => {
-    const today = new Date(); // Fecha actual (25 de marzo de 2025)
+    const today = new Date();
     let fechaEsperadaDate;
 
     if (fechaEsperada) {
@@ -167,7 +170,40 @@ function OrdenesPage() {
     } else if (estado === "anulado") {
       return <span className="estado-btn anulado">Anulado</span>;
     }
-    return estado; // Por si hay algún estado no contemplado
+    return estado;
+  };
+
+  const getEstadoTelaButton = (estadoTela) => {
+    let className = "";
+    let texto = "";
+
+    switch (estadoTela) {
+      case "Por pedir":
+        texto = "Por pedir";
+        className = "por-pedir";
+        break;
+      case "Sin tela":
+        texto = "Sin tela";
+        className = "sin-tela";
+        break;
+      case "Por llegar":
+        texto = "Por llegar";
+        className = "por-llegar";
+        break;
+      case "En fabrica":
+        texto = "En fabrica";
+        className = "en-fabrica";
+        break;
+      case "En Lottus":
+        texto = "En Lottus";
+        className = "en-lottus";
+        break;
+      default:
+        texto = "Por pedir";
+        className = "por-pedir";
+    }
+
+    return <span className={`estado-btn ${className}`}>{texto}</span>;
   };
 
   const handleDescargarExcel = () => {
@@ -184,8 +220,9 @@ function OrdenesPage() {
       "Fecha Pedido": formatDate(orden.fecha_creacion),
       "Fecha Llegada": formatDate(orden.fecha_esperada),
       Estado: orden.estado || "N/A",
+      Tela: orden.tela || "N/A",
       Nota: orden.nota || "N/A",
-      Costo: orden.costo ? `$${orden.costo.toLocaleString()}` : "$0",
+      Costo: orden.costo ? parseFloat(orden.costo.toString().replace(/[$,.]/g, '')) : 0,
     }));
 
     const hoja = XLSX.utils.json_to_sheet(datos);
@@ -266,6 +303,7 @@ function OrdenesPage() {
                 <th>Venta</th>
                 <th>Fecha Pedido</th>
                 <th>Fecha Llegada</th>
+                <th>Tela</th>
                 <th>Estado</th>
                 <th>Observación</th>
                 {(user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR")) && <th>Costo</th>}
@@ -275,7 +313,7 @@ function OrdenesPage() {
             <tbody>
               {isFetching && !ordenes.length ? (
                 <tr>
-                  <td colSpan="10" className="loading-container">
+                  <td colSpan="11" className="loading-container">
                     <div className="loader"></div>
                     <p>Cargando órdenes...</p>
                   </td>
@@ -290,6 +328,7 @@ function OrdenesPage() {
                       <td>{orden.orden_venta}</td>
                       <td>{formatDate(orden.fecha_creacion)}</td>
                       <td>{formatDate(orden.fecha_esperada)}</td>
+                      <td>{getEstadoTelaButton(orden.tela)}</td>
                       <td>{getEstadoButton(orden.estado, orden.fecha_esperada)}</td>
                       <td>{orden.nota}</td>
                       {(user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR")) && (
@@ -303,7 +342,7 @@ function OrdenesPage() {
                     </tr>
                     {expandedOrderId === orden.id_orden && (
                       <tr className="detalleProductos">
-                        <td colSpan="10">
+                        <td colSpan="11">
                           <div className="detalle-container">
                             {isLoadingProductos ? (
                               <div className="loading-container">
@@ -342,6 +381,23 @@ function OrdenesPage() {
                                       <option value="recibido">Recibido</option>
                                       <option value="anulado">Anulado</option>
                                     </select>
+                                    <select
+                                      className="selectDetallePedido"
+                                      value={formTela[orden.id_orden] || ""}
+                                      onChange={(e) =>
+                                        setFormTela((prev) => ({
+                                          ...prev,
+                                          [orden.id_orden]: e.target.value,
+                                        }))
+                                      }
+                                    >
+                                      <option value="">Seleccionar estado de tela</option>
+                                      <option value="Por pedir">Por pedir</option>
+                                      <option value="Sin tela">Sin tela</option>
+                                      <option value="Por llegar">Por llegar</option>
+                                      <option value="En fabrica">En fabrica</option>
+                                      <option value="En Lottus">En Lottus</option>
+                                    </select>
                                     <button onClick={() => handleActualizarPedido(orden.id_orden)}>Enviar</button>
                                   </div>
                                 )}
@@ -377,7 +433,7 @@ function OrdenesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="10">No hay órdenes disponibles</td>
+                  <td colSpan="11">No hay órdenes disponibles</td>
                 </tr>
               )}
             </tbody>

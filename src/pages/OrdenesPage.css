@@ -98,9 +98,9 @@ main {
 .tablaOrdenes th:nth-child(1),
 .tablaOrdenes td:nth-child(1) { width: 8%; } /* O.P. */
 .tablaOrdenes th:nth-child(2),
-.tablaOrdenes td:nth-child(2) { width: 15%; } /* Proveedor */
+.tablaOrdenes td:nth-child(2) { width: 12%; } /* Proveedor */
 .tablaOrdenes th:nth-child(3),
-.tablaOrdenes td:nth-child(3) { width: 10%; } /* Vendedor */
+.tablaOrdenes td:nth-child(3) { width: 8%; } /* Vendedor */
 .tablaOrdenes th:nth-child(4),
 .tablaOrdenes td:nth-child(4) { width: 8%; } /* Venta */
 .tablaOrdenes th:nth-child(5),
@@ -108,13 +108,15 @@ main {
 .tablaOrdenes th:nth-child(6),
 .tablaOrdenes td:nth-child(6) { width: 12%; } /* Fecha Llegada */
 .tablaOrdenes th:nth-child(7),
-.tablaOrdenes td:nth-child(7) { width: 10%; } /* Estado */
+.tablaOrdenes td:nth-child(7) { width: 9%; } /* Tela */
 .tablaOrdenes th:nth-child(8),
-.tablaOrdenes td:nth-child(8) { width: 18%; } /* Observación */
+.tablaOrdenes td:nth-child(8) { width: 9%; } /* Estado */
 .tablaOrdenes th:nth-child(9),
-.tablaOrdenes td:nth-child(9) { width: 10%; } /* Costo */
+.tablaOrdenes td:nth-child(9) { width: 20%; } /* Observación */
 .tablaOrdenes th:nth-child(10),
-.tablaOrdenes td:nth-child(10) { width: 3%; text-align: center; } /* Ícono de acciones */
+.tablaOrdenes td:nth-child(10) { width: 11%; } /* Costo */
+.tablaOrdenes th:nth-child(11),
+.tablaOrdenes td:nth-child(11) { width: 3%; text-align: center; } /* Ícono de acciones */
 
 /* Estilos de filas */
 .tablaOrdenes tr {
@@ -161,6 +163,27 @@ main {
 
 .estado-btn.anulado {
   background-color: #e74c3c; /* Rojo */
+}
+
+.estado-btn.por-pedir {
+  background-color: #dc3545;
+}
+
+.estado-btn.sin-tela {
+  background-color: #28a745;
+}
+
+.estado-btn.por-llegar {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.estado-btn.en-fabrica {
+  background-color: #28a745;
+}
+
+.estado-btn.en-lottus {
+  background-color: #fd7e14;
 }
 
 /* Efecto hover en filas */
@@ -212,7 +235,7 @@ main {
 .formularioActualizacion {
   display: flex;
   justify-content: space-between;
-  width: 500px;
+  width: 730px;
   margin: 0 auto 20px;
   align-items: center;
 }
@@ -276,13 +299,13 @@ main {
 }
 
 .tdDescripcion {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  white-space: initial !important;
+  word-break: break-word;
 }
 
 .even-row {
-  background-color: #fafafa;
+  background-color: #fafafa; 
 }
 
 .odd-row {

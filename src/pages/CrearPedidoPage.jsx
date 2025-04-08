@@ -19,6 +19,7 @@ function CrearPedidoPage() {
   });
   const [numeroOP, setNumeroOP] = useState(null);
   const navigate = useNavigate();
+  const [llevaTela, setLlevaTela] = useState(false); // Nuevo estado para el checkbox de tela
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -140,6 +141,7 @@ function CrearPedidoPage() {
             referencia: producto.referencia,
             especificaciones: producto.descripcion,
           })),
+          tela: llevaTela ? "Por pedir" : "Sin tela", // Asignar el estado de la tela basado en el checkbox
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -224,6 +226,16 @@ function CrearPedidoPage() {
                 onChange={(e) => handleChange(e)}
                 required
               />
+            </div>
+            <div className="form-group">
+              <label className="labelTelas">Tela:</label>
+              <input
+                type="checkbox"
+                checked={llevaTela}
+                onChange={(e) => setLlevaTela(e.target.checked)}
+                className="checkbox-tela"
+              />
+              <p className="textoTela">Incluye tela</p>
             </div>
             <h3 className="tituloProductos">Productos:</h3>
             {pedido.productos.map((producto, index) => (
