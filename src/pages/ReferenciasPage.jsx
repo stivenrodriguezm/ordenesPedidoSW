@@ -1,7 +1,7 @@
 // src/pages/ReferenciasPage.jsx
 import { useState, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import API, { fetchReferencias } from "../services/api";
+import API from "../services/api";
 import "./ReferenciasPage.css";
 import { CiEdit } from "react-icons/ci";
 import { AppContext } from "../AppContext";
@@ -12,7 +12,7 @@ function ReferenciasPage() {
   const [proveedorId, setProveedorId] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const token = localStorage.getItem("accessToken");
+  const token = localStorage.getItem("accessToken"); // Restauramos esta línea
   const queryClient = useQueryClient();
 
   // Consulta para obtener todas las referencias
@@ -25,7 +25,7 @@ function ReferenciasPage() {
         return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
       });
     },
-    enabled: !!token && !contextLoading, // Solo se ejecuta si hay token y el contexto está cargado
+    enabled: !!token && !contextLoading, // Espera a que contextLoading sea false
     staleTime: 5 * 60 * 1000, // 5 minutos de frescura
   });
 

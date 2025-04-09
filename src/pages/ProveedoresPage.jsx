@@ -61,7 +61,7 @@ function ProveedoresPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4">No hay proveedores disponibles</td>
+                  <td colSpan="4">No se encontraron proveedores. Verifica tu conexión o intenta de nuevo.</td>
                 </tr>
               )}
             </tbody>

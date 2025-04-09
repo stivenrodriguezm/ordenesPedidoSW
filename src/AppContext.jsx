@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 
-// Bandera global para asegurar una sola ejecución
+// Bandera global para asegurar una sola ejecución inicial
 let hasInitialized = false;
 
 export const AppContext = createContext();
@@ -15,6 +15,7 @@ export function AppProvider({ children }) {
 
   const fetchInitialData = async () => {
     if (!token || hasInitialized) {
+      console.log("No hay token o ya se inicializó. Saltando fetchInitialData.");
       setIsLoading(false);
       return;
     }
@@ -30,11 +31,13 @@ export function AppProvider({ children }) {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
+      console.log("Proveedores cargados:", proveedoresRes.data);
+      console.log("Usuario cargado:", userRes.data);
       setProveedores(proveedoresRes.data);
       setUsuario(userRes.data);
       hasInitialized = true;
     } catch (error) {
-      console.error("Error cargando datos iniciales:", error);
+      console.error("Error cargando datos iniciales:", error.response?.data || error.message);
       setProveedores([]);
       setUsuario(null);
     } finally {
@@ -43,14 +46,14 @@ export function AppProvider({ children }) {
   };
 
   useEffect(() => {
-    console.log("Montando AppContext...");
+    console.log("Montando AppContext... Token disponible:", !!token);
     fetchInitialData();
-  }, []);
+  }, [token]); // Dependencia en token para recargar si cambia
 
   const value = {
     proveedores,
     usuario,
-    setUsuario, // Exponemos setUsuario para que LoginPage pueda usarlo
+    setUsuario,
     isLoading,
   };
 

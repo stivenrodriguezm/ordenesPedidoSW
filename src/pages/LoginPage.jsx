@@ -12,9 +12,10 @@ function LoginPage() {
   const navigate = useNavigate();
   const { setUsuario } = useContext(AppContext); // Nota: AppContext no tiene setUsuario actualmente
 
+  // src/pages/LoginPage.jsx (fragmento relevante)
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(""); // Limpiar errores previos
+    setError("");
     try {
       console.log("Enviando solicitud de login con:", { username, password });
       const response = await API.post("token/", { username, password });
@@ -28,8 +29,8 @@ function LoginPage() {
 
       const role = userResponse.data.role;
       localStorage.setItem("userRole", role);
-      setUsuario(userResponse.data); // Esto fallará porque AppContext no tiene setUsuario
-      navigate("/");
+      setUsuario(userResponse.data); // Esto debería disparar la recarga en AppContext
+      navigate("/"); // Redirige después de establecer todo
     } catch (err) {
       console.error("Error en login:", err.response ? err.response.data : err.message);
       setError("Credenciales inválidas. Intenta de nuevo.");
