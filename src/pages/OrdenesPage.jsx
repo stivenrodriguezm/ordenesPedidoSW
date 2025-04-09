@@ -1,113 +1,83 @@
-import React, { useState, useEffect, useContext } from "react";
+// src/pages/OrdenesPage.jsx
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaChevronDown } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import API, { fetchOrdenes } from "../services/api";
 import "./OrdenesPage.css";
 import { AppContext } from "../AppContext";
 
 function OrdenesPage() {
   const { proveedores, usuario: user } = useContext(AppContext);
-  const [ordenes, setOrdenes] = useState([]);
-  const [vendedores, setVendedores] = useState([]);
-  const [estados] = useState(["en_proceso", "anulado", "recibido"]);
+  const estados = [
+    { value: "en_proceso", label: "En proceso" },
+    { value: "anulado", label: "Anulado" },
+    { value: "recibido", label: "Recibido" },
+  ];
   const [filtros, setFiltros] = useState({ proveedor: "", vendedor: "", estado: "en_proceso" });
-  const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState(null);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
-  const [productos, setProductos] = useState([]);
   const [formCosto, setFormCosto] = useState({});
   const [formEstado, setFormEstado] = useState({});
   const [formTela, setFormTela] = useState({});
-  const [isLoadingProductos, setIsLoadingProductos] = useState(false);
-
   const navigate = useNavigate();
-  const API_BASE_URL = "https://api.muebleslottus.com/api";
   const token = localStorage.getItem("accessToken");
+  const queryClient = useQueryClient();
 
-  // Peticion a API para obtener listado de ordenes de pedido en cada renderizado
-  const fetchOrdenes = async () => {
-    try {
-      setIsFetching(true);
-      let endpoint = `${API_BASE_URL}/listar-pedidos/`;
-      const params = [];
-      if (user && user.rol === "Vendedor") params.push(`usuario_id=${user.id}`);
-      if (filtros.proveedor && filtros.proveedor !== "") params.push(`id_proveedor=${filtros.proveedor}`);
-      if (filtros.vendedor && filtros.vendedor !== "") params.push(`id_vendedor=${filtros.vendedor}`);
-      if (filtros.estado && filtros.estado !== "") params.push(`estado=${filtros.estado}`);
-      if (params.length) endpoint += `?${params.join("&")}`;
+  // Consulta para vendedores
+  const { data: vendedores = [] } = useQuery({
+    queryKey: ["vendedores"],
+    queryFn: () => API.get("vendedores/").then((res) => res.data.filter((u) => u.first_name && u.first_name.trim() !== "")),
+    enabled: !!token && (user?.role === "ADMINISTRADOR" || user?.role === "AUXILIAR"),
+    staleTime: Infinity,
+  });
 
-      const response = await axios.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
-      setOrdenes(response.data);
-      setError(null);
-    } catch (err) {
-      setError("Error al cargar los datos. Intenta nuevamente.");
-      console.error("Error fetching orders:", err);
-    } finally {
-      setIsFetching(false);
-    }
-  };
-  // Peticion a API para obtener los vendedores en cada renderizado
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setIsFetching(true);
-        const vendedoresResponse = await axios.get(`${API_BASE_URL}/vendedores/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setVendedores(vendedoresResponse.data.filter((user) => user.first_name && user.first_name.trim() !== ""));
-        await fetchOrdenes();
-      } catch (err) {
-        setError("Error al cargar los datos iniciales.");
-        console.error("Error fetching initial data:", err);
-      } finally {
-        setIsFetching(false);
-      }
-    };
-    fetchInitialData();
-  }, [token, user]);
+  // Consulta para órdenes con filtros dinámicos
+  const { data: ordenes = [], isLoading: isFetching } = useQuery({
+    queryKey: ["ordenes", filtros, user?.id],
+    queryFn: () => fetchOrdenes(filtros, user?.rol === "Vendedor" ? user.id : null),
+    enabled: !!token,
+    staleTime: 5 * 60 * 1000, // 5 minutos de frescura
+  });
 
-  useEffect(() => {
-    fetchOrdenes();
-  }, [filtros, token, user]);
+  // Consulta para productos de una orden específica
+  const { data: productos = [], isLoading: isLoadingProductos } = useQuery({
+    queryKey: ["productos", expandedOrderId],
+    queryFn: () => API.get(`detalles-pedido/${expandedOrderId}/`).then((res) => res.data),
+    enabled: !!expandedOrderId,
+    staleTime: Infinity,
+  });
 
-  // Peticion a API para obtener detalles de pedido en cada renderizado
-  const fetchProductos = async (orderId) => {
-    try {
-      setIsLoadingProductos(true);
-      const response = await axios.get(`${API_BASE_URL}/detalles-pedido/${orderId}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (Array.isArray(response.data)) {
-        setProductos(response.data);
-      } else {
-        setProductos([]);
-        console.error("API response for products is not an array:", response.data);
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setProductos([]);
-    } finally {
-      setIsLoadingProductos(false);
-    }
-  };
+  // Mutación para actualizar un pedido
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ id, updates }) =>
+      API.put(`ordenes/${id}/`, updates, { headers: { Authorization: `Bearer ${token}` } }),
+    onSuccess: (_, { id, updates }) => {
+      alert("Pedido actualizado correctamente");
+      queryClient.setQueryData(["ordenes", filtros, user?.id], (old) =>
+        old.map((orden) =>
+          orden.id_orden === id ? { ...orden, ...updates } : orden
+        )
+      );
+    },
+    onError: (error) => {
+      console.error("Error al actualizar el pedido:", error.response?.data || error);
+      alert("Error al actualizar el pedido");
+    },
+  });
 
-  
-  const handleToggleProductos = async (orderId) => {
+  const handleToggleProductos = (orderId) => {
     if (expandedOrderId === orderId) {
       setExpandedOrderId(null);
-      setProductos([]);
       setFormCosto({});
       setFormEstado({});
       setFormTela({});
     } else {
       setExpandedOrderId(orderId);
-      setProductos([]);
-      await fetchProductos(orderId);
       const order = ordenes.find((o) => o.id_orden === orderId);
-      setFormCosto({ [orderId]: parseFloat(order.costo) });
-      setFormEstado({ [orderId]: order.estado });
-      setFormTela({ [orderId]: order.tela });
+      setFormCosto({ [orderId]: order.costo !== null ? parseFloat(order.costo) : "" });
+      setFormEstado({ [orderId]: order.estado || "" });
+      setFormTela({ [orderId]: order.tela || "" });
     }
   };
 
@@ -118,34 +88,42 @@ function OrdenesPage() {
     }));
   };
 
-  const handleActualizarPedido = async (id) => {
-    const costo = parseFloat(formCosto[id]);
-    const estado = formEstado[id];
-    const tela = formTela[id]; // Obtener el valor de la tela del estado del formulario
-  
-    if (!estado || isNaN(costo)) {
-      alert("Datos inválidos. Revisa el costo y el estado.");
+  const handleActualizarPedido = (id) => {
+    const ordenActual = ordenes.find((o) => o.id_orden === id);
+    const costoInput = formCosto[id];
+    const estadoInput = formEstado[id];
+    const telaInput = formTela[id];
+
+    // Preparar solo los campos que han cambiado
+    const updates = {};
+    if (costoInput !== undefined && costoInput !== "" && parseFloat(costoInput) !== parseFloat(ordenActual.costo)) {
+      const costo = parseFloat(costoInput);
+      if (isNaN(costo)) {
+        alert("El costo debe ser un número válido.");
+        return;
+      }
+      updates.costo = costo;
+    }
+    if (estadoInput && estadoInput !== ordenActual.estado) {
+      updates.estado = estadoInput;
+    }
+    if (telaInput && telaInput !== ordenActual.tela) {
+      updates.tela = telaInput;
+    }
+
+    // Si no hay cambios, no hacemos nada
+    if (Object.keys(updates).length === 0) {
+      alert("No hay cambios para actualizar.");
       return;
     }
-  
-    try {
-      await axios.put(
-        `${API_BASE_URL}/ordenes/${id}/`,
-        { costo, estado, tela }, // Incluir el campo tela en el objeto de datos
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Pedido actualizado correctamente");
-      setOrdenes((prev) =>
-        prev.map((orden) => (orden.id_orden === id ? { ...orden, costo, estado, tela } : orden))
-      );
-    } catch (error) {
-      console.error("Error al actualizar el pedido:", error);
-      alert("Error al actualizar el pedido");
-    }
+
+    updateOrderMutation.mutate({ id, updates });
   };
 
   function formatCurrency(amount) {
-    return `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+    return amount !== null && amount !== undefined
+      ? `$${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+      : "N/A";
   }
 
   function formatDate(dateStr) {
@@ -225,7 +203,7 @@ function OrdenesPage() {
       Estado: orden.estado || "N/A",
       Tela: orden.tela || "N/A",
       Nota: orden.nota || "N/A",
-      Costo: orden.costo ? parseFloat(orden.costo.toString().replace(/[$,.]/g, '')) : 0,
+      Costo: orden.costo ? parseFloat(orden.costo.toString().replace(/[$,.]/g, "")) : 0,
     }));
 
     const hoja = XLSX.utils.json_to_sheet(datos);
@@ -233,8 +211,6 @@ function OrdenesPage() {
     XLSX.utils.book_append_sheet(libro, hoja, "Ordenes");
     XLSX.writeFile(libro, "ordenes_filtradas.xlsx");
   };
-
-  if (error && !ordenes.length) return <div className="error">{error}</div>;
 
   return (
     <div className="ordenes-page">
@@ -288,9 +264,9 @@ function OrdenesPage() {
             className="selectFiltro"
           >
             <option value="">Seleccionar Estado</option>
-            {estados.map((estado, index) => (
-              <option key={index} value={estado}>
-                {estado}
+            {estados.map((estado) => (
+              <option key={estado.value} value={estado.value}>
+                {estado.label}
               </option>
             ))}
           </select>
@@ -309,12 +285,12 @@ function OrdenesPage() {
                 <th>Tela</th>
                 <th>Estado</th>
                 <th>Observación</th>
-                {(user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR")) && <th>Costo</th>}
+                {user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR") && <th>Costo</th>}
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {isFetching && !ordenes.length ? (
+              {isFetching ? (
                 <tr>
                   <td colSpan="11" className="loading-container">
                     <div className="loader"></div>
@@ -334,7 +310,7 @@ function OrdenesPage() {
                       <td>{getEstadoTelaButton(orden.tela)}</td>
                       <td>{getEstadoButton(orden.estado, orden.fecha_esperada)}</td>
                       <td>{orden.nota}</td>
-                      {(user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR")) && (
+                      {user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR") && (
                         <td>{formatCurrency(orden.costo)}</td>
                       )}
                       <td className="accionesIcono">
@@ -354,7 +330,7 @@ function OrdenesPage() {
                               </div>
                             ) : (
                               <>
-                                {(user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR")) && (
+                                {user && (user.role === "ADMINISTRADOR" || user.role === "AUXILIAR") && (
                                   <div className="formularioActualizacion">
                                     <input
                                       type="number"
@@ -362,12 +338,10 @@ function OrdenesPage() {
                                       value={formCosto[orden.id_orden] || ""}
                                       onChange={(e) => {
                                         const rawValue = e.target.value.replace(/\./g, "");
-                                        if (!isNaN(rawValue)) {
-                                          setFormCosto((prev) => ({
-                                            ...prev,
-                                            [orden.id_orden]: parseFloat(rawValue),
-                                          }));
-                                        }
+                                        setFormCosto((prev) => ({
+                                          ...prev,
+                                          [orden.id_orden]: rawValue === "" ? "" : parseFloat(rawValue),
+                                        }));
                                       }}
                                     />
                                     <select
@@ -401,7 +375,12 @@ function OrdenesPage() {
                                       <option value="En fabrica">En fabrica</option>
                                       <option value="En Lottus">En Lottus</option>
                                     </select>
-                                    <button onClick={() => handleActualizarPedido(orden.id_orden)}>Enviar</button>
+                                    <button
+                                      onClick={() => handleActualizarPedido(orden.id_orden)}
+                                      disabled={updateOrderMutation.isLoading}
+                                    >
+                                      {updateOrderMutation.isLoading ? "Enviando..." : "Enviar"}
+                                    </button>
                                   </div>
                                 )}
                                 <h3 className="tituloProductos">Productos:</h3>

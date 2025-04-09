@@ -1,15 +1,31 @@
-import { useState, useEffect } from "react";
+// src/pages/CrearPedidoPage.jsx
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import API, { fetchReferencias } from "../services/api";
+import { AppContext } from "../AppContext";
 import "./CrearPedidoPage.css";
 import html2canvas from "html2canvas";
 import logoFinal from "../assets/logoFinal.png";
 import { IoIosClose } from "react-icons/io";
 
 function CrearPedidoPage() {
-  const [proveedores, setProveedores] = useState([]);
-  const [referencias, setReferencias] = useState([]);
-  const [user, setUser] = useState({ first_name: "", last_name: "" });
+  const { proveedores, usuario: user, isLoading: contextLoading } = useContext(AppContext);
+  const navigate = useNavigate();
+  const token = localStorage.getItem("accessToken");
+  const queryClient = useQueryClient(); // Agregamos el queryClient
+
+  const [proveedorId, setProveedorId] = useState("");
+  const { data: referencias = [], isLoading: referenciasLoading } = useQuery({
+    queryKey: ["referencias", proveedorId],
+    queryFn: () => {
+      console.log("Solicitando referencias para proveedor:", proveedorId);
+      return fetchReferencias(proveedorId);
+    },
+    enabled: !!proveedorId && !!token,
+    staleTime: Infinity,
+  });
+
   const [pedido, setPedido] = useState({
     proveedor: "",
     fecha: "",
@@ -18,43 +34,20 @@ function CrearPedidoPage() {
     ordenCompra: "",
   });
   const [numeroOP, setNumeroOP] = useState(null);
-  const navigate = useNavigate();
-  const [llevaTela, setLlevaTela] = useState(false); // Nuevo estado para el checkbox de tela
+  const [llevaTela, setLlevaTela] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-
-    const fetchAndUpdateUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        sessionStorage.setItem("user", JSON.stringify(response.data));
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-        });
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-      }
-    };
-
-    const fetchAndUpdateProveedores = async () => {
-      try {
-        const response = await axios.get(
-          "https://api.muebleslottus.com/api/proveedores/",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        sessionStorage.setItem("proveedores", JSON.stringify(response.data));
-        setProveedores(response.data);
-      } catch (error) {
-        console.error("Error fetching providers:", error);
-      }
-    };
-
-    fetchAndUpdateUser();
-    fetchAndUpdateProveedores();
-  }, []);
+  const createOrderMutation = useMutation({
+    mutationFn: (newOrder) =>
+      API.post("ordenes/", newOrder, { headers: { Authorization: `Bearer ${token}` } }),
+    onSuccess: (response) => {
+      setNumeroOP(response.data.id);
+      // Invalidamos la consulta de órdenes para que se actualice en OrdenesPage
+      queryClient.invalidateQueries(["ordenes"]);
+    },
+    onError: (error) => {
+      console.error("Error creating order:", error.response?.data || error);
+    },
+  });
 
   const getFormattedDate = () => {
     const today = new Date();
@@ -76,30 +69,10 @@ function CrearPedidoPage() {
     return `${formattedDay}-${formattedMonth}-${formattedYear}`;
   };
 
-  const handleProveedorChange = async (e) => {
-    const proveedorId = e.target.value;
-    setPedido({ ...pedido, proveedor: proveedorId });
-
-    if (proveedorId) {
-      const cachedReferencias = sessionStorage.getItem(`referencias_${proveedorId}`);
-      if (cachedReferencias) {
-        setReferencias(JSON.parse(cachedReferencias));
-      } else {
-        const token = localStorage.getItem("accessToken");
-        try {
-          const response = await axios.get(
-            `https://api.muebleslottus.com/api/referencias/?proveedor=${proveedorId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          sessionStorage.setItem(`referencias_${proveedorId}`, JSON.stringify(response.data));
-          setReferencias(response.data);
-        } catch (error) {
-          console.error("Error fetching references:", error);
-        }
-      }
-    } else {
-      setReferencias([]);
-    }
+  const handleProveedorChange = (e) => {
+    const id = e.target.value;
+    setProveedorId(id);
+    setPedido({ ...pedido, proveedor: id });
   };
 
   const handleChange = (e, index, field) => {
@@ -124,32 +97,20 @@ function CrearPedidoPage() {
     setPedido({ ...pedido, productos: updatedProductos });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("accessToken");
-
-    try {
-      const response = await axios.post(
-        "https://api.muebleslottus.com/api/ordenes/",
-        {
-          proveedor: pedido.proveedor,
-          fecha_esperada: pedido.fecha,
-          notas: pedido.nota,
-          orden_venta: pedido.ordenCompra,
-          detalles: pedido.productos.map((producto) => ({
-            cantidad: producto.cantidad,
-            referencia: producto.referencia,
-            especificaciones: producto.descripcion,
-          })),
-          tela: llevaTela ? "Por pedir" : "Sin tela", // Asignar el estado de la tela basado en el checkbox
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setNumeroOP(response.data.id);
-    } catch (error) {
-      console.error("Error creating order:", error.response?.data || error);
-    }
+    createOrderMutation.mutate({
+      proveedor: pedido.proveedor,
+      fecha_esperada: pedido.fecha,
+      notas: pedido.nota,
+      orden_venta: pedido.ordenCompra,
+      detalles: pedido.productos.map((producto) => ({
+        cantidad: producto.cantidad,
+        referencia: producto.referencia,
+        especificaciones: producto.descripcion,
+      })),
+      tela: llevaTela ? "Por pedir" : "Sin tela",
+    });
   };
 
   useEffect(() => {
@@ -174,10 +135,13 @@ function CrearPedidoPage() {
           navigate("/ordenes");
         }
       };
-
       renderImage();
     }
   }, [numeroOP, navigate]);
+
+  if (contextLoading) {
+    return <div>Cargando datos iniciales...</div>;
+  }
 
   return (
     <div className="crear-pedido-page">
@@ -264,6 +228,7 @@ function CrearPedidoPage() {
                     onChange={(e) => handleChange(e, index, "referencia")}
                     required
                     className="select-referencia"
+                    disabled={referenciasLoading}
                   >
                     <option value="">- Selecciona una referencia -</option>
                     {referencias.map((ref) => (
@@ -297,7 +262,9 @@ function CrearPedidoPage() {
               />
             </div>
             <div className="form-buttons">
-              <button type="submit" className="enviarBtn">Enviar</button>
+              <button type="submit" className="enviarBtn" disabled={createOrderMutation.isLoading}>
+                {createOrderMutation.isLoading ? "Enviando..." : "Enviar"}
+              </button>
             </div>
           </div>
         </form>
@@ -312,15 +279,26 @@ function CrearPedidoPage() {
             </div>
             <div className="preview-info">
               <div className="info-column">
-                <p><strong>Proveedor:</strong> {proveedores.length > 0 && pedido.proveedor
-                  ? proveedores.find((p) => String(p.id) === String(pedido.proveedor))?.nombre_empresa || "No seleccionado"
-                  : "Cargando..."}</p>
-                <p><strong>Vendedor:</strong> {`${user.first_name} ${user.last_name}`}</p>
-                <p><strong>Orden de compra:</strong> {pedido.ordenCompra || "No especificado"}</p>
+                <p>
+                  <strong>Proveedor:</strong>{" "}
+                  {proveedores.length > 0 && pedido.proveedor
+                    ? proveedores.find((p) => String(p.id) === String(pedido.proveedor))?.nombre_empresa || "No seleccionado"
+                    : "Cargando..."}
+                </p>
+                <p>
+                  <strong>Vendedor:</strong> {user ? `${user.first_name} ${user.last_name}` : "Cargando..."}
+                </p>
+                <p>
+                  <strong>Orden de compra:</strong> {pedido.ordenCompra || "No especificado"}
+                </p>
               </div>
               <div className="info-column">
-                <p><strong>Fecha pedido:</strong> {getFormattedDate()}</p>
-                <p><strong>Fecha entrega:</strong> {formatDate(pedido.fecha)}</p>
+                <p>
+                  <strong>Fecha pedido:</strong> {getFormattedDate()}
+                </p>
+                <p>
+                  <strong>Fecha entrega:</strong> {formatDate(pedido.fecha)}
+                </p>
               </div>
             </div>
             <h3 className="preview-productos-title">Productos:</h3>

@@ -1,3 +1,4 @@
+// src/pages/LoginPage.jsx
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
@@ -9,20 +10,28 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { setUsuario } = useContext(AppContext);
+  const { setUsuario } = useContext(AppContext); // Nota: AppContext no tiene setUsuario actualmente
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError(""); // Limpiar errores previos
     try {
+      console.log("Enviando solicitud de login con:", { username, password });
       const response = await API.post("token/", { username, password });
+      console.log("Respuesta de token:", response.data);
       localStorage.setItem("accessToken", response.data.access);
       localStorage.setItem("refreshToken", response.data.refresh);
+
+      console.log("Solicitando datos del usuario...");
       const userResponse = await API.get("user/");
+      console.log("Datos del usuario:", userResponse.data);
+
       const role = userResponse.data.role;
       localStorage.setItem("userRole", role);
-      setUsuario(userResponse.data);
+      setUsuario(userResponse.data); // Esto fallará porque AppContext no tiene setUsuario
       navigate("/");
     } catch (err) {
+      console.error("Error en login:", err.response ? err.response.data : err.message);
       setError("Credenciales inválidas. Intenta de nuevo.");
     }
   };

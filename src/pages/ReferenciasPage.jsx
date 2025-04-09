@@ -1,70 +1,55 @@
-import { useState, useEffect, useContext } from "react";
-import axios from "axios";
+// src/pages/ReferenciasPage.jsx
+import { useState, useContext } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import API, { fetchReferencias } from "../services/api";
 import "./ReferenciasPage.css";
 import { CiEdit } from "react-icons/ci";
 import { AppContext } from "../AppContext";
 
 function ReferenciasPage() {
-  const { proveedores } = useContext(AppContext);
-  const [referencias, setReferencias] = useState([]);
+  const { proveedores, isLoading: contextLoading } = useContext(AppContext);
   const [referencia, setReferencia] = useState("");
   const [proveedorId, setProveedorId] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [refresh, setRefresh] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Estado para el loader
   const token = localStorage.getItem("accessToken");
+  const queryClient = useQueryClient();
 
-  // Peticion a API para obtener referencias en cada renderizado
-  useEffect(() => {
-    const fetchReferencias = async () => {
-      try {
-        setIsLoading(true); // Activar el loader
-        const res = await axios.get("https://api.muebleslottus.com/api/referencias/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  // Consulta para obtener todas las referencias
+  const { data: referencias = [], isLoading } = useQuery({
+    queryKey: ["referencias"],
+    queryFn: async () => {
+      const res = await API.get("referencias/");
+      return res.data.map((ref) => {
+        const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
+        return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
+      });
+    },
+    enabled: !!token && !contextLoading, // Solo se ejecuta si hay token y el contexto está cargado
+    staleTime: 5 * 60 * 1000, // 5 minutos de frescura
+  });
 
-        const referenciasWithProveedorName = res.data.map((ref) => {
-          const proveedor = proveedores.find((prov) => prov.id === ref.proveedor);
-          return { ...ref, proveedor_name: proveedor ? proveedor.nombre_empresa : "Desconocido" };
-        });
-
-        setReferencias(referenciasWithProveedorName);
-      } catch (error) {
-        console.error("Error cargando referencias:", error);
-      } finally {
-        setIsLoading(false); // Desactivar el loader
-      }
-    };
-
-    fetchReferencias();
-  }, [token, proveedores, refresh]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (isEditing) {
-        await axios.put(
-          `https://api.muebleslottus.com/api/referencias/${editingId}/`,
-          { nombre: referencia, proveedor: proveedorId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        await axios.post(
-          "https://api.muebleslottus.com/api/referencias/",
-          { nombre: referencia, proveedor: proveedorId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-
+  // Mutación para agregar o editar una referencia
+  const referenciaMutation = useMutation({
+    mutationFn: (data) =>
+      isEditing
+        ? API.put(`referencias/${editingId}/`, data, { headers: { Authorization: `Bearer ${token}` } })
+        : API.post("referencias/", data, { headers: { Authorization: `Bearer ${token}` } }),
+    onSuccess: () => {
       setReferencia("");
       setProveedorId("");
       setIsEditing(false);
       setEditingId(null);
-      setRefresh(!refresh);
-    } catch (error) {
-      console.error("Error en la referencia:", error);
-    }
+      queryClient.invalidateQueries(["referencias"]); // Refrescar las referencias tras éxito
+    },
+    onError: (error) => {
+      console.error("Error en la referencia:", error.response?.data || error);
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    referenciaMutation.mutate({ nombre: referencia, proveedor: proveedorId });
   };
 
   const handleEdit = (referencia) => {
@@ -73,6 +58,10 @@ function ReferenciasPage() {
     setIsEditing(true);
     setEditingId(referencia.id);
   };
+
+  if (contextLoading) {
+    return <div>Cargando datos iniciales...</div>;
+  }
 
   return (
     <div className="referencias-page">
@@ -87,6 +76,7 @@ function ReferenciasPage() {
               value={referencia}
               onChange={(e) => setReferencia(e.target.value)}
               required
+              disabled={referenciaMutation.isLoading}
             />
           </div>
           <div className="form-group-refs">
@@ -95,6 +85,7 @@ function ReferenciasPage() {
               value={proveedorId}
               onChange={(e) => setProveedorId(e.target.value)}
               required
+              disabled={referenciaMutation.isLoading}
             >
               <option value="">Selecciona un proveedor</option>
               {proveedores.map((proveedor) => (
@@ -104,8 +95,8 @@ function ReferenciasPage() {
               ))}
             </select>
           </div>
-          <button type="submit" className="btn-primary">
-            {isEditing ? "Editar" : "Agregar"}
+          <button type="submit" className="btn-primary" disabled={referenciaMutation.isLoading}>
+            {referenciaMutation.isLoading ? "Guardando..." : isEditing ? "Editar" : "Agregar"}
           </button>
         </form>
         <table className="tablaReferencias">
@@ -140,6 +131,7 @@ function ReferenciasPage() {
                       type="button"
                       onClick={() => handleEdit(referencia)}
                       className="btn-edit"
+                      disabled={referenciaMutation.isLoading}
                     >
                       <CiEdit />
                     </button>

@@ -1,37 +1,26 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
+// src/pages/ProveedoresPage.jsx
+import { useContext } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import "./ProveedoresPage.css";
 import { CiEdit } from "react-icons/ci";
-import { Link } from "react-router-dom";
+import { AppContext } from "../AppContext";
 
 function ProveedoresPage() {
-  const [proveedores, setProveedores] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const { proveedores, isLoading: contextLoading } = useContext(AppContext);
   const navigate = useNavigate();
-  const token = localStorage.getItem("accessToken");
 
-  // Peticion a API para obtener proveedores en cada renderizado
-  const fetchProveedores = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get("https://api.muebleslottus.com/api/proveedores/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProveedores(response.data);
-    } catch (error) {
-      console.error("Error fetching providers:", error);
-      setError("Error al cargar los proveedores. Intenta nuevamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProveedores();
-  }, []);
+  if (contextLoading) {
+    return (
+      <div className="proveedores-page">
+        <main>
+          <div className="loading-container">
+            <div className="loader"></div>
+            <p>Cargando proveedores...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="proveedores-page">
@@ -40,7 +29,8 @@ function ProveedoresPage() {
           <button
             className="nuevoProveedorBtn"
             onClick={() => navigate("/proveedores/nuevo")}
-            aria-label="Agregar nuevo proveedor">
+            aria-label="Agregar nuevo proveedor"
+          >
             Nuevo Proveedor
           </button>
         </div>
@@ -56,18 +46,7 @@ function ProveedoresPage() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="4" className="loading-container">
-                    <div className="loader"></div>
-                    <p>Cargando proveedores...</p>
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan="4" className="error">{error}</td>
-                </tr>
-              ) : proveedores.length > 0 ? (
+              {proveedores.length > 0 ? (
                 proveedores.map((proveedor) => (
                   <tr key={proveedor.id}>
                     <td>{proveedor.nombre_empresa || "N/A"}</td>
