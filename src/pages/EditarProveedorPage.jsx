@@ -1,7 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import "./NuevoProveedorPage.css";
 import { AppContext } from "../AppContext";
 
 function EditarProveedorPage() {

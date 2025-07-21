@@ -1,0 +1,158 @@
+.sales-summary-report-container {
+    margin-bottom: 1rem;
+    background-color: var(--color-surface);
+    padding: 1rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-elevation-low);
+}
+
+.sales-summary-report-container h3 {
+    font-size: 1.3rem;
+    color: var(--color-text-primary);
+    margin-top: 0;
+    margin-bottom: 0.7rem;
+    text-align: left;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border-light);
+    font-weight: 600;
+}
+
+.summary-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 1rem;
+}
+
+.summary-card {
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-xs);
+    padding: 0.8rem;
+    text-align: center;
+    box-shadow: none;
+    transition: background-color 0.1s ease-in-out;
+}
+
+.summary-card:hover {
+    background-color: var(--color-hover);
+}
+
+.summary-card h4 {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-top: 0;
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+}
+
+.summary-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.sales-by-vendedor-card {
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-xs);
+    padding: 0.8rem;
+    box-shadow: none;
+}
+
+.sales-by-vendedor-card h4 {
+    font-size: 1.1rem;
+    color: var(--color-text-primary);
+    margin-top: 0;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-border-light);
+    font-weight: 600;
+}
+
+.vendedor-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-start;
+}
+
+.vendedor-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: var(--color-surface);
+    border-radius: var(--border-radius-xs);
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+    transition: background-color 0.1s ease-in-out;
+    width: calc(20% - 0.5rem); /* 5 items per row */
+    box-sizing: border-box;
+}
+
+.vendedor-item:hover {
+    background-color: var(--color-hover);
+}
+
+.vendedor-item span {
+    text-align: center;
+    width: 100%;
+}
+
+.vendedor-item span:first-child {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    margin-bottom: 0.05rem;
+    font-size: 0.8rem;
+}
+
+.vendedor-item span:nth-child(2) {
+    font-weight: 400;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.05rem;
+    font-size: 0.75rem;
+}
+
+.delivered-info {
+    font-size: 0.7rem;
+    color: var(--color-text-tertiary);
+    margin-left: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .vendedor-item {
+        width: calc(33.33% - 0.5rem); /* 3 items per row */
+    }
+}
+
+@media (max-width: 768px) {
+    .summary-cards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    .vendedor-item {
+        width: calc(50% - 0.5rem); /* 2 items per row */
+    }
+    .sales-summary-report-container h3 {
+        font-size: 1.2rem;
+    }
+    .summary-value {
+        font-size: 1.1rem;
+    }
+    .sales-by-vendedor-card h4 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-cards-grid {
+        grid-template-columns: 1fr; /* Stack cards on very small screens */
+    }
+    .vendedor-item {
+        width: 100%; /* 1 item per row */
+    }
+}

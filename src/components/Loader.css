@@ -1,0 +1,32 @@
+/* Loader.css */
+
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 50vh; /* Le da altura para que se centre en el espacio de contenido */
+  background-color: transparent; /* Sin fondo que tape nada */
+}
+
+.loader-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3; /* Gris claro */
+  border-top: 5px solid #007bff; /* Azul Lottus */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loader-text {
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

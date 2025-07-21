@@ -26,3 +26,44 @@ const theme = createTheme({
 });
 
 export default theme;
+/** 
+
+tengo un proyecto ya bien avanzado el cual es una plataforma para una empresa de muebles y la idea es administrar desde aca varias cosas. 
+
+
+
+te dare gran parte del codigo frontend para que entiendas el estilo de las paginas y tambien el codigo backend para que entiendas la logica y puedas ayudarme a continuar con el proyecto.
+
+
+
+Frontend: react. Backend: django. 
+
+
+
+FRONTEND:
+
+
+
+/src
+
+     /assets
+
+     /components
+
+     /hooks
+
+     /pages
+
+     /services
+
+     App.jsx
+
+     AppContext.jsx
+
+     index.css
+
+     main.jsx
+
+     PrivateRoute.jsx
+
+     theme.jsx**/

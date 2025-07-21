@@ -1,0 +1,113 @@
+/* Hereda estilos globales de index.css */
+
+.page-header .filters-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.page-header .actions-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.page-header .search-input,
+.page-header .filters-group input[type="date"],
+.page-header .filters-group select {
+  padding: 0.75rem 1rem; /* Ajustado a 0.75rem */
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.95rem; /* Ajustado a 0.95rem */
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.page-header .search-input { min-width: 200px; }
+.page-header .filters-group input[type="date"] { min-width: 130px; }
+.page-header .filters-group select { min-width: 180px; } /* Aumentado de 150px a 180px */
+
+.page-header .search-input:focus,
+.page-header .filters-group input[type="date"]:focus,
+.page-header .filters-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-focus-shadow);
+}
+
+.btn-primary, .btn-secondary {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 1.25rem; border: 1px solid; border-radius: 6px;
+  cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease;
+}
+.btn-primary { background-color: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.btn-primary:hover { background-color: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+.btn-secondary { background-color: var(--color-surface); border-color: var(--color-border); color: var(--color-text-primary); }
+.btn-secondary:hover { border-color: var(--color-border-hover); background-color: #f8f9fa; }
+.btn-icon-only { padding: 0.6rem !important; width: 44px; height: 44px; justify-content: center; }
+
+/* Estilos de la tabla de Recibos */
+.recibos-caja-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.recibos-caja-table th, .recibos-caja-table td {
+  padding: 1rem 1.25rem; /* Ajustado a 1rem 1.25rem */
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle; /* Añadido para consistencia */
+}
+
+.recibos-caja-table th {
+  background-color: #f8f9fa;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.8rem; /* Ajustado a 0.8rem */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Anchos de columna */
+.rc-th-rc, .rc-td-rc { width: 8%; }
+.rc-th-fecha, .rc-td-fecha { width: 12%; }
+.rc-th-venta, .rc-td-venta { width: 8%; }
+.rc-th-metodo, .rc-td-metodo { width: 15%; }
+.rc-th-valor, .rc-td-valor { width: 12%; text-align: right; }
+.rc-th-nota, .rc-td-nota { width: 20%; /* Reducido de 25% */ white-space: normal; }
+.rc-th-estado, .rc-td-estado { width: 10%; }
+.rc-th-acciones, .rc-td-acciones { width: 15%; /* Aumentado de 10% */ text-align: center; }
+
+/* Clase para valores monetarios */
+.td-valor {
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.status-badge {
+  display: inline-flex; /* Cambiado a inline-flex */
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px; /* Ajustado a 5px 12px */
+  border-radius: 9999px; /* Forma de píldora */
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2; /* Añadido para consistencia */
+  white-space: nowrap;
+  text-transform: capitalize; /* Añadido para consistencia */
+}
+.status-badge.pendiente { background-color: #fff3cd; color: #664d03; } /* Colores existentes */
+.status-badge.confirmado { background-color: #d1e7dd; color: #0f5132; } /* Colores existentes */
+
+/* Modal de Confirmación */
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}

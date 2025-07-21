@@ -1,133 +1,110 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { FaCircleUser } from "react-icons/fa6";
-import "./PerfilPage.css";
+import React, { useState, useContext } from 'react';
+import { AppContext } from '../AppContext';
+import API from '../services/api';
+import './PerfilPage.css';
+import { FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 
-function PerfilPage() {
-  const [user, setUser] = useState({ first_name: "", last_name: "" });
-  const [passwords, setPasswords] = useState({
-    actual: "",
-    nueva: "",
-    confirmar: "",
-  });
-  const [mensaje, setMensaje] = useState("");
-  const [isError, setIsError] = useState(false); // Nuevo estado para manejar si el mensaje es de error o éxito
+const PerfilPage = () => {
+    const { usuario } = useContext(AppContext);
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [notification, setNotification] = useState({ message: '', type: '' });
+    const [isLoading, setIsLoading] = useState(false);
 
-  // Peticion a API para obtener nombre y apellido del usuario en cada renderizado
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-        });
-      } catch (error) {
-        console.error("Error obteniendo datos del usuario:", error);
-      }
+    const getInitials = (name = '', lastName = '') => {
+        const firstNameInitial = name ? name[0] : '';
+        const lastNameInitial = lastName ? lastName[0] : '';
+        return `${firstNameInitial}${lastNameInitial}`.toUpperCase();
     };
 
-    fetchUser();
-  }, []);
-
-  const handleChange = (e) => {
-    setPasswords({ ...passwords, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (passwords.nueva !== passwords.confirmar) {
-      setMensaje("Las contraseñas nuevas no coinciden.");
-      setIsError(true);
-      return;
-    }
-
-    const token = localStorage.getItem("accessToken");
-
-    try {
-      const response = await axios.post(
-        "https://api.muebleslottus.com/api/cambiar-contrasena/",
-        {
-          old_password: passwords.actual,
-          new_password: passwords.nueva,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (newPassword !== confirmPassword) {
+            setNotification({ message: 'Las nuevas contraseñas no coinciden.', type: 'error' });
+            return;
         }
-      );
-      setMensaje("Contraseña actualizada correctamente.");
-      setIsError(false);
-      // Limpiar los campos después de un cambio exitoso
-      setPasswords({ actual: "", nueva: "", confirmar: "" });
-    } catch (error) {
-      setMensaje("Error al actualizar la contraseña. Verifica los datos.");
-      setIsError(true);
-      console.error("Error cambiando la contraseña:", error);
-    }
-  };
 
-  return (
-    <div className="perfil-page">
-      <main>
-        <div className="perfil-container">
-          <h2>Perfil de Usuario</h2>
-          <div className="user-icon">
-            <FaCircleUser size={80} />
-          </div>
-          <p className="user-name">{`${user.first_name} ${user.last_name}`}</p>
+        setIsLoading(true);
+        setNotification({ message: '', type: '' });
 
-          <h3>Cambiar Contraseña</h3>
-          {mensaje && (
-            <p className={`mensaje ${isError ? "error" : "exito"}`}>{mensaje}</p>
-          )}
+        try {
+            await API.post('/change-password/', {
+                old_password: oldPassword,
+                new_password: newPassword,
+            });
+            setNotification({ message: '¡Contraseña actualizada con éxito!', type: 'success' });
+            setOldPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (err) {
+            setNotification({ message: err.response?.data?.error || 'Ocurrió un error al cambiar la contraseña.', type: 'error' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-          <form className="formPerfil" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="actual">Contraseña Actual:</label>
-              <input
-                type="password"
-                id="actual"
-                name="actual"
-                value={passwords.actual}
-                onChange={handleChange}
-                required
-              />
+    return (
+        <div className="perfil-page-container">
+            <div className="perfil-card">
+                <div className="perfil-card-header">
+                    <div className="perfil-avatar">
+                        <span>{getInitials(usuario?.first_name, usuario?.last_name)}</span>
+                    </div>
+                    <h1 className="perfil-user-name">{`${usuario?.first_name} ${usuario?.last_name}`}</h1>
+                    <p className="perfil-user-role">{usuario?.role}</p>
+                </div>
+
+                <div className="perfil-card-body">
+                    <h2 className="form-title">Cambiar Contraseña</h2>
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <label htmlFor="oldPassword">Contraseña Actual</label>
+                            <input 
+                                type="password"
+                                id="oldPassword"
+                                value={oldPassword}
+                                onChange={(e) => setOldPassword(e.target.value)}
+                                required 
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="newPassword">Nueva Contraseña</label>
+                            <input 
+                                type="password"
+                                id="newPassword"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                required 
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="confirmPassword">Confirmar Nueva Contraseña</label>
+                            <input 
+                                type="password"
+                                id="confirmPassword"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required 
+                            />
+                        </div>
+                        
+                        {notification.message && (
+                            <div className={`notification-banner ${notification.type}`}>
+                                {notification.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
+                                <span>{notification.message}</span>
+                            </div>
+                        )}
+
+                        <button type="submit" className="submit-button" disabled={isLoading}>
+                            {isLoading ? 'Actualizando...' : 'Actualizar Contraseña'}
+                        </button>
+                    </form>
+                </div>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="nueva">Nueva Contraseña:</label>
-              <input
-                type="password"
-                id="nueva"
-                name="nueva"
-                value={passwords.nueva}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmar">Confirmar Nueva Contraseña:</label>
-              <input
-                type="password"
-                id="confirmar"
-                name="confirmar"
-                value={passwords.confirmar}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <button type="submit">Actualizar Contraseña</button>
-          </form>
         </div>
-      </main>
-    </div>
-  );
-}
+    );
+};
 
 export default PerfilPage;

@@ -1,0 +1,3546 @@
+// ==================== src/App.css ====================
+
+/* src/App.css */
+
+/* 1. Importar la fuente desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
+
+/* 2. Definir variables de color y estilos globales */
+:root {
+  /* --- Nueva Paleta Unificada --- */
+  --primary-brand-color: #bfa15b; /* Dorado elegante para la marca */
+  --primary-action-color: #007bff; /* Azul para acciones secundarias y destacadas */
+  --text-dark: #2c3e50;         /* Negro suave para textos importantes */
+  
+  /* --- Colores existentes (se pueden mantener o ajustar) --- */
+  --dark-color: #2c3e50;
+  --light-color: #ffffff;
+  --text-color: #343a40;
+  --background-light: #f8f9fa;
+  --star-color: #ffc107;
+}
+
+/* 3. Aplicar box-sizing a todos los elementos */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos base para el body */
+body {
+  font-family: 'Lato', sans-serif;
+  color: var(--text-color);
+  background-color: var(--light-color);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Contenedor principal de la aplicación */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* El contenido principal debe crecer para empujar el footer hacia abajo */
+main {
+  flex-grow: 1;
+}
+
+/* --- Clases de Botón Reutilizables --- */
+.btn {
+  padding: 0.8rem 2.5rem;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  border: none;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.btn-brand {
+  background-color: var(--primary-brand-color);
+  color: var(--light-color);
+  box-shadow: 0 4px 15px rgba(191, 161, 91, 0.25);
+}
+
+.btn-brand:hover {
+  background-color: #a88d4c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(191, 161, 91, 0.35);
+}
+
+.btn-primary {
+  background-color: var(--primary-action-color);
+  color: var(--light-color);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+}
+
+
+// ==================== src/index.js ====================
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+
+// ==================== src/App.js ====================
+
+// ==================== src/App.js (ACTUALIZADO) ====================
+
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './App.css';
+
+// 1. IMPORTACIONES DE REACT-TOASTIFY
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+import ScrollToTop from './components/common/ScrollToTop';
+import Header from './components/common/Header';
+import Footer from './components/common/Footer';
+import FloatingWhatsApp from './components/common/FloatingWhatsApp';
+
+import HomePage from './pages/HomePage';
+import RoomsPage from './pages/RoomsPage';
+import RoomDetailPage from './pages/RoomDetailPage';
+import ContactPage from './pages/ContactPage';
+import RegulationsPage from './pages/RegulationsPage';
+import ServicesPage from './pages/ServicesPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <ScrollToTop />
+      
+      <div className="app-container">
+        <Header />
+        <main>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/habitaciones" element={<RoomsPage />} />
+            <Route path="/habitaciones/:id" element={<RoomDetailPage />} />
+            <Route path="/servicios" element={<ServicesPage />} />
+            <Route path="/contacto" element={<ContactPage />} />
+            <Route path="/reglamento-interno" element={<RegulationsPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </main>
+        <Footer />
+        <FloatingWhatsApp />
+      </div>
+
+      {/* 2. AÑADIR EL CONTENEDOR DE NOTIFICACIONES AQUÍ */}
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+// ==================== src/index.css ====================
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+
+// ==================== src/components/HomeGallery.module.css ====================
+
+/* ==================== src/components/HomeGallery.module.css ==================== */
+
+.gallerySection {
+  padding: 2rem 2rem 0;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #343a40;
+}
+
+.galleryContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.mainImageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 15px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.gallerySlide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.gallerySlide.active {
+  opacity: 1;
+}
+
+.mainImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.navArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.navArrow:hover {
+  background-color: white;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.prevArrow {
+  left: 15px;
+}
+
+.nextArrow {
+  right: 15px;
+}
+
+.thumbnailContainer {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.thumbnailWrapper {
+  width: 100px;
+  height: 75px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.thumbnailWrapper.active {
+  border-color: #007bff;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .gallerySection {
+    padding: 2rem 1rem 0;
+  }
+  .sectionTitle {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+  }
+}
+
+
+// ==================== src/components/LocationSection.module.css ====================
+
+/* ==================== src/components/LocationSection.module.css ==================== */
+
+.locationSection {
+  padding: 4rem 2rem;
+  background-color: #ffffff;
+}
+
+.contentWrapper {
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  align-items: center;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.textContainer {
+  padding-right: 2rem;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  color: #343a40;
+  line-height: 1.2;
+}
+
+.sectionText {
+  font-size: 1.1rem;
+  color: #6c757d;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.poiList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.poiItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.poiIcon {
+  color: #007bff;
+  font-size: 1.5rem;
+}
+
+.mapContainer {
+  height: 500px;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.mapIframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (max-width: 992px) {
+  .contentWrapper {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .textContainer {
+    width: 100%;
+    padding-right: 0;
+    margin-bottom: 2rem;
+  }
+
+  .poiItem {
+    justify-content: center;
+  }
+  
+  .mapContainer {
+    height: 400px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .locationSection {
+    padding: 2rem 1rem;
+  }
+  .sectionTitle {
+    font-size: 2rem;
+  }
+  .mapContainer {
+    height: 300px;
+  }
+}
+
+
+// ==================== src/components/TestimonialsSection.module.css ====================
+
+/* ==================== src/components/TestimonialsSection.module.css ==================== */
+
+.testimonialsSection {
+  padding: 4rem 2rem;
+  background-color: #f8f9fa;
+  text-align: center; 
+}
+
+.mainTitle {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #343a40;
+  margin-bottom: 0.5rem;
+}
+
+.mainSubtitle {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-bottom: 4rem; 
+}
+
+.cardsTitle {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #343a40;
+}
+
+.cardsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.testimonialCard {
+  background-color: #ffffff;
+  border-radius: 15px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  position: relative;
+  border-top: 5px solid #007bff;
+}
+
+.quoteIcon {
+  font-size: 3rem;
+  color: #007bff;
+  opacity: 0.2;
+  position: absolute;
+  top: 1rem;
+  left: 1.5rem;
+}
+
+.quote {
+  font-size: 1.1rem;
+  font-style: italic;
+  color: #6c757d;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  text-align: center;
+}
+
+.cardFooter {
+  text-align: center;
+}
+
+.stars {
+  color: #ffc107; 
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.author {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #343a40;
+}
+
+@media (max-width: 768px) {
+  .testimonialsSection {
+    padding: 2rem 1rem;
+  }
+  .mainTitle {
+    font-size: 2.2rem;
+  }
+  .mainSubtitle {
+    font-size: 1rem;
+    margin-bottom: 3rem;
+  }
+  .cardsTitle {
+    font-size: 2rem;
+  }
+  .testimonialCard {
+    padding: 1.5rem;
+  }
+}
+
+
+// ==================== src/components/BookingForm.module.css ====================
+
+/* ==================== src/components/BookingForm.module.css ==================== */
+
+.bookingForm {
+    background-color: rgba(10, 25, 47, 0.7);
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    max-width: 1200px;
+    flex-wrap: wrap; 
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: #fff;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 160px;
+}
+
+.formGroup label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.formInput,
+.formSelect {
+    padding: 0.8rem;
+    border: 1px solid #555;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: 'Lato', sans-serif;
+    background-color: #333;
+    color: #fff;
+    width: 100%;
+}
+
+.formInput[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+.submitButton {
+    padding: 0.8rem 2rem;
+    flex-shrink: 0;
+    height: 50.4px;
+}
+
+/* --- Media query para pantallas de menos de 768px --- */
+@media (max-width: 768px) {
+    .bookingForm {
+        flex-direction: column;
+        align-items: stretch;
+        /* MODIFICADO: Reducido el espacio y el padding */
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+
+    .formGroup {
+        width: 100%; 
+    }
+
+    /* NUEVO: Reducir tamaño de la etiqueta en móvil */
+    .formGroup label {
+        font-size: 0.8rem;
+    }
+    
+    /* NUEVO: Reducir tamaño de campos de entrada en móvil */
+    .formInput,
+    .formSelect {
+        font-size: 0.9rem;
+        padding: 0.7rem;
+    }
+
+    .submitButton {
+        width: 100%;
+        height: auto;
+        margin-top: 0.5rem; /* Margen reducido */
+        /* MODIFICADO: Padding y font-size del botón */
+        padding: 0.8rem;
+        font-size: 1rem;
+    }
+}
+
+
+// ==================== src/components/RoomsSection.module.css ====================
+
+/* ==================== src/components/RoomsSection.module.css ==================== */
+
+.roomsSection {
+  padding: 4rem 2rem;
+  background-color: #f8f9fa;
+  text-align: center;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-dark); /* Usando nueva variable */
+}
+
+.sectionSubtitle {
+  font-size: 1.1rem;
+  color: #6c757d;
+  margin-bottom: 3rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cardsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.roomCard {
+  background-color: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  /* MODIFICADO: Ancho fluido con un máximo para responsividad */
+  width: 100%;
+  max-width: 350px;
+}
+
+.roomCard:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.cardImage {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+.cardContent {
+  padding: 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.cardTitle {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-dark); /* Usando nueva variable */
+}
+
+.cardDescription {
+  font-size: 0.95rem;
+  color: #6c757d;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+}
+
+.cardButton {
+  padding: 0.75rem 1.5rem; /* Padding más pequeño */
+  align-self: flex-start;
+}
+
+.viewAllContainer {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+@media (max-width: 768px) {
+  .roomsSection {
+    padding: 2rem 1rem;
+  }
+  .sectionTitle {
+    font-size: 2rem;
+  }
+  .sectionSubtitle {
+    font-size: 1rem;
+  }
+}
+
+
+// ==================== src/components/HomeGallery.js ====================
+
+// src/components/HomeGallery.js
+import React, { useState } from 'react';
+import styles from './HomeGallery.module.css';
+import galleryData from '../data/galleryData';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import AnimatedSection from './common/AnimatedSection'; // Importar el componente de animación
+
+const HomeGallery = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handlePrev = () => {
+    const isFirstSlide = currentIndex === 0;
+    const newIndex = isFirstSlide ? galleryData.length - 1 : currentIndex - 1;
+    setCurrentIndex(newIndex);
+  };
+
+  const handleNext = () => {
+    const isLastSlide = currentIndex === galleryData.length - 1;
+    const newIndex = isLastSlide ? 0 : currentIndex + 1;
+    setCurrentIndex(newIndex);
+  };
+
+  const goToSlide = (slideIndex) => {
+    setCurrentIndex(slideIndex);
+  };
+
+  return (
+    <section className={styles.gallerySection}>
+      <AnimatedSection>
+        <h2 className={styles.sectionTitle}>Galería de fotos</h2>
+      </AnimatedSection>
+      <AnimatedSection>
+        <div className={styles.galleryContainer}>
+          <div className={styles.mainImageWrapper}>
+            {galleryData.map((image, index) => (
+              <div
+                key={image.id}
+                className={`${styles.gallerySlide} ${index === currentIndex ? styles.active : ''}`}
+              >
+                <img
+                  src={image.url}
+                  alt={image.alt}
+                  className={styles.mainImage}
+                  onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/900x500/cccccc/ffffff?text=Imagen+no+disponible`; }}
+                />
+              </div>
+            ))}
+            <button className={`${styles.navArrow} ${styles.prevArrow}`} onClick={handlePrev}>
+              <FaChevronLeft />
+            </button>
+            <button className={`${styles.navArrow} ${styles.nextArrow}`} onClick={handleNext}>
+              <FaChevronRight />
+            </button>
+          </div>
+          <div className={styles.thumbnailContainer}>
+            {galleryData.map((image, index) => (
+              <div
+                key={image.id}
+                className={`${styles.thumbnailWrapper} ${currentIndex === index ? styles.active : ''}`}
+                onClick={() => goToSlide(index)}
+              >
+                <img
+                  src={image.url}
+                  alt={`Miniatura de ${image.alt}`}
+                  className={styles.thumbnail}
+                  onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/80x60/cccccc/ffffff?text=Error`; }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </AnimatedSection>
+    </section>
+  );
+};
+
+export default HomeGallery;
+
+
+
+// ==================== src/components/ServicesSection.module.css ====================
+
+/* ==================== src/components/ServicesSection.module.css ==================== */
+
+.servicesSection {
+  padding: 4rem 2rem;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #343a40;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.serviceItem {
+  background-color: #f8f9fa;
+  padding: 2.5rem 1.5rem;
+  border-radius: 15px;
+  text-align: center;
+  border: 1px solid #e9ecef;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.serviceItem:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.iconWrapper {
+  font-size: 3.5rem;
+  color: #007bff;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+}
+
+.serviceName {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.detailsModule {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 5rem auto 0 auto;
+  text-align: left;
+  align-items: center;
+}
+
+.imageContainer {
+  width: 500px;
+  height: 700px; 
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  margin: 0 auto;
+}
+
+.detailsImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.textContainer {
+  padding: 1rem;
+}
+
+.detailsText {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #6c757d;
+  margin: 0 auto 15px;
+}
+
+.detailsButton {
+  padding: 0.8rem 2.5rem;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 50px;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  display: inline-block;
+}
+
+.detailsButton:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 992px) {
+  .detailsModule {
+    grid-template-columns: 1fr;
+    text-align: center;
+    max-width: 500px;
+  }
+  .imageContainer {
+    height: 500px; 
+    margin-bottom: 2rem;
+    width: auto;
+  }
+  .textContainer {
+    padding: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .servicesSection {
+    padding: 2rem 1rem;
+  }
+  .sectionTitle {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+  }
+  .detailsModule {
+    margin-top: 3rem;
+  }
+}
+
+
+// ==================== src/components/Hero.js ====================
+
+// src/components/Hero.js
+import React from 'react';
+import styles from './Hero.module.css';
+import BookingForm from './BookingForm'; // 1. Importar el nuevo componente
+
+const Hero = () => {
+  return (
+    <section className={styles.hero}>
+      <div className={styles.heroContent}>
+        <h1 className={styles.heroTitle}>
+          Tu Hogar Estratégico en el Corazón de Bogotá
+        </h1>
+        <p className={styles.heroSubtitle}>
+          A pasos de Corferias, con la comodidad y el servicio que mereces.
+        </p>
+        <br />
+        <br />
+        <BookingForm />
+      </div>
+    </section>
+  );
+};
+
+export default Hero;
+
+
+// ==================== src/components/LocationSection.js ====================
+
+// ==================== src/components/LocationSection.js (CORREGIDO) ====================
+
+import React from 'react';
+import styles from './LocationSection.module.css';
+import { FaMapMarkerAlt } from 'react-icons/fa';
+import AnimatedSection from './common/AnimatedSection';
+
+const LocationSection = () => {
+    const pointsOfInterest = [
+        'Corferias (Centro de Convenciones) - a 0.1 km',
+        'Embajada de Estados Unidos - a 0.8 km',
+        'Centro Comercial Gran Estación - a 2.7 km',
+        'Estadio El Campín y Movistar Arena - a 4.5 km',
+        'Aeropuerto El Dorado - a 8 km',
+    ];
+
+    const mapSrc = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.820148281313!2d-74.0958195257375!3d4.626490843603408!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9b5a5a095007%3A0x5d6c8ba788c0a860!2sHotel%20Fontana%20Bogot%C3%A1!5e0!3m2!1sen!2sus!4v1720125488109!5m2!1sen!2sus";
+
+    return (
+        <section className={styles.locationSection}>
+            <div className={styles.contentWrapper}>
+                {/* Se mantiene el contenedor para el layout de grid */}
+                <div className={styles.textContainer}>
+                    {/* 1. Título con animación propia */}
+                    <AnimatedSection>
+                        <h2 className={styles.sectionTitle}>Una Ubicación Privilegiada</h2>
+                    </AnimatedSection>
+                    
+                    {/* 2. Párrafo con animación propia */}
+                    <AnimatedSection>
+                        <p className={styles.sectionText}>
+                            Nos encontramos en una zona estratégica de Bogotá, ideal para viajeros de negocios y turistas. A pocos pasos de Corferias y con fácil acceso a las principales vías de la ciudad.
+                        </p>
+                    </AnimatedSection>
+                    
+                    {/* 3. Cada punto de interés (li) con su propia animación */}
+                    <ul className={styles.poiList}>
+                        {pointsOfInterest.map((point, index) => (
+                            <AnimatedSection key={index}>
+                                <li className={styles.poiItem}>
+                                    <FaMapMarkerAlt className={styles.poiIcon} />
+                                    <span>{point}</span>
+                                </li>
+                            </AnimatedSection>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* El mapa ya tenía su animación independiente, se mantiene igual */}
+                <AnimatedSection>
+                    <div className={styles.mapContainer}>
+                        <iframe
+                            src={mapSrc}
+                            className={styles.mapIframe}
+                            allowFullScreen=""
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            title="Ubicación del Hotel Fontana"
+                        ></iframe>
+                    </div>
+                </AnimatedSection>
+            </div>
+        </section>
+    );
+};
+
+export default LocationSection;
+
+
+// ==================== src/components/ServicesSection.js ====================
+
+// ==================== src/components/ServicesSection.js (CORREGIDO) ====================
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import styles from './ServicesSection.module.css';
+import { FaWifi, FaDumbbell, FaUserClock, FaParking } from 'react-icons/fa';
+import AnimatedSection from './common/AnimatedSection';
+
+const ServicesSection = () => {
+    const services = [
+        { icon: <FaWifi />, name: 'WiFi de Alta Velocidad' },
+        { icon: <FaDumbbell />, name: 'Zona de cardio' },
+        { icon: <FaUserClock />, name: 'Recepción 24 Horas' },
+        { icon: <FaParking />, name: 'Parking Privado Gratis' },
+    ];
+
+    return (
+        <section className={styles.servicesSection}>
+            {/* 1. El título se anima por separado */}
+            <AnimatedSection>
+                <h2 className={styles.sectionTitle}>Nuestros Servicios</h2>
+            </AnimatedSection>
+            
+            {/* 2. Cada tarjeta de servicio se anima individualmente */}
+            <div className={styles.gridContainer}>
+                {services.map((service, index) => (
+                    <AnimatedSection key={index}>
+                        <div className={styles.serviceItem}>
+                            <div className={styles.iconWrapper}>{service.icon}</div>
+                            <h3 className={styles.serviceName}>{service.name}</h3>
+                        </div>
+                    </AnimatedSection>
+                ))}
+            </div>
+            
+            <div className={styles.detailsModule}>
+                {/* 3. La imagen del módulo de detalles se anima por separado */}
+                <AnimatedSection>
+                    <div className={styles.imageContainer}>
+                        <img
+                            src="https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675246/DSC04604_nmxq5b.jpg"
+                            alt="[Interior del Hotel Fontana]"
+                            className={styles.detailsImage}
+                        />
+                    </div>
+                </AnimatedSection>
+
+                <div className={styles.textContainer}>
+                    {/* 4. Cada párrafo se anima individualmente */}
+                    <AnimatedSection>
+                        <p className={styles.detailsText}>
+                            ¡Bienvenido al Hotel Fontana, tu puerta de entrada al corazón de los negocios y la cultura en la vibrante Bogotá! Con habitaciones acogedoras, estamos estratégicamente ubicados a solo 1 minuto a pie del Centro Internacional de Negocios y Exposiciones - Corferias.
+                        </p>
+                    </AnimatedSection>
+                    <AnimatedSection>
+                        <p className={styles.detailsText}>
+                            Nuestro hotel brinda comodidades de primer nivel, como gimnasio, parqueadero privado y una sala de juntas para 20 personas, perfecta para eventos y reuniones. Disfruta de una estancia sin preocupaciones con recepción 24 horas, servicio de habitaciones, televisión por cable Directv y wifi de alta velocidad en todo el alojamiento.
+                        </p>
+                    </AnimatedSection>
+                    <AnimatedSection>
+                        <p className={styles.detailsText}>
+                            Empieza tus días con un delicioso desayuno americano y disfruta de una vista panorámica de la ciudad. Estamos cerca de lugares emblemáticos como la Plaza de Bolívar, Monserrate, el centro histórico (a 5.1 km), el Estadio El Campín y Movistar Arena (a 4.5 km), la Embajada Americana (a 0.8 km), y el centro comercial Gran Estación (a 2.7 km). El Aeropuerto Internacional de El Dorado se encuentra a solo 8 km de distancia.
+                        </p>
+                    </AnimatedSection>
+                    <AnimatedSection>
+                        <p className={styles.detailsText}>
+                            Haz de tu estadía en Bogotá una experiencia memorable en Hotel Fontana. ¡Te esperamos con los brazos abiertos para hacer de tu visita una experiencia única!
+                        </p>
+                    </AnimatedSection>
+                    <br />
+                    {/* 5. El botón final también se anima por separado */}
+                    <AnimatedSection>
+                        <Link to="/servicios" className={styles.detailsButton}>
+                            Ver todos nuestros servicios
+                        </Link>
+                    </AnimatedSection>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+export default ServicesSection;
+
+
+// ==================== src/components/TestimonialsSection.js ====================
+
+// ==================== src/components/TestimonialsSection.js (CORREGIDO) ====================
+
+import React from 'react';
+import styles from './TestimonialsSection.module.css';
+import { FaStar, FaQuoteLeft } from 'react-icons/fa';
+import AnimatedSection from './common/AnimatedSection';
+
+const StarRating = ({ rating }) => {
+    const stars = [];
+    for (let i = 0; i < 5; i++) {
+        stars.push(
+            <FaStar key={i} color={i < rating ? '#ffc107' : '#e4e5e9'} />
+        );
+    }
+    return <div className={styles.stars}>{stars}</div>;
+};
+
+const TestimonialsSection = () => {
+    const testimonials = [
+        {
+            quote: "El servicio fue impecable y la ubicación es inmejorable, justo al lado de Corferias. Hizo mi viaje de negocios mucho más sencillo. ¡Volveré sin duda!",
+            author: "Carlos Mendoza",
+            rating: 5,
+        },
+        {
+            quote: "Habitaciones muy cómodas y limpias. El personal de recepción fue extremadamente amable y servicial. Una excelente opción en Bogotá.",
+            author: "Ana Sofía Restrepo",
+            rating: 5,
+        },
+        {
+            quote: "Buena relación calidad-precio. El gimnasio estaba bien equipado y el WiFi funcionaba perfectamente. Ideal para una estancia corta.",
+            author: "Javier Correa",
+            rating: 4,
+        },
+    ];
+
+    return (
+        <section className={styles.testimonialsSection}>
+            {/* 1. Título principal animado */}
+            <AnimatedSection>
+                <h2 className={styles.mainTitle}>Calificación de 9,1/10: Fantástico</h2>
+            </AnimatedSection>
+            
+            {/* 2. Subtítulo animado */}
+            <AnimatedSection>
+                <p className={styles.mainSubtitle}>Basado en más de 700 comentarios reales</p>
+            </AnimatedSection>
+            
+            {/* 3. Título de las tarjetas animado */}
+            <AnimatedSection>
+                <h3 className={styles.cardsTitle}>Lo que dicen nuestros huéspedes</h3>
+            </AnimatedSection>
+            
+            {/* 4. Cada tarjeta de testimonio animada individualmente */}
+            <div className={styles.cardsContainer}>
+                {testimonials.map((testimonial, index) => (
+                    <AnimatedSection key={index}>
+                        <div className={styles.testimonialCard}>
+                            <FaQuoteLeft className={styles.quoteIcon} />
+                            <p className={styles.quote}>"{testimonial.quote}"</p>
+                            <div className={styles.cardFooter}>
+                                <StarRating rating={testimonial.rating} />
+                                <p className={styles.author}>- {testimonial.author}</p>
+                            </div>
+                        </div>
+                    </AnimatedSection>
+                ))}
+            </div>
+        </section>
+    );
+};
+
+export default TestimonialsSection;
+
+
+// ==================== src/components/BookingForm.js ====================
+
+// src/components/BookingForm.js
+import React, { useState } from 'react';
+import styles from './BookingForm.module.css';
+
+const BookingForm = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = tomorrowDate.toISOString().split('T')[0];
+
+  const [checkin, setCheckin] = useState(today);
+  const [checkout, setCheckout] = useState(tomorrow);
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!checkin || !checkout) {
+      alert("Por favor, selecciona las fechas de llegada y salida.");
+      return;
+    }
+
+    const baseUrl = 'https://www.booking.com/hotel/co/fontana-bogota.es.html';
+    const params = new URLSearchParams({
+      ss: 'Hotel Fontana Bogotá, Bogotá, Colombia',
+      checkin: checkin,
+      checkout: checkout,
+      group_adults: adults,
+      group_children: children,
+      no_rooms: 1,
+      req_adults: adults,
+      req_children: children,
+    });
+    const finalUrl = `${baseUrl}?${params.toString()}`;
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <form className={styles.bookingForm} onSubmit={handleSubmit}>
+      <div className={styles.formGroup}>
+        <label htmlFor="checkin">Llegada</label>
+        <input
+          type="date"
+          id="checkin"
+          value={checkin}
+          min={today}
+          onChange={(e) => setCheckin(e.target.value)}
+          className={styles.formInput}
+          required
+        />
+      </div>
+      <div className={styles.formGroup}>
+        <label htmlFor="checkout">Salida</label>
+        <input
+          type="date"
+          id="checkout"
+          value={checkout}
+          min={checkin || today}
+          onChange={(e) => setCheckout(e.target.value)}
+          className={styles.formInput}
+          required
+        />
+      </div>
+      <div className={styles.formGroup}>
+        <label htmlFor="adults">Adultos</label>
+        <input
+          type="number"
+          id="adults"
+          value={adults}
+          min="1"
+          onChange={(e) => setAdults(e.target.value)}
+          className={styles.formInput}
+        />
+      </div>
+      <div className={styles.formGroup}>
+        <label htmlFor="children">Niños</label>
+        <input
+          type="number"
+          id="children"
+          value={children}
+          min="0"
+          onChange={(e) => setChildren(e.target.value)}
+          className={styles.formInput}
+        />
+      </div>
+      <button type="submit" className={`btn btn-brand ${styles.submitButton}`}>
+        Reservar
+      </button>
+    </form>
+  );
+};
+
+export default BookingForm;
+
+
+// ==================== src/components/RoomsSection.js ====================
+
+// ==================== src/components/RoomsSection.js (CORREGIDO) ====================
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import styles from './RoomsSection.module.css';
+import roomsData from '../data/roomData.js';
+import AnimatedSection from './common/AnimatedSection';
+
+const RoomsSection = () => {
+  const featuredRooms = roomsData.slice(0, 3);
+
+  return (
+    <section className={styles.roomsSection}>
+      {/* El título y subtítulo pueden aparecer juntos */}
+      <AnimatedSection>
+        <h2 className={styles.sectionTitle}>Nuestras Habitaciones</h2>
+        <p className={styles.sectionSubtitle}>
+          Espacios diseñados para tu confort y descanso. Elige la opción perfecta para ti.
+        </p>
+      </AnimatedSection>
+
+      {/* MODIFICADO: Se elimina el <AnimatedSection> que envolvía a cardsContainer */}
+      <div className={styles.cardsContainer}>
+        {featuredRooms.map((room) => (
+          // NUEVO: Se añade <AnimatedSection> aquí para envolver CADA tarjeta.
+          // Usamos el room.id como key para la animación.
+          <AnimatedSection key={room.id}>
+            <div className={styles.roomCard}>
+              <img
+                src={room.imageUrl}
+                alt={`[Imagen de ${room.name}]`}
+                className={styles.cardImage}
+                onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/800x600/cccccc/ffffff?text=Imagen+no+disponible`; }}
+              />
+              <div className={styles.cardContent}>
+                <h3 className={styles.cardTitle}>{room.name}</h3>
+                <p className={styles.cardDescription}>{room.description}</p>
+                <Link to={`/habitaciones/${room.id}`} className={`btn btn-brand ${styles.cardButton}`}>
+                  Ver Detalles
+                </Link>
+              </div>
+            </div>
+          </AnimatedSection>
+        ))}
+      </div>
+
+      {/* El botón ya estaba correctamente envuelto, así que se mantiene igual */}
+      <AnimatedSection>
+        <div className={styles.viewAllContainer}>
+          <Link to="/habitaciones" className="btn btn-brand">
+            Ver todas las habitaciones
+          </Link>
+        </div>
+      </AnimatedSection>
+    </section>
+  );
+};
+
+export default RoomsSection;
+
+
+// ==================== src/components/Hero.module.css ====================
+
+/* ==================== src/components/Hero.module.css ==================== */
+
+.hero {
+  height: 100vh; /* Ocupa toda la altura de la pantalla */
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  text-align: center;
+  color: white;
+  background-image: url('https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751662642/DSC04616_gdzm3u.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed; /* Efecto parallax para escritorio */
+}
+
+/* Capa oscura para mejorar la legibilidad del texto */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* Negro con 50% de opacidad */
+  z-index: 1;
+}
+
+/* Contenedor del contenido para que esté por encima de la capa oscura */
+.heroContent {
+  position: relative;
+  z-index: 2;
+  max-width: 1300px;
+  width: 90%;
+  padding: 0 1rem;
+  animation: fadeIn 2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.heroTitle {
+  font-size: 3.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  max-width: 900px;
+  margin-top: 200px;
+}
+
+.heroSubtitle {
+  font-size: 1.6rem;
+  font-weight: 300;
+  margin-bottom: 6rem;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* MODIFICADO: Media query mejorada para tablets y móviles */
+@media (max-width: 768px) {
+  /* Previene problemas de rendimiento y zoom en móviles */
+  .hero {
+    background-attachment: scroll;
+  }
+  
+  .heroContent {
+    /* Permite que el formulario de reserva se estire al 100% del ancho */
+    align-items: stretch;
+    padding: 0 1.5rem; /* Un poco más de espacio lateral */
+  }
+
+  .heroTitle {
+    font-size: 2.5rem; /* Tamaño más adecuado para móviles */
+    margin-top: 100px; /* Espacio para el header y un respiro */
+  }
+
+  .heroSubtitle {
+    font-size: 1.2rem; /* Subtítulo más pequeño */
+    margin-bottom: 2rem;
+  }
+}
+
+/* NUEVO: Media query para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .heroTitle {
+    font-size: 2rem; /* Aún más pequeño para celulares */
+  }
+
+  .heroSubtitle {
+    font-size: 1.1rem;
+  }
+}
+
+
+// ==================== src/components/common/ScrollToTop.js ====================
+
+// src/components/common/ScrollToTop.js
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+
+// Este componente no renderiza nada visualmente.
+// Su único propósito es hacer scroll hacia arriba cada vez que la ruta cambia.
+const ScrollToTop = () => {
+  // Extrae el pathname (ej. "/", "/habitaciones") del objeto de ubicación actual.
+  const { pathname } = useLocation();
+
+  // useEffect se ejecuta cada vez que el valor de 'pathname' cambia.
+  useEffect(() => {
+    // Hace scroll de la ventana a la posición (0, 0) - la parte superior de la página.
+    window.scrollTo(0, 0);
+  }, [pathname]); // El array de dependencias asegura que el efecto solo se ejecute cuando la URL cambie.
+
+  return null; // No se renderiza ningún elemento en el DOM.
+};
+
+export default ScrollToTop;
+
+
+
+// ==================== src/components/common/AnimatedSection.css ====================
+
+/* src/components/common/AnimatedSection.css */
+
+/* Estilo base para la sección animada (oculta por defecto) */
+.animated-section {
+  opacity: 0;
+  transform: translateY(50px); /* Comienza 50px más abajo */
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+/* Clase que se añade cuando la sección es visible */
+.animated-section.is-visible {
+  opacity: 1;
+  transform: translateY(0); /* Vuelve a su posición original */
+}
+
+
+
+// ==================== src/components/common/AnimatedSection.js ====================
+
+// src/components/common/AnimatedSection.js
+import React from 'react';
+import { useInView } from 'react-intersection-observer';
+import './AnimatedSection.css'; // Importando la hoja de estilos
+
+const AnimatedSection = ({ children }) => {
+  const { ref, inView } = useInView({
+    triggerOnce: true, // La animación se ejecuta solo una vez cuando el elemento entra en la vista
+    threshold: 0.1,    // La animación se activa cuando al menos el 10% del componente es visible
+    rootMargin: '0px 0px -50px 0px', // Activa la animación un poco antes de que llegue al borde
+  });
+
+  return (
+    // Se aplica la clase 'is-visible' solo cuando el componente está a la vista
+    <div ref={ref} className={`animated-section ${inView ? 'is-visible' : ''}`}>
+      {children}
+    </div>
+  );
+};
+
+export default AnimatedSection;
+
+
+
+// ==================== src/components/common/Header.module.css ====================
+
+/* ==================== src/components/common/Header.module.css (ACTUALIZADO) ==================== */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 2rem;
+    background-color: transparent;
+    box-shadow: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.header.solid {
+    background-color: var(--light-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    height: 70px;
+    width: auto;
+    transition: fill 0.4s ease, filter 0.4s ease, height 0.3s ease;
+    color: #daa52c;
+    filter: drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.2));
+}
+
+.header.solid .logo {
+    fill: var(--primary-brand-color);
+}
+
+.navigation {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.navList {
+    list-style: none;
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+}
+
+.navLink a {
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    position: relative;
+    padding-bottom: 8px;
+    transition: color 0.3s ease;
+    color: white;
+}
+
+/* NUEVO: Oculta el ícono del enlace por defecto (vista de escritorio) */
+.navLink a svg {
+    display: none;
+}
+
+.solid .navLink a {
+    color: var(--text-dark);
+}
+
+.navLink a span {
+    position: relative;
+}
+
+.navLink a span::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary-action-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease-in-out;
+}
+
+.solid .navLink a:hover span::after {
+    transform: scaleX(1);
+}
+
+.solid .navLink a.activeLink span::after {
+    transform: scaleX(1);
+}
+
+/* MODIFICADO: Se mueve la regla del botón fuera del media query para que aplique a desktop también */
+.menuToggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--light-color);
+    font-size: 1.8rem;
+    cursor: pointer;
+    z-index: 1002; 
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), color 0.3s ease;
+}
+
+/* NUEVO: Oculta el título del menú por defecto (vista de escritorio) */
+.menuTitle {
+    display: none;
+}
+
+.header.solid .menuToggle {
+    color: var(--text-dark);
+}
+
+.header.menuOpen .menuToggle {
+    transform: rotate(90deg);
+    color: var(--light-color);
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+}
+
+.header:not(.menuOpen) .overlay {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+@media (max-width: 992px) {
+    .menuToggle {
+        display: block;
+    }
+    
+    .logo {
+        height: 55px;
+        margin-left: -20px;
+    }
+
+    .navigation {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 80%;
+        max-width: 320px;
+        height: 100vh;
+        background-color: #2c3e50;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        gap: 1.5rem;
+        padding: 100px 1.5rem 2rem;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+        transform: translateX(100%);
+        visibility: hidden;
+        transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), visibility 0.4s;
+        z-index: 1001;
+    }
+
+    .navigation.active {
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    /* MODIFICADO: Muestra el título del menú en móvil */
+    .menuTitle {
+        display: block;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255, 255, 255, 0.5);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .navList {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .navigation .navLink a {
+        color: var(--light-color);
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* MODIFICADO: Muestra el ícono del enlace en móvil */
+    .navigation .navLink a svg {
+        display: inline-block;
+    }
+
+    .navigation .navLink a.activeLink {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .navigation .navLink a span::after {
+        display: none;
+    }
+    
+    .bookingButton {
+        font-size: 1.1rem;
+        padding: 0.9rem;
+        width: 100%;
+        text-align: center;
+        margin-top: auto;
+    }
+}
+
+
+// ==================== src/components/common/Footer.module.css ====================
+
+/* src/components/common/Footer.module.css */
+
+
+.footer {
+  background-color: #2c3e50;
+  color: #ecf0f1;
+  padding: 3rem 2rem;
+  font-family: 'Arial', sans-serif;
+}
+
+.footerContainer {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footerColumn {
+  flex: 1; /* Cada columna toma el mismo espacio */
+  min-width: 250px; /* Ancho mínimo antes de que se apilen */
+  padding: 0 1rem;
+}
+
+.footerColumn h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  color: #ffffff;
+  position: relative;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #3498db; /* Línea azul para el título */
+  display: inline-block;
+}
+
+.contactInfo p {
+  margin: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  line-height: 1.6;
+}
+
+.quickLinks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quickLinks li {
+  margin-bottom: 0.8rem;
+}
+
+.quickLinks a {
+  color: #ecf0f1;
+  text-decoration: none;
+  transition: color 0.3s ease, padding-left 0.3s ease;
+}
+
+.quickLinks a:hover {
+  color: #3498db; /* Color de acento al pasar el ratón */
+  padding-left: 5px;
+}
+
+.socialIcons {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.socialIcons a {
+  color: #ecf0f1;
+  font-size: 1.8rem; /* Tamaño de los iconos */
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.socialIcons a:hover {
+  color: #3498db;
+  transform: scale(1.1); /* Agrandar el icono al pasar el ratón */
+}
+
+.footerBottom {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #34495e; /* Separador */
+  font-size: 0.9rem;
+  color: #bdc3c7; /* Un gris más suave */
+}
+
+@media (max-width: 768px) {
+  .footer {
+    padding: 2rem 1rem;
+  }
+  .footerContainer {
+    flex-direction: column;
+    text-align: center;
+    gap: 2.5rem;
+  }
+  .socialIcons {
+    justify-content: center;
+  }
+}
+
+
+// ==================== src/components/common/FloatingWhatsApp.js ====================
+
+// ==================== src/components/common/FloatingWhatsApp.js (ACTUALIZADO) ====================
+
+import React from 'react';
+import styles from './FloatingWhatsApp.module.css';
+import { FaWhatsapp } from 'react-icons/fa';
+
+const FloatingWhatsApp = () => {
+  // MODIFICADO: Se actualiza el número de teléfono.
+  const phoneNumber = "573222585951"; 
+  const message = "Hola, me gustaría obtener más información sobre las reservas.";
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+  return (
+    <a
+      href={whatsappUrl}
+      className={styles.whatsappButton}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Contactar por WhatsApp"
+    >
+      <FaWhatsapp />
+    </a>
+  );
+};
+
+export default FloatingWhatsApp;
+
+
+// ==================== src/components/common/Footer.js ====================
+
+// src/components/common/Footer.js
+import React from 'react';
+import { Link } from 'react-router-dom';
+import styles from './Footer.module.css';
+import { FaFacebookF, FaTwitter, FaInstagram, FaMapMarkerAlt, FaPhone, FaEnvelope } from 'react-icons/fa';
+
+const Footer = () => {
+  const quickLinks = [
+    { title: 'Inicio', path: '/' },
+    { title: 'Habitaciones', path: '/habitaciones' },
+    { title: 'Servicios', path: '/servicios' },
+    { title: 'Contacto', path: '/contacto' },
+    { title: 'Reglamento Interno', path: '/reglamento-interno' }, // Enlace añadido
+  ];
+
+  const socialLinks = [
+    { icon: <FaInstagram />, url: 'https://www.instagram.com/hotelfontanabogota/', label: 'Instagram' },
+  ];
+
+  return (
+    <footer className={styles.footer}>
+      <div className={styles.footerContainer}>
+        <div className={`${styles.footerColumn} ${styles.contactInfo}`}>
+          <h3>Hotel Fontana</h3>
+          <p>
+            <FaMapMarkerAlt />
+            Cra. 37 #24-25, Bogotá, Colombia
+          </p>
+          <p>
+            <FaPhone />
+            +57 (601) 123-4567
+          </p>
+          <p>
+            <FaEnvelope />
+            reservas@hotelfontanabogota.com
+          </p>
+        </div>
+
+        <div className={styles.footerColumn}>
+          <h3>Enlaces Rápidos</h3>
+          <ul className={styles.quickLinks}>
+            {quickLinks.map(link => (
+              <li key={link.title}>
+                {/* Usando Link en lugar de <a> */}
+                <Link to={link.path}>{link.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className={styles.footerColumn}>
+          <h3>Síguenos</h3>
+          <div className={styles.socialIcons}>
+            {socialLinks.map(social => (
+              <a 
+                key={social.label} 
+                href={social.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                aria-label={social.label}
+              >
+                {social.icon}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className={styles.footerBottom}>
+        <p>&copy; {new Date().getFullYear()} Hotel Fontana. Todos los derechos reservados.</p>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;
+
+
+
+// ==================== src/components/common/Header.js ====================
+
+// ==================== src/components/common/Header.js (CORREGIDO) ====================
+
+import React, { useState, useEffect } from 'react'; // << LÍNEA CORREGIDA
+import { NavLink, useLocation } from 'react-router-dom';
+import styles from './Header.module.css';
+import { ReactComponent as Logo } from '../../assets/images/logo.svg';
+import { FaBars, FaTimes, FaHome, FaBed, FaConciergeBell, FaEnvelope } from 'react-icons/fa';
+
+const Header = () => {
+    const bookingUrl = `https://www.booking.com/hotel/co/fontana-bogota.es.html`;
+    const location = useLocation();
+    const isHomePage = location.pathname === '/';
+
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const handleLogoClick = (e) => {
+        if (isHomePage) {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth',
+            });
+        }
+        setIsMenuOpen(false);
+    };
+
+    useEffect(() => {
+        if (isMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, [isMenuOpen]);
+
+    useEffect(() => {
+        if (isHomePage) {
+            const handleScroll = () => setIsScrolled(window.scrollY > 80);
+            window.addEventListener('scroll', handleScroll);
+            return () => window.removeEventListener('scroll', handleScroll);
+        } else {
+            setIsScrolled(false);
+        }
+    }, [isHomePage]);
+
+    const handleLinkClick = () => {
+        setIsMenuOpen(false);
+    };
+    
+    const toggleMenu = () => {
+        setIsMenuOpen(!isMenuOpen);
+    }
+
+    const navLinks = [
+        { title: 'Inicio', path: '/', icon: <FaHome /> },
+        { title: 'Habitaciones', path: '/habitaciones', icon: <FaBed /> },
+        { title: 'Servicios', path: '/servicios', icon: <FaConciergeBell /> },
+        { title: 'Contacto', path: '/contacto', icon: <FaEnvelope /> },
+    ];
+
+    const isSolid = !isHomePage || isScrolled;
+    const headerClasses = `${styles.header} ${isSolid ? styles.solid : ''} ${isMenuOpen ? styles.menuOpen : ''}`;
+    const navigationClasses = `${styles.navigation} ${isMenuOpen ? styles.active : ''}`;
+
+    return (
+        <header className={headerClasses}>
+            <div className={styles.logoContainer}>
+                <NavLink to="/" onClick={handleLogoClick}>
+                    <Logo className={styles.logo} />
+                </NavLink>
+            </div>
+            
+            <button className={styles.menuToggle} onClick={toggleMenu} aria-label="Abrir menú">
+                {isMenuOpen ? <FaTimes /> : <FaBars />}
+            </button>
+
+            {isMenuOpen && <div className={styles.overlay} onClick={toggleMenu}></div>}
+
+            <div className={navigationClasses}>
+                <h3 className={styles.menuTitle}>Menú</h3>
+                <nav>
+                    <ul className={styles.navList}>
+                        {navLinks.map((link) => (
+                            <li key={link.title} className={styles.navLink}>
+                                <NavLink 
+                                    to={link.path} 
+                                    onClick={handleLinkClick}
+                                    className={({ isActive }) => isActive ? styles.activeLink : undefined}
+                                >
+                                    {link.icon} <span>{link.title}</span>
+                                </NavLink>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+
+                <a href={bookingUrl} target="_blank" rel="noopener noreferrer" className={`btn btn-primary ${styles.bookingButton}`}>
+                    Reserva Ahora
+                </a>
+            </div>
+        </header>
+    );
+};
+
+export default Header;
+
+
+// ==================== src/components/common/Button.js ====================
+
+
+
+
+// ==================== src/components/common/FloatingWhatsApp.module.css ====================
+
+/* src/components/common/FloatingWhatsApp.module.css */
+.whatsappButton {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  background-color: #25d366;
+  color: white;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.whatsappButton:hover {
+  transform: scale(1.1);
+  background-color: #128c7e;
+}
+
+
+
+// ==================== src/pages/ServicesPage.js ====================
+
+// src/pages/ServicesPage.js
+import React from 'react';
+import styles from './ServicesPage.module.css';
+import { FaCheckCircle } from 'react-icons/fa';
+import AnimatedSection from '../components/common/AnimatedSection'; // Importar animación
+
+const ServicesPage = () => {
+  const serviceCategories = [
+    {
+      category: 'Servicios más populares',
+      items: [
+        { name: 'Desayuno americano', imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675213/DSC04550_o9tpwl.jpg' },
+        { name: 'Parking Privado Gratis', imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675245/DSC04600_czjgjf.jpg' },
+        { name: 'Zona de Cardio', imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675211/DSC04545_zxcsvm.jpg' },
+        { name: 'Recepción 24 horas', imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675248/DSC04614_jv5dsd.jpg' },
+      ],
+    },
+    {
+      category: 'Baño',
+      items: ['Artículos de aseo', 'Ducha', 'Toallas', 'Secador de pelo'],
+    },
+    {
+      category: 'Dormitorio',
+      items: ['Ropa de cama', 'Armario', 'Caja fuerte', 'TV de pantalla plana'],
+    },
+    {
+      category: 'Seguridad',
+      items: ['Extintores', 'Cámaras de seguridad', 'Caja fuerte', 'Personal 24 horas'],
+    },
+    {
+      category: 'Comida y bebida',
+      items: ['Desayuno americano', 'Maquina dispensadora 24 horas', 'Minibar', 'Ubicacion estrategica con restaurantes y bares cercanos'],
+    },
+    {
+      category: 'General',
+      items: ['Prohibido fumar', 'Lavandería (de pago)', 'Ascensor', 'Accesorios de planchado'],
+    },
+  ];
+
+  return (
+    <div className={styles.pageContainer}>
+      <AnimatedSection>
+        <h1 className={styles.pageTitle}>Nuestros Servicios e Instalaciones</h1>
+      </AnimatedSection>
+      <AnimatedSection>
+        <p className={styles.pageSubtitle}>
+          En todas nuestras habitaciones encontrará TV de pantalla plana, caja fuerte, minibar y un baño privado con ducha y secador de pelo para su comodidad, además, cada reserva incluye desayuno americano. El Hotel Fontana cuenta con una sala de juntas, espacios para reuniones y una recepción abierta las 24 horas. También ofrecemos consigna de equipaje. Nuestra ubicación es ideal: Corferias se encuentra a solo 100 metros, la embajada americana a 500 metros, mientras que el Aeropuerto Internacional El Dorado está a 15 minutos en auto, facilitando todos sus traslados.
+        </p>
+      </AnimatedSection>
+      
+      {serviceCategories.map((category, index) => (
+        <AnimatedSection key={index}>
+          <section className={styles.categorySection}>
+            <h2 className={styles.categoryTitle}>{category.category}</h2>
+            
+            {category.category === 'Servicios más populares' ? (
+              <div className={styles.popularServicesGrid}>
+                {category.items.map((item, itemIndex) => (
+                  <div key={itemIndex} className={styles.popularServiceCard}>
+                    <img
+                      src={item.imageUrl}
+                      alt={`[Imagen de ${item.name}]`}
+                      className={styles.cardImage}
+                      onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/400x300/cccccc/ffffff?text=Imagen`; }}
+                    />
+                    <div className={styles.cardName}>{item.name}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.otherServicesGrid}>
+                {category.items.map((item, itemIndex) => (
+                  <div key={itemIndex} className={styles.serviceItem}>
+                    <FaCheckCircle className={styles.serviceIcon} />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </AnimatedSection>
+      ))}
+    </div>
+  );
+};
+
+export default ServicesPage;
+
+
+
+// ==================== src/pages/ContactPage.module.css ====================
+
+/* ==================== src/pages/ContactPage.module.css (ACTUALIZADO) ==================== */
+
+.pageContainer {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    padding-top: 120px;
+}
+
+.pageTitle {
+    text-align: center;
+    font-size: 2.8rem;
+    margin-bottom: 4rem;
+    color: #343a40;
+}
+
+.contentWrapper {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 4rem;
+    align-items: start;
+}
+
+.infoContainer {
+    background-color: #f8f9fa;
+    padding: 2rem;
+    border-radius: 10px;
+}
+
+.infoContainer h3 {
+    font-size: 1.8rem;
+    margin-bottom: 2rem;
+    color: #343a40;
+    border-bottom: 2px solid var(--primary-action-color);
+    padding-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.infoItem {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+.infoIcon {
+    font-size: 1.5rem;
+    color: var(--primary-action-color);
+    margin-top: 4px;
+}
+
+.formContainer {
+    padding: 0 1rem;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.formGroup label {
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+.formInput,
+.formTextarea,
+.formSelect {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-family: 'Lato', sans-serif;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: #fff;
+    /* MODIFICADO: Se establece el color por defecto a negro */
+    color: var(--text-dark);
+}
+
+/* NUEVO: Cuando el select está en su estado inicial (inválido), el texto es gris */
+.formSelect:invalid {
+  color: #6c757d;
+}
+
+/* NUEVO: Se asegura que las opciones desplegables siempre sean negras */
+.formSelect option {
+  color: var(--text-dark);
+}
+
+.formInput:focus,
+.formTextarea:focus,
+.formSelect:focus {
+    outline: none;
+    border-color: var(--primary-action-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.formTextarea {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.submitButton {
+    padding: 0.8rem 2rem;
+    background-color: var(--primary-action-color);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease;
+    align-self: flex-start;
+}
+
+.submitButton:hover {
+    background-color: #0056b3;
+}
+
+@media (max-width: 992px) {
+    .contentWrapper {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .pageContainer {
+        padding: 1.5rem 1rem;
+        padding-top: 100px;
+    }
+    .pageTitle {
+        font-size: 2.2rem;
+        margin-bottom: 2rem;
+    }
+}
+
+
+// ==================== src/pages/ContactPage.js ====================
+
+// ==================== src/pages/ContactPage.js (ACTUALIZADO) ====================
+
+import React, { useState } from 'react';
+import emailjs from '@emailjs/browser';
+import styles from './ContactPage.module.css';
+import { FaMapMarkerAlt, FaPhone, FaEnvelope } from 'react-icons/fa';
+import AnimatedSection from '../components/common/AnimatedSection';
+import { toast } from 'react-toastify';
+
+const ContactPage = () => {
+    const contactInfo = [
+        {
+            icon: <FaMapMarkerAlt className={styles.infoIcon} />,
+            text: 'Cra. 37 #24-25, Bogotá, Colombia',
+        },
+        {
+            icon: <FaPhone className={styles.infoIcon} />,
+            text: '+57 (601) 123-4567',
+        },
+        {
+            icon: <FaEnvelope className={styles.infoIcon} />,
+            text: 'reservas@hotelfontanabogota.com',
+        },
+    ];
+
+    // 1. AÑADIR ESTADO PARA EL CAMPO 'REASON'
+    const [reason, setReason] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        setIsSubmitting(true);
+
+        const form = event.target;
+        
+        let templateId = '';
+        if (reason === 'pregunta') {
+            templateId = 'template_da65wrk';
+        } else {
+            templateId = 'template_i6nov8c';
+        }
+
+        const serviceId = 'service_w2gim5e';
+        const publicKey = 'c6oUc6aaB0wguGlkm';
+
+        emailjs.sendForm(serviceId, templateId, form, publicKey)
+            .then((result) => {
+                toast.success('PQRS enviado exitosamente!');
+                form.reset();
+                setReason(''); // 2. REINICIAR EL ESTADO DESPUÉS DE ENVIAR
+            }, (error) => {
+                toast.error('Hubo un error, intenta nuevamente o envíanos un correo.');
+            })
+            .finally(() => {
+                setIsSubmitting(false);
+            });
+    };
+
+    return (
+        <div className={styles.pageContainer}>
+            <AnimatedSection>
+                <h1 className={styles.pageTitle}>Contáctanos</h1>
+            </AnimatedSection>
+            <div className={styles.contentWrapper}>
+                <AnimatedSection>
+                    <div className={styles.infoContainer}>
+                        <h3>Información de Contacto</h3>
+                        {contactInfo.map((item, index) => (
+                            <div key={index} className={styles.infoItem}>
+                                {item.icon}
+                                <span>{item.text}</span>
+                            </div>
+                        ))}
+                    </div>
+                </AnimatedSection>
+                <AnimatedSection>
+                    <div className={styles.formContainer}>
+                        <form className={styles.form} onSubmit={handleSubmit}>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="name">Nombre</label>
+                                <input type="text" id="name" name="name" className={styles.formInput} required />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="email">Email</label>
+                                <input type="email" id="email" name="email" className={styles.formInput} required />
+                            </div>
+                            
+                            <div className={styles.formGroup}>
+                                <label htmlFor="reason">Motivo de Contacto</label>
+                                {/* 3. CONECTAR EL SELECT AL ESTADO */}
+                                <select 
+                                    id="reason" 
+                                    name="reason" 
+                                    className={styles.formSelect} 
+                                    value={reason} // El valor del select es controlado por el estado
+                                    onChange={(e) => setReason(e.target.value)} // Actualiza el estado al cambiar
+                                    required
+                                >
+                                    <option value="" disabled>-- Elige una opción --</option>
+                                    <option value="pregunta">Pregunta</option>
+                                    <option value="queja">Queja</option>
+                                    <option value="reclamo">Reclamo</option>
+                                    <option value="sugerencia">Sugerencia</option>
+                                </select>
+                            </div>
+                            
+                            <div className={styles.formGroup}>
+                                <label htmlFor="message">Mensaje</label>
+                                <textarea id="message" name="message" className={styles.formTextarea} required></textarea>
+                            </div>
+                            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
+                                {isSubmitting ? 'Enviando...' : 'Enviar'}
+                            </button>
+                        </form>
+                    </div>
+                </AnimatedSection>
+            </div>
+        </div>
+    );
+};
+
+export default ContactPage;
+
+
+// ==================== src/pages/RegulationsPage.js ====================
+
+// ==================== src/pages/RegulationsPage.js (ACTUALIZADO) ====================
+
+import React from 'react';
+import styles from './RegulationsPage.module.css';
+import pdfFile from '../assets/RIT.pdf';
+
+const RegulationsPage = () => {
+  return (
+    <div className={styles.pageContainer}>
+      <h1 className={styles.pageTitle}>Reglamento Interno de Trabajo</h1>
+      
+      {/* NUEVO: Texto de la fecha de actualización */}
+      <p className={styles.lastUpdated}>
+        Ultima actualización el 6 de julio del 2025
+      </p>
+      
+      <div className={styles.pdfContainer}>
+        <embed 
+          src={pdfFile} 
+          type="application/pdf" 
+          className={styles.pdfEmbed}
+        />
+      </div>
+      
+      <div className={styles.downloadLinkContainer}>
+        <p>
+          Si no puedes ver el documento, puedes&nbsp;
+          <a href={pdfFile} download="Reglamento_Interno_Hotel_Fontana.pdf">
+            descargarlo aquí
+          </a>.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default RegulationsPage;
+
+
+// ==================== src/pages/RoomsPage.js ====================
+
+// src/pages/RoomsPage.js
+import React from 'react';
+import { Link } from 'react-router-dom';
+import roomsData from '../data/roomData';
+import styles from './RoomsPage.module.css';
+import AnimatedSection from '../components/common/AnimatedSection'; // Importar animación
+
+const RoomsPage = () => {
+  return (
+    <div className={styles.pageContainer}>
+      <AnimatedSection>
+        <h1 className={styles.pageTitle}>Explora Nuestras Habitaciones</h1>
+      </AnimatedSection>
+      <AnimatedSection>
+        <p className={styles.pageSubtitle}>
+          Encuentra el espacio perfecto que se adapte a tus necesidades de confort y estilo.
+        </p>
+      </AnimatedSection>
+      <AnimatedSection>
+        <div className={styles.gridContainer}>
+          {roomsData.map((room) => (
+            <div key={room.id} className={styles.roomCard}>
+              <img
+                src={room.imageUrl}
+                alt={`[Imagen de ${room.name}]`}
+                className={styles.cardImage}
+                onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/800x600/cccccc/ffffff?text=Imagen+no+disponible`; }}
+              />
+              <div className={styles.cardContent}>
+                <h3 className={styles.cardTitle}>{room.name}</h3>
+                <p className={styles.cardDescription}>{room.description}</p>
+                <Link to={`/habitaciones/${room.id}`} className={styles.cardButton}>
+                  Ver Detalles
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </AnimatedSection>
+    </div>
+  );
+};
+
+export default RoomsPage;
+
+
+
+// ==================== src/pages/RoomDetailPage.js ====================
+
+// src/pages/RoomDetailPage.js
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import roomsData from '../data/roomData';
+import styles from './RoomDetailPage.module.css';
+import { FaCheckCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+
+const RoomDetailPage = () => {
+  const { id } = useParams();
+  const room = roomsData.find((r) => r.id === parseInt(id));
+  
+  // Estado para manejar la imagen actual de la galería
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Reiniciar el índice si se cambia de habitación
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [id]);
+
+  // --- Lógica de la Galería ---
+  const handlePrev = () => {
+    const isFirstSlide = currentIndex === 0;
+    const newIndex = isFirstSlide ? room.imageUrls.length - 1 : currentIndex - 1;
+    setCurrentIndex(newIndex);
+  };
+
+  const handleNext = () => {
+    const isLastSlide = currentIndex === room.imageUrls.length - 1;
+    const newIndex = isLastSlide ? 0 : currentIndex + 1;
+    setCurrentIndex(newIndex);
+  };
+
+  const goToSlide = (slideIndex) => {
+    setCurrentIndex(slideIndex);
+  };
+  // --- Fin de la Lógica de la Galería ---
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  if (!room) {
+    return (
+      <div className={`${styles.pageContainer} ${styles.notFound}`}>
+        <h2>Habitación no encontrada</h2>
+        <p>La habitación que buscas no existe o no está disponible.</p>
+        <Link to="/habitaciones" className={styles.backLink}>
+          Volver a todas las habitaciones
+        </Link>
+      </div>
+    );
+  }
+  
+  const phoneNumber = "573222585951";
+  const message = `Hola, estoy interesado en reservar la ${room.name}.`;
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+  return (
+    <div className={styles.pageContainer}>
+      {/* --- Nueva Galería Funcional --- */}
+      <div className={styles.galleryContainer}>
+        <div className={styles.mainImageWrapper}>
+          {/* Mapea todas las imágenes para transiciones suaves, pero solo la activa es visible */}
+          {room.imageUrls.map((url, index) => (
+            <div
+              key={index}
+              className={`${styles.gallerySlide} ${index === currentIndex ? styles.active : ''}`}
+            >
+              <img
+                src={url}
+                alt={`[Imagen de ${room.name} ${index + 1}]`}
+                className={styles.mainImage}
+                onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/900x500/cccccc/ffffff?text=Imagen+no+disponible`; }}
+              />
+            </div>
+          ))}
+          <button className={`${styles.navArrow} ${styles.prevArrow}`} onClick={handlePrev}>
+            <FaChevronLeft />
+          </button>
+          <button className={`${styles.navArrow} ${styles.nextArrow}`} onClick={handleNext}>
+            <FaChevronRight />
+          </button>
+        </div>
+        <div className={styles.thumbnailContainer}>
+          {room.imageUrls.map((url, index) => (
+            <div
+              key={index}
+              className={`${styles.thumbnailWrapper} ${currentIndex === index ? styles.active : ''}`}
+              onClick={() => goToSlide(index)}
+            >
+              <img
+                src={url}
+                alt={`[Miniatura de ${room.name} ${index + 1}]`}
+                className={styles.thumbnail}
+                onError={(e) => { e.target.onerror = null; e.target.src=`https://placehold.co/80x60/cccccc/ffffff?text=Error`; }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* --- Contenido de la Habitación --- */}
+      <div className={styles.roomContent}>
+        <div className={styles.detailsWrapper}>
+          <h1 className={styles.roomName}>{room.name}</h1>
+          <p className={styles.roomDescription}>{room.description}</p>
+          
+          <div className={styles.amenitiesSection}>
+            <h2 className={styles.amenitiesTitle}>Comodidades de la habitación</h2>
+            <ul className={styles.amenitiesList}>
+              {room.amenities.map((amenity, index) => (
+                <li key={index} className={styles.amenityItem}>
+                  <FaCheckCircle className={styles.amenityIcon} />
+                  <span>{amenity}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className={styles.priceAndButton}>
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={styles.bookingButton}>
+              Reservar por WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RoomDetailPage;
+
+
+
+// ==================== src/pages/NotFoundPage.module.css ====================
+
+/* src/pages/NotFoundPage.module.css */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 60vh;
+}
+
+.title {
+  font-size: 5rem;
+  font-weight: 700;
+  color: #007bff;
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  color: #343a40;
+  margin-top: -1rem;
+  margin-bottom: 2rem;
+}
+
+.backLink {
+  padding: 0.8rem 2rem;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 50px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.backLink:hover {
+  background-color: #0056b3;
+}
+
+
+
+// ==================== src/pages/HomePage.js ====================
+
+// src/pages/HomePage.js
+import React from 'react';
+
+// Ya no se necesita AnimatedSection aquí
+// import AnimatedSection from '../components/common/AnimatedSection';
+
+// Importando todos los componentes de las secciones
+import Hero from '../components/Hero';
+import RoomsSection from '../components/RoomsSection';
+import HomeGallery from '../components/HomeGallery';
+import ServicesSection from '../components/ServicesSection';
+import LocationSection from '../components/LocationSection';
+import TestimonialsSection from '../components/TestimonialsSection';
+
+const HomePage = () => {
+  return (
+    <>
+      {/* El componente Hero ya tiene su propia animación de entrada */}
+      <Hero />
+
+      {/* Cada componente de sección ahora maneja su propia animación interna */}
+      <RoomsSection />
+      <HomeGallery />
+      <ServicesSection />
+      <LocationSection />
+      <TestimonialsSection />
+    </>
+  );
+};
+
+export default HomePage;
+
+
+
+
+// ==================== src/pages/BookingPage.js ====================
+
+
+
+
+// ==================== src/pages/RegulationsPage.module.css ====================
+
+/* ==================== src/pages/RegulationsPage.module.css (ACTUALIZADO) ==================== */
+
+.pageContainer {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    padding-top: 120px;
+}
+
+.pageTitle {
+    font-size: 2.8rem;
+    color: #343a40;
+    text-align: center;
+    /* MODIFICADO: Se reduce el margen inferior para acercar el nuevo texto */
+    margin-bottom: 1rem; 
+}
+
+/* NUEVO: Estilos para la fecha de actualización */
+.lastUpdated {
+    text-align: center;
+    margin-bottom: 3rem;
+    font-style: italic;
+    color: #6c757d;
+}
+
+.pdfContainer {
+    height: 75vh;
+    max-height: 800px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e0e0e0;
+}
+
+.pdfEmbed {
+    width: 100%;
+    height: 100%;
+}
+
+.downloadLinkContainer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.downloadLinkContainer a {
+    color: var(--primary-action-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.downloadLinkContainer a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .pageContainer {
+        padding: 1rem;
+        padding-top: 100px;
+    }
+
+    .pageTitle {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .lastUpdated {
+        margin-bottom: 2rem;
+        font-size: 0.9rem;
+    }
+
+    .pdfContainer {
+        height: 70vh;
+    }
+}
+
+
+// ==================== src/pages/RoomDetailPage.module.css ====================
+
+/* ==================== src/pages/RoomDetailPage.module.css ==================== */
+
+.pageContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  padding-top: 120px;
+  background-color: #fff;
+}
+
+.galleryContainer {
+  width: 100%;
+  margin-bottom: 2.5rem;
+}
+
+.mainImageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 15px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.gallerySlide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.gallerySlide.active {
+  opacity: 1;
+}
+
+.mainImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.navArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.navArrow:hover {
+  background-color: white;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.prevArrow {
+  left: 15px;
+}
+
+.nextArrow {
+  right: 15px;
+}
+
+.thumbnailContainer {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.thumbnailWrapper {
+  width: 100px;
+  height: 75px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.thumbnailWrapper.active {
+  border-color: #007bff;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.roomContent {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.detailsWrapper {
+  padding-top: 1rem;
+}
+
+.roomName {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.roomDescription {
+  font-size: 1.1rem;
+  color: #6c757d;
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+.amenitiesSection {
+  margin-top: 2.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.amenitiesTitle {
+  font-size: 1.8rem;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.amenitiesList {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.amenityItem {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.amenityIcon {
+  color: #28a745;
+  font-size: 1.2rem;
+}
+
+.priceAndButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-top: 2rem;
+}
+
+.roomPrice {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.priceLabel {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #6c757d;
+  display: block;
+}
+
+.bookingButton {
+  padding: 0.8rem 2rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.bookingButton:hover {
+  background-color: #0a5fbb;
+  transform: scale(1.05);
+}
+
+.notFound {
+  text-align: center;
+  padding: 5rem 2rem;
+}
+
+.notFound h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.backLink {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 1.5rem 1rem;
+    padding-top: 100px;
+  }
+  .roomName {
+    font-size: 2rem;
+  }
+  .amenitiesTitle {
+    font-size: 1.5rem;
+  }
+  .priceAndButton {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .bookingButton {
+    width: 100%;
+    text-align: center;
+  }
+  .amenitiesList {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+// ==================== src/pages/NotFoundPage.js ====================
+
+// src/pages/NotFoundPage.js
+import React from 'react';
+import { Link } from 'react-router-dom';
+import styles from './NotFoundPage.module.css';
+
+const NotFoundPage = () => {
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.title}>404</h1>
+      <p className={styles.subtitle}>Página no encontrada</p>
+      <Link to="/" className={styles.backLink}>
+        Volver al Inicio
+      </Link>
+    </div>
+  );
+};
+
+export default NotFoundPage;
+
+
+
+// ==================== src/pages/ServicesPage.module.css ====================
+
+/* ==================== src/pages/ServicesPage.module.css ==================== */
+
+.pageContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  padding-top: 120px;
+}
+
+.pageTitle {
+  text-align: center;
+  font-size: 2.8rem;
+  margin-bottom: 1.5rem;
+  color: #343a40;
+}
+
+.pageSubtitle {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #6c757d;
+  max-width: 800px;
+  margin: 0 auto 4rem auto;
+  line-height: 1.7;
+}
+
+.categorySection {
+  margin-bottom: 4rem;
+}
+
+.categoryTitle {
+  font-size: 2.2rem;
+  color: #343a40;
+  margin-bottom: 2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 3px solid #007bff;
+  display: inline-block;
+}
+
+.popularServicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.popularServiceCard {
+  background-color: #fff;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+}
+
+.popularServiceCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.cardImage {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.cardName {
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 1.5rem 1rem;
+  color: #343a40;
+}
+
+.otherServicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.serviceItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  color: #495057;
+  border-left: 4px solid #007bff;
+}
+
+.serviceIcon {
+  font-size: 1.2rem;
+  color: #28a745;
+}
+
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 1.5rem 1rem;
+    padding-top: 100px;
+  }
+  .pageTitle {
+    font-size: 2.2rem;
+  }
+  .pageSubtitle {
+    font-size: 1rem;
+    margin-bottom: 3rem;
+  }
+  .categoryTitle {
+    font-size: 1.8rem;
+  }
+}
+
+
+// ==================== src/pages/RoomsPage.module.css ====================
+
+/* ==================== src/pages/RoomsPage.module.css (LIMPIO) ==================== */
+
+.pageContainer {
+    padding: 4rem 2rem;
+    padding-top: 100px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.pageTitle {
+    text-align: center;
+    font-size: 2.8rem;
+    margin-bottom: 1rem;
+    color: #343a40;
+}
+
+.pageSubtitle {
+    text-align: center;
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-bottom: 4rem;
+}
+
+.gridContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2.5rem;
+}
+
+.roomCard {
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.roomCard:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.cardImage {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+}
+
+.cardContent {
+    padding: 1.5rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.cardTitle {
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem 0;
+    color: #343a40;
+}
+
+.cardDescription {
+    font-size: 0.95rem;
+    color: #6c757d;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    flex-grow: 1;
+}
+
+.cardPrice {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 1.5rem;
+}
+
+.cardButton {
+    padding: 0.75rem 1.5rem;
+    background-color: #bfa15b;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+    align-self: flex-start;
+}
+
+.cardButton:hover {
+    background-color: #a88d4c;
+}
+
+@media (max-width: 768px) {
+    .pageContainer {
+        padding: 2rem 1rem;
+        padding-top: 90px;
+    }
+    .pageTitle {
+        font-size: 2.2rem;
+    }
+    .pageSubtitle {
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+}
+
+
+// ==================== src/data/galleryData.js ====================
+
+// src/data/galleryData.js
+
+// Este archivo gestiona las imágenes para la galería principal del hotel.
+const galleryData = [
+  {
+    id: 1,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675248/DSC04614_jv5dsd.jpg',
+    alt: 'Fachada del Hotel Fontana Bogotá',
+  },
+  {
+    id: 2,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675244/DSC04583_fuknac.jpg',
+    alt: 'Restaurante del hotel',
+  },
+  {
+    id: 3,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675242/DSC04571_idqm8r.jpg',
+    alt: 'Sala de juntas equipada',
+  },
+  {
+    id: 4,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675213/DSC04550_o9tpwl.jpg',
+    alt: 'restaurante del hotel',
+  },
+  {
+    id: 5,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675210/DSC04544_sxms3g.jpg',
+    alt: 'Lobby y área de recepción',
+  },
+  {
+    id: 6,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675245/DSC04600_czjgjf.jpg',
+    alt: 'Detalle del área de desayuno',
+  },
+  {
+    id: 7,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751675209/DSC04340_revdvk.jpg',
+    alt: 'Detalle del área de desayuno',
+  },
+  {
+    id: 8,
+    url: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751680951/WhatsApp_Image_2025-07-04_at_9.02.07_PM_vhagwz.jpg',
+    alt: 'Detalle del área de desayuno',
+  },
+];
+
+export default galleryData;
+
+
+
+// ==================== src/data/roomData.js ====================
+
+// src/data/roomData.js
+
+// Archivo corregido y actualizado con la información real del Hotel Fontana Bogotá - Corferias
+// Se han añadido 5 tipos de habitación reales, con sus comodidades específicas y galerías de imágenes representativas.
+
+const roomsData = [
+  {
+    id: 1140919301, // ID real de Booking para la Habitación Doble Estándar
+    name: 'Habitación Doble Estándar',
+    description: 'Nuestra habitación Doble Estándar es la elección perfecta para parejas o viajeros que buscan comodidad y funcionalidad. Cuenta con una cama doble grande y un diseño moderno y acogedor.',
+    imageUrls: [
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751663550/521700895_vew7vj.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751663602/521721574_cldyoe.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751663605/521700863_alnjlk.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751664136/521700774_og9llr.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751664182/521700888_cgcae2.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751664182/521700828_pa5lpw.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751664182/521700803_akhmev.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751664183/521700851_vk5gvx.jpg',
+    ],
+    amenities: ['1 cama doble grande', 'TV de pantalla plana', 'Baño privado', 'Ducha y secador de pelo', 'Caja fuerte', 'Teléfono'],
+    price: 175000, // Precio estimado en COP
+    imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751663550/521700895_vew7vj.jpg', // Imagen principal
+  },
+  {
+    id: 1140919302, // ID real de Booking
+    name: 'Habitación Doble Estándar (2 Camas)',
+    description: 'Perfecta para amigos o colegas, esta habitación cuenta con dos cómodas camas individuales. Equipada con TV de pantalla plana y un baño privado completo para asegurar una estancia confortable.',
+    imageUrls: [
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666310/DSC04383_syofmx.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665950/DSC04365_x8xl7e.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666310/DSC04376_xkpp1d.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666311/DSC04389_k5xjv2.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666312/DSC04391_n6crte.jpg',
+    ],
+    amenities: ['2 camas individuales', 'TV de pantalla plana', 'Baño privado con ducha', 'Canales vía satélite', 'Caja fuerte', 'Secador de pelo'],
+    price: 195000, // Precio estimado en COP
+    imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666310/DSC04383_syofmx.jpg', // Imagen principal
+  },
+  {
+    id: 1140919305, // ID real de Booking
+    name: 'Habitación Individual Estándar',
+    description: 'Ideal para el viajero solo, esta habitación compacta y funcional ofrece una cama cómoda y todas las comodidades esenciales para una estancia productiva y placentera.',
+    imageUrls: [
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666667/DSC04426_dsfpjd.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666668/DSC04435_vbgpq3.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666667/DSC04400_a819ca.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666666/DSC04395_xvotsx.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666311/DSC04389_k5xjv2.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666312/DSC04391_n6crte.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666668/DSC04438_h1blbg.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751664136/521700774_og9llr.jpg',
+    ],
+    amenities: ['1 cama individual', 'TV de pantalla plana', 'Baño privado', 'Caja fuerte', 'Escritorio', 'Teléfono'],
+    price: 150000, // Precio estimado en COP
+    imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751666667/DSC04426_dsfpjd.jpg', // Imagen principal
+  },
+  {
+    id: 1140919304, // ID real de Booking
+    name: 'Habitación Doble Deluxe con Bañera',
+    description: 'Disfruta de un extra de confort en nuestra habitación Deluxe. Más espaciosa y elegante, cuenta con una cama doble grande y una relajante bañera, ideal para desconectar después de un día en la ciudad.',
+    imageUrls: [
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751667098/DSC04412_y8dsnu.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665948/DSC04354_lsvqzc.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751667099/DSC04423_ygiyvy.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665949/DSC04361_rfuj2n.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665950/DSC04365_x8xl7e.jpg',
+    ],
+    amenities: ['Bañera', 'Cama doble grande', 'Artículos de aseo gratis', 'TV de pantalla plana', 'Baño privado', 'Caja fuerte'],
+    price: 250000, // Precio estimado en COP
+    imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751667098/DSC04412_y8dsnu.jpg', // Imagen principal
+  },
+  {
+    id: 1140919303, // ID real de Booking
+    name: 'Suite Deluxe',
+    description: 'Experimenta el máximo lujo en nuestra Suite Deluxe. Este espacioso refugio ofrece una cama extragrande y una bañera para una estancia verdaderamente inolvidable y confortable.',
+    imageUrls: [
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665946/DSC04331_vycdgh.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665946/DSC04335_vl0egu.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665947/DSC04340_by2iak.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665947/DSC04347_zxru1r.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665947/DSC04345_pc33zf.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665948/DSC04354_lsvqzc.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665949/DSC04361_rfuj2n.jpg',
+      'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665950/DSC04365_x8xl7e.jpg',
+    ],
+    amenities: ['Bañera', 'Cama doble extragrande', 'Vistas a un patio interior', 'TV de pantalla plana', 'Baño privado', 'Caja fuerte'],
+    price: 380000, // Precio estimado en COP
+    imageUrl: 'https://res.cloudinary.com/dgn1mpqsc/image/upload/v1751665946/DSC04331_vycdgh.jpg', // Imagen principal
+
+  },
+];
+
+export default roomsData;
+
+

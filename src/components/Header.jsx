@@ -1,41 +1,31 @@
-import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; 
-import axios from "axios";
-import { FaUser } from "react-icons/fa";
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { FaSignOutAlt, FaUser } from "react-icons/fa";
 import "./Header.css";
+import { AppContext } from "../AppContext";
 
 function Header() {
-  const [user, setUser] = useState({ first_name: "", last_name: "" });
+  const { usuario, setUsuario } = useContext(AppContext);
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const location = useLocation();
-  const navigate = useNavigate(); 
   const menuRef = useRef(null);
-  const userBarRef = useRef(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-
-    // peticion a API para obtener el primer nombre y primer apellido del usuario activo
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser({
-          first_name: response.data.first_name,
-          last_name: response.data.last_name,
-        });
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-      }
-    };
-
-    fetchUser();
-  }, []);
+  const getTitle = () => {
+    const path = location.pathname;
+    if (path === "/") return "Inicio";
+    const title = path.split('/')[1] || 'inicio';
+    return title
+      .replace(/-/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem('accessToken');
+    setUsuario(null);
+    setMenuOpen(false);
     navigate("/login");
   };
 
@@ -44,56 +34,65 @@ function Header() {
     setMenuOpen(false);
   };
 
-  const getTitle = () => {
-    const path = location.hash ? location.hash.replace("#", "") : location.pathname;
-  
-    if (path.startsWith("/ordenes")) return "Órdenes de pedido";
-    if (path.startsWith("/referencias")) return "Referencias";
-    if (path.startsWith("/proveedores")) return "Proveedores";
-    return "Inicio";
+  const getInitials = (name = '', lastName = '') => {
+    const firstNameInitial = name ? name[0] : '';
+    const lastNameInitial = lastName ? lastName[0] : '';
+    return `${firstNameInitial}${lastNameInitial}`.toUpperCase();
   };
 
-  // Manejar clics fuera del menú o en usuarioBarra para cerrar el menú
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        menuRef.current && !menuRef.current.contains(event.target) &&
-        userBarRef.current && !userBarRef.current.contains(event.target)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
       }
     };
-
-    if (menuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [menuOpen]);
+  }, []);
 
   return (
-    <div className="barraSuperior">
-      <p className="tituloHeader">{getTitle()}</p>
-      <div
-        className="usuarioBarra"
-        ref={userBarRef}
-        onClick={() => setMenuOpen((prev) => !prev)}
-        style={{ cursor: "pointer" }}
-      >
-        <p className="usuarioHeader">{`${user.first_name} ${user.last_name}`}</p>
-        <FaUser />
+    <header className="header">
+      <div className="header-content">
+        <div className="header-left">
+          <h2 className="header-title">{getTitle()}</h2>
+        </div>
+        
+        <div className="header-right">
+          {usuario ? (
+            <div className="user-menu" ref={menuRef}>
+              <button className="user-button" onClick={() => setMenuOpen(prev => !prev)}>
+                <div className="user-avatar">
+                  <span>{getInitials(usuario.first_name, usuario.last_name)}</span>
+                </div>
+              </button>
+              
+              {menuOpen && (
+                <div className="dropdown-menu">
+                  <div className="dropdown-header">
+                    <span className="user-fullname">{`${usuario.first_name} ${usuario.last_name}`}</span>
+                    <span className="user-role">{usuario.role}</span>
+                  </div>
+                  <ul>
+                    <li onClick={handleNavigateToProfile}>
+                      <FaUser className="dropdown-icon" />
+                      <span>Mi Perfil</span>
+                    </li>
+                    <li onClick={handleLogout} className="logout-item">
+                      <FaSignOutAlt className="dropdown-icon" />
+                      <span>Cerrar Sesión</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+             <button onClick={() => navigate('/login')} className="login-button">Iniciar Sesión</button>
+          )}
+        </div>
       </div>
-      {menuOpen && (
-        <ul className="menuDesplegable" ref={menuRef}>
-          <li onClick={handleNavigateToProfile}>Cambiar Contraseña</li>
-          <li onClick={handleLogout}>Cerrar Sesión</li>
-        </ul>
-      )}
-    </div>
+    </header>
   );
 }
 

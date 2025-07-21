@@ -1,157 +1,123 @@
 :root {
-  --color-primario: #131931; /* Azul principal */
-  --hover-btn: #393e50;
-  --shadow-color: rgba(0, 0, 0, 0.1);
+    --perfil-card-bg: #ffffff;
+    --perfil-header-bg: #f8f9fa;
+    --perfil-avatar-icon-color: #adb5bd;
 }
 
-.perfil-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 150px;
+.perfil-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Alinea la tarjeta arriba */
+    padding: 2rem;
+    min-height: 100%;
+    background-color: var(--color-background);
 }
 
-main {
-  flex: 1;
-  padding: 20px;
-  width: 100%;
+.perfil-card {
+    width: 100%;
+    max-width: 550px;
+    background-color: var(--perfil-card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    animation: fadeIn 0.5s ease-out;
 }
 
-.perfil-container {
-  text-align: center;
-  background-color: #fff;
-  border-radius: 10px;
-  padding: 30px;
-  box-shadow: 0 4px 12px var(--shadow-color); /* Sombra suave */
-  max-width: 600px;
-  margin: 0 auto;
+.perfil-card-header {
+    background-color: var(--perfil-header-bg);
+    padding: 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
 }
 
-/* Estilo para los encabezados */
-.perfil-container h2 {
-  color: var(--color-primario);
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 24px;
-  margin-bottom: 20px;
+.perfil-avatar {
+    height: 80px;
+    width: 80px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 2.5rem;
+    margin: 0 auto 1rem auto;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
 }
 
-.perfil-container h3 {
-  color: var(--color-primario);
-  font-weight: 600;
-  font-size: 18px;
-  margin-top: 30px;
-  margin-bottom: 15px;
+.perfil-avatar span {
+    line-height: 1;
 }
 
-/* Estilo para el ícono de usuario */
-.user-icon {
-  color: var(--color-primario);
-  margin-bottom: 15px;
+.perfil-user-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
 }
 
-.user-icon svg {
-  transition: color 0.3s ease;
+.perfil-user-role {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.25rem;
 }
 
-.user-icon svg:hover {
-  color: var(--hover-btn);
+.perfil-card-body {
+    padding: 2rem;
 }
 
-/* Estilo para el nombre del usuario */
-.user-name {
-  font-size: 20px;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 20px;
+.form-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 1.5rem;
+    text-align: center;
 }
 
-/* Estilo para el mensaje de éxito o error */
-.mensaje {
-  font-weight: 600;
-  font-size: 14px;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 15px;
+.notification-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1.5rem;
+    font-weight: 500;
 }
 
-.mensaje.exito {
-  color: #2ecc71; /* Verde para éxito */
-  background-color: rgba(46, 204, 113, 0.1);
+.notification-banner.success {
+    background-color: #d1e7dd; /* Verde claro */
+    color: #0f5132;
+    border: 1px solid #badbcc;
 }
 
-.mensaje.error {
-  color: #e74c3c; /* Rojo para error */
-  background-color: rgba(231, 76, 60, 0.1);
+.notification-banner.error {
+    background-color: #f8d7da; /* Rojo claro */
+    color: #842029;
+    border: 1px solid #f5c2c7;
 }
 
-/* Estilo para el formulario */
-.formPerfil {
-  display: flex;
-  flex-direction: column;
-  max-width: 350px;
-  margin: 0 auto;
+.submit-button {
+    width: 100%;
+    padding: 0.85rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--color-primary);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Estilo para cada grupo de formulario (label + input) */
-.form-group {
-  margin-bottom: 15px;
-  text-align: left;
+.submit-button:hover {
+    background-color: var(--color-primary-hover);
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
 }
 
-.form-group label {
-  display: block;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--color-primario);
-  margin-bottom: 5px;
-  width: 250px;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  transition: border-color 0.3s ease;
-}
-
-.form-group input:focus {
-  border-color: var(--color-primario);
-  outline: none;
-  box-shadow: 0 0 5px rgba(19, 25, 49, 0.2); /* Sombra al enfocar */
-}
-
-/* Estilo para el botón */
-.formPerfil button {
-  padding: 12px 20px;
-  font-size: 16px;
-  font-weight: 600;
-  border: none;
-  border-radius: 6px;
-  background-color: var(--color-primario);
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  margin-top: 10px;
-}
-
-.formPerfil button:hover {
-  background-color: var(--hover-btn);
-}
-
-/* Ajustes para pantallas pequeñas */
-@media (max-width: 768px) {
-  main {
-    padding: 15px;
-  }
-
-  .perfil-container {
-    padding: 20px;
-  }
-
-  .formPerfil {
-    max-width: 100%;
-  }
+.submit-button:disabled {
+    background-color: #a0c7ff;
+    cursor: not-allowed;
 }

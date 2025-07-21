@@ -1,75 +1,89 @@
-// src/pages/LoginPage.jsx
-import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../services/api";
-import "./LoginPage.css";
-import { AppContext } from "../AppContext";
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { AppContext } from '../AppContext';
+import './LoginPage.css';
 
-function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const { setUsuario } = useContext(AppContext); // Nota: AppContext no tiene setUsuario actualmente
+const LoginPage = () => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const { setUsuario, setIsLoggingIn } = useContext(AppContext);
+    const navigate = useNavigate();
 
-  // src/pages/LoginPage.jsx (fragmento relevante)
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    try {
-      console.log("Enviando solicitud de login con:", { username, password });
-      const response = await API.post("token/", { username, password });
-      console.log("Respuesta de token:", response.data);
-      localStorage.setItem("accessToken", response.data.access);
-      localStorage.setItem("refreshToken", response.data.refresh);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
 
-      console.log("Solicitando datos del usuario...");
-      const userResponse = await API.get("user/");
-      console.log("Datos del usuario:", userResponse.data);
+        try {
+            const response = await axios.post('http://127.0.0.1:8000/api/token/', {
+                username,
+                password,
+            });
 
-      const role = userResponse.data.role;
-      localStorage.setItem("userRole", role);
-      setUsuario(userResponse.data); // Esto debería disparar la recarga en AppContext
-      navigate("/"); // Redirige después de establecer todo
-    } catch (err) {
-      console.error("Error en login:", err.response ? err.response.data : err.message);
-      setError("Credenciales inválidas. Intenta de nuevo.");
-    }
-  };
+            localStorage.setItem('accessToken', response.data.access);
+            localStorage.setItem('refreshToken', response.data.refresh);
+            
+            // Activar el loader de Lottus
+            setIsLoggingIn(true);
 
-  return (
-    <div className="login-page">
-      <div className="login-container">
-        <h1>Iniciar Sesión</h1>
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label htmlFor="username">Usuario:</label>
-            <input
-              type="text"
-              id="username"
-              placeholder="Ingresa tu usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Contraseña:</label>
-            <input
-              type="password"
-              id="password"
-              placeholder="Ingresa tu contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit">Entrar</button>
-          {error && <p className="error">{error}</p>}
-        </form>
-      </div>
-    </div>
-  );
-}
+            // Simular una carga y luego navegar
+            setTimeout(() => {
+                // La verificación del usuario se hará en AppContext
+                navigate('/');
+                // No es necesario desactivar el loader aquí, se hará en App.jsx
+            }, 2500); // Duración de la animación del loader
+
+        } catch (err) {
+            setError('Usuario o contraseña incorrectos. Inténtalo de nuevo.');
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="login-page-container">
+            <div className="login-panel-left">
+                <h1 className="login-brand-title">LOTTUS </h1>
+                <p className="login-brand-subtitle">Plataforma administrativa</p>
+            </div>
+            <div className="login-panel-right">
+                <div className="login-form-wrapper">
+                    <h2>Bienvenido!</h2>
+                    <p className="login-form-intro">Inicia sesión para continuar</p>
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <label htmlFor="username">Usuario</label>
+                            <input
+                                type="text"
+                                id="username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="password">Contraseña</label>
+                            <input
+                                type="password"
+                                id="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                disabled={isLoading}
+                            />
+                        </div>
+                        {error && <p className="error-message">{error}</p>}
+                        <button type="submit" className="login-submit-button" disabled={isLoading}>
+                            {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default LoginPage;

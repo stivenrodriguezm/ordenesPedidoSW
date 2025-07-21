@@ -1,35 +1,34 @@
 import { Link } from "react-router-dom";
-import { FaFileAlt, FaList, FaUsers, FaBox } from "react-icons/fa";
+import { FaPlus, FaBoxOpen, FaCashRegister, FaReceipt, FaSignOutAlt } from "react-icons/fa";
 import "./AccesosRapidos.css";
 
-function AccesosRapidos({ userRole }) {
+const AccesoRapidoCard = ({ to, icon, title, description, className }) => (
+  <Link to={to} className={`acceso-rapido-card ${className || ''}`}>
+    <div className="acceso-rapido-icon">{icon}</div>
+    <div className="acceso-rapido-info">
+      <h3>{title}</h3>
+      <p>{description}</p>
+    </div>
+  </Link>
+);
+
+function AccesosRapidos() {
   const accesos = [
-    { nombre: "Crear pedido", ruta: "/ordenes/nuevo", icono: <FaFileAlt />, className: "crear-pedido" },
-    { nombre: "Ver pedidos", ruta: "/ordenes", icono: <FaList />, className: "ver-pedidos" },
+    { to: "/nuevaVenta", icon: <FaPlus />, title: "Crear Venta", description: "Registra una nueva venta.", className: "ventas" },
+    { to: "/ordenes/nuevo", icon: <FaBoxOpen />, title: "Crear Pedido", description: "Genera una nueva orden de pedido.", className: "crear-pedido" },
+    { to: "/caja?action=create", icon: <FaCashRegister />, title: "Movimiento Caja", description: "Registra un movimiento de caja.", className: "caja" },
+    { to: "/recibos-caja?action=create", icon: <FaReceipt />, title: "Recibo de Caja", description: "Genera un nuevo recibo de caja.", className: "recibos" },
+    { to: "/comprobantes-egreso?action=create", icon: <FaSignOutAlt />, title: "Comprobante de Egreso", description: "Genera un nuevo comprobante de egreso.", className: "egresos" },
   ];
 
-  if (userRole === "ADMINISTRADOR" || userRole === "AUXILIAR") {
-    accesos.push(
-      { nombre: "Proveedores", ruta: "/proveedores", icono: <FaUsers />, className: "proveedores" },
-      { nombre: "Referencias", ruta: "/referencias", icono: <FaBox />, className: "referencias" }
-    );
-  }
-
   return (
-    <div className="accesosRapidos">
+    <div className="accesos-rapidos-grid">
       {accesos.map((acceso, index) => (
-        <Link
-          key={index}
-          to={acceso.ruta}
-          className={`tarjetaAcceso ${acceso.className}`}
-          style={{ animationDelay: `${index * 0.2}s` }}
-        >
-          <div className="tarjeta-icono">{acceso.icono}</div>
-          <p>{acceso.nombre}</p>
-        </Link>
+        <AccesoRapidoCard key={index} {...acceso} />
       ))}
     </div>
   );
 }
 
 export default AccesosRapidos;
+

@@ -1,0 +1,171 @@
+/* Hereda estilos globales de index.css */
+
+/* ==========================================================================
+   Encabezado y Filtros
+   ========================================================================== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* Permite que los elementos se ajusten en pantallas pequeñas */
+  gap: 1rem;
+}
+
+.filters-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-wrapper {
+  position: relative;
+}
+
+.search-input {
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  width: 280px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-focus-shadow);
+}
+
+.search-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-placeholder);
+  pointer-events: none; /* Para que no interfiera con el clic en el input */
+}
+
+.filters-group input[type="date"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-surface);
+  font-size: 0.95rem;
+}
+
+.actions-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* ==========================================================================
+   Tabla de Caja
+   ========================================================================== */
+.caja-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.caja-table th,
+.caja-table td {
+  padding: 1rem 1.25rem; /* Padding consistente */
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.caja-table th {
+  background-color: #f8f9fa; /* Un fondo muy sutil para el header */
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Anchos de columna sugeridos */
+.th-caja-id { width: 8%; }
+.th-caja-fecha { width: 18%; }
+.th-caja-concepto { width: 34%; }
+.th-caja-tipo { width: 12%; }
+.th-caja-valor { width: 14%; }
+.th-caja-total { width: 14%; }
+
+/* Alineación de celdas */
+.td-valor, .td-total {
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.td-valor {
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Badges de Tipo (Ingreso/Egreso/Cierre)
+   ========================================================================== */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border-radius: 9999px; /* Forma de píldora */
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.type-badge.ingreso {
+  color: #0f5132; /* Verde oscuro para texto */
+  background-color: #d1e7dd; /* Verde claro para fondo */
+}
+
+.type-badge.egreso {
+  color: #842029; /* Rojo oscuro para texto */
+  background-color: #f8d7da; /* Rojo claro para fondo */
+}
+
+.type-badge.cierre {
+  color: #0a58ca; /* Azul oscuro para texto */
+  background-color: #cfe2ff; /* Azul claro para fondo */
+}
+
+/* ==========================================================================
+   Paginación
+   ========================================================================== */
+.pagination-container {
+  padding: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pagination-container button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.pagination-container button:hover:not(:disabled) {
+  background-color: #e9ecef;
+  border-color: var(--color-border-hover);
+}
+
+.pagination-container button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pagination-container span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}

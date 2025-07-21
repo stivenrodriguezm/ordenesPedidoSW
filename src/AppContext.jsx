@@ -1,63 +1,99 @@
-// src/AppContext.jsx
-import React, { createContext, useState, useEffect, useContext } from "react";
-import axios from "axios";
-
-// Bandera global para asegurar una sola ejecución inicial
-let hasInitialized = false;
+import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
+import API from "./services/api"; // Usaremos la instancia de API centralizada
 
 export const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  const [proveedores, setProveedores] = useState([]);
   const [usuario, setUsuario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false); // Nuevo estado para el loader de login
+  const [proveedores, setProveedores] = useState([]);
+  const [isLoadingProveedores, setIsLoadingProveedores] = useState(true);
+  const [clientes, setClientes] = useState([]);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(true);
   const token = localStorage.getItem("accessToken");
 
-  const fetchInitialData = async () => {
-    if (!token || hasInitialized) {
-      console.log("No hay token o ya se inicializó. Saltando fetchInitialData.");
-      setIsLoading(false);
+  useEffect(() => {
+    const verifyUser = async () => {
+      if (!token) {
+        setIsLoading(false);
+        setUsuario(null);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const userRes = await API.get("/user/");
+        setUsuario(userRes.data);
+      } catch (error) {
+        console.error("Error verificando el usuario:", error);
+        setUsuario(null);
+        localStorage.clear();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    verifyUser();
+  }, [token]);
+
+  const fetchProveedores = useCallback(async () => {
+    if (!token) {
+      setIsLoadingProveedores(false);
       return;
     }
-
+    setIsLoadingProveedores(true);
     try {
-      console.log("Cargando datos iniciales desde AppContext...");
-      setIsLoading(true);
-      const [proveedoresRes, userRes] = await Promise.all([
-        axios.get("https://api.muebleslottus.com/api/proveedores/", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("https://api.muebleslottus.com/api/user/", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      console.log("Proveedores cargados:", proveedoresRes.data);
-      console.log("Usuario cargado:", userRes.data);
-      setProveedores(proveedoresRes.data);
-      setUsuario(userRes.data);
-      hasInitialized = true;
+      const response = await API.get('/proveedores/');
+      setProveedores(response.data.results || []);
     } catch (error) {
-      console.error("Error cargando datos iniciales:", error.response?.data || error.message);
+      console.error("Error al cargar proveedores:", error);
       setProveedores([]);
-      setUsuario(null);
     } finally {
-      setIsLoading(false);
+      setIsLoadingProveedores(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    console.log("Montando AppContext... Token disponible:", !!token);
-    fetchInitialData();
-  }, [token]); // Dependencia en token para recargar si cambia
+    fetchProveedores();
+  }, [fetchProveedores]);
 
-  const value = {
-    proveedores,
-    usuario,
-    setUsuario,
-    isLoading,
-  };
+  useEffect(() => {
+    const fetchClientes = async () => {
+      if (!token) {
+        setIsLoadingClientes(false);
+        return;
+      }
+      setIsLoadingClientes(true);
+      try {
+        const response = await API.get('/clientes/');
+        setClientes(response.data.results || []); 
+      } catch (error) {
+        console.error("Error al cargar clientes:", error);
+        setClientes([]);
+      } finally {
+        setIsLoadingClientes(false);
+      }
+    };
+    fetchClientes();
+  }, [token]);
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider
+      value={{
+        usuario,
+        setUsuario,
+        isLoading,
+        isLoggingIn, // Proveer el nuevo estado
+        setIsLoggingIn, // Proveer la función para modificarlo
+        proveedores,
+        isLoadingProveedores,
+        fetchProveedores,
+        clientes,
+        isLoadingClientes,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
 }
-
-export const useAppContext = () => useContext(AppContext);

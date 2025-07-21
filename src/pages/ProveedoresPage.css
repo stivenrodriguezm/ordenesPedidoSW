@@ -1,199 +1,107 @@
-:root {
-  --color-primario: #131931; /* Azul principal */
-  --hover-btn: #393e50;
-}
-
-.proveedores-page {
+/* Contenedor principal de la página */
+.proveedores-container {
   display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-main {
-  flex: 1;
-  padding: 20px;
-}
-
-/* Contenedor de los botones */
-.botonesContainer {
+/* Estilos para el encabezado de la página */
+.proveedores-header {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* Botones */
-.nuevoProveedorBtn,
-.exportarBtn {
-  padding: 10px 20px;
-  font-size: 1rem;
+.proveedores-header h1 {
+  font-size: 1.75rem;
   font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Estilos para la tabla de proveedores */
+.proveedores-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  table-layout: fixed;
+}
+
+.proveedores-table th, .proveedores-table td {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.proveedores-table th {
+  background-color: #f8f9fa;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.proveedores-table tbody tr {
+  transition: background-color 0.15s ease-out;
+}
+
+.proveedores-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.proveedores-table tbody tr:hover {
+  background-color: var(--color-primary-light-bg);
+}
+
+/* Anchos de columna fijos */
+.th-empresa, .td-empresa { width: 35%; }
+.th-encargado, .td-encargado { width: 30%; }
+.th-contacto, .td-contacto { width: 25%; }
+.th-editar, .td-editar { width: 10%; text-align: center; }
+
+
+/* Estilos para botones de acción */
+.new-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background-color: var(--color-primary);
+  color: #fff;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-/* Botón Nuevo Proveedor */
-.nuevoProveedorBtn {
-  background-color: var(--color-primario);
-  color: white;
-}
-
-.nuevoProveedorBtn:hover {
-  background-color: var(--hover-btn);
-}
-
-/* Botón Exportar */
-.exportarBtn {
-  background-color: var(--color-primario);
-  color: white;
-}
-
-.exportarBtn:hover {
-  background-color: var(--hover-btn);
-}
-
-/* Contenedor de la tabla */
-.tabla-contenedor {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  overflow-x: auto;
-  min-height: 300px; /* Mantiene el espacio aunque la tabla esté vacía */
-}
-
-/* Estilos de la tabla */
-.tablaProveedores {
-  width: 1100px;
-  border-collapse: collapse;
-  margin: 20px auto;
-  table-layout: fixed; /* Fija el ancho de las columnas */
-}
-
-/* Estilos de los encabezados */
-.tablaProveedores th {
-  color: var(--color-primario);
-  text-transform: uppercase;
+  font-size: 0.9rem;
   font-weight: 600;
-  font-size: 14px;
-  text-align: left;
-  padding: 12px 15px;
-  white-space: nowrap;
-  border-bottom: 2px solid #d1d1d1; /* Borde grueso gris como en ReferenciasPage */
+  transition: background-color 0.2s ease;
 }
 
-/* Asignación de anchos fijos a las columnas */
-.tablaProveedores th:nth-child(1),
-.tablaProveedores td:nth-child(1) {
-  width: 30%;
+.new-button:hover {
+  background-color: var(--color-primary-hover);
 }
 
-.tablaProveedores th:nth-child(2),
-.tablaProveedores td:nth-child(2) {
-  width: 30%;
+.new-button .icon {
+  font-size: 1rem;
 }
 
-.tablaProveedores th:nth-child(3),
-.tablaProveedores td:nth-child(3) {
-  width: 30%;
-}
-
-.tablaProveedores th:nth-child(4),
-.tablaProveedores td:nth-child(4) {
-  width: 10%;
-  text-align: center;
-}
-
-/* Estilos de filas */
-.tablaProveedores tr {
-  border-bottom: 1px solid #d1d1d1; /* Borde gris más grueso como en ReferenciasPage */
-}
-
-.tablaProveedores tr:last-child {
-  border-bottom: none; /* Elimina el borde de la última fila */
-}
-
-/* Estilos de celdas */
-.tablaProveedores td {
-  padding: 12px 15px;
-  color: #555;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-bottom: 1px solid #d1d1d1; /* Borde gris para las celdas */
-}
-
-/* Efecto hover en filas */
-.tablaProveedores tr:hover {
-  background-color: #ececec;
-}
-
-/* Ícono de edición */
-.editarIcono {
-  text-align: center;
-}
-
-.editarIcono svg {
-  color: #000000;
-  font-size: 18px;
+.edit-button {
+  background: none;
+  border: none;
   cursor: pointer;
-}
-
-.editarIcono svg:hover {
-  color: var(--color-primario);
-}
-
-/* ---- Loader ---- */
-.loading-container {
-  text-align: center;
-  padding: 20px;
-  text-align: center !important;
-  width: 1000px;
-  min-height: 100px; /* Mantiene el espacio aunque la carga sea rápida */
-}
-
-/* Círculo giratorio */
-.loader {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(25, 34, 66, 0.3);
-  border-top-color: var(--color-primario);
+  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+  padding: 0.5rem;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-/* Animación del loader */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Mensaje de carga */
-.loading-container p {
-  color: var(--color-primario);
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-/* Ajuste para pantallas pequeñas */
-@media (max-width: 768px) {
-  .tabla-contenedor {
-    width: 100%;
-    overflow-x: scroll;
-  }
-
-  .botonesContainer {
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  .nuevoProveedorBtn,
-  .exportarBtn {
-    width: 100%;
-    text-align: center;
-  }
+.edit-button:hover {
+  color: var(--color-primary);
+  background-color: var(--color-primary-light-bg);
 }
