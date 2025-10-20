@@ -12,7 +12,7 @@ import Modal from '../components/Modal';
 
 // Componente de Modal para la creación de Comprobantes de Egreso
 const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoading }) => {
-  const [newCE, setNewCE] = useState({ id: '', fecha: '', medio_pago: '', proveedor: '', valor: '', nota: '' });
+  const [newCE, setNewCE] = useState({ id: '', fecha: '', metodo_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' });
 
   useEffect(() => {
     if (isOpen) {
@@ -21,7 +21,7 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       const formattedToday = `${year}-${month}-${day}`;
-      setNewCE(prev => ({ ...prev, fecha: formattedToday }));
+      setNewCE(prev => ({ ...prev, fecha: formattedToday, metodo_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' }));
     }
   }, [isOpen]);
 
@@ -42,8 +42,12 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
           <input type="date" name="fecha" value={newCE.fecha} onChange={handleChange} required />
         </div>
         <div className="form-group">
+          <label>Concepto:</label>
+          <input type="text" name="concepto" value={newCE.concepto} onChange={handleChange} required placeholder="Ej: Pago de factura 123" />
+        </div>
+        <div className="form-group">
           <label>Medio de pago:</label>
-          <select name="medio_pago" value={newCE.medio_pago} onChange={handleChange} required>
+          <select name="metodo_pago" value={newCE.metodo_pago} onChange={handleChange} required>
             <option value="">Elegir medio de pago</option>
             {mediosPago.map((medio) => (<option key={medio.value} value={medio.value}>{medio.label}</option>))}
           </select>
@@ -60,8 +64,8 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
           <input type="number" name="valor" value={newCE.valor} onChange={handleChange} required min="0" step="any" />
         </div>
         <div className="form-group">
-          <label>Nota:</label>
-          <textarea name="nota" value={newCE.nota} onChange={handleChange} placeholder="Escribe una nota (opcional)" rows="3" />
+          <label>Descripción:</label>
+          <textarea name="descripcion" value={newCE.descripcion} onChange={handleChange} placeholder="Escribe una nota (opcional)" rows="3" />
         </div>
         <button type="submit" className="modal-submit" disabled={isLoading}>
           {isLoading ? 'Creando...' : 'Crear'}
@@ -79,7 +83,7 @@ const ComprobantesEgreso = () => {
   const [filters, setFilters] = useState({
     fecha_inicio: '',
     fecha_fin: '',
-    medio_pago: '',
+    metodo_pago: '',
     proveedor: '',
     query: ''
   });
@@ -126,7 +130,7 @@ const ComprobantesEgreso = () => {
     }
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/egresos/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/comprobantes-egreso/', {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -164,7 +168,7 @@ const ComprobantesEgreso = () => {
     setFilters({
       fecha_inicio: '',
       fecha_fin: '',
-      medio_pago: '',
+      metodo_pago: '',
       proveedor: '',
       query: ''
     });
@@ -174,16 +178,17 @@ const ComprobantesEgreso = () => {
   const exportData = async () => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/egresos/?page_size=1000', {
+      const response = await axios.get('http://127.0.0.1:8000/api/comprobantes-egreso/?page_size=1000', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = (response.data.results || []).map(item => ({
         ID: item.id,
         Fecha: formatDate(item.fecha),
         Proveedor: item.proveedor_nombre || '-',
-        'Medio de Pago': mediosPago.find(medio => medio.value === item.medio_pago)?.label || item.medio_pago,
+        'Medio de Pago': mediosPago.find(medio => medio.value === item.metodo_pago)?.label || item.metodo_pago,
         Valor: formatCurrency(item.valor),
-        Nota: item.nota || '-'
+        Concepto: item.concepto || '-',
+        Descripción: item.descripcion || '-'
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(data);
@@ -201,14 +206,14 @@ const ComprobantesEgreso = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('http://127.0.0.1:8000/api/egresos/crear/', ceData, {
+      await axios.post('http://127.0.0.1:8000/api/comprobantes-egreso/crear/', ceData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Comprobante de Egreso creado exitosamente.', type: 'success' });
       setIsCreatingCE(false);
       fetchData(filters, 1); // Refrescar datos en la página 1
     } catch (error) {
-       const errorMsg = error.response?.data?.detail || 'Error al crear el comprobante.';
+       const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : 'Error al crear el comprobante.';
        setNotification({ message: errorMsg, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -232,7 +237,7 @@ const ComprobantesEgreso = () => {
           <input type="text" className="search-input" name="query" placeholder="Buscar por CE o Proveedor..." value={filters.query} onChange={handleFilterChange} />
           <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
           <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
-          <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
+          <select name="metodo_pago" value={filters.metodo_pago} onChange={handleFilterChange}>
             <option value="">Medio de pago</option>
             {mediosPago.map((medio) => (<option key={medio.value} value={medio.value}>{medio.label}</option>))}
           </select>
@@ -254,27 +259,29 @@ const ComprobantesEgreso = () => {
               <th className="th-ce-id">CE</th>
               <th className="th-ce-fecha">Fecha</th>
               <th className="th-ce-proveedor">Proveedor</th>
+              <th className="th-ce-concepto">Concepto</th>
               <th className="th-ce-metodo">Medio de Pago</th>
               <th className="th-ce-valor">Valor</th>
-              <th className="th-ce-nota">Nota</th>
+              <th className="th-ce-descripcion">Descripción</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan="6"><div className="loading-container"><div className="loader"></div><p>Cargando comprobantes...</p></div></td></tr>
+              <tr><td colSpan="7"><div className="loading-container"><div className="loader"></div><p>Cargando comprobantes...</p></div></td></tr>
             ) : comprobantesData.length > 0 ? (
               comprobantesData.map((item) => (
                 <tr key={item.id}>
                   <td className="td-ce-id">{item.id}</td>
                   <td className="td-ce-fecha">{formatDate(item.fecha)}</td>
                   <td className="td-ce-proveedor">{item.proveedor_nombre || '—'}</td>
-                  <td className="td-ce-metodo">{mediosPago.find(medio => medio.value === item.medio_pago)?.label || (item.medio_pago ? item.medio_pago.charAt(0).toUpperCase() + item.medio_pago.slice(1) : '—')}</td>
+                  <td className="td-ce-concepto">{item.concepto || '—'}</td>
+                  <td className="td-ce-metodo">{mediosPago.find(medio => medio.value === item.metodo_pago)?.label || (item.metodo_pago ? item.metodo_pago.charAt(0).toUpperCase() + item.metodo_pago.slice(1) : '—')}</td>
                   <td className="td-ce-valor td-valor">{formatCurrency(item.valor)}</td>
-                  <td className="td-ce-nota">{item.nota || '—'}</td>
+                  <td className="td-ce-descripcion">{item.descripcion || '—'}</td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan="6" className="empty-cell">No hay comprobantes de egreso para mostrar.</td></tr>
+              <tr><td colSpan="7" className="empty-cell">No hay comprobantes de egreso para mostrar.</td></tr>
             )}
           </tbody>
         </table>

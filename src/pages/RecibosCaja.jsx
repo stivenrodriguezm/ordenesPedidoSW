@@ -33,10 +33,12 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   return (
     <Modal show={isOpen} onClose={onClose} title="Nuevo Recibo de Caja">
       <form onSubmit={handleSubmit}>
+
         <div className="form-group">
           <label>RC:</label>
           <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ingresa el ID del recibo" />
         </div>
+
         <div className="form-group">
           <label>Fecha:</label>
           <input type="date" name="fecha" value={newRC.fecha} onChange={handleChange} required />
@@ -116,7 +118,7 @@ const RecibosCaja = () => {
   const [isSubmitting, setIsSubmitting] = useState(false); // Para el estado de envío de formularios
   const [notification, setNotification] = useState({ message: '', type: '' });
 
-  const mediosPago = ['Efectivo', 'Davivienda', 'Bancolombia', 'Otro'];
+  const mediosPago = ['Efectivo', 'Davivienda', 'Bancolombia', 'Bold', 'Datafono Lottus', 'Otro'];
 
   const formatCurrency = (value) => {
     if (value === null || isNaN(value)) return '$0';
@@ -142,7 +144,7 @@ const RecibosCaja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/recibos/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/recibos-caja/', {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -174,11 +176,12 @@ const RecibosCaja = () => {
       const token = localStorage.getItem("accessToken");
       try {
         // Solo obtener IDs de ventas pendientes para el select
-        const response = await axios.get('http://127.0.0.1:8000/api/ventas/pendientes-ids/', {
+        const response = await axios.get('http://127.0.0.1:8000/api/get-pendientes-ids/', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVentas(response.data.map(id => ({ id_venta: id }))); // Formatear a { id_venta: id }
       } catch (error) {
+        console.error('Error details:', error); // Debugging line
         setNotification({ message: 'Error cargando ventas para el formulario.', type: 'error' });
       }
     };
@@ -201,7 +204,7 @@ const RecibosCaja = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('http://127.0.0.1:8000/api/recibos/create/', rcData, {
+      await axios.post('http://127.0.0.1:8000/api/recibos-caja/crear/', rcData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotification({ message: 'Recibo de Caja creado exitosamente.', type: 'success' });
@@ -221,7 +224,7 @@ const RecibosCaja = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.patch(`http://127.0.0.1:8000/api/recibos/${selectedRecibo.id}/confirmar/`, {}, {
+      await axios.patch(`http://127.0.0.1:8000/api/recibos-caja/${selectedRecibo.id}/confirmar/`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotification({ message: 'Recibo de Caja confirmado exitosamente.', type: 'success' });

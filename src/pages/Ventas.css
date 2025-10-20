@@ -46,7 +46,10 @@
 /* ==========================================================================
    Tabla Principal de Ventas
    ========================================================================== */
-.ventas-table {}
+.ventas-table {
+  width: 100%;
+  table-layout: fixed;
+}
 .th-oc, .td-oc           { width: 6%; }
 .th-fecha, .td-fecha     { width: 10%; }
 .th-vendedor, .td-vendedor { width: 9%; }

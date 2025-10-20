@@ -30,7 +30,7 @@ function CrearPedidoPage() {
   const { data: ventasPendientes = [], isLoading: ventasLoading, error: ventasError } = useQuery({
     queryKey: ["ventasPendientes"],
     queryFn: () =>
-      API.get("ventas/pendientes-ids/", {
+      API.get("ventas/pendientes/ids/", {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => {
         return res.data;
@@ -51,7 +51,7 @@ function CrearPedidoPage() {
 
   const createOrderMutation = useMutation({
     mutationFn: (newOrder) =>
-      API.post("ordenes/", newOrder, { headers: { Authorization: `Bearer ${token}` } }),
+      API.post("ordenes-pedido/", newOrder, { headers: { Authorization: `Bearer ${token}` } }),
     onSuccess: (response) => {
       setNumeroOP(response.data.id);
       queryClient.invalidateQueries({ queryKey: ['ordenes'] });

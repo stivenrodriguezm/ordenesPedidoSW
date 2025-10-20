@@ -158,13 +158,8 @@ const NuevaVenta = () => {
     };
 
     try {
-      if (!isClienteNuevo) {
-        await axios.put(`http://127.0.0.1:8000/api/clientes/${clienteId}/`, payload.cliente, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
 
-      await axios.post('http://127.0.0.1:8000/api/crear-venta-cliente/', payload, {
+      await axios.post('http://127.0.0.1:8000/api/ventas/crear/', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
@@ -8,11 +8,13 @@ import AppNotification from '../components/AppNotification';
 import EditSaleModal from '../components/EditSaleModal';
 import RemisionModal from '../components/RemisionModal';
 import SalesSummaryReport from '../components/SalesSummaryReport';
+import { AppContext } from '../AppContext';
 import './Ventas.css';
 import '../components/Modal.css';
 import '../components/AppNotification.css';
 
 const Ventas = () => {
+    const { fetchClientes } = useContext(AppContext);
     const navigate = useNavigate();
     const [ventas, setVentas] = useState([]);
     const [reportSales, setReportSales] = useState([]);
@@ -70,12 +72,10 @@ const Ventas = () => {
     // --- Funciones de Formato ---
     const formatShortDate = (dateStr) => {
         if (!dateStr) return '—';
-        const date = new Date(dateStr);
-        const day = String(date.getDate()).padStart(2, '0');
+        const [year, month, day] = dateStr.split('-');
         const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-        const month = monthNames[date.getMonth()];
-        const year = date.getFullYear();
-        return `${day}-${month}-${year}`;
+        const monthName = monthNames[parseInt(month, 10) - 1];
+        return `${day}-${monthName}-${year}`;
     };
 
     const formatDate = (dateStr) => {
@@ -89,15 +89,7 @@ const Ventas = () => {
     const formatCurrency = (value) => {
         if (value === null || value === undefined) return '$0';
 
-        // Convertir el valor a string para asegurar el manejo de diferentes tipos de entrada
-        let stringValue = String(value);
-
-        // Eliminar todos los caracteres no numéricos (excepto el signo negativo si existe)
-        // Esto convierte "8.645.555" o "8,645,555" en "8645555"
-        const cleanedString = stringValue.replace(/[^0-9-]/g, '');
-
-        // Convertir a entero. parseInt es adecuado ya que queremos solo números enteros.
-        const num = parseInt(cleanedString, 10);
+        const num = parseFloat(value);
 
         if (isNaN(num)) return '$0';
 
@@ -147,7 +139,9 @@ const Ventas = () => {
                 currentYear += 1;
             }
         }
-        return options.reverse(); // Reverse to show most recent first
+        options.reverse(); // Reverse to show most recent first
+        options.unshift({ value: 'all', label: 'Todas las fechas' });
+        return options;
     };
 
     const monthOptions = generateMonthOptions();
@@ -160,14 +154,16 @@ const Ventas = () => {
             if (searchTerm) {
                 params.search = searchTerm;
             } else {
-                const [month, year] = selectedMonthYear.split('-');
-                params.month = month;
-                params.year = year;
+                if (selectedMonthYear !== 'all') {
+                    const [month, year] = selectedMonthYear.split('-');
+                    params.month = month;
+                    params.year = year;
+                }
                 params.vendedor = selectedVendedor;
                 params.estado = selectedEstado;
             }
             const response = await axios.get('http://127.0.0.1:8000/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
-            const sortedVentas = response.data.sort((a, b) => b.id_venta - a.id_venta);
+            const sortedVentas = response.data.sort((a, b) => b.id - a.id);
             setVentas(sortedVentas || []);
         } catch (error) {
             console.error('Error cargando ventas:', error);
@@ -180,8 +176,12 @@ const Ventas = () => {
     const fetchReportSales = useCallback(async () => {
         const token = localStorage.getItem("accessToken");
         try {
-            const [month, year] = selectedMonthYear.split('-');
-            const params = { month, year };
+            const params = {};
+            if (selectedMonthYear !== 'all') {
+                const [month, year] = selectedMonthYear.split('-');
+                params.month = month;
+                params.year = year;
+            }
             const response = await axios.get('http://127.0.0.1:8000/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
             setReportSales(response.data || []);
         } catch (error) {
@@ -259,7 +259,7 @@ const Ventas = () => {
             setLoadingNestedDetails(true);
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`http://127.0.0.1:8000/api/detalles-pedido/${orderId}/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get(`http://127.0.0.1:8000/api/pedidos/${orderId}/detalles/`, { headers: { Authorization: `Bearer ${token}` } });
                 setNestedOrderDetails(response.data);
             } catch (error) {
                 console.error('Error cargando detalles del pedido anidado:', error);
@@ -274,7 +274,8 @@ const Ventas = () => {
     const handleAddObservacion = async (tipo) => {
         const token = localStorage.getItem("accessToken");
         const id = tipo === 'cliente' ? ventaDetails.cliente.id : expandedVentaId;
-        const url = `http://127.0.0.1:8000/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/`;
+        const url = `http://127.0.0.1:8000/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
+
         const texto = tipo === 'cliente' ? observacionClienteText : observacionVentaText;
 
         if (!texto) {
@@ -402,7 +403,6 @@ const Ventas = () => {
                             <th className="th-valor">Abono</th>
                             <th className="th-valor">Saldo</th>
                             <th className="th-valor">Valor</th>
-                            <th className="th-estado">Pedido</th>
                             <th className="th-estado">Estado</th>
                             <th className="th-accion"></th>
                         </tr>
@@ -412,27 +412,26 @@ const Ventas = () => {
                             <tr><td colSpan="10"><div className="loading-container"><div className="loader"></div></div></td></tr>
                         ) : ventas.length > 0 ? (
                             ventas.map((venta) => (
-                                <React.Fragment key={venta.id_venta}>
+                                <React.Fragment key={venta.id}>
                                     <tr>
-                                        <td className="td-oc">{venta.id_venta}</td>
+                                        <td className="td-oc">{venta.id}</td>
                                         <td className="td-fecha">{formatShortDate(venta.fecha_venta)}</td>
                                         <td className="td-fecha">{formatShortDate(venta.fecha_entrega)}</td>
-                                        <td className="td-vendedor">{venta.vendedor}</td>
-                                        <td className="td-cliente">{venta.cliente}</td>
+                                        <td className="td-vendedor">{venta.vendedor_nombre}</td>
+                                        <td className="td-cliente">{venta.cliente_nombre}</td>
                                         <td className="td-valor">{formatCurrency(venta.abono)}</td>
                                         <td className="td-valor">{formatCurrency(venta.saldo)}</td>
-                                        <td className="td-valor td-valor-total">{formatCurrency(venta.valor)}</td>
-                                        <td className="td-estado"><span className={`status-badge ${getStatusClass(venta.pedido)}`}>{venta.pedido}</span></td>
+                                        <td className="td-valor td-valor-total">{formatCurrency(venta.valor_total)}</td>
                                         <td className="td-estado">{venta.estado ? <span className={`status-badge ${getStatusClass(venta.estado)}`}>{capitalizeEstado(venta.estado)}</span> : ''}</td>
                                         <td className="td-accion">
-                                            <button className="btn-icon" onClick={() => handleExpandVenta(venta.id_venta)}>
-                                                <FaChevronDown style={{ transform: expandedVentaId === venta.id_venta ? 'rotate(180deg)' : 'none' }} />
+                                            <button className="btn-icon" onClick={() => handleExpandVenta(venta.id)}>
+                                                <FaChevronDown style={{ transform: expandedVentaId === venta.id ? 'rotate(180deg)' : 'none' }} />
                                             </button>
                                         </td>
                                     </tr>
-                                    {expandedVentaId === venta.id_venta && (
+                                    {expandedVentaId === venta.id && (
                                         <tr className="expanded-row">
-                                            <td colSpan="11">
+                                            <td colSpan="10">
                                                 {loadingDetails ? (
                                                     <div className="loading-container"><div className="loader"></div></div>
                                                 ) : ventaDetails ? (
@@ -597,6 +596,7 @@ const Ventas = () => {
                     onSaleUpdated={refreshVentaDetails} // Re-fetch current sale details
                     setNotification={setNotification}
                     fetchVentas={fetchVentas}
+                    fetchClientes={fetchClientes}
                 />
             )}
 

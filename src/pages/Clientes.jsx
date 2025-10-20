@@ -4,6 +4,7 @@ import { AppContext } from '../AppContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaEdit, FaPlus, FaFileExport } from 'react-icons/fa';
+import API from '../services/api';
 
 const EditClienteModal = ({ cliente, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -151,8 +152,10 @@ const Clientes = () => {
 
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/cliente/${clienteId}/ventas-observaciones/`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await API.get(`/clientes/${clienteId}/ventas-observaciones/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       setClienteDetails(response.data);
       setSelectedCliente(contextClientes.find(cliente => cliente.id === clienteId));
@@ -168,8 +171,10 @@ const Clientes = () => {
   const handleEditCliente = async (updatedCliente) => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.patch(`http://127.0.0.1:8000/api/clientes/${updatedCliente.id}/`, updatedCliente, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await API.patch(`/clientes/${updatedCliente.id}/`, updatedCliente, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       // Esta es una forma de actualizar el estado global. Necesitarías una función en tu context.
       // updateClientes(prev => prev.map(c => c.id === updatedCliente.id ? response.data : c));
@@ -184,7 +189,12 @@ const Clientes = () => {
     try {
       const response = await API.post(
         `clientes/${expandedClienteId}/observaciones/`,
-        { texto: observationText }
+        { texto: observationText },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       setClienteDetails(prevDetails => ({
         ...prevDetails,
@@ -256,28 +266,42 @@ const Clientes = () => {
                         {loadingDetails ? (
                           <div className="loading-container"><div className="loader"></div></div>
                         ) : clienteDetails ? (
-                          <div className="details-view">
-                            <div className="details-section">
-                              <h4>Compras Recientes</h4>
-                              <ul>
-                                {clienteDetails.ventas.length > 0 ? clienteDetails.ventas.map((venta) => (
-                                  <li key={venta.id_venta}>
-                                    Venta #{venta.id_venta} - {venta.estado}
-                                  </li>
-                                )) : <li>No hay compras registradas.</li>}
-                              </ul>
-                            </div>
-                            <div className="details-section">
-                              <h4>Observaciones</h4>
-                              <ul>
-                                {clienteDetails.observaciones_cliente.length > 0 ? clienteDetails.observaciones_cliente.map((obs) => (
-                                  <li key={obs.id}>{obs.texto}</li>
-                                )) : <li>No hay observaciones.</li>}
-                              </ul>
-                            </div>
-                            <div className="details-actions">
-                              <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
-                              <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
+                          <div className="details-view flex flex-col">
+                            {selectedCliente && (
+                                <div className="flex flex-row gap-4 w-full">
+                                    <div className="client-summary-details details-section flex-1"> {/* Detalles del Cliente */}
+                                        <h4>Detalles del Cliente</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-gray-700 text-sm">
+                                            <p><strong>Nombre:</strong> {selectedCliente.nombre}</p>
+                                            <p><strong>Correo:</strong> {selectedCliente.correo}</p>
+                                            <p><strong>Dirección:</strong> {selectedCliente.direccion}</p>
+                                            <p><strong>Teléfono 1:</strong> {selectedCliente.telefono1}</p>
+                                            <p><strong>Teléfono 2:</strong> {selectedCliente.telefono2 || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="details-section flex-1"> {/* Compras Recientes */}
+                                        <h4 class="text-lg font-semibold text-gray-800 mb-3">Compras Recientes</h4>
+                                        <ul>
+                                            {clienteDetails.ventas.length > 0 ? clienteDetails.ventas.map((venta) => (
+                                                <li key={venta.id_venta}>
+                                                    Venta #{venta.id_venta} - {venta.estado}
+                                                </li>
+                                            )) : <li>No hay compras registradas.</li>}
+                                        </ul>
+                                    </div>
+                                    <div className="details-section flex-1"> {/* Observaciones */}
+                                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Observaciones</h4>
+                                        <ul>
+                                            {clienteDetails.observaciones_cliente.length > 0 ? clienteDetails.observaciones_cliente.map((obs) => (
+                                                <li key={obs.id}>{obs.texto}</li>
+                                            )) : <li>No hay observaciones.</li>}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex flex-row justify-end space-x-2 flex-[0_0_20%]"> {/* Adjusted flex property */}
+                                <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
+                                <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
                             </div>
                           </div>
                         ) : null}

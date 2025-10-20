@@ -58,25 +58,26 @@ export function AppProvider({ children }) {
     fetchProveedores();
   }, [fetchProveedores]);
 
-  useEffect(() => {
-    const fetchClientes = async () => {
-      if (!token) {
-        setIsLoadingClientes(false);
-        return;
-      }
-      setIsLoadingClientes(true);
-      try {
-        const response = await API.get('/clientes/');
-        setClientes(response.data.results || []); 
-      } catch (error) {
-        console.error("Error al cargar clientes:", error);
-        setClientes([]);
-      } finally {
-        setIsLoadingClientes(false);
-      }
-    };
-    fetchClientes();
+  const fetchClientes = useCallback(async () => {
+    if (!token) {
+      setIsLoadingClientes(false);
+      return;
+    }
+    setIsLoadingClientes(true);
+    try {
+      const response = await API.get('/clientes/');
+      setClientes(response.data.results || []); 
+    } catch (error) {
+      console.error("Error al cargar clientes:", error);
+      setClientes([]);
+    } finally {
+      setIsLoadingClientes(false);
+    }
   }, [token]);
+
+  useEffect(() => {
+    fetchClientes();
+  }, [fetchClientes]);
 
   return (
     <AppContext.Provider
@@ -91,6 +92,7 @@ export function AppProvider({ children }) {
         fetchProveedores,
         clientes,
         isLoadingClientes,
+        fetchClientes, // Expose the function
       }}
     >
       {children}

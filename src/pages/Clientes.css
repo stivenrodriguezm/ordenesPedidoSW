@@ -120,16 +120,16 @@
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
-  padding: 0;
   background-color: #f8f9fa;
   box-shadow: inset 0 4px 6px -6px rgba(0,0,0,0.1), inset 0 -4px 6px -6px rgba(0,0,0,0.1);
 }
 
 .details-view {
   padding: 1.5rem 2rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  width: 100%; /* Added to ensure full width */
 }
 
 .details-section h4 {

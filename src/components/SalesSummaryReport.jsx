@@ -20,12 +20,12 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         });
 
         ventas.forEach(venta => {
-            totalSales += parseFloat(venta.valor) || 0;
+            totalSales += parseFloat(venta.valor_total) || 0;
 
-            const vendorId = vendorNameToIdMap[venta.vendedor];
+            const vendorId = vendorNameToIdMap[venta.vendedor_nombre];
 
             if (vendorId && salesByVendedor[vendorId]) {
-                salesByVendedor[vendorId].total += parseFloat(venta.valor) || 0;
+                salesByVendedor[vendorId].total += parseFloat(venta.valor_total) || 0;
                 salesByVendedor[vendorId].count++;
                 if (venta.estado === 'entregado') {
                     salesByVendedor[vendorId].delivered++;

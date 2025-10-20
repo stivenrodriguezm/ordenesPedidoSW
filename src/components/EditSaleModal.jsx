@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 
-const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas }) => {
+const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchClientes }) => {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     id: '',
     cliente_id: '',
@@ -62,6 +64,8 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
       onClose();
       onSaleUpdated(formData.id); // Trigger re-fetch of updated sale details
       fetchVentas(); // Re-fetch all sales to update the main table
+      fetchClientes(); // Re-fetch all clients to update the global context
+      queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] }); // Invalidate pending sales query
     } catch (error) {
       console.error('Error al editar la venta:', error);
       let friendlyError = 'Error al editar la venta.';

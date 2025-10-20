@@ -12,7 +12,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading 
 
   useEffect(() => {
     if (orden) {
-      const cleanedCosto = typeof orden.costo === 'string' ? parseFloat(orden.costo.replace(/[$.]/g, '').replace(',', '.')) : orden.costo;
+      const cleanedCosto = parseFloat(orden.costo);
       setFormState({
         costo: isNaN(cleanedCosto) ? '' : cleanedCosto,
         estado: orden.estado || '',
@@ -185,10 +185,11 @@ const OrdenesPage = () => {
     setExpandedOrderId(orderId);
     setLoadingDetails(true);
     try {
-      const response = await API.get(`detalles-pedido/${orderId}/`);
+      const response = await API.get(`pedidos/${orderId}/detalles/`);
       setOrderDetails(response.data);
     } catch (error) {
       setErrorMessage('Error al cargar los detalles del pedido.');
+      console.error(error);
     } finally {
       setLoadingDetails(false);
     }
@@ -209,7 +210,7 @@ const OrdenesPage = () => {
       tela: formData.tela
     };
     try {
-        await API.put(`ordenes/${id}/`, updates);
+        await API.patch(`ordenes-pedido/${id}/`, updates);
         setFilteredOrdenes(prev => prev.map(o => o.id === id ? {...o, ...updates} : o));
         setIsEditModalOpen(false); // Cierra el modal en caso de éxito
     } catch (error) {
