@@ -8,24 +8,24 @@ import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
   const [nombre_empresa, setNombreEmpresa] = useState('');
-  const [nombre_contacto, setNombreContacto] = useState('');
-  const [telefono, setTelefono] = useState('');
+  const [nombre_encargado, setNombreEncargado] = useState('');
+  const [contacto, setContacto] = useState('');
 
   useEffect(() => {
     if (proveedor) {
       setNombreEmpresa(proveedor.nombre_empresa || '');
-      setNombreContacto(proveedor.nombre_contacto || '');
-      setTelefono(proveedor.telefono || '');
+      setNombreEncargado(proveedor.nombre_encargado || '');
+      setContacto(proveedor.contacto || '');
     } else {
       setNombreEmpresa('');
-      setNombreContacto('');
-      setTelefono('');
+      setNombreEncargado('');
+      setContacto('');
     }
   }, [proveedor, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ id: proveedor?.id, nombre_empresa, nombre_contacto, telefono });
+    onSave({ id: proveedor?.id, nombre_empresa, nombre_encargado, contacto });
   };
 
   if (!isOpen) return null;
@@ -44,11 +44,11 @@ const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
           </div>
           <div className="form-group">
             <label>Encargado:</label>
-            <input type="text" value={nombre_contacto} onChange={(e) => setNombreContacto(e.target.value)} required />
+            <input type="text" value={nombre_encargado} onChange={(e) => setNombreEncargado(e.target.value)} required />
           </div>
           <div className="form-group">
             <label>Contacto:</label>
-            <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} required />
+            <input type="text" value={contacto} onChange={(e) => setContacto(e.target.value)} required />
           </div>
           <button type="submit" className="modal-submit" disabled={isLoading}>
             {isLoading ? 'Guardando...' : (proveedor ? 'Guardar Cambios' : 'Crear Proveedor')}
@@ -140,11 +140,11 @@ function ProveedoresPage() {
               <th className="th-empresa sortable" onClick={() => requestSort('nombre_empresa')}>
                 <span>Empresa</span> {getSortIcon('nombre_empresa')}
               </th>
-              <th className="th-encargado sortable" onClick={() => requestSort('nombre_contacto')}>
-                <span>Encargado</span> {getSortIcon('nombre_contacto')}
+              <th className="th-encargado sortable" onClick={() => requestSort('nombre_encargado')}>
+                <span>Encargado</span> {getSortIcon('nombre_encargado')}
               </th>
-              <th className="th-contacto sortable" onClick={() => requestSort('telefono')}>
-                <span>Contacto</span> {getSortIcon('telefono')}
+              <th className="th-contacto sortable" onClick={() => requestSort('contacto')}>
+                <span>Contacto</span> {getSortIcon('contacto')}
               </th>
               <th className="th-editar">Editar</th>
             </tr>
@@ -156,8 +156,8 @@ function ProveedoresPage() {
               sortedProveedores.map((proveedor) => (
                 <tr key={proveedor.id}>
                   <td className="td-empresa">{proveedor.nombre_empresa}</td>
-                  <td className="td-encargado">{proveedor.nombre_contacto}</td>
-                  <td className="td-contacto">{proveedor.telefono}</td>
+                  <td className="td-encargado">{proveedor.nombre_encargado}</td>
+                  <td className="td-contacto">{proveedor.contacto}</td>
                   <td className="td-editar">
                     <button className="btn-icon" onClick={() => handleOpenModal(proveedor)}>
                       <FaEdit />

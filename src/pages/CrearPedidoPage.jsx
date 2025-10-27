@@ -30,7 +30,7 @@ function CrearPedidoPage() {
   const { data: ventasPendientes = [], isLoading: ventasLoading, error: ventasError } = useQuery({
     queryKey: ["ventasPendientes"],
     queryFn: () =>
-      API.get("ventas/pendientes/ids/", {
+      API.get("get-pendientes-ids/", {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => {
         return res.data;

@@ -12,7 +12,7 @@ import Modal from '../components/Modal';
 
 // Componente de Modal para la creación de Comprobantes de Egreso
 const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoading }) => {
-  const [newCE, setNewCE] = useState({ id: '', fecha: '', metodo_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' });
+  const [newCE, setNewCE] = useState({ id: '', fecha: '', medio_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' });
 
   useEffect(() => {
     if (isOpen) {
@@ -21,7 +21,7 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       const formattedToday = `${year}-${month}-${day}`;
-      setNewCE(prev => ({ ...prev, fecha: formattedToday, metodo_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' }));
+      setNewCE(prev => ({ ...prev, fecha: formattedToday, medio_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' }));
     }
   }, [isOpen]);
 
@@ -47,7 +47,7 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
         </div>
         <div className="form-group">
           <label>Medio de pago:</label>
-          <select name="metodo_pago" value={newCE.metodo_pago} onChange={handleChange} required>
+          <select name="medio_pago" value={newCE.medio_pago} onChange={handleChange} required>
             <option value="">Elegir medio de pago</option>
             {mediosPago.map((medio) => (<option key={medio.value} value={medio.value}>{medio.label}</option>))}
           </select>
@@ -83,7 +83,7 @@ const ComprobantesEgreso = () => {
   const [filters, setFilters] = useState({
     fecha_inicio: '',
     fecha_fin: '',
-    metodo_pago: '',
+    medio_pago: '',
     proveedor: '',
     query: ''
   });
@@ -168,7 +168,7 @@ const ComprobantesEgreso = () => {
     setFilters({
       fecha_inicio: '',
       fecha_fin: '',
-      metodo_pago: '',
+      medio_pago: '',
       proveedor: '',
       query: ''
     });
@@ -185,7 +185,7 @@ const ComprobantesEgreso = () => {
         ID: item.id,
         Fecha: formatDate(item.fecha),
         Proveedor: item.proveedor_nombre || '-',
-        'Medio de Pago': mediosPago.find(medio => medio.value === item.metodo_pago)?.label || item.metodo_pago,
+        'Medio de Pago': mediosPago.find(medio => medio.value === item.medio_pago)?.label || item.medio_pago,
         Valor: formatCurrency(item.valor),
         Concepto: item.concepto || '-',
         Descripción: item.descripcion || '-'
@@ -237,14 +237,14 @@ const ComprobantesEgreso = () => {
           <input type="text" className="search-input" name="query" placeholder="Buscar por CE o Proveedor..." value={filters.query} onChange={handleFilterChange} />
           <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
           <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
-          <select name="metodo_pago" value={filters.metodo_pago} onChange={handleFilterChange}>
+          <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
             <option value="">Medio de pago</option>
             {mediosPago.map((medio) => (<option key={medio.value} value={medio.value}>{medio.label}</option>))}
           </select>
-          <select name="proveedor" value={filters.proveedor} onChange={handleFilterChange} disabled={isLoadingProveedores}>
+          {/* <select name="proveedor" value={filters.proveedor} onChange={handleFilterChange} disabled={isLoadingProveedores}>
             <option value="">Proveedor</option>
             {Array.isArray(proveedores) && proveedores.map((proveedor) => (<option key={proveedor.id} value={proveedor.id}>{proveedor.nombre_empresa}</option>))}
-          </select>
+          </select> */}
           <button className="btn-secondary btn-icon-only" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
         </div>
         <div className="actions-group">
@@ -275,7 +275,7 @@ const ComprobantesEgreso = () => {
                   <td className="td-ce-fecha">{formatDate(item.fecha)}</td>
                   <td className="td-ce-proveedor">{item.proveedor_nombre || '—'}</td>
                   <td className="td-ce-concepto">{item.concepto || '—'}</td>
-                  <td className="td-ce-metodo">{mediosPago.find(medio => medio.value === item.metodo_pago)?.label || (item.metodo_pago ? item.metodo_pago.charAt(0).toUpperCase() + item.metodo_pago.slice(1) : '—')}</td>
+                  <td className="td-ce-metodo">{mediosPago.find(medio => medio.value === item.medio_pago)?.label || (item.medio_pago ? item.medio_pago.charAt(0).toUpperCase() + item.medio_pago.slice(1) : '—')}</td>
                   <td className="td-ce-valor td-valor">{formatCurrency(item.valor)}</td>
                   <td className="td-ce-descripcion">{item.descripcion || '—'}</td>
                 </tr>

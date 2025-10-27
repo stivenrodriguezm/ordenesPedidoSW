@@ -166,10 +166,10 @@ const HomePage = () => {
                     <tbody>
                         {stats.ultimas_ventas && stats.ultimas_ventas.length > 0 ? (
                             stats.ultimas_ventas.map(venta => (
-                                <tr key={venta.id_venta}>
-                                    <td>{venta.id_venta}</td>
-                                    <td>{venta.cliente}</td>
-                                    <td>{formatCurrency(venta.valor)}</td>
+                                <tr key={venta.id}>
+                                    <td>{venta.id}</td>
+                                    <td>{venta.cliente_nombre}</td>
+                                    <td>{formatCurrency(venta.valor_total)}</td>
                                     <td>{new Date(venta.fecha_venta).toLocaleDateString('es-CO')}</td>
                                     <td><span className={`status-badge status-${venta.estado}`}>{venta.estado}</span></td>
                                 </tr>
