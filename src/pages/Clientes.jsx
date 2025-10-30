@@ -108,7 +108,7 @@ const AddObservationModal = ({ onSave, onClose }) => {
 };
 
 const Clientes = () => {
-  const { clientes: contextClientes, isLoadingClientes } = useContext(AppContext);
+  const { clientes: contextClientes, isLoadingClientes, usuario } = useContext(AppContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClienteId, setExpandedClienteId] = useState(null);
   const [clienteDetails, setClienteDetails] = useState(null);
@@ -166,12 +166,35 @@ const Clientes = () => {
     }
   };
 
-  const exportClientes = async () => { /* Lógica sin cambios */ };
+  const exportClientes = () => {
+    const lowercasedFilter = searchTerm.toLowerCase();
+    const filtered = contextClientes.filter(cliente =>
+      cliente.id.toString().toLowerCase().includes(lowercasedFilter) ||
+      cliente.nombre.toLowerCase().includes(lowercasedFilter) ||
+      cliente.cedula.toLowerCase().includes(lowercasedFilter)
+    );
+
+    const dataToExport = filtered.map(cliente => ({
+      'ID': cliente.id,
+      'Nombre': cliente.nombre,
+      'Cédula': cliente.cedula,
+      'Correo': cliente.correo,
+      'Dirección': cliente.direccion,
+      'Ciudad': cliente.ciudad,
+      'Teléfono 1': cliente.telefono1,
+      'Teléfono 2': cliente.telefono2,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+    XLSX.writeFile(wb, 'Clientes.xlsx');
+  };
 
   const handleEditCliente = async (updatedCliente) => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await API.patch(`/clientes/${updatedCliente.id}/`, updatedCliente, {
+      const response = await API.put(`/clientes/${updatedCliente.id}/`, updatedCliente, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -188,7 +211,7 @@ const Clientes = () => {
     const token = localStorage.getItem("accessToken");
     try {
       const response = await API.post(
-        `clientes/${expandedClienteId}/observaciones/`,
+        `clientes/${expandedClienteId}/observaciones/anadir/`,
         { texto: observationText },
         {
           headers: {
@@ -219,9 +242,11 @@ const Clientes = () => {
             setCurrentPage(1);
           }}
         />
-        <button className="btn-secondary" onClick={exportClientes}>
-          <FaFileExport /> Exportar
-        </button>
+        {usuario?.role === 'administrador' && (
+          <button className="btn-secondary" onClick={exportClientes}>
+            <FaFileExport /> Exportar
+          </button>
+        )}
       </div>
 
       <div className="table-container">
@@ -283,8 +308,8 @@ const Clientes = () => {
                                         <h4 class="text-lg font-semibold text-gray-800 mb-3">Compras Recientes</h4>
                                         <ul>
                                             {clienteDetails.ventas.length > 0 ? clienteDetails.ventas.map((venta) => (
-                                                <li key={venta.id_venta}>
-                                                    Venta #{venta.id_venta} - {venta.estado}
+                                                <li key={venta.id}>
+                                                    Venta #{venta.id} - {venta.estado}
                                                 </li>
                                             )) : <li>No hay compras registradas.</li>}
                                         </ul>

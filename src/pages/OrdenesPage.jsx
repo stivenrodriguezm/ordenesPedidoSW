@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../services/api';
+import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
@@ -76,7 +76,7 @@ const OrdenesPage = () => {
   const [vendedores, setVendedores] = useState([]);
   const [selectedProveedor, setSelectedProveedor] = useState('');
   const [selectedVendedor, setSelectedVendedor] = useState('');
-  const [selectedEstado, setSelectedEstado] = useState('en_proceso');
+  const [selectedEstado, setSelectedEstado] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -147,22 +147,28 @@ const OrdenesPage = () => {
   }, [token]);
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchOrdenes = async () => {
       setIsLoading(true);
+      const token = localStorage.getItem("accessToken");
       try {
         const params = {
           id_proveedor: selectedProveedor,
           id_vendedor: selectedVendedor,
           estado: selectedEstado,
-          ordering: '-id', // Sort by ID in descending order
-          page_size: 9999, // Request a very large page size to effectively disable pagination
+          ordering: '-id',
         };
+        
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
-        const response = await API.get('listar-pedidos/', { params });
-        let fetchedOrdenes = Array.isArray(response.data.results) ? response.data.results.filter(orden => orden.id) : [];
-        // Client-side sort to ensure descending order by ID
-        fetchedOrdenes.sort((a, b) => b.id - a.id);
-        console.log("Sorted Orders:", fetchedOrdenes.map(o => o.id)); // Debugging line
+        
+        const response = await axios.get('http://127.0.0.1:8000/api/listar-pedidos/', {
+            headers: { Authorization: `Bearer ${token}` },
+            params
+        });
+        
+        let fetchedOrdenes = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
+        
         setFilteredOrdenes(fetchedOrdenes);
         
       } catch (error) {
@@ -172,8 +178,9 @@ const OrdenesPage = () => {
         setIsLoading(false);
       }
     };
+
     fetchOrdenes();
-  }, [selectedProveedor, selectedVendedor, selectedEstado, token]);
+  }, [selectedProveedor, selectedVendedor, selectedEstado, token, user]);
   
   
 
@@ -184,11 +191,14 @@ const OrdenesPage = () => {
     }
     setExpandedOrderId(orderId);
     setLoadingDetails(true);
+    setOrderDetails(null); // Reset details on new expand
+    setErrorMessage(''); // Reset error message
     try {
       const response = await API.get(`pedidos/${orderId}/detalles/`);
       setOrderDetails(response.data);
     } catch (error) {
-      setErrorMessage('Error al cargar los detalles del pedido.');
+      const errorMsg = error.response?.data?.error || 'Error al cargar los detalles del pedido.';
+      setErrorMessage(errorMsg);
       console.error(error);
     } finally {
       setLoadingDetails(false);
@@ -220,7 +230,36 @@ const OrdenesPage = () => {
     }
   };
 
-  const exportOrdenes = async () => { /* Lógica sin cambios */ };
+  const formatCurrencyForExport = (value) => {
+    if (value === null || value === undefined) return null;
+    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
+    return isNaN(num) ? null : num;
+  };
+
+  const exportOrdenes = () => {
+    const dataToExport = filteredOrdenes.map(orden => {
+      const data = {
+        'O.P.': orden.id,
+        'Proveedor': orden.proveedor_nombre,
+        'Vendedor': orden.vendedor,
+        'Venta': orden.venta || orden.orden_venta,
+        'F. Pedido': formatDate(orden.fecha_pedido),
+        'F. Llegada': formatDate(orden.fecha_esperada),
+        'Tela': orden.tela,
+        'Estado': getEstadoText(orden.estado, orden.fecha_esperada),
+        'Observación': orden.observacion,
+      };
+      if (user?.role === 'ADMINISTRADOR' || user?.role === 'AUXILIAR') {
+        data['Costo'] = formatCurrencyForExport(orden.costo);
+      }
+      return data;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ordenes');
+    XLSX.writeFile(wb, 'Ordenes.xlsx');
+  };
   const getEstadoClass = (estado, fechaEsperada) => {
     if (estado === 'en_proceso') {
       const today = new Date();
@@ -252,7 +291,7 @@ const OrdenesPage = () => {
             <option value="">{isLoadingProveedores ? "Cargando proveedores..." : "Todos los proveedores"}</option>
             {!isLoadingProveedores && Array.isArray(proveedores) && proveedores.map((prov) => (<option key={prov.id} value={prov.id}>{prov.nombre_empresa}</option>))}
           </select>
-          {(user?.role === 'ADMINISTRADOR' || user?.role === 'AUXILIAR') && (
+          {(user?.role === 'administrador' || user?.role === 'auxiliar') && (
             <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
               <option value="">Todos los vendedores</option>
               {vendedores.map((vendedor) => (<option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>))}
@@ -263,7 +302,7 @@ const OrdenesPage = () => {
           </select>
         </div>
         <div className="actions-group">
-          <button className="btn-secondary" onClick={exportOrdenes}><FaFileExport /> Exportar</button>
+          {(user?.role === 'administrador' || user?.role === 'auxiliar') && <button className="btn-secondary" onClick={exportOrdenes}><FaFileExport /> Exportar</button>}
           <button className="btn-primary" onClick={() => navigate('/ordenes/nuevo')}><FaPlus /> Crear Pedido</button>
         </div>
       </div>
@@ -281,7 +320,7 @@ const OrdenesPage = () => {
               <th className="th-tela">Tela</th>
               <th className="th-estado">Estado</th>
               <th className="th-observacion">Observación</th>
-              {(user?.role === 'ADMINISTRADOR' || user?.role === 'AUXILIAR') && <th className="th-costo">Costo</th>}
+              {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <th className="th-costo">Costo</th>}
               <th className="th-accion"></th>
             </tr>
           </thead>
@@ -301,7 +340,7 @@ const OrdenesPage = () => {
                     <td className="td-tela"><span className={`status-badge ${getTelaClass(orden.tela)}`}>{orden.tela}</span></td>
                     <td className="td-estado"><span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>{getEstadoText(orden.estado, orden.fecha_esperada)}</span></td>
                     <td className="td-observacion">{orden.observacion}</td>
-                    {(user?.role === 'ADMINISTRADOR' || user?.role === 'AUXILIAR') && <td className="td-costo">${formatNumber(orden.costo)}</td>}
+                    {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <td className="td-costo">${formatNumber(orden.costo)}</td>}
                     <td className="td-accion">
                       <button className="btn-icon" onClick={() => handleExpandOrder(orden.id)}>
                          <FaChevronDown style={{ transform: expandedOrderId === orden.id ? 'rotate(180deg)' : 'none' }} />
@@ -313,6 +352,7 @@ const OrdenesPage = () => {
                       <td colSpan={11}>
                         <div className="details-view-wrapper">
                           {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
+                            errorMessage ? <div className="error-cell">{errorMessage}</div> :
                             orderDetails ? (
                               <>
                                 <div className="order-preview">
@@ -327,7 +367,7 @@ const OrdenesPage = () => {
                                       <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
                                       <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
                                     </div>
-                                    {(user?.role === 'ADMINISTRADOR' || user?.role === 'AUXILIAR') && (
+                                    {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
                                         <button className="btn-primary btn-editar-pedido" onClick={() => handleOpenEditModal(orden)}>
                                             <FaEdit /> Editar Pedido
                                         </button>

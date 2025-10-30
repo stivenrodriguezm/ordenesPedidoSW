@@ -4,7 +4,8 @@ import { AppContext } from "../AppContext";
 import AppNotification from '../components/AppNotification';
 import API from "../services/api";
 import "./ProveedoresPage.css";
-import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport } from "react-icons/fa";
+import * as XLSX from 'xlsx';
 
 const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
   const [nombre_empresa, setNombreEmpresa] = useState('');
@@ -60,7 +61,7 @@ const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
 };
 
 function ProveedoresPage() {
-  const { proveedores, isLoadingProveedores, fetchProveedores } = useContext(AppContext);
+  const { proveedores, isLoadingProveedores, fetchProveedores, usuario } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProveedor, setEditingProveedor] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre_empresa', direction: 'ascending' });
@@ -118,6 +119,19 @@ function ProveedoresPage() {
   const handleCloseModal = () => setIsModalOpen(false);
   const handleSave = (data) => mutation.mutate(data);
 
+  const exportProveedores = () => {
+    const dataToExport = sortedProveedores.map(proveedor => ({
+      'Empresa': proveedor.nombre_empresa,
+      'Encargado': proveedor.nombre_encargado,
+      'Contacto': proveedor.contacto,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
+    XLSX.writeFile(wb, 'Proveedores.xlsx');
+  };
+
   return (
     <div className="page-container">
       <AppNotification 
@@ -126,8 +140,11 @@ function ProveedoresPage() {
         onClose={() => setNotification({ message: '', type: '' })}
       />
       <div className="page-header">
-        {/* El título se ha eliminado de esta sección */}
-        <div/>
+        {usuario?.role === 'administrador' && (
+          <button className="btn-secondary" onClick={exportProveedores}>
+            <FaFileExport /> Exportar
+          </button>
+        )}
         <button className="btn-primary" onClick={() => handleOpenModal()}>
           <FaPlus /> Nuevo Proveedor
         </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit } from "react-icons/fa";
+import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen } from "react-icons/fa";
 import Modal from '../components/Modal';
 import AppNotification from '../components/AppNotification';
 import EditSaleModal from '../components/EditSaleModal';
@@ -14,12 +14,13 @@ import '../components/Modal.css';
 import '../components/AppNotification.css';
 
 const Ventas = () => {
-    const { fetchClientes } = useContext(AppContext);
+    const { fetchClientes, usuario } = useContext(AppContext);
     const navigate = useNavigate();
     const [ventas, setVentas] = useState([]);
     const [reportSales, setReportSales] = useState([]);
     const [vendedores, setVendedores] = useState([]);
     const [estados, setEstados] = useState([]);
+    const [isReportVisible, setIsReportVisible] = useState(false);
     
     const [searchTerm, setSearchTerm] = useState('');
     const getDefaultMonthYear = () => {
@@ -159,7 +160,11 @@ const Ventas = () => {
                     params.month = month;
                     params.year = year;
                 }
-                params.vendedor = selectedVendedor;
+                if (usuario?.role.toLowerCase() === 'vendedor') {
+                    params.vendedor = usuario.id;
+                } else {
+                    params.vendedor = selectedVendedor;
+                }
                 params.estado = selectedEstado;
             }
             const response = await axios.get('http://127.0.0.1:8000/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
@@ -171,7 +176,7 @@ const Ventas = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [searchTerm, selectedMonthYear, selectedVendedor, selectedEstado, setNotification]);
+    }, [searchTerm, selectedMonthYear, selectedVendedor, selectedEstado, setNotification, usuario]);
 
     const fetchReportSales = useCallback(async () => {
         const token = localStorage.getItem("accessToken");
@@ -182,12 +187,15 @@ const Ventas = () => {
                 params.month = month;
                 params.year = year;
             }
+            if (usuario?.role.toLowerCase() === 'vendedor') {
+                params.vendedor = usuario.id;
+            }
             const response = await axios.get('http://127.0.0.1:8000/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
             setReportSales(response.data || []);
         } catch (error) {
             console.error('Error cargando ventas para el informe:', error);
         }
-    }, [selectedMonthYear]);
+    }, [selectedMonthYear, usuario]);
 
     useEffect(() => {
         fetchVentas();
@@ -348,6 +356,41 @@ const Ventas = () => {
         }
     };
 
+    const formatCurrencyForExport = (value) => {
+        if (value === null || value === undefined) return null;
+        const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
+        return isNaN(num) ? null : num;
+      };
+
+    const exportVentas = () => {
+        const dataToExport = ventas.map(venta => ({
+          'O.C.': venta.id,
+          'F. Venta': formatShortDate(venta.fecha_venta),
+          'F. Entrega': formatShortDate(venta.fecha_entrega),
+          'Vendedor': venta.vendedor_nombre,
+          'Cliente': venta.cliente_nombre,
+          'Abono': formatCurrencyForExport(venta.abono),
+          'Saldo': formatCurrencyForExport(venta.saldo),
+          'Valor': formatCurrencyForExport(venta.valor_total),
+          'Estado': capitalizeEstado(venta.estado),
+        }));
+    
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+        XLSX.writeFile(wb, 'Ventas.xlsx');
+      };
+
+    const formatReportTitle = (monthYear) => {
+        if (!monthYear || monthYear === 'all') {
+          return 'Informe de Ventas - Todas las fechas';
+        }
+        const [month, year] = monthYear.split('-');
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const monthName = monthNames[parseInt(month, 10) - 1];
+        return `Informe de Ventas - ${monthName} ${year}`;
+      };
+
     return (
         <div className="page-container">
             <AppNotification
@@ -355,13 +398,25 @@ const Ventas = () => {
                 type={notification.type}
                 onClose={() => setNotification({ message: '', type: '' })}
             />
-            <SalesSummaryReport
-                ventas={reportSales}
-                vendedores={vendedores}
-                selectedMonthYear={selectedMonthYear}
-                formatCurrency={formatCurrency}
-                capitalizeEstado={capitalizeEstado}
-            />
+            {usuario && (
+                <div className="sales-summary-report-wrapper">
+                    <div className="report-header">
+                        <h3>{formatReportTitle(selectedMonthYear)}</h3>
+                        <button className="btn-icon" onClick={() => setIsReportVisible(!isReportVisible)}>
+                            {isReportVisible ? <FaLockOpen /> : <FaLock />}
+                        </button>
+                    </div>
+                    {isReportVisible && (
+                        <SalesSummaryReport
+                            ventas={reportSales}
+                            vendedores={vendedores}
+                            selectedMonthYear={selectedMonthYear}
+                            formatCurrency={formatCurrency}
+                            capitalizeEstado={capitalizeEstado}
+                        />
+                    )}
+                </div>
+            )}
       
             <div className="page-header">
                 <div className="filters-group">
@@ -378,16 +433,18 @@ const Ventas = () => {
                         <option value="">Todos los estados</option>
                         {estados.map(e => <option key={e} value={e}>{capitalizeEstado(e)}</option>)}
                     </select>
-                    <select value={selectedVendedor} onChange={(e) => {setSelectedVendedor(e.target.value);}}>
-                        <option value="">Todos los vendedores</option>
-                        {vendedores.map(vendedor => (
-                            <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
-                        ))}
-                    </select>
+                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                        <select value={selectedVendedor} onChange={(e) => {setSelectedVendedor(e.target.value);}}>
+                            <option value="">Todos los vendedores</option>
+                            {vendedores.map(vendedor => (
+                                <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
                 <div className="actions-group">
-                    <button className="btn-secondary"><FaFileExport /> Exportar</button>
-                    <button className="btn-primary" onClick={() => navigate('/nuevaVenta')}><FaPlus /> Nueva Venta</button>
+                    {usuario?.role.toLowerCase() === 'administrador' && <button className="btn-secondary" onClick={exportVentas}><FaFileExport /> Exportar</button>}
+                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && <button className="btn-primary" onClick={() => navigate('/nuevaVenta')}><FaPlus /> Nueva Venta</button>}
                 </div>
             </div>
 

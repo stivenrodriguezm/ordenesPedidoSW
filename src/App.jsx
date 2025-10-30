@@ -1,11 +1,11 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import React, { useContext, useEffect } from "react";
-import PrivateRoute from "./components/PrivateRoute"; 
+import PrivateRoute from "./PrivateRoute"; 
 import LoginPage from "./pages/LoginPage";
 import ReferenciasPage from "./pages/ReferenciasPage";
 import ProveedoresPage from "./pages/ProveedoresPage";
 import OrdenesPage from "./pages/OrdenesPage";
-import EditarProveedorPage from "./pages/EditarProveedorPage";
+
 import CrearPedidoPage from "./pages/CrearPedidoPage";
 import PerfilPage from "./pages/PerfilPage";
 import Sidebar from "./components/Sidebar";
@@ -18,6 +18,7 @@ import NuevaVenta from "./pages/NuevaVenta";
 import Caja from "./pages/Caja";
 import RecibosCaja from "./pages/RecibosCaja";
 import ComprobantesEgreso from "./pages/ComprobantesEgreso";
+import TestOrdenes from "./pages/TestOrdenes";
 import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
@@ -58,19 +59,19 @@ function App() {
               <MainLayout>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/ordenes" element={<OrdenesPage />} />
-                  <Route path="/referencias" element={<ReferenciasPage />} />
-                  <Route path="/proveedores" element={<ProveedoresPage />} />
-                  <Route path="/proveedores/editar/:id" element={<EditarProveedorPage />} />
-                  <Route path="/ordenes/nuevo" element={<CrearPedidoPage />} />
-                  <Route path="/perfil" element={<PerfilPage />} />
-                  <Route path="/clientes" element={<Clientes />} />
-                  <Route path="/ventas" element={<Ventas />} />
-                  <Route path="/nuevaVenta" element={<NuevaVenta />} />
-                  <Route path="/EditarVenta/:id/" element={<EditarVenta />} />
-                  <Route path="/caja" element={<Caja />} />
-                  <Route path="/recibos-caja" element={<RecibosCaja />} />
-                  <Route path="/comprobantes-egreso" element={<ComprobantesEgreso />} />
+                  <Route path="/ordenes" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><OrdenesPage /></PrivateRoute>} />
+                  <Route path="/referencias" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ReferenciasPage /></PrivateRoute>} />
+                  <Route path="/proveedores" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ProveedoresPage /></PrivateRoute>} />
+                  <Route path="/ordenes/nuevo" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><CrearPedidoPage /></PrivateRoute>} />
+                  <Route path="/perfil" element={<PrivateRoute><PerfilPage /></PrivateRoute>} />
+                  <Route path="/clientes" element={<PrivateRoute roles={['administrador', 'auxiliar']}><Clientes /></PrivateRoute>} />
+                  <Route path="/ventas" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><Ventas /></PrivateRoute>} />
+                  <Route path="/nuevaVenta" element={<PrivateRoute roles={['administrador', 'auxiliar']}><NuevaVenta /></PrivateRoute>} />
+                  <Route path="/EditarVenta/:id/" element={<PrivateRoute roles={['administrador', 'auxiliar']}><EditarVenta /></PrivateRoute>} />
+                  <Route path="/caja" element={<PrivateRoute roles={['administrador', 'auxiliar']}><Caja /></PrivateRoute>} />
+                  <Route path="/recibos-caja" element={<PrivateRoute roles={['administrador', 'auxiliar']}><RecibosCaja /></PrivateRoute>} />
+                  <Route path="/comprobantes-egreso" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ComprobantesEgreso /></PrivateRoute>} />
+                  <Route path="/test-ordenes" element={<TestOrdenes />} />
                 </Routes>
               </MainLayout>
             </PrivateRoute>

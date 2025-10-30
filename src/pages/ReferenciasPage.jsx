@@ -2,7 +2,8 @@ import React, { useState, useContext, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
 import "./ReferenciasPage.css";
-import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport } from "react-icons/fa";
+import * as XLSX from 'xlsx';
 import { AppContext } from "../AppContext";
 import AppNotification from '../components/AppNotification';
 
@@ -67,7 +68,7 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
 
 
 function ReferenciasPage() {
-  const { proveedores, isLoading: contextLoading, isLoadingProveedores, fetchProveedores } = useContext(AppContext);
+  const { proveedores, isLoading: contextLoading, isLoadingProveedores, fetchProveedores, usuario } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReferencia, setEditingReferencia] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'proveedor_name', direction: 'ascending' });
@@ -141,6 +142,18 @@ function ReferenciasPage() {
   };
   const handleCloseModal = () => setIsModalOpen(false);
   const handleSave = (data) => mutation.mutate(data);
+
+  const exportReferencias = () => {
+    const dataToExport = sortedReferencias.map(ref => ({
+      'Referencia': ref.nombre,
+      'Proveedor': ref.proveedor_name,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Referencias');
+    XLSX.writeFile(wb, 'Referencias.xlsx');
+  };
   
   return (
     <div className="page-container">
@@ -150,8 +163,11 @@ function ReferenciasPage() {
         onClose={() => setNotification({ message: '', type: '' })}
       />
       <div className="page-header">
-        {/* Título eliminado de aquí para ser manejado por el Header global */}
-        <div/> {/* Div vacío para alinear el botón a la derecha */}
+        {usuario?.role === 'administrador' && (
+          <button className="btn-secondary" onClick={exportReferencias}>
+            <FaFileExport /> Exportar
+          </button>
+        )}
         <button className="btn-primary" onClick={() => handleOpenModal()}>
           <FaPlus /> Nueva Referencia
         </button>

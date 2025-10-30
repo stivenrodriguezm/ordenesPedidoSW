@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AppContext } from '../AppContext';
 import './Caja.css';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -12,6 +13,12 @@ import CierreCajaModal from '../components/CierreCajaModal';
 // Modal para creación de movimientos
 const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
   const [formState, setFormState] = useState({ tipo: 'ingreso', concepto: '', valor: '' });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormState({ tipo: 'ingreso', concepto: '', valor: '' });
+    }
+  }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,6 +65,7 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
 };
 
 const Caja = () => {
+  const { usuario } = useContext(AppContext);
   const location = useLocation();
   const [cajaData, setCajaData] = useState([]);
   const [stats, setStats] = useState({ ingresos_hoy: 0, egresos_hoy: 0, saldo_actual: 0 });
@@ -117,7 +125,7 @@ const Caja = () => {
 
   useEffect(() => {
     fetchData(currentPage, filters);
-  }, [currentPage, filters, fetchData]);
+  }, [currentPage, filters.fecha_inicio, filters.fecha_fin, filters.query, fetchData]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -164,23 +172,32 @@ const Caja = () => {
     }
   };
 
+  const formatCurrencyForExport = (value) => {
+    if (value === null || value === undefined) return null;
+    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
+    return isNaN(num) ? null : num;
+  };
+
   const exportData = async () => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/caja/?page_size=1000', {
-        headers: { Authorization: `Bearer ${token}` }
+      // Fetch all data without pagination for export
+      const response = await axios.get('http://127.0.0.1:8000/api/caja/', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { ...filters, page_size: 9999 }
       });
-      const data = (response.data.movimientos.results || []).map(item => ({
+
+      const dataToExport = (response.data.movimientos.results || []).map(item => ({
         ID: item.id,
         Usuario: item.usuario_nombre,
         'Fecha y Hora': formatDateTime(item.fecha_hora),
         Concepto: item.concepto,
         Tipo: item.tipo,
-        Valor: item.valor,
-        'Total Acumulado': item.total_acumulado
+        Valor: formatCurrencyForExport(item.valor),
+        'Total Acumulado': formatCurrencyForExport(item.total_acumulado)
       }));
 
-      const worksheet = XLSX.utils.json_to_sheet(data);
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos de Caja');
       XLSX.writeFile(workbook, 'movimientos-caja.xlsx');
@@ -221,7 +238,7 @@ const Caja = () => {
           <button className="btn-secondary btn-icon-only" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
         </div>
         <div className="actions-group">
-          <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>
+          {usuario?.role === 'administrador' && <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>}
           <button className="btn-primary" onClick={() => setIsCreateModalOpen(true)}><FaPlus /> Nuevo Movimiento</button>
           <button className="btn-secondary" onClick={() => setIsCierreModalOpen(true)}><FaLock /> Cierre de Caja</button>
         </div>

@@ -77,7 +77,7 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
 
 
 const ComprobantesEgreso = () => {
-  const { proveedores, isLoadingProveedores } = useContext(AppContext);
+  const { proveedores, isLoadingProveedores, usuario } = useContext(AppContext);
   const location = useLocation();
   const [comprobantesData, setComprobantesData] = useState([]);
   const [filters, setFilters] = useState({
@@ -175,23 +175,30 @@ const ComprobantesEgreso = () => {
     setCurrentPage(1);
   };
 
+  const formatCurrencyForExport = (value) => {
+    if (value === null || value === undefined) return null;
+    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
+    return isNaN(num) ? null : num;
+  };
+
   const exportData = async () => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/comprobantes-egreso/?page_size=1000', {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get('http://127.0.0.1:8000/api/comprobantes-egreso/', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { ...filters, page_size: 9999 }
       });
-      const data = (response.data.results || []).map(item => ({
+      const dataToExport = (response.data.results || []).map(item => ({
         ID: item.id,
         Fecha: formatDate(item.fecha),
         Proveedor: item.proveedor_nombre || '-',
         'Medio de Pago': mediosPago.find(medio => medio.value === item.medio_pago)?.label || item.medio_pago,
-        Valor: formatCurrency(item.valor),
+        Valor: formatCurrencyForExport(item.valor),
         Concepto: item.concepto || '-',
         Descripción: item.descripcion || '-'
       }));
 
-      const worksheet = XLSX.utils.json_to_sheet(data);
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Comprobantes de Egreso');
       XLSX.writeFile(workbook, 'comprobantes-egreso.xlsx');
@@ -248,7 +255,7 @@ const ComprobantesEgreso = () => {
           <button className="btn-secondary btn-icon-only" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
         </div>
         <div className="actions-group">
-          <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>
+          {usuario?.role === 'administrador' && <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>}
           <button className="btn-primary" onClick={handleOpenCreateModal}><FaPlus /> Nuevo Comprobante</button>
         </div>
       </div>

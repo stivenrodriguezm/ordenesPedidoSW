@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AppContext } from '../AppContext';
 import './RecibosCaja.css';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -92,6 +93,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }
 
 
 const RecibosCaja = () => {
+  const { usuario } = useContext(AppContext);
   const location = useLocation();
   const [recibosData, setRecibosData] = useState([]);
   const [filters, setFilters] = useState({
@@ -238,7 +240,45 @@ const RecibosCaja = () => {
     }
   };
 
-  const exportData = async () => { /* Lógica de exportación sin cambios */ };
+  const formatCurrencyForExport = (value) => {
+    if (value === null || value === undefined) return null;
+    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
+    return isNaN(num) ? null : num;
+  };
+
+  const exportData = async () => {
+    setIsLoading(true);
+    const token = localStorage.getItem("accessToken");
+    const params = { ...filters, page_size: 9999 }; // Fetch all matching data
+    Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
+
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/api/recibos-caja/', {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      });
+      
+      const dataToExport = response.data.results.map(item => ({
+        'RC': item.id,
+        'Fecha': formatDate(item.fecha),
+        'Venta': item.venta,
+        'Método de Pago': item.metodo_pago,
+        'Valor': formatCurrencyForExport(item.valor),
+        'Nota': item.nota || '—',
+        'Estado': item.estado,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'RecibosCaja');
+      XLSX.writeFile(wb, 'RecibosCaja.xlsx');
+
+    } catch (error) {
+      setNotification({ message: 'Error al exportar los recibos de caja.', type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="page-container">
@@ -260,7 +300,7 @@ const RecibosCaja = () => {
           <button className="btn-secondary btn-icon-only" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
         </div>
         <div className="actions-group">
-          <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>
+          {usuario?.role === 'administrador' && <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>}
           <button className="btn-primary" onClick={() => setIsCreatingRC(true)}><FaPlus /> Nuevo Recibo</button>
         </div>
       </div>
@@ -295,7 +335,7 @@ const RecibosCaja = () => {
                     <span className={`status-badge ${item.estado.toLowerCase()}`}>{item.estado}</span>
                   </td>
                   <td className="rc-td-acciones">
-                    {item.estado === 'Pendiente' && (
+                    {item.estado === 'Pendiente' && usuario?.role === 'administrador' && (
                       <button className="btn-secondary" onClick={() => { setSelectedRecibo(item); setShowConfirmModal(true); }} title="Confirmar Recibo">
                         <FaCheckCircle /> Confirmar
                       </button>

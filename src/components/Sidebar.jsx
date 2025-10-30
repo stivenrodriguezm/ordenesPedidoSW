@@ -15,7 +15,7 @@ function Sidebar() {
         { to: "/ventas", icon: <FaFileInvoiceDollar />, label: "Ventas" },
         { to: "/ordenes", icon: <FaClipboardList />, label: "Pedidos" },
       ],
-      roles: ["ADMINISTRADOR", "VENDEDOR", "AUXILIAR"]
+      roles: ["administrador", "vendedor", "auxiliar"]
     },
     {
       title: "Finanzas",
@@ -24,7 +24,7 @@ function Sidebar() {
         { to: "/recibos-caja", icon: <FaReceipt />, label: "Recibos de Caja" },
         { to: "/comprobantes-egreso", icon: <FaFileInvoice />, label: "Egresos" },
       ],
-      roles: ["ADMINISTRADOR", "AUXILIAR"]
+      roles: ["administrador", "auxiliar"]
     },
     {
       title: "Bases de Datos",
@@ -33,7 +33,7 @@ function Sidebar() {
         { to: "/proveedores", icon: <FaWarehouse />, label: "Proveedores" },
         { to: "/referencias", icon: <FaBoxes />, label: "Referencias" },
       ],
-      roles: ["ADMINISTRADOR", "AUXILIAR"]
+      roles: ["administrador", "auxiliar"]
     }
   ];
 
@@ -44,7 +44,7 @@ function Sidebar() {
       </div>
       <nav className="sidebar-nav">
         {navSections.map(section => (
-          (section.roles.includes(usuario?.role)) && (
+          (section.roles.includes(usuario?.role.toLowerCase())) && (
             <div key={section.title}>
               <h3 className="nav-subtitle">{section.title}</h3>
               <ul>

@@ -1,9 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useContext } from "react";
-import { AppContext } from "../AppContext";
+import { AppContext } from "./AppContext";
 
-// Componente para la pantalla de carga global.
-// Mantiene una apariencia consistente durante la carga inicial de la app.
 const GlobalLoader = () => (
   <>
     <style>
@@ -57,19 +55,23 @@ const GlobalLoader = () => (
   </>
 );
 
-
-function PrivateRoute({ children }) {
+function PrivateRoute({ children, roles }) {
   const token = localStorage.getItem("accessToken");
-  const { isLoading } = useContext(AppContext);
+  const { usuario, isLoading } = useContext(AppContext);
 
-  // Muestra el loader global mientras el AppContext está verificando el usuario.
   if (isLoading) {
     return <GlobalLoader />;
   }
 
-  // Si no hay token después de cargar, redirige a login.
-  // Si hay token, muestra el contenido protegido.
-  return token ? children : <Navigate to="/login" />;
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  if (roles && !roles.includes(usuario?.role.toLowerCase())) {
+    return <Navigate to="/" />; // Redirect to home if role not allowed
+  }
+
+  return children;
 }
 
 export default PrivateRoute;

@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
+import { AppContext } from '../AppContext';
 import './SalesSummaryReport.css';
 
 const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurrency, capitalizeEstado }) => {
+    const { usuario } = useContext(AppContext);
     const { totalSales, salesCount, deliveredPercentage, salesByVendedor, monthlyProjection } = useMemo(() => {
         let totalSales = 0;
         const salesByVendedor = {};
@@ -85,7 +87,6 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
 
     return (
         <div className="sales-summary-report-container">
-            <h3>Informe de Ventas - {currentMonthName} {year}</h3>
             <div className="summary-cards-grid">
                 <div className="details-card summary-card">
                     <h4>Ventas Totales</h4>
@@ -105,18 +106,34 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 </div>
             </div>
 
-            <div className="details-card sales-by-vendedor-card">
-                <h4>Ventas por Vendedor</h4>
-                <div className="vendedor-list">
-                    {Object.values(salesByVendedor).sort((a, b) => b.total - a.total).map(vendedor => (
-                        <div key={vendedor.name} className="vendedor-item">
-                            <span>{vendedor.name}</span>
-                            <span>{formatCurrency(vendedor.total)} ({vendedor.count} ventas)</span>
-                            <span className="delivered-info">({vendedor.delivered} entregadas)</span>
-                        </div>
-                    ))}
+            {(usuario.role === 'administrador' || usuario.role === 'auxiliar') && (
+                <div className="details-card sales-by-vendedor-card">
+                    <h4>Ventas por Vendedor</h4>
+                    <div className="vendedor-list">
+                        {Object.values(salesByVendedor).sort((a, b) => b.total - a.total).map(vendedor => (
+                            <div key={vendedor.name} className="vendedor-item">
+                                <span>{vendedor.name}</span>
+                                <span>{formatCurrency(vendedor.total)} ({vendedor.count} ventas)</span>
+                                <span className="delivered-info">({vendedor.delivered} entregadas)</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {(usuario.role === 'administrador' || usuario.role === 'auxiliar') && (
+                <div className="details-card top-sellers-card">
+                    <h4>Vendedores del Mes</h4>
+                    <div className="top-sellers-list">
+                        {Object.values(salesByVendedor).sort((a, b) => b.total - a.total).map(vendedor => (
+                            <div key={vendedor.name} className="seller-item">
+                                <span className="seller-name">{vendedor.name}</span>
+                                <span className="seller-sales">{formatCurrency(vendedor.total)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
