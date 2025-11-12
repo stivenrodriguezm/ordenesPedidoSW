@@ -162,7 +162,7 @@ const OrdenesPage = () => {
         
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
         
-        const response = await axios.get('http://127.0.0.1:8000/api/listar-pedidos/', {
+        const response = await axios.get('https://api.muebleslottus.com/api/listar-pedidos/', {
             headers: { Authorization: `Bearer ${token}` },
             params
         });

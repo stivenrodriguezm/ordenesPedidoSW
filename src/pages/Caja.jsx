@@ -109,7 +109,7 @@ const Caja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/caja/', {
+      const response = await axios.get('https://api.muebleslottus.com/api/caja/', {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -142,7 +142,7 @@ const Caja = () => {
     setIsSubmitting(true);
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('http://127.0.0.1:8000/api/caja/', movimientoData, {
+      await axios.post('https://api.muebleslottus.com/api/caja/', movimientoData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Movimiento creado exitosamente.', type: 'success' });
@@ -159,7 +159,7 @@ const Caja = () => {
     setIsSubmitting(true);
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('http://127.0.0.1:8000/api/caja/cierre/', cierreData, {
+      await axios.post('https://api.muebleslottus.com/api/caja/cierre/', cierreData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Cierre de caja exitoso.', type: 'success' });
@@ -182,7 +182,7 @@ const Caja = () => {
     const token = localStorage.getItem("accessToken");
     try {
       // Fetch all data without pagination for export
-      const response = await axios.get('http://127.0.0.1:8000/api/caja/', {
+      const response = await axios.get('https://api.muebleslottus.com/api/caja/', {
         headers: { Authorization: `Bearer ${token}` },
         params: { ...filters, page_size: 9999 }
       });

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Modal from './Modal';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
+import { AppContext } from '../AppContext';
 
 const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchClientes }) => {
+  const { usuario } = useContext(AppContext);
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     id: '',
@@ -14,6 +16,8 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     estado: '',
     estado_pedidos: false,
   });
+
+  const isAuxiliar = usuario?.role?.toLowerCase() === 'auxiliar';
 
   useEffect(() => {
     if (saleData) {
@@ -42,22 +46,31 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("accessToken");
-    const payload = {
-      venta: {
+    
+    let ventaPayload = {
         id: formData.id,
-        fecha_venta: formData.fecha_venta,
-        vendedor: formData.vendedor_id,
-        valor_total: parseFloat(formData.valor_total),
         estado: formData.estado,
-        estado_pedidos: formData.estado_pedidos,
-      },
+    };
+
+    if (!isAuxiliar) {
+        ventaPayload = {
+            ...ventaPayload,
+            fecha_venta: formData.fecha_venta,
+            vendedor: formData.vendedor_id,
+            valor_total: parseFloat(formData.valor_total),
+            estado_pedidos: formData.estado_pedidos,
+        };
+    }
+
+    const payload = {
+      venta: ventaPayload,
       cliente: {
         id: formData.cliente_id,
       }
     };
 
     try {
-      await axios.put(`http://127.0.0.1:8000/api/ventas/${formData.id}/editar/`, payload, {
+      await axios.put(`https://api.muebleslottus.com/api/ventas/${formData.id}/editar/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Venta actualizada correctamente.', type: 'success' });
@@ -69,16 +82,10 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     } catch (error) {
       console.error('Error al editar la venta:', error);
       let friendlyError = 'Error al editar la venta.';
-      if (error.response && error.response.data) {
-        if (typeof error.response.data === 'string') {
-          friendlyError = error.response.data;
-        } else if (error.response.data.venta && error.response.data.venta.id && error.response.data.venta.id.length > 0) {
-          friendlyError = `Error: ${error.response.data.venta.id[0]}`;
-        } else if (error.response.data.cliente && error.response.data.cliente.id && error.response.data.cliente.id.length > 0) {
-          friendlyError = `Error: ${error.response.data.cliente.id[0]}`;
-        } else {
+      if (error.response && error.response.data && error.response.data.error) {
+          friendlyError = error.response.data.error;
+      } else if (error.response && error.response.data) {
           friendlyError = JSON.stringify(error.response.data);
-        }
       }
       setNotification({ message: friendlyError, type: 'error' });
     }
@@ -97,11 +104,11 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         </div>
         <div className="form-group">
           <label>Fecha de Venta:</label>
-          <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required />
+          <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isAuxiliar} />
         </div>
         <div className="form-group">
           <label>Vendedor:</label>
-          <select name="vendedor_id" value={formData.vendedor_id} onChange={handleChange} required>
+          <select name="vendedor_id" value={formData.vendedor_id} onChange={handleChange} required disabled={isAuxiliar}>
             <option value="">Seleccionar vendedor</option>
             {vendedores.map(vendedor => (
               <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
@@ -110,7 +117,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         </div>
         <div className="form-group">
           <label>Valor Total:</label>
-          <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required />
+          <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required disabled={isAuxiliar} />
         </div>
         <div className="form-group">
           <label>Estado:</label>
@@ -122,7 +129,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         </div>
         <div className="form-group checkbox-group">
           <label>Estado Pedidos:</label>
-          <input type="checkbox" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} />
+          <input type="checkbox" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isAuxiliar} />
         </div>
         <button type="submit">Guardar Cambios</button>
       </form>

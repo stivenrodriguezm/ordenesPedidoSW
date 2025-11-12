@@ -167,7 +167,7 @@ const Ventas = () => {
                 }
                 params.estado = selectedEstado;
             }
-            const response = await axios.get('http://127.0.0.1:8000/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
+            const response = await axios.get('https://api.muebleslottus.com/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
             const sortedVentas = response.data.sort((a, b) => b.id - a.id);
             setVentas(sortedVentas || []);
         } catch (error) {
@@ -190,7 +190,7 @@ const Ventas = () => {
             if (usuario?.role.toLowerCase() === 'vendedor') {
                 params.vendedor = usuario.id;
             }
-            const response = await axios.get('http://127.0.0.1:8000/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
+            const response = await axios.get('https://api.muebleslottus.com/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
             setReportSales(response.data || []);
         } catch (error) {
             console.error('Error cargando ventas para el informe:', error);
@@ -209,7 +209,7 @@ const Ventas = () => {
         const fetchVendedores = async () => {
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get('http://127.0.0.1:8000/api/vendedores/', { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get('https://api.muebleslottus.com/api/vendedores/', { headers: { Authorization: `Bearer ${token}` } });
                 setVendedores(response.data || []);
             } catch (error) {
                 console.error('Error cargando vendedores:', error);
@@ -234,7 +234,7 @@ const Ventas = () => {
             setLoadingDetails(true);
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`http://127.0.0.1:8000/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get(`https://api.muebleslottus.com/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
                 setVentaDetails(response.data);
                 console.log('Venta Details Response:', response.data);
                 console.log('ventaDetails.cliente:', ventaDetails.cliente);
@@ -250,7 +250,7 @@ const Ventas = () => {
         setLoadingDetails(true);
         const token = localStorage.getItem("accessToken");
         try {
-            const response = await axios.get(`http://127.0.0.1:8000/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await axios.get(`https://api.muebleslottus.com/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
             setVentaDetails(response.data);
         } catch (error) {
             console.error('Error al refrescar detalles de la venta:', error);
@@ -267,7 +267,7 @@ const Ventas = () => {
             setLoadingNestedDetails(true);
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`http://127.0.0.1:8000/api/pedidos/${orderId}/detalles/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get(`https://api.muebleslottus.com/api/pedidos/${orderId}/detalles/`, { headers: { Authorization: `Bearer ${token}` } });
                 setNestedOrderDetails(response.data);
             } catch (error) {
                 console.error('Error cargando detalles del pedido anidado:', error);
@@ -282,7 +282,7 @@ const Ventas = () => {
     const handleAddObservacion = async (tipo) => {
         const token = localStorage.getItem("accessToken");
         const id = tipo === 'cliente' ? ventaDetails.cliente.id : expandedVentaId;
-        const url = `http://127.0.0.1:8000/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
+        const url = `https://api.muebleslottus.com/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
 
         const texto = tipo === 'cliente' ? observacionClienteText : observacionVentaText;
 
@@ -296,7 +296,7 @@ const Ventas = () => {
             setNotification({ message: 'Observación añadida correctamente.', type: 'success' });
             console.log('Notification set to success:', { message: 'Observación añadida correctamente.', type: 'success' });
             // Re-fetch venta details to show new observacion without closing the expanded view
-            const response = await axios.get(`http://127.0.0.1:8000/api/ventas/${expandedVentaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await axios.get(`https://api.muebleslottus.com/api/ventas/${expandedVentaId}/`, { headers: { Authorization: `Bearer ${token}` } });
             setVentaDetails(response.data);
 
             if (tipo === 'cliente') {
@@ -332,7 +332,7 @@ const Ventas = () => {
         setNotification({ message: '', type: '' });
         const token = localStorage.getItem("accessToken");
         try {
-            await axios.post(`http://127.0.0.1:8000/api/ventas/${expandedVentaId}/remisiones/`, remisionData, {
+            await axios.post(`https://api.muebleslottus.com/api/ventas/${expandedVentaId}/remisiones/`, remisionData, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setNotification({ message: 'Remisión añadida correctamente.', type: 'success' });
@@ -654,6 +654,7 @@ const Ventas = () => {
                     setNotification={setNotification}
                     fetchVentas={fetchVentas}
                     fetchClientes={fetchClientes}
+                    usuario={usuario}
                 />
             )}
 

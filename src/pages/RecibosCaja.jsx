@@ -146,7 +146,7 @@ const RecibosCaja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/recibos-caja/', {
+      const response = await axios.get('https://api.muebleslottus.com/api/recibos-caja/', {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -178,7 +178,7 @@ const RecibosCaja = () => {
       const token = localStorage.getItem("accessToken");
       try {
         // Solo obtener IDs de ventas pendientes para el select
-        const response = await axios.get('http://127.0.0.1:8000/api/get-pendientes-ids/', {
+        const response = await axios.get('https://api.muebleslottus.com/api/get-pendientes-ids/', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVentas(response.data.map(id => ({ id_venta: id }))); // Formatear a { id_venta: id }
@@ -206,7 +206,7 @@ const RecibosCaja = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('http://127.0.0.1:8000/api/recibos-caja/crear/', rcData, {
+      await axios.post('https://api.muebleslottus.com/api/recibos-caja/crear/', rcData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotification({ message: 'Recibo de Caja creado exitosamente.', type: 'success' });
@@ -226,7 +226,7 @@ const RecibosCaja = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.patch(`http://127.0.0.1:8000/api/recibos-caja/${selectedRecibo.id}/confirmar/`, {}, {
+      await axios.patch(`https://api.muebleslottus.com/api/recibos-caja/${selectedRecibo.id}/confirmar/`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotification({ message: 'Recibo de Caja confirmado exitosamente.', type: 'success' });
@@ -253,7 +253,7 @@ const RecibosCaja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/recibos-caja/', {
+      const response = await axios.get('https://api.muebleslottus.com/api/recibos-caja/', {
         headers: { Authorization: `Bearer ${token}` },
         params
       });

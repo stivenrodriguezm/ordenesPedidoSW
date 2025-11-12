@@ -130,7 +130,7 @@ const ComprobantesEgreso = () => {
     }
 
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/comprobantes-egreso/', {
+      const response = await axios.get('https://api.muebleslottus.com/api/comprobantes-egreso/', {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -184,7 +184,7 @@ const ComprobantesEgreso = () => {
   const exportData = async () => {
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/comprobantes-egreso/', {
+      const response = await axios.get('https://api.muebleslottus.com/api/comprobantes-egreso/', {
         headers: { Authorization: `Bearer ${token}` },
         params: { ...filters, page_size: 9999 }
       });
@@ -213,7 +213,7 @@ const ComprobantesEgreso = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('http://127.0.0.1:8000/api/comprobantes-egreso/crear/', ceData, {
+      await axios.post('https://api.muebleslottus.com/api/comprobantes-egreso/crear/', ceData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Comprobante de Egreso creado exitosamente.', type: 'success' });

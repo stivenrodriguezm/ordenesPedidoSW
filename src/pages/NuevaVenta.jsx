@@ -46,7 +46,7 @@ const NuevaVenta = () => {
     const fetchVendedores = async () => {
       const token = localStorage.getItem("accessToken");
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/vendedores/', {
+        const response = await axios.get('https://api.muebleslottus.com/api/vendedores/', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVendedores(response.data);
@@ -76,7 +76,7 @@ const NuevaVenta = () => {
     setIsLoading(true);
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/clientes/${clienteId}/`, {
+      const response = await axios.get(`https://api.muebleslottus.com/api/clientes/${clienteId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -159,7 +159,7 @@ const NuevaVenta = () => {
 
     try {
 
-      await axios.post('http://127.0.0.1:8000/api/ventas/crear/', payload, {
+      await axios.post('https://api.muebleslottus.com/api/ventas/crear/', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

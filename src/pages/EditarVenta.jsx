@@ -45,13 +45,13 @@ const EditarVenta = () => {
 
       try {
         // Fetch vendedores
-        const vendedoresResponse = await axios.get('http://127.0.0.1:8000/api/vendedores/', {
+        const vendedoresResponse = await axios.get('https://api.muebleslottus.com/api/vendedores/', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVendedores(vendedoresResponse.data);
 
         // Fetch venta details
-        const ventaResponse = await axios.get(`http://127.0.0.1:8000/api/ventas/${id}/`, {
+        const ventaResponse = await axios.get(`https://api.muebleslottus.com/api/ventas/${id}/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const ventaDetails = ventaResponse.data;
@@ -132,14 +132,14 @@ const EditarVenta = () => {
     };
 
     try {
-      await axios.put(`http://127.0.0.1:8000/api/ventas/${id}/editar/`, payload, {
+      await axios.put(`https://api.muebleslottus.com/api/ventas/${id}/editar/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // If there's an observacion, update or create it
       if (observacion) {
         await axios.post(
-          `http://127.0.0.1:8000/api/ventas/${id}/observaciones/`,
+          `https://api.muebleslottus.com/api/ventas/${id}/observaciones/`,
           { texto: observacion },
           { headers: { Authorization: `Bearer ${token}` } }
         );
