@@ -9,6 +9,7 @@ import debounce from 'lodash.debounce';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
 import CierreCajaModal from '../components/CierreCajaModal';
+import API_BASE_URL from '../apiConfig';
 
 // Modal para creación de movimientos
 const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
@@ -53,7 +54,7 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
           </div>
           <div className="form-group">
             <label>Valor</label>
-            <input type="number" name="valor" value={formState.valor} onChange={handleChange} required min="0" step="any" placeholder="$50000" />
+            <input type="number" name="valor" value={formState.valor} onChange={handleChange} required step="any" placeholder="$50000" />
           </div>
           <button type="submit" className="modal-submit" disabled={isLoading}>
             {isLoading ? 'Guardando...' : 'Crear Movimiento'}
@@ -109,7 +110,7 @@ const Caja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('https://api.muebleslottus.com/api/caja/', {
+      const response = await axios.get(`${API_BASE_URL}/api/caja/`, {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -142,7 +143,7 @@ const Caja = () => {
     setIsSubmitting(true);
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('https://api.muebleslottus.com/api/caja/', movimientoData, {
+      await axios.post(`${API_BASE_URL}/api/caja/`, movimientoData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Movimiento creado exitosamente.', type: 'success' });
@@ -159,7 +160,7 @@ const Caja = () => {
     setIsSubmitting(true);
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('https://api.muebleslottus.com/api/caja/cierre/', cierreData, {
+      await axios.post(`${API_BASE_URL}/api/caja/cierre/`, cierreData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Cierre de caja exitoso.', type: 'success' });
@@ -182,7 +183,7 @@ const Caja = () => {
     const token = localStorage.getItem("accessToken");
     try {
       // Fetch all data without pagination for export
-      const response = await axios.get('https://api.muebleslottus.com/api/caja/', {
+      const response = await axios.get(`${API_BASE_URL}/api/caja/`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { ...filters, page_size: 9999 }
       });

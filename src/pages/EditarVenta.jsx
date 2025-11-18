@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import './EditarVenta.css';
+import API_BASE_URL from '../apiConfig';
 
 const EditarVenta = () => {
   const navigate = useNavigate();
@@ -45,13 +46,13 @@ const EditarVenta = () => {
 
       try {
         // Fetch vendedores
-        const vendedoresResponse = await axios.get('https://api.muebleslottus.com/api/vendedores/', {
+        const vendedoresResponse = await axios.get(`${API_BASE_URL}/api/vendedores/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVendedores(vendedoresResponse.data);
 
         // Fetch venta details
-        const ventaResponse = await axios.get(`https://api.muebleslottus.com/api/ventas/${id}/`, {
+        const ventaResponse = await axios.get(`${API_BASE_URL}/api/ventas/${id}/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const ventaDetails = ventaResponse.data;
@@ -132,14 +133,14 @@ const EditarVenta = () => {
     };
 
     try {
-      await axios.put(`https://api.muebleslottus.com/api/ventas/${id}/editar/`, payload, {
+      await axios.put(`${API_BASE_URL}/api/ventas/${id}/editar/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // If there's an observacion, update or create it
       if (observacion) {
         await axios.post(
-          `https://api.muebleslottus.com/api/ventas/${id}/observaciones/`,
+          `${API_BASE_URL}/api/ventas/${id}/observaciones/`,
           { texto: observacion },
           { headers: { Authorization: `Bearer ${token}` } }
         );

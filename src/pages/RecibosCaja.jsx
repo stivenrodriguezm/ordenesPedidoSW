@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import { FaFileExport, FaPlus, FaSearch, FaUndo, FaCheckCircle } from 'react-icons/fa';
 import debounce from 'lodash.debounce';
 import AppNotification from '../components/AppNotification';
+import API_BASE_URL from '../apiConfig';
 
 import Modal from '../components/Modal'; // Importar el componente Modal genérico
 
@@ -146,7 +147,7 @@ const RecibosCaja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('https://api.muebleslottus.com/api/recibos-caja/', {
+      const response = await axios.get(`${API_BASE_URL}/api/recibos-caja/`, {
         headers: { Authorization: `Bearer ${token}` },
         params
       });
@@ -178,7 +179,7 @@ const RecibosCaja = () => {
       const token = localStorage.getItem("accessToken");
       try {
         // Solo obtener IDs de ventas pendientes para el select
-        const response = await axios.get('https://api.muebleslottus.com/api/get-pendientes-ids/', {
+        const response = await axios.get(`${API_BASE_URL}/api/get-pendientes-ids/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVentas(response.data.map(id => ({ id_venta: id }))); // Formatear a { id_venta: id }
@@ -206,7 +207,7 @@ const RecibosCaja = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post('https://api.muebleslottus.com/api/recibos-caja/crear/', rcData, {
+      await axios.post(`${API_BASE_URL}/api/recibos-caja/crear/`, rcData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotification({ message: 'Recibo de Caja creado exitosamente.', type: 'success' });
@@ -226,7 +227,7 @@ const RecibosCaja = () => {
     setNotification({ message: '', type: '' });
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.patch(`https://api.muebleslottus.com/api/recibos-caja/${selectedRecibo.id}/confirmar/`, {}, {
+      await axios.patch(`${API_BASE_URL}/api/recibos-caja/${selectedRecibo.id}/confirmar/`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotification({ message: 'Recibo de Caja confirmado exitosamente.', type: 'success' });
@@ -253,7 +254,7 @@ const RecibosCaja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get('https://api.muebleslottus.com/api/recibos-caja/', {
+      const response = await axios.get(`${API_BASE_URL}/api/recibos-caja/`, {
         headers: { Authorization: `Bearer ${token}` },
         params
       });

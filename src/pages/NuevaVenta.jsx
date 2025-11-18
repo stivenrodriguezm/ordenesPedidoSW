@@ -4,6 +4,7 @@ import axios from 'axios';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
 import './NuevaVenta.css';
+import API_BASE_URL from '../apiConfig';
 
 const NuevaVenta = () => {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ const NuevaVenta = () => {
     const fetchVendedores = async () => {
       const token = localStorage.getItem("accessToken");
       try {
-        const response = await axios.get('https://api.muebleslottus.com/api/vendedores/', {
+        const response = await axios.get(`${API_BASE_URL}/api/vendedores/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setVendedores(response.data);
@@ -76,7 +77,7 @@ const NuevaVenta = () => {
     setIsLoading(true);
     const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get(`https://api.muebleslottus.com/api/clientes/${clienteId}/`, {
+      const response = await axios.get(`${API_BASE_URL}/api/clientes/${clienteId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -159,7 +160,7 @@ const NuevaVenta = () => {
 
     try {
 
-      await axios.post('https://api.muebleslottus.com/api/ventas/crear/', payload, {
+      await axios.post(`${API_BASE_URL}/api/ventas/crear/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -12,14 +12,12 @@
 }
 
 .modal-content {
-  background: #fff;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  width: 90%;
-  max-width: 500px;
-  position: relative;
-  animation: fadeIn 0.3s ease-out;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  width: 500px;
+  max-width: 90%;
 }
 
 .modal-header {
@@ -27,69 +25,21 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
+  padding-bottom: 10px;
   margin-bottom: 20px;
 }
 
 .modal-title {
   margin: 0;
-  font-size: 1.5rem;
-  color: #333;
 }
 
 .modal-close-button {
   background: none;
   border: none;
-  font-size: 2rem;
+  font-size: 1.5rem;
   cursor: pointer;
-  color: #888;
-  transition: color 0.2s;
-}
-
-.modal-close-button:hover {
-  color: #333;
 }
 
 .modal-body {
-  font-size: 1rem;
-  color: #555;
-}
-
-.modal-body textarea {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  resize: vertical;
-  min-height: 100px;
-  font-size: 1rem;
-}
-
-.modal-body button {
-  background-color: #007bff;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 15px;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-}
-
-.modal-body button:hover {
-  background-color: #0056b3;
-}
-
-.form-group.checkbox-group input[type="checkbox"] {
-  width: 16px; /* Adjust as needed */
-  height: 16px; /* Adjust as needed */
-  margin-right: 8px; /* Add some space between checkbox and label */
-  vertical-align: middle;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+  padding-top: 10px;
 }

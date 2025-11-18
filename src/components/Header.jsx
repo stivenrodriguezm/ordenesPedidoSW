@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaSignOutAlt, FaUser } from "react-icons/fa";
+import { useQueryClient } from "@tanstack/react-query"; // Importar el hook
 import "./Header.css";
 import { AppContext } from "../AppContext";
 
@@ -10,6 +11,7 @@ function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const menuRef = useRef(null);
+  const queryClient = useQueryClient(); // Obtener la instancia del cliente
 
   const getTitle = () => {
     const path = location.pathname;
@@ -25,6 +27,7 @@ function Header() {
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     setUsuario(null);
+    queryClient.clear(); // Limpiar la caché de React Query
     setMenuOpen(false);
     navigate("/login");
   };

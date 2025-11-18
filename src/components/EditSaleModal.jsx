@@ -3,6 +3,7 @@ import Modal from './Modal';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppContext } from '../AppContext';
+import API_BASE_URL from '../apiConfig';
 
 const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchClientes }) => {
   const { usuario } = useContext(AppContext);
@@ -17,12 +18,8 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     estado_pedidos: false,
   });
 
-  const isAuxiliar = usuario?.role?.toLowerCase() === 'auxiliar';
-
   useEffect(() => {
     if (saleData) {
-      console.log('saleData.vendedor:', saleData.vendedor);
-      console.log('vendedores prop:', vendedores);
       setFormData({
         id: saleData.id,
         cliente_id: saleData.cliente.id,
@@ -33,7 +30,22 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         estado_pedidos: saleData.estado_pedidos,
       });
     }
-  }, [saleData, vendedores]);
+  }, [saleData]);
+
+  // --- Permissions Logic ---
+  const isAuxiliar = usuario?.role?.toLowerCase() === 'auxiliar';
+  
+  // Rule 1: Disable 'Estado' select if the sale is already 'entregada' for an auxiliar user.
+  const isEstadoDisabled = isAuxiliar && formData.estado.trim().toLowerCase() === 'entregado';
+  
+  // Rule 2: Disable 'Estado Pedidos' checkbox if it's already true for an auxiliar user.
+  const isEstadoPedidosDisabled = isAuxiliar && formData.estado_pedidos;
+
+  // Rule 3: Auxiliar users should not see the 'anulada' option.
+  const availableEstados = isAuxiliar ? estados.filter(e => e !== 'anulado') : estados;
+  console.log('isAuxiliar:', isAuxiliar);
+  console.log('estados:', estados);
+  console.log('availableEstados:', availableEstados);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -47,46 +59,41 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     e.preventDefault();
     const token = localStorage.getItem("accessToken");
     
-    let ventaPayload = {
-        id: formData.id,
-        estado: formData.estado,
-    };
+    let ventaPayload = {};
 
-    if (!isAuxiliar) {
+    if (isAuxiliar) {
         ventaPayload = {
-            ...ventaPayload,
+            estado: formData.estado,
+            estado_pedidos: formData.estado_pedidos,
+        };
+    } else {
+        ventaPayload = {
             fecha_venta: formData.fecha_venta,
             vendedor: formData.vendedor_id,
             valor_total: parseFloat(formData.valor_total),
+            estado: formData.estado,
             estado_pedidos: formData.estado_pedidos,
         };
     }
 
     const payload = {
       venta: ventaPayload,
-      cliente: {
-        id: formData.cliente_id,
-      }
+      cliente: { id: formData.cliente_id }
     };
 
     try {
-      await axios.put(`https://api.muebleslottus.com/api/ventas/${formData.id}/editar/`, payload, {
+      await axios.put(`${API_BASE_URL}/api/ventas/${formData.id}/editar/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotification({ message: 'Venta actualizada correctamente.', type: 'success' });
       onClose();
-      onSaleUpdated(formData.id); // Trigger re-fetch of updated sale details
-      fetchVentas(); // Re-fetch all sales to update the main table
-      fetchClientes(); // Re-fetch all clients to update the global context
-      queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] }); // Invalidate pending sales query
+      onSaleUpdated(formData.id);
+      fetchVentas();
+      fetchClientes();
+      queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] });
     } catch (error) {
       console.error('Error al editar la venta:', error);
-      let friendlyError = 'Error al editar la venta.';
-      if (error.response && error.response.data && error.response.data.error) {
-          friendlyError = error.response.data.error;
-      } else if (error.response && error.response.data) {
-          friendlyError = JSON.stringify(error.response.data);
-      }
+      const friendlyError = error.response?.data?.error || JSON.stringify(error.response?.data) || 'Error al editar la venta.';
       setNotification({ message: friendlyError, type: 'error' });
     }
   };
@@ -121,20 +128,27 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         </div>
         <div className="form-group">
           <label>Estado:</label>
-          <select name="estado" value={formData.estado} onChange={handleChange} required>
-            {estados.map(estado => (
+          <select 
+            name="estado" 
+            value={formData.estado} 
+            onChange={handleChange} 
+            required 
+            disabled={isEstadoDisabled}
+          >
+            {availableEstados.map(estado => (
               <option key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1).replace(/_/g, ' ')}</option>
             ))}
           </select>
         </div>
         <div className="form-group checkbox-group">
           <label>Estado Pedidos:</label>
-          <input type="checkbox" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isAuxiliar} />
+          <input type="checkbox" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isEstadoPedidosDisabled} />
         </div>
         <button type="submit">Guardar Cambios</button>
       </form>
     </Modal>
   );
+
 };
 
 export default EditSaleModal;

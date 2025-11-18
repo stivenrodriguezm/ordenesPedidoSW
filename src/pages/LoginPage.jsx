@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AppContext } from '../AppContext';
+import API_BASE_URL from '../apiConfig';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -12,13 +13,25 @@ const LoginPage = () => {
     const { setUsuario, setIsLoggingIn } = useContext(AppContext);
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const testConnection = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/api/test/`);
+                console.log('Test connection response:', response.data);
+            } catch (error) {
+                console.error('Test connection error:', error);
+            }
+        };
+        testConnection();
+    }, []);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
         try {
-            const response = await axios.post('https://api.muebleslottus.com/api/token/', {
+            const response = await axios.post(`${API_BASE_URL}/api/token/`, {
                 username,
                 password,
             });

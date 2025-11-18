@@ -295,3 +295,13 @@
     display: flex;
     justify-content: center;
 }
+
+.status-badge.pedido-realizado {
+  background-color: #d4edda; /* Verde claro */
+  color: #155724; /* Verde oscuro */
+}
+
+.status-badge.pedido-pendiente {
+  background-color: #fff3cd; /* Amarillo claro */
+  color: #856404; /* Amarillo oscuro */
+}

@@ -5,6 +5,8 @@ import * as XLSX from 'xlsx';
 import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
 import { AppContext } from '../AppContext';
+import API_BASE_URL from '../apiConfig';
+import API from '../services/api';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
 const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading }) => {
@@ -76,7 +78,7 @@ const OrdenesPage = () => {
   const [vendedores, setVendedores] = useState([]);
   const [selectedProveedor, setSelectedProveedor] = useState('');
   const [selectedVendedor, setSelectedVendedor] = useState('');
-  const [selectedEstado, setSelectedEstado] = useState('');
+  const [selectedEstado, setSelectedEstado] = useState('en_proceso');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -162,7 +164,7 @@ const OrdenesPage = () => {
         
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
         
-        const response = await axios.get('https://api.muebleslottus.com/api/listar-pedidos/', {
+        const response = await axios.get(`${API_BASE_URL}/api/listar-pedidos/`, {
             headers: { Authorization: `Bearer ${token}` },
             params
         });
@@ -197,6 +199,7 @@ const OrdenesPage = () => {
       const response = await API.get(`pedidos/${orderId}/detalles/`);
       setOrderDetails(response.data);
     } catch (error) {
+      console.error("Error fetching order details:", error);
       const errorMsg = error.response?.data?.error || 'Error al cargar los detalles del pedido.';
       setErrorMessage(errorMsg);
       console.error(error);
@@ -249,7 +252,7 @@ const OrdenesPage = () => {
         'Estado': getEstadoText(orden.estado, orden.fecha_esperada),
         'Observación': orden.observacion,
       };
-      if (user?.role === 'ADMINISTRADOR' || user?.role === 'AUXILIAR') {
+      if (user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') {
         data['Costo'] = formatCurrencyForExport(orden.costo);
       }
       return data;
@@ -349,7 +352,7 @@ const OrdenesPage = () => {
                   </tr>
                   {expandedOrderId === orden.id && (
                     <tr className="expanded-row">
-                      <td colSpan={11}>
+                      <td colSpan={user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar' ? 11 : 10}>
                         <div className="details-view-wrapper">
                           {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
                             errorMessage ? <div className="error-cell">{errorMessage}</div> :

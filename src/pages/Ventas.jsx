@@ -12,6 +12,7 @@ import { AppContext } from '../AppContext';
 import './Ventas.css';
 import '../components/Modal.css';
 import '../components/AppNotification.css';
+import API_BASE_URL from '../apiConfig';
 
 const Ventas = () => {
     const { fetchClientes, usuario } = useContext(AppContext);
@@ -167,7 +168,7 @@ const Ventas = () => {
                 }
                 params.estado = selectedEstado;
             }
-            const response = await axios.get('https://api.muebleslottus.com/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
+            const response = await axios.get(`${API_BASE_URL}/api/ventas/`, { headers: { Authorization: `Bearer ${token}` }, params });
             const sortedVentas = response.data.sort((a, b) => b.id - a.id);
             setVentas(sortedVentas || []);
         } catch (error) {
@@ -190,7 +191,7 @@ const Ventas = () => {
             if (usuario?.role.toLowerCase() === 'vendedor') {
                 params.vendedor = usuario.id;
             }
-            const response = await axios.get('https://api.muebleslottus.com/api/ventas/', { headers: { Authorization: `Bearer ${token}` }, params });
+            const response = await axios.get(`${API_BASE_URL}/api/ventas/`, { headers: { Authorization: `Bearer ${token}` }, params });
             setReportSales(response.data || []);
         } catch (error) {
             console.error('Error cargando ventas para el informe:', error);
@@ -209,7 +210,7 @@ const Ventas = () => {
         const fetchVendedores = async () => {
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get('https://api.muebleslottus.com/api/vendedores/', { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get(`${API_BASE_URL}/api/vendedores/`, { headers: { Authorization: `Bearer ${token}` } });
                 setVendedores(response.data || []);
             } catch (error) {
                 console.error('Error cargando vendedores:', error);
@@ -234,7 +235,7 @@ const Ventas = () => {
             setLoadingDetails(true);
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`https://api.muebleslottus.com/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get(`${API_BASE_URL}/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
                 setVentaDetails(response.data);
                 console.log('Venta Details Response:', response.data);
                 console.log('ventaDetails.cliente:', ventaDetails.cliente);
@@ -250,7 +251,7 @@ const Ventas = () => {
         setLoadingDetails(true);
         const token = localStorage.getItem("accessToken");
         try {
-            const response = await axios.get(`https://api.muebleslottus.com/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await axios.get(`${API_BASE_URL}/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
             setVentaDetails(response.data);
         } catch (error) {
             console.error('Error al refrescar detalles de la venta:', error);
@@ -267,7 +268,7 @@ const Ventas = () => {
             setLoadingNestedDetails(true);
             const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`https://api.muebleslottus.com/api/pedidos/${orderId}/detalles/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await axios.get(`${API_BASE_URL}/api/pedidos/${orderId}/detalles/`, { headers: { Authorization: `Bearer ${token}` } });
                 setNestedOrderDetails(response.data);
             } catch (error) {
                 console.error('Error cargando detalles del pedido anidado:', error);
@@ -282,7 +283,7 @@ const Ventas = () => {
     const handleAddObservacion = async (tipo) => {
         const token = localStorage.getItem("accessToken");
         const id = tipo === 'cliente' ? ventaDetails.cliente.id : expandedVentaId;
-        const url = `https://api.muebleslottus.com/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
+        const url = `${API_BASE_URL}/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
 
         const texto = tipo === 'cliente' ? observacionClienteText : observacionVentaText;
 
@@ -296,7 +297,7 @@ const Ventas = () => {
             setNotification({ message: 'Observación añadida correctamente.', type: 'success' });
             console.log('Notification set to success:', { message: 'Observación añadida correctamente.', type: 'success' });
             // Re-fetch venta details to show new observacion without closing the expanded view
-            const response = await axios.get(`https://api.muebleslottus.com/api/ventas/${expandedVentaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await axios.get(`${API_BASE_URL}/api/ventas/${expandedVentaId}/`, { headers: { Authorization: `Bearer ${token}` } });
             setVentaDetails(response.data);
 
             if (tipo === 'cliente') {
@@ -332,7 +333,7 @@ const Ventas = () => {
         setNotification({ message: '', type: '' });
         const token = localStorage.getItem("accessToken");
         try {
-            await axios.post(`https://api.muebleslottus.com/api/ventas/${expandedVentaId}/remisiones/`, remisionData, {
+            await axios.post(`${API_BASE_URL}/api/ventas/${expandedVentaId}/remisiones/`, remisionData, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setNotification({ message: 'Remisión añadida correctamente.', type: 'success' });
@@ -460,13 +461,14 @@ const Ventas = () => {
                             <th className="th-valor">Abono</th>
                             <th className="th-valor">Saldo</th>
                             <th className="th-valor">Valor</th>
+                            <th className="th-pedidos">PEDIDOS</th>
                             <th className="th-estado">Estado</th>
                             <th className="th-accion"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {isLoading ? (
-                            <tr><td colSpan="10"><div className="loading-container"><div className="loader"></div></div></td></tr>
+                            <tr><td colSpan="11"><div className="loading-container"><div className="loader"></div></div></td></tr>
                         ) : ventas.length > 0 ? (
                             ventas.map((venta) => (
                                 <React.Fragment key={venta.id}>
@@ -479,6 +481,11 @@ const Ventas = () => {
                                         <td className="td-valor">{formatCurrency(venta.abono)}</td>
                                         <td className="td-valor">{formatCurrency(venta.saldo)}</td>
                                         <td className="td-valor td-valor-total">{formatCurrency(venta.valor_total)}</td>
+                                        <td className="td-pedidos">
+                                            <span className={`status-badge ${venta.estado_pedidos ? 'pedido-realizado' : 'pedido-pendiente'}`}>
+                                                {venta.estado_pedidos ? 'Pedido' : 'Pendiente'}
+                                            </span>
+                                        </td>
                                         <td className="td-estado">{venta.estado ? <span className={`status-badge ${getStatusClass(venta.estado)}`}>{capitalizeEstado(venta.estado)}</span> : ''}</td>
                                         <td className="td-accion">
                                             <button className="btn-icon" onClick={() => handleExpandVenta(venta.id)}>
@@ -488,7 +495,7 @@ const Ventas = () => {
                                     </tr>
                                     {expandedVentaId === venta.id && (
                                         <tr className="expanded-row">
-                                            <td colSpan="10">
+                                            <td colSpan="11">
                                                 {loadingDetails ? (
                                                     <div className="loading-container"><div className="loader"></div></div>
                                                 ) : ventaDetails ? (
@@ -548,7 +555,9 @@ const Ventas = () => {
                                                         <div className="details-card pedidos-info">
                                                           <div className="pedidos-header">
                                                             <h4>Órdenes de Pedido Asociadas</h4>
-                                                            <button className="btn-primary" onClick={() => { setShowEditSaleModal(true); setEditSaleData(ventaDetails); }}><FaEdit /> Editar Venta</button>
+                                                            {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                                                              <button className="btn-primary" onClick={() => { setShowEditSaleModal(true); setEditSaleData(ventaDetails); }}><FaEdit /> Editar Venta</button>
+                                                            )}
                                                           </div>
                                                            <table className="data-table nested-ordenes-table">
                                                               <thead>
@@ -610,7 +619,7 @@ const Ventas = () => {
                                 </React.Fragment>
                             ))
                         ) : (
-                            <tr><td colSpan="10" className="empty-cell">No hay ventas para mostrar.</td></tr>
+                            <tr><td colSpan="11" className="empty-cell">No hay ventas para mostrar.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -645,6 +654,7 @@ const Ventas = () => {
 
             {editSaleData && (
                 <EditSaleModal
+                    key={editSaleData.id}
                     show={showEditSaleModal}
                     onClose={() => setShowEditSaleModal(false)}
                     saleData={editSaleData}
@@ -657,6 +667,8 @@ const Ventas = () => {
                     usuario={usuario}
                 />
             )}
+            {console.log('Usuario en Ventas.jsx:', usuario)}
+            {console.log('Usuario en Ventas.jsx:', usuario)}
 
             <RemisionModal
                 isOpen={showRemisionModal}

@@ -36,7 +36,7 @@ function CrearPedidoPage() {
         return res.data;
       }),
     enabled: !!token,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   });
 
   const [pedido, setPedido] = useState({
@@ -153,6 +153,10 @@ function CrearPedidoPage() {
       renderImage();
     }
   }, [numeroOP, navigate]);
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] });
+  }, [queryClient]);
 
   if (contextLoading || ventasLoading) {
     return (

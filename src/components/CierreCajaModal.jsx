@@ -40,7 +40,6 @@ const CierreCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
                 value={descuadre} 
                 onChange={(e) => setDescuadre(e.target.value)} 
                 required 
-                min="0" 
                 step="any" 
                 placeholder="Ingrese el monto del descuadre"
               />
