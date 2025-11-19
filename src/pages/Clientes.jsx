@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import './Clientes.css';
 import { AppContext } from '../AppContext';
-import axios from 'axios';
+
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaEdit, FaPlus, FaFileExport } from 'react-icons/fa';
 import API from '../services/api';

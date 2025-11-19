@@ -2,12 +2,11 @@ import React, { useState, useEffect, useContext, useCallback, useMemo } from 're
 import { useLocation } from 'react-router-dom';
 import { AppContext } from '../AppContext';
 import './ComprobantesEgreso.css';
-import axios from 'axios';
+import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { FaFileExport, FaPlus, FaSearch, FaUndo } from 'react-icons/fa';
 import debounce from 'lodash.debounce';
 import AppNotification from '../components/AppNotification';
-import API_BASE_URL from '../apiConfig';
 
 import Modal from '../components/Modal';
 
@@ -121,7 +120,6 @@ const ComprobantesEgreso = () => {
   // --- Fetching de Datos ---
   const fetchData = useCallback(async (filters, page) => {
     setIsLoading(true);
-    const token = localStorage.getItem("accessToken");
     
     const params = { page, page_size: pageSize };
     for (const key in filters) {
@@ -131,8 +129,7 @@ const ComprobantesEgreso = () => {
     }
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/comprobantes-egreso/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await API.get(`/comprobantes-egreso/`, {
         params
       });
       setComprobantesData(response.data.results || []);
@@ -183,10 +180,8 @@ const ComprobantesEgreso = () => {
   };
 
   const exportData = async () => {
-    const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/comprobantes-egreso/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await API.get(`/comprobantes-egreso/`, {
         params: { ...filters, page_size: 9999 }
       });
       const dataToExport = (response.data.results || []).map(item => ({
@@ -212,11 +207,8 @@ const ComprobantesEgreso = () => {
   const handleCreateCE = async (ceData) => {
     setIsSubmitting(true);
     setNotification({ message: '', type: '' });
-    const token = localStorage.getItem("accessToken");
     try {
-      await axios.post(`${API_BASE_URL}/api/comprobantes-egreso/crear/`, ceData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.post(`/comprobantes-egreso/crear/`, ceData);
       setNotification({ message: 'Comprobante de Egreso creado exitosamente.', type: 'success' });
       setIsCreatingCE(false);
       fetchData(filters, 1); // Refrescar datos en la página 1

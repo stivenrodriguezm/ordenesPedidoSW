@@ -1,8 +1,6 @@
 // src/services/api.js
 import axios from "axios";
-
-// Lee la URL base de la API desde las variables de entorno de Vite.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import API_BASE_URL from '../apiConfig'; // Importar desde apiConfig.js
 
 // Crear instancia de Axios para las solicitudes
 const API = axios.create({

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import axios from 'axios';
+import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen } from "react-icons/fa";
@@ -12,7 +12,6 @@ import { AppContext } from '../AppContext';
 import './Ventas.css';
 import '../components/Modal.css';
 import '../components/AppNotification.css';
-import API_BASE_URL from '../apiConfig';
 
 const Ventas = () => {
     const { fetchClientes, usuario } = useContext(AppContext);
@@ -150,7 +149,6 @@ const Ventas = () => {
 
     const fetchVentas = useCallback(async () => {
         setIsLoading(true);
-        const token = localStorage.getItem("accessToken");
         try {
             const params = {};
             if (searchTerm) {
@@ -168,7 +166,7 @@ const Ventas = () => {
                 }
                 params.estado = selectedEstado;
             }
-            const response = await axios.get(`${API_BASE_URL}/api/ventas/`, { headers: { Authorization: `Bearer ${token}` }, params });
+            const response = await API.get(`/ventas/`, { params });
             const sortedVentas = response.data.sort((a, b) => b.id - a.id);
             setVentas(sortedVentas || []);
         } catch (error) {
@@ -180,7 +178,6 @@ const Ventas = () => {
     }, [searchTerm, selectedMonthYear, selectedVendedor, selectedEstado, setNotification, usuario]);
 
     const fetchReportSales = useCallback(async () => {
-        const token = localStorage.getItem("accessToken");
         try {
             const params = {};
             if (selectedMonthYear !== 'all') {
@@ -191,7 +188,7 @@ const Ventas = () => {
             if (usuario?.role.toLowerCase() === 'vendedor') {
                 params.vendedor = usuario.id;
             }
-            const response = await axios.get(`${API_BASE_URL}/api/ventas/`, { headers: { Authorization: `Bearer ${token}` }, params });
+            const response = await API.get(`/ventas/`, { params });
             setReportSales(response.data || []);
         } catch (error) {
             console.error('Error cargando ventas para el informe:', error);
@@ -208,9 +205,8 @@ const Ventas = () => {
 
     useEffect(() => {
         const fetchVendedores = async () => {
-            const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/vendedores/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await API.get(`/vendedores/`);
                 setVendedores(response.data || []);
             } catch (error) {
                 console.error('Error cargando vendedores:', error);
@@ -233,9 +229,8 @@ const Ventas = () => {
             setExpandedVentaId(ventaId);
             setExpandedNestedOrderId(null); // Reset nested view
             setLoadingDetails(true);
-            const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await API.get(`/ventas/${ventaId}/`);
                 setVentaDetails(response.data);
                 console.log('Venta Details Response:', response.data);
                 console.log('ventaDetails.cliente:', ventaDetails.cliente);
@@ -249,9 +244,8 @@ const Ventas = () => {
 
     const refreshVentaDetails = async (ventaId) => {
         setLoadingDetails(true);
-        const token = localStorage.getItem("accessToken");
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/ventas/${ventaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await API.get(`/ventas/${ventaId}/`);
             setVentaDetails(response.data);
         } catch (error) {
             console.error('Error al refrescar detalles de la venta:', error);
@@ -266,9 +260,8 @@ const Ventas = () => {
         } else {
             setExpandedNestedOrderId(orderId);
             setLoadingNestedDetails(true);
-            const token = localStorage.getItem("accessToken");
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/pedidos/${orderId}/detalles/`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await API.get(`/pedidos/${orderId}/detalles/`);
                 setNestedOrderDetails(response.data);
             } catch (error) {
                 console.error('Error cargando detalles del pedido anidado:', error);
@@ -281,9 +274,8 @@ const Ventas = () => {
     const getStatusClass = (status) => status ? status.toLowerCase().replace(/ /g, '-') : '';
 
     const handleAddObservacion = async (tipo) => {
-        const token = localStorage.getItem("accessToken");
         const id = tipo === 'cliente' ? ventaDetails.cliente.id : expandedVentaId;
-        const url = `${API_BASE_URL}/api/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
+        const url = `/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
 
         const texto = tipo === 'cliente' ? observacionClienteText : observacionVentaText;
 
@@ -293,11 +285,11 @@ const Ventas = () => {
         }
 
         try {
-            await axios.post(url, { texto }, { headers: { Authorization: `Bearer ${token}` } });
+            await API.post(url, { texto });
             setNotification({ message: 'Observación añadida correctamente.', type: 'success' });
             console.log('Notification set to success:', { message: 'Observación añadida correctamente.', type: 'success' });
             // Re-fetch venta details to show new observacion without closing the expanded view
-            const response = await axios.get(`${API_BASE_URL}/api/ventas/${expandedVentaId}/`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await API.get(`/ventas/${expandedVentaId}/`);
             setVentaDetails(response.data);
 
             if (tipo === 'cliente') {
@@ -331,11 +323,8 @@ const Ventas = () => {
         }
         setIsLoading(true);
         setNotification({ message: '', type: '' });
-        const token = localStorage.getItem("accessToken");
         try {
-            await axios.post(`${API_BASE_URL}/api/ventas/${expandedVentaId}/remisiones/`, remisionData, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            await API.post(`/ventas/${expandedVentaId}/remisiones/`, remisionData);
             setNotification({ message: 'Remisión añadida correctamente.', type: 'success' });
             setShowRemisionModal(false);
             refreshVentaDetails(expandedVentaId); // Refrescar detalles de la venta

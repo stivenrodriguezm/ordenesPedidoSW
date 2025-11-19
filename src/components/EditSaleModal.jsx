@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import Modal from './Modal';
-import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppContext } from '../AppContext';
-import API_BASE_URL from '../apiConfig';
+import API from '../services/api';
 
 const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchClientes }) => {
   const { usuario } = useContext(AppContext);
@@ -57,7 +56,6 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("accessToken");
     
     let ventaPayload = {};
 
@@ -82,9 +80,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     };
 
     try {
-      await axios.put(`${API_BASE_URL}/api/ventas/${formData.id}/editar/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.put(`/ventas/${formData.id}/editar/`, payload);
       setNotification({ message: 'Venta actualizada correctamente.', type: 'success' });
       onClose();
       onSaleUpdated(formData.id);

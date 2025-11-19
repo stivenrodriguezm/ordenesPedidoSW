@@ -2,12 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo, useContext } from 're
 import { useLocation } from 'react-router-dom';
 import { AppContext } from '../AppContext';
 import './RecibosCaja.css';
-import axios from 'axios';
+import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { FaFileExport, FaPlus, FaSearch, FaUndo, FaCheckCircle } from 'react-icons/fa';
 import debounce from 'lodash.debounce';
 import AppNotification from '../components/AppNotification';
-import API_BASE_URL from '../apiConfig';
 
 import Modal from '../components/Modal'; // Importar el componente Modal genérico
 
@@ -41,7 +40,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
           <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ingresa el ID del recibo" />
         </div>
 
-        <div className="form-group">
+        <div className="form-grup">
           <label>Fecha:</label>
           <input type="date" name="fecha" value={newRC.fecha} onChange={handleChange} required />
         </div>
@@ -142,13 +141,11 @@ const RecibosCaja = () => {
   // --- Fetching de Datos ---
   const fetchData = useCallback(async (filters, page) => {
     setIsLoading(true);
-    const token = localStorage.getItem("accessToken");
     const params = { page, page_size: pageSize, ...filters };
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/recibos-caja/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await API.get(`/recibos-caja/`, {
         params
       });
       setRecibosData(response.data.results || []);
@@ -176,12 +173,9 @@ const RecibosCaja = () => {
 
   useEffect(() => {
     const fetchVentas = async () => {
-      const token = localStorage.getItem("accessToken");
       try {
         // Solo obtener IDs de ventas pendientes para el select
-        const response = await axios.get(`${API_BASE_URL}/api/get-pendientes-ids/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await API.get(`/get-pendientes-ids/`);
         setVentas(response.data.map(id => ({ id_venta: id }))); // Formatear a { id_venta: id }
       } catch (error) {
         console.error('Error details:', error); // Debugging line
@@ -205,11 +199,8 @@ const RecibosCaja = () => {
   const handleCreateRC = async (rcData) => {
     setIsSubmitting(true);
     setNotification({ message: '', type: '' });
-    const token = localStorage.getItem("accessToken");
     try {
-      await axios.post(`${API_BASE_URL}/api/recibos-caja/crear/`, rcData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await API.post(`/recibos-caja/crear/`, rcData);
       setNotification({ message: 'Recibo de Caja creado exitosamente.', type: 'success' });
       setIsCreatingRC(false);
       fetchData(filters, 1);
@@ -225,11 +216,8 @@ const RecibosCaja = () => {
     if (!selectedRecibo) return;
     setIsSubmitting(true);
     setNotification({ message: '', type: '' });
-    const token = localStorage.getItem("accessToken");
     try {
-      await axios.patch(`${API_BASE_URL}/api/recibos-caja/${selectedRecibo.id}/confirmar/`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await API.patch(`/recibos-caja/${selectedRecibo.id}/confirmar/`, {});
       setNotification({ message: 'Recibo de Caja confirmado exitosamente.', type: 'success' });
       setShowConfirmModal(false);
       fetchData(filters, currentPage); // Refrescar datos en la página actual
@@ -249,13 +237,11 @@ const RecibosCaja = () => {
 
   const exportData = async () => {
     setIsLoading(true);
-    const token = localStorage.getItem("accessToken");
     const params = { ...filters, page_size: 9999 }; // Fetch all matching data
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/recibos-caja/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await API.get(`/recibos-caja/`, {
         params
       });
       

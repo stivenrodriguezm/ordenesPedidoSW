@@ -2,14 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo, useContext } from 're
 import { useLocation } from 'react-router-dom';
 import { AppContext } from '../AppContext';
 import './Caja.css';
-import axios from 'axios';
+import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { FaFileExport, FaPlus, FaSearch, FaUndo, FaLock } from 'react-icons/fa';
 import debounce from 'lodash.debounce';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
 import CierreCajaModal from '../components/CierreCajaModal';
-import API_BASE_URL from '../apiConfig';
 
 // Modal para creación de movimientos
 const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
@@ -105,13 +104,11 @@ const Caja = () => {
 
   const fetchData = useCallback(async (page, currentFilters) => {
     setIsLoading(true);
-    const token = localStorage.getItem("accessToken");
     const params = { page, page_size: pageSize, ...currentFilters };
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/caja/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await API.get(`/caja/`, {
         params
       });
       setStats(response.data.stats);
@@ -141,11 +138,8 @@ const Caja = () => {
 
   const handleCreateMovimiento = async (movimientoData) => {
     setIsSubmitting(true);
-    const token = localStorage.getItem("accessToken");
     try {
-      await axios.post(`${API_BASE_URL}/api/caja/`, movimientoData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.post(`/caja/`, movimientoData);
       setNotification({ message: 'Movimiento creado exitosamente.', type: 'success' });
       setIsCreateModalOpen(false);
       fetchData(1, filters); // Refresh data
@@ -158,11 +152,8 @@ const Caja = () => {
 
   const handleCierreCaja = async (cierreData) => {
     setIsSubmitting(true);
-    const token = localStorage.getItem("accessToken");
     try {
-      await axios.post(`${API_BASE_URL}/api/caja/cierre/`, cierreData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.post(`/caja/cierre/`, cierreData);
       setNotification({ message: 'Cierre de caja exitoso.', type: 'success' });
       setIsCierreModalOpen(false);
       fetchData(1, filters); // Refresh data
@@ -180,11 +171,9 @@ const Caja = () => {
   };
 
   const exportData = async () => {
-    const token = localStorage.getItem("accessToken");
     try {
       // Fetch all data without pagination for export
-      const response = await axios.get(`${API_BASE_URL}/api/caja/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await API.get(`/caja/`, {
         params: { ...filters, page_size: 9999 }
       });
 

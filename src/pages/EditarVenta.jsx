@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import API from '../services/api';
 import './EditarVenta.css';
-import API_BASE_URL from '../apiConfig';
 
 const EditarVenta = () => {
   const navigate = useNavigate();
@@ -41,20 +40,15 @@ const EditarVenta = () => {
   // Fetch vendedores and venta details on mount
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem("accessToken");
       setIsLoading(true);
 
       try {
         // Fetch vendedores
-        const vendedoresResponse = await axios.get(`${API_BASE_URL}/api/vendedores/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const vendedoresResponse = await API.get(`/vendedores/`);
         setVendedores(vendedoresResponse.data);
 
         // Fetch venta details
-        const ventaResponse = await axios.get(`${API_BASE_URL}/api/ventas/${id}/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const ventaResponse = await API.get(`/ventas/${id}/`);
         const ventaDetails = ventaResponse.data;
 
         // Set cliente data
@@ -111,7 +105,6 @@ const EditarVenta = () => {
     setIsLoading(true);
     setErrorMessage('');
 
-    const token = localStorage.getItem("accessToken");
     const payload = {
       cliente: {
         id: clienteData.id,
@@ -133,16 +126,13 @@ const EditarVenta = () => {
     };
 
     try {
-      await axios.put(`${API_BASE_URL}/api/ventas/${id}/editar/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.put(`/ventas/${id}/editar/`, payload);
 
       // If there's an observacion, update or create it
       if (observacion) {
-        await axios.post(
-          `${API_BASE_URL}/api/ventas/${id}/observaciones/`,
-          { texto: observacion },
-          { headers: { Authorization: `Bearer ${token}` } }
+        await API.post(
+          `/ventas/${id}/observaciones/`,
+          { texto: observacion }
         );
       }
 

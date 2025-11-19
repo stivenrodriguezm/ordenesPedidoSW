@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
 import { AppContext } from '../AppContext';
-import API_BASE_URL from '../apiConfig';
 import API from '../services/api';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
@@ -153,7 +151,6 @@ const OrdenesPage = () => {
 
     const fetchOrdenes = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem("accessToken");
       try {
         const params = {
           id_proveedor: selectedProveedor,
@@ -164,8 +161,7 @@ const OrdenesPage = () => {
         
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
         
-        const response = await axios.get(`${API_BASE_URL}/api/listar-pedidos/`, {
-            headers: { Authorization: `Bearer ${token}` },
+        const response = await API.get(`/listar-pedidos/`, {
             params
         });
         

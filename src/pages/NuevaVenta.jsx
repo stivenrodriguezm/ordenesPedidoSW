@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
 import './NuevaVenta.css';
-import API_BASE_URL from '../apiConfig';
+import API from '../services/api';
 
 const NuevaVenta = () => {
   const navigate = useNavigate();
@@ -45,11 +44,8 @@ const NuevaVenta = () => {
   // Cargar vendedores y fecha por defecto al montar el componente
   useEffect(() => {
     const fetchVendedores = async () => {
-      const token = localStorage.getItem("accessToken");
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/vendedores/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await API.get(`/vendedores/`);
         setVendedores(response.data);
       } catch (error) {
         console.error('Error cargando vendedores:', error);
@@ -75,11 +71,8 @@ const NuevaVenta = () => {
     }
 
     setIsLoading(true);
-    const token = localStorage.getItem("accessToken");
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/clientes/${clienteId}/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await API.get(`/clientes/${clienteId}/`);
 
       const cliente = response.data;
       setClienteData({
@@ -135,7 +128,6 @@ const NuevaVenta = () => {
     setIsLoading(true);
     setNotification({ message: '', type: '' });
 
-    const token = localStorage.getItem("accessToken");
     const payload = {
       cliente_nuevo: isClienteNuevo,
       cliente: {
@@ -160,9 +152,7 @@ const NuevaVenta = () => {
 
     try {
 
-      await axios.post(`${API_BASE_URL}/api/ventas/crear/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.post(`/ventas/crear/`, payload);
 
       setNotification({ message: 'Venta creada exitosamente.', type: 'success' });
       setTimeout(() => {
