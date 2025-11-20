@@ -7,15 +7,18 @@ import { FaChevronDown, FaEdit, FaPlus, FaFileExport } from 'react-icons/fa';
 import API from '../services/api';
 
 const EditClienteModal = ({ cliente, onSave, onClose }) => {
+  // DEBUG: Log the prop received by the modal
+  console.log('[EditClienteModal] Received cliente prop:', cliente);
+
   const [formData, setFormData] = useState({
     id: cliente.id,
-    nombre: cliente.nombre,
-    cedula: cliente.cedula,
-    correo: cliente.correo,
-    direccion: cliente.direccion,
-    ciudad: cliente.ciudad,
-    telefono1: cliente.telefono1,
-    telefono2: cliente.telefono2,
+    nombre: cliente.nombre || '',
+    cedula: cliente.cedula || '',
+    correo: cliente.correo || '',
+    direccion: cliente.direccion || '',
+    ciudad: cliente.ciudad || '',
+    telefono1: cliente.telefono1 || '',
+    telefono2: cliente.telefono2 || '',
   });
 
   const handleChange = (e) => {
@@ -35,6 +38,8 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
+          {/* DEBUG: Log the formData state */}
+          {console.log('[EditClienteModal] formData state:', formData)}
           <div className="form-group">
             <label>Nombre:</label>
             <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required />
@@ -111,15 +116,19 @@ const Clientes = () => {
   const { clientes: contextClientes, isLoadingClientes, usuario } = useContext(AppContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClienteId, setExpandedClienteId] = useState(null);
-  const [clienteDetails, setClienteDetails] = useState(null);
+  const [expandedData, setExpandedData] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filteredClientes, setFilteredClientes] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showObservationModal, setShowObservationModal] = useState(false);
-  const [selectedCliente, setSelectedCliente] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // DEBUG: Log the context data
+  useEffect(() => {
+    console.log('[Clientes] Data from context:', contextClientes);
+  }, [contextClientes]);
 
   const pageSize = 30;
 
@@ -147,20 +156,32 @@ const Clientes = () => {
       return;
     }
 
+    console.log(`[handleExpandCliente] Expanding client with ID: ${clienteId}`);
     setExpandedClienteId(clienteId);
     setLoadingDetails(true);
+    setExpandedData(null);
 
-    const token = localStorage.getItem("accessToken");
     try {
-      const response = await API.get(`/clientes/${clienteId}/ventas-observaciones/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setClienteDetails(response.data);
-      setSelectedCliente(contextClientes.find(cliente => cliente.id === clienteId));
+      const [clienteRes, detailsRes] = await Promise.all([
+        API.get(`/clientes/${clienteId}/`),
+        API.get(`/clientes/${clienteId}/ventas-observaciones/`)
+      ]);
+
+      console.log('[handleExpandCliente] API response for /clientes/id:', clienteRes.data);
+      console.log('[handleExpandCliente] API response for /ventas-observaciones/:', detailsRes.data);
+      
+      const mergedData = {
+        ...clienteRes.data,
+        ventas: detailsRes.data.ventas,
+        observaciones_cliente: detailsRes.data.observaciones_cliente
+      };
+      
+      console.log('[handleExpandCliente] Merged data for state:', mergedData);
+      setExpandedData(mergedData);
+
     } catch (error) {
       setErrorMessage('Error al cargar los detalles del cliente.');
+      console.error('[handleExpandCliente] Error:', error);
     } finally {
       setLoadingDetails(false);
     }
@@ -192,15 +213,9 @@ const Clientes = () => {
   };
 
   const handleEditCliente = async (updatedCliente) => {
-    const token = localStorage.getItem("accessToken");
     try {
-      const response = await API.put(`/clientes/${updatedCliente.id}/`, updatedCliente, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      // Esta es una forma de actualizar el estado global. Necesitarías una función en tu context.
-      // updateClientes(prev => prev.map(c => c.id === updatedCliente.id ? response.data : c));
+      const response = await API.put(`/clientes/${updatedCliente.id}/`, updatedCliente);
+      setExpandedData(prevData => ({...prevData, ...response.data}));
       setShowEditModal(false);
     } catch (error) {
        setErrorMessage('Error al editar el cliente.');
@@ -208,20 +223,14 @@ const Clientes = () => {
   };
 
   const handleAddObservation = async (observationText) => {
-    const token = localStorage.getItem("accessToken");
     try {
       const response = await API.post(
-        `clientes/${expandedClienteId}/observaciones/anadir/`,
-        { texto: observationText },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        `/clientes/${expandedClienteId}/observaciones/anadir/`,
+        { texto: observationText }
       );
-      setClienteDetails(prevDetails => ({
-        ...prevDetails,
-        observaciones_cliente: [...prevDetails.observaciones_cliente, response.data]
+      setExpandedData(prevData => ({
+        ...prevData,
+        observaciones_cliente: [...prevData.observaciones_cliente, response.data]
       }));
       setShowObservationModal(false);
     } catch (error) {
@@ -268,7 +277,10 @@ const Clientes = () => {
             {isLoadingClientes ? (
               <tr><td colSpan="9"><div className="loading-container"><div className="loader"></div></div></td></tr>
             ) : filteredClientes.length > 0 ? (
-              filteredClientes.map((cliente) => (
+              filteredClientes.map((cliente) => {
+                // DEBUG: Log the client object being rendered in the table
+                console.log('[Clientes Table] Rendering cliente:', cliente);
+                return (
                 <React.Fragment key={cliente.id}>
                   <tr>
                     <td className="td-id">{cliente.id}</td>
@@ -288,42 +300,42 @@ const Clientes = () => {
                   {expandedClienteId === cliente.id && (
                     <tr className="expanded-row">
                       <td colSpan="9">
+                        {/* DEBUG: Log the expandedData state before rendering details */}
+                        {console.log('[Clientes Expanded View] expandedData:', expandedData)}
                         {loadingDetails ? (
                           <div className="loading-container"><div className="loader"></div></div>
-                        ) : clienteDetails ? (
+                        ) : expandedData ? (
                           <div className="details-view flex flex-col">
-                            {selectedCliente && (
-                                <div className="flex flex-row gap-4 w-full">
-                                    <div className="client-summary-details details-section flex-1"> {/* Detalles del Cliente */}
-                                        <h4>Detalles del Cliente</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-gray-700 text-sm">
-                                            <p><strong>Nombre:</strong> {selectedCliente.nombre}</p>
-                                            <p><strong>Correo:</strong> {selectedCliente.correo}</p>
-                                            <p><strong>Dirección:</strong> {selectedCliente.direccion}</p>
-                                            <p><strong>Teléfono 1:</strong> {selectedCliente.telefono1}</p>
-                                            <p><strong>Teléfono 2:</strong> {selectedCliente.telefono2 || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="details-section flex-1"> {/* Compras Recientes */}
-                                        <h4 class="text-lg font-semibold text-gray-800 mb-3">Compras Recientes</h4>
-                                        <ul>
-                                            {clienteDetails.ventas.length > 0 ? clienteDetails.ventas.map((venta) => (
-                                                <li key={venta.id}>
-                                                    Venta #{venta.id} - {venta.estado}
-                                                </li>
-                                            )) : <li>No hay compras registradas.</li>}
-                                        </ul>
-                                    </div>
-                                    <div className="details-section flex-1"> {/* Observaciones */}
-                                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Observaciones</h4>
-                                        <ul>
-                                            {clienteDetails.observaciones_cliente.length > 0 ? clienteDetails.observaciones_cliente.map((obs) => (
-                                                <li key={obs.id}>{obs.texto}</li>
-                                            )) : <li>No hay observaciones.</li>}
-                                        </ul>
+                            <div className="flex flex-row gap-4 w-full">
+                                <div className="client-summary-details details-section flex-1"> {/* Detalles del Cliente */}
+                                    <h4>Detalles del Cliente</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-gray-700 text-sm">
+                                        <p><strong>Nombre:</strong> {expandedData.nombre}</p>
+                                        <p><strong>Correo:</strong> {expandedData.correo || 'N/A'}</p>
+                                        <p><strong>Dirección:</strong> {expandedData.direccion}</p>
+                                        <p><strong>Teléfono 1:</strong> {expandedData.telefono1}</p>
+                                        <p><strong>Teléfono 2:</strong> {expandedData.telefono2 || 'N/A'}</p>
                                     </div>
                                 </div>
-                            )}
+                                <div className="details-section flex-1"> {/* Compras Recientes */}
+                                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Compras Recientes</h4>
+                                    <ul>
+                                        {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
+                                            <li key={venta.id}>
+                                                Venta #{venta.id} - {venta.estado}
+                                            </li>
+                                        )) : <li>No hay compras registradas.</li>}
+                                    </ul>
+                                </div>
+                                <div className="details-section flex-1"> {/* Observaciones */}
+                                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Observaciones</h4>
+                                    <ul>
+                                        {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
+                                            <li key={obs.id}>{obs.texto}</li>
+                                        )) : <li>No hay observaciones.</li>}
+                                    </ul>
+                                </div>
+                            </div>
                             <div className="flex flex-row justify-end space-x-2 flex-[0_0_20%]"> {/* Adjusted flex property */}
                                 <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
                                 <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
@@ -334,7 +346,8 @@ const Clientes = () => {
                     </tr>
                   )}
                 </React.Fragment>
-              ))
+                );
+              })
             ) : (
               <tr><td colSpan="9" className="empty-cell">No se encontraron clientes.</td></tr>
             )}
@@ -342,8 +355,8 @@ const Clientes = () => {
         </table>
       </div>
 
-      {showEditModal && selectedCliente && (
-        <EditClienteModal cliente={selectedCliente} onSave={handleEditCliente} onClose={() => setShowEditModal(false)} />
+      {showEditModal && expandedData && (
+        <EditClienteModal cliente={expandedData} onSave={handleEditCliente} onClose={() => setShowEditModal(false)} />
       )}
 
       {showObservationModal && (

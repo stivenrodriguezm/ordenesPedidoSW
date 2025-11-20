@@ -40,7 +40,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
           <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ingresa el ID del recibo" />
         </div>
 
-        <div className="form-grup">
+        <div className="form-group">
           <label>Fecha:</label>
           <input type="date" name="fecha" value={newRC.fecha} onChange={handleChange} required />
         </div>
@@ -157,12 +157,9 @@ const RecibosCaja = () => {
     }
   }, [pageSize]);
 
-  const debouncedFetch = useMemo(() => debounce(fetchData, 300), [fetchData]);
-
   useEffect(() => {
-    debouncedFetch(filters, currentPage);
-    return () => debouncedFetch.cancel();
-  }, [currentPage, filters, debouncedFetch]);
+    fetchData(filters, currentPage);
+  }, [filters, currentPage, fetchData]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

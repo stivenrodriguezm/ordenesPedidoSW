@@ -65,8 +65,8 @@ export function AppProvider({ children }) {
     }
     setIsLoadingClientes(true);
     try {
-      const response = await API.get('/clientes/');
-      setClientes(response.data.results || []); 
+      const response = await API.get('/clientes/?page_size=1000');
+      setClientes(response.data.results || []);
     } catch (error) {
       console.error("Error al cargar clientes:", error);
       setClientes([]);

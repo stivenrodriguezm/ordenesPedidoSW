@@ -142,12 +142,9 @@ const ComprobantesEgreso = () => {
     }
   }, [pageSize]);
 
-  const debouncedFetch = useMemo(() => debounce(fetchData, 300), [fetchData]);
-
   useEffect(() => {
-    debouncedFetch(filters, currentPage);
-    return () => debouncedFetch.cancel();
-  }, [currentPage, filters, debouncedFetch]);
+    fetchData(filters, currentPage);
+  }, [filters, currentPage, fetchData]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

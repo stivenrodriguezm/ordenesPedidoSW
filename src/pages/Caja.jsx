@@ -5,7 +5,6 @@ import './Caja.css';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { FaFileExport, FaPlus, FaSearch, FaUndo, FaLock } from 'react-icons/fa';
-import debounce from 'lodash.debounce';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
 import CierreCajaModal from '../components/CierreCajaModal';
@@ -108,9 +107,7 @@ const Caja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
-      const response = await API.get(`/caja/`, {
-        params
-      });
+      const response = await API.get(`/caja/`, { params });
       setStats(response.data.stats);
       setCajaData(response.data.movimientos.results || []);
       setTotalPages(Math.ceil(response.data.movimientos.count / pageSize) || 1);
@@ -123,7 +120,7 @@ const Caja = () => {
 
   useEffect(() => {
     fetchData(currentPage, filters);
-  }, [currentPage, filters.fecha_inicio, filters.fecha_fin, filters.query, fetchData]);
+  }, [currentPage, filters, fetchData]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -142,7 +139,7 @@ const Caja = () => {
       await API.post(`/caja/`, movimientoData);
       setNotification({ message: 'Movimiento creado exitosamente.', type: 'success' });
       setIsCreateModalOpen(false);
-      fetchData(1, filters); // Refresh data
+      fetchData(1, filters);
     } catch (error) {
       setNotification({ message: 'Error al crear el movimiento.', type: 'error' });
     } finally {
@@ -156,7 +153,7 @@ const Caja = () => {
       await API.post(`/caja/cierre/`, cierreData);
       setNotification({ message: 'Cierre de caja exitoso.', type: 'success' });
       setIsCierreModalOpen(false);
-      fetchData(1, filters); // Refresh data
+      fetchData(1, filters);
     } catch (error) {
       setNotification({ message: 'Error al realizar el cierre de caja.', type: 'error' });
     } finally {
@@ -171,12 +168,11 @@ const Caja = () => {
   };
 
   const exportData = async () => {
-    try {
-      // Fetch all data without pagination for export
-      const response = await API.get(`/caja/`, {
-        params: { ...filters, page_size: 9999 }
-      });
+    const params = { page_size: 9999, ...filters };
+    Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
+    try {
+      const response = await API.get(`/caja/`, { params });
       const dataToExport = (response.data.movimientos.results || []).map(item => ({
         ID: item.id,
         Usuario: item.usuario_nombre,

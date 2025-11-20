@@ -167,7 +167,11 @@ const Ventas = () => {
                 params.estado = selectedEstado;
             }
             const response = await API.get(`/ventas/`, { params });
-            const sortedVentas = response.data.sort((a, b) => b.id - a.id);
+            const sortedVentas = response.data.sort((a, b) => {
+                if (a.fecha_venta < b.fecha_venta) return 1;
+                if (a.fecha_venta > b.fecha_venta) return -1;
+                return b.id - a.id;
+            });
             setVentas(sortedVentas || []);
         } catch (error) {
             console.error('Error cargando ventas:', error);
@@ -652,6 +656,7 @@ const Ventas = () => {
                     onSaleUpdated={refreshVentaDetails} // Re-fetch current sale details
                     setNotification={setNotification}
                     fetchVentas={fetchVentas}
+                    fetchReportSales={fetchReportSales}
                     fetchClientes={fetchClientes}
                     usuario={usuario}
                 />

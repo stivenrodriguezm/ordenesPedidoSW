@@ -106,20 +106,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 </div>
             </div>
 
-            {(usuario.role === 'administrador' || usuario.role === 'auxiliar') && (
-                <div className="details-card sales-by-vendedor-card">
-                    <h4>Ventas por Vendedor</h4>
-                    <div className="vendedor-list">
-                        {Object.values(salesByVendedor).sort((a, b) => b.total - a.total).map(vendedor => (
-                            <div key={vendedor.name} className="vendedor-item">
-                                <span>{vendedor.name}</span>
-                                <span>{formatCurrency(vendedor.total)} ({vendedor.count} ventas)</span>
-                                <span className="delivered-info">({vendedor.delivered} entregadas)</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+
 
             {(usuario.role === 'administrador' || usuario.role === 'auxiliar') && (
                 <div className="details-card top-sellers-card">

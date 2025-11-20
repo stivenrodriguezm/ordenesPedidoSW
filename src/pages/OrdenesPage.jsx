@@ -104,7 +104,7 @@ const OrdenesPage = () => {
     { value: 'recibido', label: 'Recibido' },
     { value: 'anulado', label: 'Anulado' },
   ];
-  const telas = ['Por pedir', 'Sin tela', 'Por llegar', 'En fabrica', 'En Lottus'];
+  const telas = ['Por pedir', 'Pedida', 'En fabrica', 'Sin tela'];
 
   // ... (el resto de funciones como formatDate, formatNumber, etc., no cambian)
   const formatDate = (dateStr) => {

@@ -193,3 +193,23 @@ main {
   transition: background-color 0.2s ease;
 }
 .modal-submit:hover { background-color: var(--color-primary-hover); }
+
+/* Styles for checkbox groups */
+.form-group.checkbox-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start; /* Aligns items to the start */
+}
+
+.form-group.checkbox-group label {
+  margin-bottom: 0; /* Removes bottom margin from label in a checkbox group */
+}
+
+.form-group input[type="checkbox"] {
+  width: auto; /* Overrides the default 100% width */
+  height: 1.2em;
+  width: 1.2em;
+  accent-color: var(--color-primary);
+}

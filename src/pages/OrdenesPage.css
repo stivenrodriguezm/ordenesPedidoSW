@@ -33,23 +33,22 @@
 
 .status-badge.atrasado { color: var(--color-destructive); background-color: #f8d7da; }
 
-/* --- Colores para Estado de la Tela --- */
-.status-badge.por-pedir { color: #664d03; background-color: #fff3cd; }
-.status-badge.sin-tela { color: var(--color-text-secondary); background-color: #e9ecef; }
-.status-badge.por-llegar { color: #553c7a; background-color: #eadaff; }
-.status-badge.en-fabrica { color: #0056b3; background-color: #cce5ff; }
-.status-badge.en-lottus { color: var(--color-success); background-color: #d1e7dd; }
+/* --- Colores para Estado de la Tela (v2) --- */
+.ordenes-table .status-badge.por-pedir { color: #842029; background-color: #f8d7da; } /* Rojo */
+.ordenes-table .status-badge.pedida { color: #664d03; background-color: #fff3cd; } /* Amarillo */
+.ordenes-table .status-badge.en-fabrica { color: var(--color-success); background-color: #d1e7dd; } /* Verde */
+.ordenes-table .status-badge.sin-tela { color: var(--color-success); background-color: #d1e7dd; } /* Verde */
 
 /* Column Widths */
 .th-op, .td-op { width: 5%; }
-.th-proveedor, .td-proveedor { width: 12%; }
+.th-proveedor, .td-proveedor { width: 15%; }
 .th-vendedor, .td-vendedor { width: 10%; }
 .th-venta, .td-venta { width: 8%; }
 .th-fecha-pedido, .td-fecha-pedido { width: 9%; }
 .th-fecha-llegada, .td-fecha-llegada { width: 9%; }
 .th-tela, .td-tela { width: 8%; }
 .th-estado, .td-estado { width: 8%; }
-.th-observacion, .td-observacion { width: 15%; }
+.th-observacion, .td-observacion { width: 12%; }
 .th-costo, .td-costo { width: 8%; }
 .th-accion, .td-accion { width: 8%; }
 

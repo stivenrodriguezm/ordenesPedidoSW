@@ -109,10 +109,11 @@
 /* Anchos y alineación de columnas */
 .th-ce-id, .td-ce-id { width: 8%; }
 .th-ce-fecha, .td-ce-fecha { width: 12%; }
-.th-ce-proveedor, .td-ce-proveedor { width: 25%; }
+.th-ce-proveedor, .td-ce-proveedor { width: 18%; }
+.th-ce-concepto, .td-ce-concepto { width: 22%; }
 .th-ce-metodo, .td-ce-metodo { width: 15%; }
 .th-ce-valor, .td-ce-valor { width: 15%; text-align: right; }
-.th-ce-nota, .td-ce-nota { width: 25%; }
+.th-ce-descripcion, .td-ce-descripcion { width: 10%; }
 
 /* Clase para valores monetarios */
 .td-valor {

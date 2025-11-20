@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AppContext } from '../AppContext';
 import API from '../services/api';
 
-const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchClientes }) => {
+const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchReportSales, fetchClientes }) => {
   const { usuario } = useContext(AppContext);
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -85,6 +85,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
       onClose();
       onSaleUpdated(formData.id);
       fetchVentas();
+      fetchReportSales();
       fetchClientes();
       queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] });
     } catch (error) {
@@ -140,7 +141,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <label>Estado Pedidos:</label>
           <input type="checkbox" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isEstadoPedidosDisabled} />
         </div>
-        <button type="submit">Guardar Cambios</button>
+        <button type="submit" className="modal-submit">Guardar Cambios</button>
       </form>
     </Modal>
   );

@@ -175,9 +175,6 @@ const NuevaVenta = () => {
                   const firstError = errorData[firstErrorKey];
                   if (Array.isArray(firstError)) {
                       friendlyError = firstError[0];
-                  } else if (typeof firstError === 'object') {
-                      const nestedErrorKey = Object.keys(firstError)[0];
-                      friendlyError = firstError[nestedErrorKey][0];
                   } else {
                      friendlyError = JSON.stringify(errorData);
                   }
