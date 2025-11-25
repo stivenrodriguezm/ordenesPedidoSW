@@ -91,7 +91,7 @@ const AddObservationModal = ({ onSave, onClose }) => {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-             <label>Nueva Observación:</label>
+            <label>Nueva Observación:</label>
             <textarea
               value={observationText}
               onChange={(e) => setObservationText(e.target.value)}
@@ -107,6 +107,8 @@ const AddObservationModal = ({ onSave, onClose }) => {
   );
 };
 
+import AppNotification from '../components/AppNotification';
+
 const Clientes = () => {
   const { clientes: contextClientes, isLoadingClientes, usuario } = useContext(AppContext);
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,6 +121,7 @@ const Clientes = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [notification, setNotification] = useState({ message: '', type: '' });
 
   const pageSize = 30;
 
@@ -155,13 +158,13 @@ const Clientes = () => {
         API.get(`/clientes/${clienteId}/`),
         API.get(`/clientes/${clienteId}/ventas-observaciones/`)
       ]);
-      
+
       const mergedData = {
         ...clienteRes.data,
         ventas: detailsRes.data.ventas,
         observaciones_cliente: detailsRes.data.observaciones_cliente
       };
-      
+
       setExpandedData(mergedData);
 
     } catch (error) {
@@ -199,10 +202,12 @@ const Clientes = () => {
   const handleEditCliente = async (updatedCliente) => {
     try {
       const response = await API.put(`/clientes/${updatedCliente.id}/`, updatedCliente);
-      setExpandedData(prevData => ({...prevData, ...response.data}));
+      setExpandedData(prevData => ({ ...prevData, ...response.data }));
+      setNotification({ message: 'Cliente actualizado correctamente.', type: 'success' });
       setShowEditModal(false);
     } catch (error) {
-       setErrorMessage('Error al editar el cliente.');
+      const errorMsg = error.response?.data?.detail || error.response?.data?.error || 'Error al editar el cliente.';
+      setNotification({ message: errorMsg, type: 'error' });
     }
   };
 
@@ -224,6 +229,11 @@ const Clientes = () => {
 
   return (
     <div className="page-container clientes-page-container">
+      <AppNotification
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ message: '', type: '' })}
+      />
       <div className="page-header">
         <input
           type="text"
@@ -287,33 +297,40 @@ const Clientes = () => {
                             <div className="loading-container"><div className="loader"></div></div>
                           ) : expandedData ? (
                             <div className="details-view">
-                              <div className="details-view-section">
-                                  <h4>Detalles del Cliente</h4>
-                                  <p><strong>Nombre:</strong> {expandedData.nombre}</p>
-                                  <p><strong>Correo:</strong> {expandedData.correo || 'N/A'}</p>
-                                  <p><strong>Dirección:</strong> {expandedData.direccion}</p>
-                                  <p><strong>Teléfono 1:</strong> {expandedData.telefono1}</p>
-                                  <p><strong>Teléfono 2:</strong> {expandedData.telefono2 || 'N/A'}</p>
+                              <div className="details-view-section details-info">
+                                <h4>Detalles del Cliente</h4>
+                                <div className="info-grid">
+                                  <div className="info-item"><strong>Nombre:</strong> <span>{expandedData.nombre}</span></div>
+                                  <div className="info-item"><strong>Correo:</strong> <span>{expandedData.correo || 'N/A'}</span></div>
+                                  <div className="info-item"><strong>Dirección:</strong> <span>{expandedData.direccion}</span></div>
+                                  <div className="info-item"><strong>Teléfono 1:</strong> <span>{expandedData.telefono1}</span></div>
+                                  <div className="info-item"><strong>Teléfono 2:</strong> <span>{expandedData.telefono2 || 'N/A'}</span></div>
+                                </div>
                               </div>
-                              <div className="details-view-section">
-                                  <h4>Compras Recientes</h4>
-                                  <ul>
-                                      {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
-                                          <li key={venta.id}>Venta #{venta.id} - {venta.estado}</li>
-                                      )) : <li>No hay compras registradas.</li>}
-                                  </ul>
+                              <div className="details-view-section details-ventas">
+                                <h4>Compras Recientes</h4>
+                                <ul className="ventas-list">
+                                  {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
+                                    <li key={venta.id} className="venta-item">
+                                      <span className="venta-id">#{venta.id}</span>
+                                      <span className={`venta-estado estado-${venta.estado.toLowerCase()}`}>{venta.estado}</span>
+                                    </li>
+                                  )) : <li className="empty-list">No hay compras registradas.</li>}
+                                </ul>
                               </div>
-                              <div className="details-view-section">
-                                  <h4>Observaciones</h4>
-                                  <ul>
-                                      {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
-                                          <li key={obs.id}>{obs.texto}</li>
-                                      )) : <li>No hay observaciones.</li>}
-                                  </ul>
+                              <div className="details-view-section details-observaciones">
+                                <h4>Observaciones</h4>
+                                <ul className="observaciones-list">
+                                  {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
+                                    <li key={obs.id} className="observacion-item">
+                                      <p>{obs.texto}</p>
+                                    </li>
+                                  )) : <li className="empty-list">No hay observaciones.</li>}
+                                </ul>
                               </div>
                               <div className="details-view-actions">
-                                  <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
-                                  <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
+                                <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit /> Editar Cliente</button>
+                                <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus /> Agregar Observación</button>
                               </div>
                             </div>
                           ) : null}
@@ -328,7 +345,7 @@ const Clientes = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Mobile View: Cards */}
         <div className="mobile-view">
           {isLoadingClientes ? (
@@ -375,7 +392,7 @@ const Clientes = () => {
                           <h4>Compras Recientes</h4>
                           <ul>
                             {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
-                                <li key={venta.id}>Venta #{venta.id} - {venta.estado}</li>
+                              <li key={venta.id}>Venta #{venta.id} - {venta.estado}</li>
                             )) : <li>No hay compras registradas.</li>}
                           </ul>
                         </div>
@@ -383,13 +400,13 @@ const Clientes = () => {
                           <h4>Observaciones</h4>
                           <ul>
                             {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
-                                <li key={obs.id}>{obs.texto}</li>
+                              <li key={obs.id}>{obs.texto}</li>
                             )) : <li>No hay observaciones.</li>}
                           </ul>
                         </div>
                         <div className="card-actions">
-                           <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
-                           <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
+                          <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit /> Editar Cliente</button>
+                          <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus /> Agregar Observación</button>
                         </div>
                       </div>
                     ) : null}

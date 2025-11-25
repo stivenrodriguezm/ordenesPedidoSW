@@ -13,6 +13,8 @@ import './Ventas.css';
 import '../components/Modal.css';
 import '../components/AppNotification.css';
 
+import useDebounce from '../hooks/useDebounce';
+
 const Ventas = () => {
     const { fetchClientes, usuario } = useContext(AppContext);
     const navigate = useNavigate();
@@ -21,8 +23,10 @@ const Ventas = () => {
     const [vendedores, setVendedores] = useState([]);
     const [estados, setEstados] = useState([]);
     const [isReportVisible, setIsReportVisible] = useState(false);
-    
+
     const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 500); // Debounce for 500ms
+
     const getDefaultMonthYear = () => {
         const today = new Date();
         let defaultMonth = today.getMonth(); // 0-indexed
@@ -43,9 +47,9 @@ const Ventas = () => {
     const [selectedMonthYear, setSelectedMonthYear] = useState(getDefaultMonthYear());
     const [selectedVendedor, setSelectedVendedor] = useState('');
     const [selectedEstado, setSelectedEstado] = useState('');
-    
-    
-    
+
+
+
     // Estados para la expansión
     const [expandedVentaId, setExpandedVentaId] = useState(null);
     const [ventaDetails, setVentaDetails] = useState(null);
@@ -59,8 +63,8 @@ const Ventas = () => {
     const [notification, setNotification] = useState({ message: '', type: '' });
     const [showEditSaleModal, setShowEditSaleModal] = useState(false);
     const [editSaleData, setEditSaleData] = useState(null);
-    
-    
+
+
 
     // Modales (sin cambios funcionales)
     const [showObservacionClienteModal, setShowObservacionClienteModal] = useState(false);
@@ -101,9 +105,9 @@ const Ventas = () => {
             maximumFractionDigits: 0,
         }).format(num);
     };
-  
+
     const capitalizeEstado = (estado) => estado ? estado.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
-  
+
     // --- Datos para Filtros ---
     const generateMonthOptions = () => {
         const options = [];
@@ -151,8 +155,8 @@ const Ventas = () => {
         setIsLoading(true);
         try {
             const params = {};
-            if (searchTerm) {
-                params.search = searchTerm;
+            if (debouncedSearchTerm) {
+                params.search = debouncedSearchTerm;
             } else {
                 if (selectedMonthYear !== 'all') {
                     const [month, year] = selectedMonthYear.split('-');
@@ -179,7 +183,7 @@ const Ventas = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [searchTerm, selectedMonthYear, selectedVendedor, selectedEstado, setNotification, usuario]);
+    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado, setNotification, usuario]);
 
     const fetchReportSales = useCallback(async () => {
         try {
@@ -223,8 +227,8 @@ const Ventas = () => {
         setEstados(["pendiente", "entregado", "anulado"]);
     }, []);
 
-    
-  
+
+
     // --- Handlers ---
     const handleExpandVenta = async (ventaId) => {
         if (expandedVentaId === ventaId) {
@@ -354,36 +358,36 @@ const Ventas = () => {
         if (value === null || value === undefined) return null;
         const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
         return isNaN(num) ? null : num;
-      };
+    };
 
     const exportVentas = () => {
         const dataToExport = ventas.map(venta => ({
-          'O.C.': venta.id,
-          'F. Venta': formatShortDate(venta.fecha_venta),
-          'F. Entrega': formatShortDate(venta.fecha_entrega),
-          'Vendedor': venta.vendedor_nombre,
-          'Cliente': venta.cliente_nombre,
-          'Abono': formatCurrencyForExport(venta.abono),
-          'Saldo': formatCurrencyForExport(venta.saldo),
-          'Valor': formatCurrencyForExport(venta.valor_total),
-          'Estado': capitalizeEstado(venta.estado),
+            'O.C.': venta.id,
+            'F. Venta': formatShortDate(venta.fecha_venta),
+            'F. Entrega': formatShortDate(venta.fecha_entrega),
+            'Vendedor': venta.vendedor_nombre,
+            'Cliente': venta.cliente_nombre,
+            'Abono': formatCurrencyForExport(venta.abono),
+            'Saldo': formatCurrencyForExport(venta.saldo),
+            'Valor': formatCurrencyForExport(venta.valor_total),
+            'Estado': capitalizeEstado(venta.estado),
         }));
-    
+
         const ws = XLSX.utils.json_to_sheet(dataToExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
         XLSX.writeFile(wb, 'Ventas.xlsx');
-      };
+    };
 
     const formatReportTitle = (monthYear) => {
         if (!monthYear || monthYear === 'all') {
-          return 'Informe de Ventas - Todas las fechas';
+            return 'Informe de Ventas - Todas las fechas';
         }
         const [month, year] = monthYear.split('-');
         const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const monthName = monthNames[parseInt(month, 10) - 1];
         return `Informe de Ventas - ${monthName} ${year}`;
-      };
+    };
 
     return (
         <div className="page-container">
@@ -411,24 +415,24 @@ const Ventas = () => {
                     )}
                 </div>
             )}
-      
+
             <div className="page-header">
                 <div className="filters-group">
                     <div className="search-wrapper">
-                         <input type="text" className="search-input" placeholder="Buscar por Cliente o OC..." value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value);}} />
-                         <FaSearch className="search-icon" />
+                        <input type="text" className="search-input" placeholder="Buscar por Cliente o OC..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); }} />
+                        <FaSearch className="search-icon" />
                     </div>
-                    <select value={selectedMonthYear} onChange={(e) => {setSelectedMonthYear(e.target.value);}}>
+                    <select value={selectedMonthYear} onChange={(e) => { setSelectedMonthYear(e.target.value); }}>
                         {monthOptions.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
                     </select>
-                    <select value={selectedEstado} onChange={(e) => {setSelectedEstado(e.target.value);}}>
+                    <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
                         <option value="">Todos los estados</option>
                         {estados.map(e => <option key={e} value={e}>{capitalizeEstado(e)}</option>)}
                     </select>
                     {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
-                        <select value={selectedVendedor} onChange={(e) => {setSelectedVendedor(e.target.value);}}>
+                        <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
                             <option value="">Todos los vendedores</option>
                             {vendedores.map(vendedor => (
                                 <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
@@ -494,118 +498,118 @@ const Ventas = () => {
                                                 ) : ventaDetails ? (
                                                     <div className="venta-details-view">
                                                         <div className="details-card cliente-info">
-                                                          <h4>Datos del Cliente</h4>
-                                                          <div className="cliente-data-grid">
-                                                            <p><strong>Nombre:</strong> {ventaDetails.cliente?.nombre || 'N/A'}</p>
-                                                            <p><strong>Cédula:</strong> {ventaDetails.cliente?.cedula || 'N/A'}</p>
-                                                            <p><strong>Correo:</strong> {ventaDetails.cliente?.correo || 'N/A'}</p>
-                                                            <p><strong>Teléfono 1:</strong> {ventaDetails.cliente?.telefono1 || 'N/A'}</p>
-                                                            <p><strong>Teléfono 2:</strong> {ventaDetails.cliente?.telefono2 || 'N/A'}</p>
-                                                            <p><strong>Dirección:</strong> {ventaDetails.cliente?.direccion || 'N/A'}</p>
-                                                          </div>
+                                                            <h4>Datos del Cliente</h4>
+                                                            <div className="cliente-data-grid">
+                                                                <p><strong>Nombre:</strong> {ventaDetails.cliente?.nombre || 'N/A'}</p>
+                                                                <p><strong>Cédula:</strong> {ventaDetails.cliente?.cedula || 'N/A'}</p>
+                                                                <p><strong>Correo:</strong> {ventaDetails.cliente?.correo || 'N/A'}</p>
+                                                                <p><strong>Teléfono 1:</strong> {ventaDetails.cliente?.telefono1 || 'N/A'}</p>
+                                                                <p><strong>Teléfono 2:</strong> {ventaDetails.cliente?.telefono2 || 'N/A'}</p>
+                                                                <p><strong>Dirección:</strong> {ventaDetails.cliente?.direccion || 'N/A'}</p>
+                                                            </div>
                                                         </div>
                                                         <div className="pagos-remisiones-wrapper">
                                                             <div className="pagos-remisiones-group-wrapper">
-                                                            <div className="details-card observaciones-cliente">
-                                                                <div className="observaciones-header">
-                                                                    <h4>Pagos</h4>
+                                                                <div className="details-card observaciones-cliente">
+                                                                    <div className="observaciones-header">
+                                                                        <h4>Pagos</h4>
+                                                                    </div>
+                                                                    <ul>
+                                                                        {ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r =>
+                                                                            <li key={r.id}>RC{r.id}: {formatCurrency(r.valor)} ({r.metodo_pago}) - {r.estado === 'Confirmado' ? 'Confirmado' : 'Por confirmar'} {formatShortDate(r.fecha)}</li>
+                                                                        ) : <li>No hay pagos registrados.</li>}
+                                                                    </ul>
                                                                 </div>
-                                                                <ul>
-                                                                    {ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r =>
-                                                                        <li key={r.id}>RC{r.id}: {formatCurrency(r.valor)} ({r.metodo_pago}) - {r.estado === 'Confirmado' ? 'Confirmado' : 'Por confirmar'} {formatShortDate(r.fecha)}</li>
-                                                                    ) : <li>No hay pagos registrados.</li>}
-                                                                </ul>
-                                                            </div>
-                                                            <div className="details-card observaciones-cliente">
-                                                                <div className="observaciones-header">
-                                                                    <h4>Remisiones</h4>
-                                                                    <button className="btn-icon" onClick={() => setShowRemisionModal(true)}><FaPlus /></button>
+                                                                <div className="details-card observaciones-cliente">
+                                                                    <div className="observaciones-header">
+                                                                        <h4>Remisiones</h4>
+                                                                        <button className="btn-icon" onClick={() => setShowRemisionModal(true)}><FaPlus /></button>
+                                                                    </div>
+                                                                    <ul>
+                                                                        {ventaDetails.remisiones.length > 0 ? ventaDetails.remisiones.map(r =>
+                                                                            <li key={r.codigo}>{r.codigo} - {formatShortDate(r.fecha)}</li>
+                                                                        ) : <li>No hay remisiones registradas.</li>}
+                                                                    </ul>
                                                                 </div>
-                                                                <ul>
-                                                                    {ventaDetails.remisiones.length > 0 ? ventaDetails.remisiones.map(r =>
-                                                                        <li key={r.codigo}>{r.codigo} - {formatShortDate(r.fecha)}</li>
-                                                                    ) : <li>No hay remisiones registradas.</li>}
-                                                                </ul>
                                                             </div>
-                                                        </div>
                                                         </div>
                                                         <div className="observaciones-wrapper">
                                                             <div className="details-card observaciones-cliente">
-                                                              <div className="observaciones-header">
-                                                                <h4>Observaciones Cliente</h4>
-                                                                <button className="btn-icon" onClick={() => setShowObservacionClienteModal(true)}><FaPlus /></button>
-                                                              </div>
-                                                              <ul>{(ventaDetails.cliente.observaciones || []).length > 0 ? ventaDetails.cliente.observaciones.map(o => <li key={o.id}>{o.texto}</li>) : <li>No hay.</li>}</ul>
+                                                                <div className="observaciones-header">
+                                                                    <h4>Observaciones Cliente</h4>
+                                                                    <button className="btn-icon" onClick={() => setShowObservacionClienteModal(true)}><FaPlus /></button>
+                                                                </div>
+                                                                <ul>{(ventaDetails.cliente.observaciones || []).length > 0 ? ventaDetails.cliente.observaciones.map(o => <li key={o.id}>{o.texto}</li>) : <li>No hay.</li>}</ul>
                                                             </div>
                                                             <div className="details-card observaciones-venta">
-                                                              <div className="observaciones-header">
-                                                                <h4>Observaciones Venta</h4>
-                                                                <button className="btn-icon" onClick={() => setShowObservacionVentaModal(true)}><FaPlus /></button>
-                                                              </div>
-                                                              <ul>{(ventaDetails.observaciones_venta || []).length > 0 ? ventaDetails.observaciones_venta.map(o => <li key={o.id}>{o.texto}</li>) : <li>No hay.</li>}</ul>
+                                                                <div className="observaciones-header">
+                                                                    <h4>Observaciones Venta</h4>
+                                                                    <button className="btn-icon" onClick={() => setShowObservacionVentaModal(true)}><FaPlus /></button>
+                                                                </div>
+                                                                <ul>{(ventaDetails.observaciones_venta || []).length > 0 ? ventaDetails.observaciones_venta.map(o => <li key={o.id}>{o.texto}</li>) : <li>No hay.</li>}</ul>
                                                             </div>
                                                         </div>
                                                         <div className="details-card pedidos-info">
-                                                          <div className="pedidos-header">
-                                                            <h4>Órdenes de Pedido Asociadas</h4>
-                                                            {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
-                                                              <button className="btn-primary" onClick={() => { setShowEditSaleModal(true); setEditSaleData(ventaDetails); }}><FaEdit /> Editar Venta</button>
-                                                            )}
-                                                          </div>
-                                                           <table className="data-table nested-ordenes-table">
-                                                              <thead>
-                                                                  <tr>
-                                                                      <th>O.P.</th>
-                                                                      <th>Proveedor</th>
-                                                                      <th>F. Pedido</th>
-                                                                      <th>F. Llegada</th>
-                                                                      <th>Tela</th>
-                                                                      <th>Estado</th>
-                                                                      <th>Observación</th>
-                                                                      <th></th>
-                                                                  </tr>
-                                                              </thead>
-                                                              <tbody>
-                                                                {ventaDetails.ordenes_pedido.length > 0 ? ventaDetails.ordenes_pedido.map(op => (
-                                                                    <React.Fragment key={`nested-op-${op.id}`}>
-                                                                        <tr>
-                                                                            <td>{op.id}</td>
-                                                                            <td>{op.proveedor_nombre}</td>
-                                                                            <td>{formatDate(op.fecha_pedido)}</td>
-                                                                            <td>{formatDate(op.fecha_esperada)}</td>
-                                                                            <td><span className={`status-badge ${getStatusClass(op.tela)}`}>{op.tela}</span></td>
-                                                                            <td><span className={`status-badge ${getStatusClass(op.estado)}`}>{capitalizeEstado(op.estado)}</span></td>
-                                                                            <td>{op.observacion || 'N/A'}</td>
-                                                                            <td className="td-accion">
-                                                                                <button className="btn-icon" onClick={() => handleExpandNestedOrder(op.id)}>
-                                                                                    <FaChevronDown style={{ transform: expandedNestedOrderId === op.id ? 'rotate(180deg)' : 'none' }} />
-                                                                                </button>
-                                                                            </td>
-                                                                        </tr>
-                                                                        {expandedNestedOrderId === op.id && (
-                                                                            <tr className="nested-expanded-row">
-                                                                                <td colSpan="8">
-                                                                                    {loadingNestedDetails ? <div className="loading-container-small"><div className="loader"></div></div>
-                                                                                    : nestedOrderDetails ? (
-                                                                                        <div className="nested-order-preview">
-                                                                                            <h5>Productos del Pedido #{op.id}</h5>
-                                                                                            <ul>
-                                                                                                {nestedOrderDetails.map((det, i) => (
-                                                                                                    <li key={i}>{det.cantidad}x {det.referencia} - {det.especificaciones}</li>
-                                                                                                ))}
-                                                                                            </ul>
-                                                                                        </div>
-                                                                                    ) : <div className="error-cell">No se encontraron detalles.</div>}
+                                                            <div className="pedidos-header">
+                                                                <h4>Órdenes de Pedido Asociadas</h4>
+                                                                {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                                                                    <button className="btn-primary" onClick={() => { setShowEditSaleModal(true); setEditSaleData(ventaDetails); }}><FaEdit /> Editar Venta</button>
+                                                                )}
+                                                            </div>
+                                                            <table className="data-table nested-ordenes-table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>O.P.</th>
+                                                                        <th>Proveedor</th>
+                                                                        <th>F. Pedido</th>
+                                                                        <th>F. Llegada</th>
+                                                                        <th>Tela</th>
+                                                                        <th>Estado</th>
+                                                                        <th>Observación</th>
+                                                                        <th></th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {ventaDetails.ordenes_pedido.length > 0 ? ventaDetails.ordenes_pedido.map(op => (
+                                                                        <React.Fragment key={`nested-op-${op.id}`}>
+                                                                            <tr>
+                                                                                <td>{op.id}</td>
+                                                                                <td>{op.proveedor_nombre}</td>
+                                                                                <td>{formatDate(op.fecha_pedido)}</td>
+                                                                                <td>{formatDate(op.fecha_esperada)}</td>
+                                                                                <td><span className={`status-badge ${getStatusClass(op.tela)}`}>{op.tela}</span></td>
+                                                                                <td><span className={`status-badge ${getStatusClass(op.estado)}`}>{capitalizeEstado(op.estado)}</span></td>
+                                                                                <td>{op.observacion || 'N/A'}</td>
+                                                                                <td className="td-accion">
+                                                                                    <button className="btn-icon" onClick={() => handleExpandNestedOrder(op.id)}>
+                                                                                        <FaChevronDown style={{ transform: expandedNestedOrderId === op.id ? 'rotate(180deg)' : 'none' }} />
+                                                                                    </button>
                                                                                 </td>
                                                                             </tr>
-                                                                        )}
-                                                                    </React.Fragment>
-                                                                )) : <tr><td colSpan="8" className="empty-cell">No hay órdenes asociadas.</td></tr>}
-                                                              </tbody>
-                                                          </table>
+                                                                            {expandedNestedOrderId === op.id && (
+                                                                                <tr className="nested-expanded-row">
+                                                                                    <td colSpan="8">
+                                                                                        {loadingNestedDetails ? <div className="loading-container-small"><div className="loader"></div></div>
+                                                                                            : nestedOrderDetails ? (
+                                                                                                <div className="nested-order-preview">
+                                                                                                    <h5>Productos del Pedido #{op.id}</h5>
+                                                                                                    <ul>
+                                                                                                        {nestedOrderDetails.map((det, i) => (
+                                                                                                            <li key={i}>{det.cantidad}x {det.referencia} - {det.especificaciones}</li>
+                                                                                                        ))}
+                                                                                                    </ul>
+                                                                                                </div>
+                                                                                            ) : <div className="error-cell">No se encontraron detalles.</div>}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </React.Fragment>
+                                                                    )) : <tr><td colSpan="8" className="empty-cell">No hay órdenes asociadas.</td></tr>}
+                                                                </tbody>
+                                                            </table>
                                                         </div>
                                                     </div>
-                                                ) : <div className="error-cell">No se pudieron cargar los detalles.</div> }
+                                                ) : <div className="error-cell">No se pudieron cargar los detalles.</div>}
                                             </td>
                                         </tr>
                                     )}
@@ -618,8 +622,8 @@ const Ventas = () => {
                 </table>
             </div>
 
-            
-        <Modal
+
+            <Modal
                 show={showObservacionClienteModal}
                 onClose={() => setShowObservacionClienteModal(false)}
                 title="Agregar Observación al Cliente"

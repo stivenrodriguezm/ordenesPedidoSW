@@ -23,6 +23,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         id: saleData.id,
         cliente_id: saleData.cliente.id,
         fecha_venta: saleData.fecha_venta,
+        fecha_entrega: saleData.fecha_entrega || '', // Add fecha_entrega
         vendedor_id: saleData.vendedor || '',
         valor_total: parseInt(saleData.valor_total),
         estado: saleData.estado,
@@ -33,10 +34,10 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
   // --- Permissions Logic ---
   const isAuxiliar = usuario?.role?.toLowerCase() === 'auxiliar';
-  
+
   // Rule 1: Disable 'Estado' select if the sale is already 'entregada' for an auxiliar user.
   const isEstadoDisabled = isAuxiliar && formData.estado.trim().toLowerCase() === 'entregado';
-  
+
   // Rule 2: Disable 'Estado Pedidos' checkbox if it's already true for an auxiliar user.
   const isEstadoPedidosDisabled = isAuxiliar && formData.estado_pedidos;
 
@@ -56,22 +57,23 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     let ventaPayload = {};
 
     if (isAuxiliar) {
-        ventaPayload = {
-            estado: formData.estado,
-            estado_pedidos: formData.estado_pedidos,
-        };
+      ventaPayload = {
+        estado: formData.estado,
+        estado_pedidos: formData.estado_pedidos,
+      };
     } else {
-        ventaPayload = {
-            fecha_venta: formData.fecha_venta,
-            vendedor: formData.vendedor_id,
-            valor_total: parseFloat(formData.valor_total),
-            estado: formData.estado,
-            estado_pedidos: formData.estado_pedidos,
-        };
+      ventaPayload = {
+        fecha_venta: formData.fecha_venta,
+        fecha_entrega: formData.fecha_entrega || null, // Include fecha_entrega
+        vendedor: formData.vendedor_id,
+        valor_total: parseFloat(formData.valor_total),
+        estado: formData.estado,
+        estado_pedidos: formData.estado_pedidos,
+      };
     }
 
     const payload = {
@@ -111,6 +113,10 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isAuxiliar} />
         </div>
         <div className="form-group">
+          <label>Fecha de Entrega:</label>
+          <input type="date" name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isAuxiliar} />
+        </div>
+        <div className="form-group">
           <label>Vendedor:</label>
           <select name="vendedor_id" value={formData.vendedor_id} onChange={handleChange} required disabled={isAuxiliar}>
             <option value="">Seleccionar vendedor</option>
@@ -125,11 +131,11 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         </div>
         <div className="form-group">
           <label>Estado:</label>
-          <select 
-            name="estado" 
-            value={formData.estado} 
-            onChange={handleChange} 
-            required 
+          <select
+            name="estado"
+            value={formData.estado}
+            onChange={handleChange}
+            required
             disabled={isEstadoDisabled}
           >
             {availableEstados.map(estado => (
