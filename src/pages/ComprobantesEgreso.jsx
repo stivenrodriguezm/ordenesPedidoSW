@@ -222,7 +222,7 @@ const ComprobantesEgreso = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container comprobantes-page-wrapper">
       <AppNotification 
         message={notification.message}
         type={notification.type}
@@ -249,8 +249,8 @@ const ComprobantesEgreso = () => {
           <button className="btn-primary" onClick={handleOpenCreateModal}><FaPlus /> Nuevo Comprobante</button>
         </div>
       </div>
-      <div className="table-container">
-        <table className="data-table ce-table">
+      <div className="comprobantes-container">
+        <table className="comprobantes-table">
           <thead>
             <tr>
               <th className="th-ce-id">CE</th>

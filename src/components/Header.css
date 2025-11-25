@@ -15,6 +15,7 @@
   z-index: 1000;
   padding: 0 var(--header-padding);
   box-sizing: border-box;
+  transition: width 0.3s ease, left 0.3s ease;
 }
 
 .header-content {
@@ -23,6 +24,21 @@
   align-items: center;
   height: 100%;
   width: 100%;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sidebar-toggle {
+  display: none; /* Oculto por defecto */
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-text-primary);
 }
 
 .header-title {
@@ -136,4 +152,17 @@
     text-decoration: none;
     cursor: pointer;
     font-weight: 600;
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+  .header {
+    width: 100%;
+    left: 0;
+    padding: 0 1.5rem;
+  }
+
+  .sidebar-toggle {
+    display: block;
+  }
 }

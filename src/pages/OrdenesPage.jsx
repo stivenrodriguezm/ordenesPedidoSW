@@ -306,8 +306,8 @@ const OrdenesPage = () => {
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="data-table ordenes-table">
+      <div className="ordenes-container">
+        <table className="ordenes-table">
           <thead>
             <tr>
               <th className="th-op">O.P.</th>

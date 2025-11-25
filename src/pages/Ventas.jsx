@@ -442,8 +442,8 @@ const Ventas = () => {
                 </div>
             </div>
 
-            <div className="table-container">
-                <table className="data-table ventas-table">
+            <div className="ventas-container">
+                <table className="ventas-table">
                     <thead>
                         <tr>
                             <th className="th-oc">O.C.</th>

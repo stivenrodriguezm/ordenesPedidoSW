@@ -150,43 +150,72 @@ function ProveedoresPage() {
         </button>
       </div>
 
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th className="th-empresa sortable" onClick={() => requestSort('nombre_empresa')}>
-                <span>Empresa</span> {getSortIcon('nombre_empresa')}
-              </th>
-              <th className="th-encargado sortable" onClick={() => requestSort('nombre_encargado')}>
-                <span>Encargado</span> {getSortIcon('nombre_encargado')}
-              </th>
-              <th className="th-contacto sortable" onClick={() => requestSort('contacto')}>
-                <span>Contacto</span> {getSortIcon('contacto')}
-              </th>
-              <th className="th-editar">Editar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoadingProveedores ? (
-              <tr><td colSpan="4"><div className="loading-container"><div className="loader"></div></div></td></tr>
-            ) : sortedProveedores.length > 0 ? (
-              sortedProveedores.map((proveedor) => (
-                <tr key={proveedor.id}>
-                  <td className="td-empresa">{proveedor.nombre_empresa}</td>
-                  <td className="td-encargado">{proveedor.nombre_encargado}</td>
-                  <td className="td-contacto">{proveedor.contacto}</td>
-                  <td className="td-editar">
-                    <button className="btn-icon" onClick={() => handleOpenModal(proveedor)}>
-                      <FaEdit />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr><td colSpan="4" className="empty-cell">No se encontraron proveedores.</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="proveedores-container">
+        {/* Desktop View: Table */}
+        <div className="desktop-view">
+          <table className="proveedores-table">
+            <thead>
+              <tr>
+                <th className="th-empresa sortable" onClick={() => requestSort('nombre_empresa')}>
+                  <span>Empresa</span> {getSortIcon('nombre_empresa')}
+                </th>
+                <th className="th-encargado sortable" onClick={() => requestSort('nombre_encargado')}>
+                  <span>Encargado</span> {getSortIcon('nombre_encargado')}
+                </th>
+                <th className="th-contacto sortable" onClick={() => requestSort('contacto')}>
+                  <span>Contacto</span> {getSortIcon('contacto')}
+                </th>
+                <th className="th-editar">Editar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoadingProveedores ? (
+                <tr><td colSpan="4"><div className="loading-container"><div className="loader"></div></div></td></tr>
+              ) : sortedProveedores.length > 0 ? (
+                sortedProveedores.map((proveedor) => (
+                  <tr key={proveedor.id}>
+                    <td className="td-empresa" data-label="Empresa">{proveedor.nombre_empresa}</td>
+                    <td className="td-encargado" data-label="Encargado">{proveedor.nombre_encargado}</td>
+                    <td className="td-contacto" data-label="Contacto">{proveedor.contacto}</td>
+                    <td className="td-editar" data-label="Editar">
+                      <button className="btn-icon" onClick={() => handleOpenModal(proveedor)}>
+                        <FaEdit />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="4" className="empty-cell">No se encontraron proveedores.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile View: Cards */}
+        <div className="mobile-view">
+          {isLoadingProveedores ? (
+            <div className="loading-container"><div className="loader"></div></div>
+          ) : sortedProveedores.length > 0 ? (
+            sortedProveedores.map((proveedor) => (
+              <div key={proveedor.id} className="card">
+                <div className="card-body">
+                  <h4 className="card-title">{proveedor.nombre_empresa}</h4>
+                  <div className="card-details">
+                    <p><strong>Encargado:</strong> {proveedor.nombre_encargado}</p>
+                    <p><strong>Contacto:</strong> {proveedor.contacto}</p>
+                  </div>
+                </div>
+                <div className="card-footer">
+                  <button className="btn-icon" onClick={() => handleOpenModal(proveedor)}>
+                    <FaEdit />
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-cell">No se encontraron proveedores.</div>
+          )}
+        </div>
       </div>
       <ProveedorModal
         isOpen={isModalOpen}

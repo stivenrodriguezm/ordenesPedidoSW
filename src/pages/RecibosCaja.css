@@ -1,5 +1,4 @@
-/* Hereda estilos globales de index.css */
-
+/* Estilos globales y de header (similar a ComprobantesEgreso) */
 .page-header .filters-group {
   display: flex;
   align-items: center;
@@ -15,10 +14,10 @@
 .page-header .search-input,
 .page-header .filters-group input[type="date"],
 .page-header .filters-group select {
-  padding: 0.75rem 1rem; /* Ajustado a 0.75rem */
+  padding: 0.75rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  font-size: 0.95rem; /* Ajustado a 0.95rem */
+  font-size: 0.95rem;
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -26,7 +25,7 @@
 
 .page-header .search-input { min-width: 200px; }
 .page-header .filters-group input[type="date"] { min-width: 130px; }
-.page-header .filters-group select { min-width: 180px; } /* Aumentado de 150px a 180px */
+.page-header .filters-group select { min-width: 180px; }
 
 .page-header .search-input:focus,
 .page-header .filters-group input[type="date"]:focus,
@@ -47,27 +46,40 @@
 .btn-secondary:hover { border-color: var(--color-border-hover); background-color: #f8f9fa; }
 .btn-icon-only { padding: 0.6rem !important; width: 44px; height: 44px; justify-content: center; }
 
+/* Container */
+.recibos-container {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
 /* Estilos de la tabla de Recibos */
-.recibos-caja-table {
+.recibos-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.recibos-caja-table th, .recibos-caja-table td {
-  padding: 1rem 1.25rem; /* Ajustado a 1rem 1.25rem */
+.recibos-table th, .recibos-table td {
+  padding: 1rem 1.25rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
-  vertical-align: middle; /* Añadido para consistencia */
+  vertical-align: middle;
 }
 
-.recibos-caja-table th {
+.recibos-table th {
   background-color: #f8f9fa;
   color: var(--color-text-secondary);
   font-weight: 600;
-  font-size: 0.8rem; /* Ajustado a 0.8rem */
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.recibos-table tbody tr:hover {
+  background-color: var(--color-primary-light-bg);
 }
 
 /* Anchos de columna */
@@ -76,9 +88,9 @@
 .rc-th-venta, .rc-td-venta { width: 8%; }
 .rc-th-metodo, .rc-td-metodo { width: 15%; }
 .rc-th-valor, .rc-td-valor { width: 12%; text-align: right; }
-.rc-th-nota, .rc-td-nota { width: 20%; /* Reducido de 25% */ white-space: normal; }
+.rc-th-nota, .rc-td-nota { width: 20%; white-space: normal; }
 .rc-th-estado, .rc-td-estado { width: 10%; }
-.rc-th-acciones, .rc-td-acciones { width: 15%; /* Aumentado de 10% */ text-align: center; }
+.rc-th-acciones, .rc-td-acciones { width: 15%; text-align: center; }
 
 /* Clase para valores monetarios */
 .td-valor {
@@ -88,19 +100,19 @@
 }
 
 .status-badge {
-  display: inline-flex; /* Cambiado a inline-flex */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 12px; /* Ajustado a 5px 12px */
-  border-radius: 9999px; /* Forma de píldora */
+  padding: 5px 12px;
+  border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
-  line-height: 1.2; /* Añadido para consistencia */
+  line-height: 1.2;
   white-space: nowrap;
-  text-transform: capitalize; /* Añadido para consistencia */
+  text-transform: capitalize;
 }
-.status-badge.pendiente { background-color: #fff3cd; color: #664d03; } /* Colores existentes */
-.status-badge.confirmado { background-color: #d1e7dd; color: #0f5132; } /* Colores existentes */
+.status-badge.pendiente { background-color: #fff3cd; color: #664d03; }
+.status-badge.confirmado { background-color: #d1e7dd; color: #0f5132; }
 
 /* Modal de Confirmación */
 .modal-actions {
@@ -110,4 +122,40 @@
   margin-top: 1.5rem;
   border-top: 1px solid var(--color-border);
   padding-top: 1rem;
+}
+
+/* === Responsive Media Query === */
+@media (max-width: 768px) {
+  /* Header */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+  .page-header .search-input,
+  .page-header .filters-group input[type="date"],
+  .page-header .filters-group select {
+    width: 100%;
+    min-width: 0;
+  }
+  .page-header .actions-group {
+    justify-content: flex-start;
+  }
+
+  /* Table */
+  .recibos-container {
+    max-width: 100%;
+    overflow-x: hidden; /* Prevent container from scrolling */
+  }
+  .recibos-table {
+    width: 100%;
+    table-layout: auto;
+  }
+  .recibos-table th, .recibos-table td {
+      white-space: normal; /* Allow text to wrap */
+      padding: 0.8rem 0.5rem;
+  }
+  .rc-th-fecha, .rc-td-fecha {
+      min-width: 120px; /* Ensure enough space for date format */
+  }
 }

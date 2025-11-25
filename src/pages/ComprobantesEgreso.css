@@ -11,6 +11,7 @@
 .page-header .actions-group {
   display: flex;
   gap: 0.75rem;
+
 }
 
 .page-header .search-input,
@@ -71,21 +72,21 @@
 }
 
 /* Estilos de la tabla de Comprobantes de Egreso */
-.data-table {
+.comprobantes-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.data-table th,
-.data-table td {
+.comprobantes-table th,
+.comprobantes-table td {
   padding: 1rem 1.25rem; /* Ajustado a 1rem 1.25rem */
   text-align: left;
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle; /* Añadido para consistencia */
 }
 
-.data-table th {
+.comprobantes-table th {
   background-color: #f8f9fa;
   color: var(--color-text-secondary);
   font-weight: 600;
@@ -94,15 +95,15 @@
   letter-spacing: 0.05em;
 }
 
-.data-table tbody tr:last-child td {
+.comprobantes-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.data-table tbody tr {
+.comprobantes-table tbody tr {
   transition: background-color 0.15s ease-out;
 }
 
-.data-table tbody tr:hover {
+.comprobantes-table tbody tr:hover {
   background-color: var(--color-primary-light-bg);
 }
 
@@ -131,6 +132,14 @@
 }
 
 /* Paginación */
+.comprobantes-container {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
 .pagination-container {
   padding: 1.5rem 0; /* Ajustado a 1.5rem 0 */
   display: flex;
@@ -159,4 +168,41 @@
   font-size: 0.9rem;
   color: var(--color-text-secondary);
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .comprobantes-page-wrapper {
+    overflow-x: hidden;
+  }
+
+  .comprobantes-container {
+    max-width: 100%; /* Constrain container width - Keep this */
+  }
+  .comprobantes-table {
+    width: 100%; /* Make table take full width */
+    table-layout: auto; /* Allow columns to shrink naturally */
+  }
+  .th-ce-fecha, .td-ce-fecha {
+    min-width: 120px; /* Ensure enough space for date format */
+    white-space: nowrap; /* Force date to a single line */
+  }
+
+  /* Responsive Header Styles */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch; /* Make children take full width */
+    gap: 1.5rem; /* Add space between filter and action groups */
+    max-width: 90vw; /* Constrain header width */
+  }
+
+  .page-header .search-input,
+  .page-header .filters-group input[type="date"],
+  .page-header .filters-group select {
+    width: 100%;
+    min-width: 0; /* Remove min-width for mobile */
+  }
+
+  .page-header .actions-group {
+    justify-content: flex-start; /* Align buttons to the left */
+  }
 }

@@ -194,7 +194,7 @@ const Caja = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container caja-page-wrapper">
       <AppNotification 
         message={notification.message}
         type={notification.type}

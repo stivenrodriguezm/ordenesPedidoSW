@@ -210,3 +210,32 @@
   font-weight: 500;
   color: var(--color-text-secondary);
 }
+
+/* === Responsive Media Query for Stats === */
+@media (max-width: 768px) {
+  .caja-page-wrapper {
+    overflow-x: hidden; /* Prevent overall page overflow */
+  }
+
+  .stats-container {
+    max-width: 90vw; /* Ensure container respects viewport width */
+    display: flex; /* Override grid to allow simpler stacking */
+    flex-direction: column; /* Stack stats vertically */
+    gap: 1rem;
+    margin-bottom: 1rem; /* Adjust margin for mobile */
+  }
+
+  .stats-container .stat-card:not(.saldo) {
+    display: none; /* Hide 'Ingresos' and 'Egresos' */
+  }
+
+  .stat-card {
+    padding: 1rem; /* Reduce padding for mobile */
+  }
+  .stat-card h4 {
+    font-size: 0.8rem; /* Smaller font for mobile header */
+  }
+  .stat-card p {
+    font-size: 1.5rem; /* Reduce font size for mobile value */
+  }
+}

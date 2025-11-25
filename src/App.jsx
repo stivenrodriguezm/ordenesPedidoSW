@@ -1,6 +1,6 @@
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
-import React, { useContext, useEffect } from "react";
-import PrivateRoute from "./PrivateRoute"; 
+import React, { useContext, useEffect, useState } from "react";
+import PrivateRoute from "./PrivateRoute";
 import LoginPage from "./pages/LoginPage";
 import ReferenciasPage from "./pages/ReferenciasPage";
 import ProveedoresPage from "./pages/ProveedoresPage";
@@ -23,11 +23,17 @@ import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
 const MainLayout = ({ children }) => {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!isSidebarOpen);
+  };
+
   return (
-    <div className="app-container">
-      <Sidebar />
+    <div className={`app-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
-        <Header />
+        <Header onMenuClick={toggleSidebar} />
         <main>{children}</main>
       </div>
     </div>

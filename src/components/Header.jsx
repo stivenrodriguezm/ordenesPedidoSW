@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaSignOutAlt, FaUser } from "react-icons/fa";
+import { FaSignOutAlt, FaUser, FaBars } from "react-icons/fa";
 import { useQueryClient } from "@tanstack/react-query"; // Importar el hook
 import "./Header.css";
 import { AppContext } from "../AppContext";
 
-function Header() {
+function Header({ onMenuClick }) {
   const { usuario, setUsuario } = useContext(AppContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -59,6 +59,9 @@ function Header() {
     <header className="header">
       <div className="header-content">
         <div className="header-left">
+          <button className="sidebar-toggle" onClick={onMenuClick}>
+            <FaBars />
+          </button>
           <h2 className="header-title">{getTitle()}</h2>
         </div>
         

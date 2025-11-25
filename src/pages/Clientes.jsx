@@ -7,9 +7,6 @@ import { FaChevronDown, FaEdit, FaPlus, FaFileExport } from 'react-icons/fa';
 import API from '../services/api';
 
 const EditClienteModal = ({ cliente, onSave, onClose }) => {
-  // DEBUG: Log the prop received by the modal
-  console.log('[EditClienteModal] Received cliente prop:', cliente);
-
   const [formData, setFormData] = useState({
     id: cliente.id,
     nombre: cliente.nombre || '',
@@ -38,8 +35,6 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
-          {/* DEBUG: Log the formData state */}
-          {console.log('[EditClienteModal] formData state:', formData)}
           <div className="form-group">
             <label>Nombre:</label>
             <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required />
@@ -125,11 +120,6 @@ const Clientes = () => {
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // DEBUG: Log the context data
-  useEffect(() => {
-    console.log('[Clientes] Data from context:', contextClientes);
-  }, [contextClientes]);
-
   const pageSize = 30;
 
   useEffect(() => {
@@ -148,7 +138,7 @@ const Clientes = () => {
 
     setFilteredClientes(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize));
     setTotalPages(Math.ceil(filtered.length / pageSize) || 1);
-  }, [contextClientes, searchTerm, currentPage]);
+  }, [contextClientes, searchTerm, currentPage, pageSize]);
 
   const handleExpandCliente = async (clienteId) => {
     if (expandedClienteId === clienteId) {
@@ -156,7 +146,6 @@ const Clientes = () => {
       return;
     }
 
-    console.log(`[handleExpandCliente] Expanding client with ID: ${clienteId}`);
     setExpandedClienteId(clienteId);
     setLoadingDetails(true);
     setExpandedData(null);
@@ -166,9 +155,6 @@ const Clientes = () => {
         API.get(`/clientes/${clienteId}/`),
         API.get(`/clientes/${clienteId}/ventas-observaciones/`)
       ]);
-
-      console.log('[handleExpandCliente] API response for /clientes/id:', clienteRes.data);
-      console.log('[handleExpandCliente] API response for /ventas-observaciones/:', detailsRes.data);
       
       const mergedData = {
         ...clienteRes.data,
@@ -176,12 +162,10 @@ const Clientes = () => {
         observaciones_cliente: detailsRes.data.observaciones_cliente
       };
       
-      console.log('[handleExpandCliente] Merged data for state:', mergedData);
       setExpandedData(mergedData);
 
     } catch (error) {
       setErrorMessage('Error al cargar los detalles del cliente.');
-      console.error('[handleExpandCliente] Error:', error);
     } finally {
       setLoadingDetails(false);
     }
@@ -258,101 +242,165 @@ const Clientes = () => {
         )}
       </div>
 
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th className="th-id">ID</th>
-              <th className="th-nombre">Nombre</th>
-              <th className="th-cedula">Cédula</th>
-              <th className="th-correo">Correo</th>
-              <th className="th-direccion">Dirección</th>
-              <th className="th-ciudad">Ciudad</th>
-              <th className="th-telefono">Teléfono 1</th>
-              <th className="th-telefono">Teléfono 2</th>
-              <th className="th-accion"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoadingClientes ? (
-              <tr><td colSpan="9"><div className="loading-container"><div className="loader"></div></div></td></tr>
-            ) : filteredClientes.length > 0 ? (
-              filteredClientes.map((cliente) => {
-                // DEBUG: Log the client object being rendered in the table
-                console.log('[Clientes Table] Rendering cliente:', cliente);
-                return (
-                <React.Fragment key={cliente.id}>
-                  <tr>
-                    <td className="td-id">{cliente.id}</td>
-                    <td className="td-nombre">{cliente.nombre}</td>
-                    <td className="td-cedula">{cliente.cedula}</td>
-                    <td className="td-correo">{cliente.correo}</td>
-                    <td className="td-direccion">{cliente.direccion}</td>
-                    <td className="td-ciudad">{cliente.ciudad}</td>
-                    <td className="td-telefono">{cliente.telefono1}</td>
-                    <td className="td-telefono">{cliente.telefono2}</td>
-                    <td className="td-accion td-action-button">
-                      <button className="btn-icon" onClick={() => handleExpandCliente(cliente.id)}>
-                        <FaChevronDown style={{ transform: expandedClienteId === cliente.id ? 'rotate(180deg)' : 'none' }} />
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedClienteId === cliente.id && (
-                    <tr className="expanded-row">
-                      <td colSpan="9">
-                        {/* DEBUG: Log the expandedData state before rendering details */}
-                        {console.log('[Clientes Expanded View] expandedData:', expandedData)}
-                        {loadingDetails ? (
-                          <div className="loading-container"><div className="loader"></div></div>
-                        ) : expandedData ? (
-                          <div className="details-view flex flex-col">
-                            <div className="flex flex-row gap-4 w-full">
-                                <div className="client-summary-details details-section flex-1"> {/* Detalles del Cliente */}
-                                    <h4>Detalles del Cliente</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-gray-700 text-sm">
-                                        <p><strong>Nombre:</strong> {expandedData.nombre}</p>
-                                        <p><strong>Correo:</strong> {expandedData.correo || 'N/A'}</p>
-                                        <p><strong>Dirección:</strong> {expandedData.direccion}</p>
-                                        <p><strong>Teléfono 1:</strong> {expandedData.telefono1}</p>
-                                        <p><strong>Teléfono 2:</strong> {expandedData.telefono2 || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="details-section flex-1"> {/* Compras Recientes */}
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Compras Recientes</h4>
-                                    <ul>
-                                        {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
-                                            <li key={venta.id}>
-                                                Venta #{venta.id} - {venta.estado}
-                                            </li>
-                                        )) : <li>No hay compras registradas.</li>}
-                                    </ul>
-                                </div>
-                                <div className="details-section flex-1"> {/* Observaciones */}
-                                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Observaciones</h4>
-                                    <ul>
-                                        {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
-                                            <li key={obs.id}>{obs.texto}</li>
-                                        )) : <li>No hay observaciones.</li>}
-                                    </ul>
-                                </div>
-                            </div>
-                            <div className="flex flex-row justify-end space-x-2 flex-[0_0_20%]"> {/* Adjusted flex property */}
-                                <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
-                                <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
-                            </div>
-                          </div>
-                        ) : null}
+      <div className="clientes-container">
+        {/* Desktop View */}
+        <div className="desktop-view">
+          <table className="clientes-table">
+            <thead>
+              <tr>
+                <th className="th-id">ID</th>
+                <th className="th-nombre">Nombre</th>
+                <th className="th-cedula">Cédula</th>
+                <th className="th-correo">Correo</th>
+                <th className="th-direccion">Dirección</th>
+                <th className="th-ciudad">Ciudad</th>
+                <th className="th-telefono">Teléfono 1</th>
+                <th className="th-telefono th-telefono-2">Teléfono 2</th>
+                <th className="th-accion"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoadingClientes ? (
+                <tr><td colSpan="9"><div className="loading-container"><div className="loader"></div></div></td></tr>
+              ) : filteredClientes.length > 0 ? (
+                filteredClientes.map((cliente) => (
+                  <React.Fragment key={cliente.id}>
+                    <tr>
+                      <td className="td-id">{cliente.id}</td>
+                      <td className="td-nombre">{cliente.nombre}</td>
+                      <td className="td-cedula">{cliente.cedula}</td>
+                      <td className="td-correo">{cliente.correo}</td>
+                      <td className="td-direccion">{cliente.direccion}</td>
+                      <td className="td-ciudad">{cliente.ciudad}</td>
+                      <td className="td-telefono">{cliente.telefono1}</td>
+                      <td className="td-telefono td-telefono-2">{cliente.telefono2}</td>
+                      <td className="td-accion">
+                        <button className="btn-icon" onClick={() => handleExpandCliente(cliente.id)}>
+                          <FaChevronDown style={{ transform: expandedClienteId === cliente.id ? 'rotate(180deg)' : 'none' }} />
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-                );
-              })
-            ) : (
-              <tr><td colSpan="9" className="empty-cell">No se encontraron clientes.</td></tr>
-            )}
-          </tbody>
-        </table>
+                    {expandedClienteId === cliente.id && (
+                      <tr className="expanded-row">
+                        <td colSpan="9">
+                          {loadingDetails ? (
+                            <div className="loading-container"><div className="loader"></div></div>
+                          ) : expandedData ? (
+                            <div className="details-view">
+                              <div className="details-view-section">
+                                  <h4>Detalles del Cliente</h4>
+                                  <p><strong>Nombre:</strong> {expandedData.nombre}</p>
+                                  <p><strong>Correo:</strong> {expandedData.correo || 'N/A'}</p>
+                                  <p><strong>Dirección:</strong> {expandedData.direccion}</p>
+                                  <p><strong>Teléfono 1:</strong> {expandedData.telefono1}</p>
+                                  <p><strong>Teléfono 2:</strong> {expandedData.telefono2 || 'N/A'}</p>
+                              </div>
+                              <div className="details-view-section">
+                                  <h4>Compras Recientes</h4>
+                                  <ul>
+                                      {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
+                                          <li key={venta.id}>Venta #{venta.id} - {venta.estado}</li>
+                                      )) : <li>No hay compras registradas.</li>}
+                                  </ul>
+                              </div>
+                              <div className="details-view-section">
+                                  <h4>Observaciones</h4>
+                                  <ul>
+                                      {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
+                                          <li key={obs.id}>{obs.texto}</li>
+                                      )) : <li>No hay observaciones.</li>}
+                                  </ul>
+                              </div>
+                              <div className="details-view-actions">
+                                  <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
+                                  <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
+                              </div>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              ) : (
+                <tr><td colSpan="9" className="empty-cell">No se encontraron clientes.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Mobile View: Cards */}
+        <div className="mobile-view">
+          {isLoadingClientes ? (
+            <div className="loading-container"><div className="loader"></div></div>
+          ) : filteredClientes.length > 0 ? (
+            filteredClientes.map((cliente) => (
+              <div key={cliente.id} className={`card-clientes card ${expandedClienteId === cliente.id ? 'expanded' : ''}`}>
+                <div className="card-header" onClick={() => handleExpandCliente(cliente.id)}>
+                  <div className="card-header-info">
+                    <h4 className="card-title">{cliente.nombre}</h4>
+                    <p className="card-subtitle">C.C. {cliente.cedula}</p>
+                  </div>
+                  <button className="btn-icon">
+                    <FaChevronDown className="chevron-icon" />
+                  </button>
+                </div>
+                {expandedClienteId === cliente.id && (
+                  <div className="card-details-wrapper">
+                    {loadingDetails ? (
+                      <div className="loading-container"><div className="loader"></div></div>
+                    ) : expandedData ? (
+                      <div className="card-expanded-content">
+                        <div className="detail-item">
+                          <strong>Correo:</strong>
+                          <span>{expandedData.correo || 'N/A'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <strong>Dirección:</strong>
+                          <span>{expandedData.direccion}</span>
+                        </div>
+                        <div className="detail-item">
+                          <strong>Ciudad:</strong>
+                          <span>{expandedData.ciudad}</span>
+                        </div>
+                        <div className="detail-item">
+                          <strong>Teléfono 1:</strong>
+                          <span>{expandedData.telefono1}</span>
+                        </div>
+                        <div className="detail-item">
+                          <strong>Teléfono 2:</strong>
+                          <span>{expandedData.telefono2 || 'N/A'}</span>
+                        </div>
+                        <div className="details-section">
+                          <h4>Compras Recientes</h4>
+                          <ul>
+                            {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
+                                <li key={venta.id}>Venta #{venta.id} - {venta.estado}</li>
+                            )) : <li>No hay compras registradas.</li>}
+                          </ul>
+                        </div>
+                        <div className="details-section">
+                          <h4>Observaciones</h4>
+                          <ul>
+                            {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
+                                <li key={obs.id}>{obs.texto}</li>
+                            )) : <li>No hay observaciones.</li>}
+                          </ul>
+                        </div>
+                        <div className="card-actions">
+                           <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit/> Editar Cliente</button>
+                           <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus/> Agregar Observación</button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="empty-cell">No se encontraron clientes.</div>
+          )}
+        </div>
       </div>
 
       {showEditModal && expandedData && (

@@ -173,8 +173,8 @@ function ReferenciasPage() {
         </button>
       </div>
 
-      <div className="table-container">
-        <table className="data-table">
+      <div className="referencias-container">
+        <table className="referencias-table">
           <thead>
             <tr>
               <th className="th-ref-nombre sortable" onClick={() => requestSort('nombre')}>

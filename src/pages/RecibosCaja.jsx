@@ -289,8 +289,8 @@ const RecibosCaja = () => {
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="data-table recibos-caja-table">
+      <div className="recibos-container">
+        <table className="recibos-table">
           <thead>
             <tr>
               <th className="rc-th-rc">RC</th>

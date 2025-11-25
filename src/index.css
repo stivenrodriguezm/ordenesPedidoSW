@@ -78,6 +78,7 @@ body {
   margin-left: 260px; /* Nuevo ancho fijo del sidebar */
   padding: 2rem;
   padding-top: calc(70px + 2rem); /* Deja espacio para el Header fijo */
+  transition: margin-left 0.3s ease-in-out;
 }
 
 main {
@@ -212,4 +213,13 @@ main {
   height: 1.2em;
   width: 1.2em;
   accent-color: var(--color-primary);
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1.5rem;
+    padding-top: calc(70px + 1.5rem);
+  }
 }

@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice } from 'react-icons/fa';
+import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes } from 'react-icons/fa';
 import { AppContext } from "../AppContext";
 import "./Sidebar.css";
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   const { usuario } = useContext(AppContext);
 
   const navSections = [
@@ -38,30 +38,40 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <NavLink to="/" className="logo-link">LOTTUS</NavLink>
-      </div>
-      <nav className="sidebar-nav">
-        {navSections.map(section => (
-          (section.roles.includes(usuario?.role.toLowerCase())) && (
-            <div key={section.title}>
-              <h3 className="nav-subtitle">{section.title}</h3>
-              <ul>
-                {section.items.map(item => (
-                  <li key={item.to}>
-                    <NavLink to={item.to} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-                      <div className="nav-icon">{item.icon}</div>
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )
-        ))}
-      </nav>
-    </aside>
+    <>
+      <aside className={`sidebar ${isOpen ? "open" : ""}`}>
+        <div className="sidebar-header">
+          <NavLink to="/" className="logo-link">LOTTUS</NavLink>
+          <button className="sidebar-close" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        <nav className="sidebar-nav">
+          {navSections.map(section => (
+            (section.roles.includes(usuario?.role.toLowerCase())) && (
+              <div key={section.title}>
+                <h3 className="nav-subtitle">{section.title}</h3>
+                <ul>
+                  {section.items.map(item => (
+                    <li key={item.to}>
+                      <NavLink 
+                        to={item.to} 
+                        className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+                        onClick={onClose}
+                      >
+                        <div className="nav-icon">{item.icon}</div>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          ))}
+        </nav>
+      </aside>
+      {isOpen && <div className="sidebar-backdrop" onClick={onClose}></div>}
+    </>
   );
 }
 

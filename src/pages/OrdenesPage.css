@@ -1,15 +1,45 @@
-/* ==========================================================================
-   1. AJUSTES TABLA PRINCIPAL Y ESTADOS (CORREGIDO)
-   ========================================================================== */
+/* Base container and table styles, adapted from Caja.css */
+.ordenes-container {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.ordenes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ordenes-table th,
+.ordenes-table td {
+  padding: 1rem 1.25rem; /* Copied from caja-table */
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle; /* Copied from caja-table */
+  white-space: nowrap; /* To enforce single line */
+  overflow: hidden; /* For ellipsis */
+  text-overflow: ellipsis; /* For ellipsis */
+}
+
+.ordenes-table th {
+  background-color: #f8f9fa; /* Copied from caja-table */
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 /* Elimina el efecto cebra y asegura fondo blanco para las filas */
 .ordenes-table > tbody > tr {
-    background-color: var(--color-surface) !important;
+    background-color: var(--color-surface);
 }
 
 /* Mantiene el efecto hover que ya tienes definido globalmente */
 .ordenes-table > tbody > tr:hover {
-    background-color: var(--color-primary-light-bg) !important;
+    background-color: var(--color-primary-light-bg);
 }
 
 /* Base para los indicadores de estado (badges sin punto) */
@@ -30,7 +60,6 @@
 .status-badge.en-proceso { color: #2b5b88; background-color: #e0eefd; }
 .status-badge.recibido { color: var(--color-success); background-color: #d1e7dd; }
 .status-badge.anulado { color: var(--color-destructive); background-color: #f8d7da; }
-
 .status-badge.atrasado { color: var(--color-destructive); background-color: #f8d7da; }
 
 /* --- Colores para Estado de la Tela (v2) --- */
@@ -39,7 +68,8 @@
 .ordenes-table .status-badge.en-fabrica { color: var(--color-success); background-color: #d1e7dd; } /* Verde */
 .ordenes-table .status-badge.sin-tela { color: var(--color-success); background-color: #d1e7dd; } /* Verde */
 
-/* Column Widths */
+/* Column Widths (Desktop) */
+.ordenes-table { table-layout: fixed; }
 .th-op, .td-op { width: 5%; }
 .th-proveedor, .td-proveedor { width: 15%; }
 .th-vendedor, .td-vendedor { width: 10%; }
@@ -54,7 +84,7 @@
 
 
 /* ==========================================================================
-   2. ESTILOS ORIGINALES RESTAURADOS (FILA EXPANDIDA Y PREVISUALIZACIÓN)
+   2. ESTILOS (FILA EXPANDIDA Y PREVISUALIZACIÓN)
    ========================================================================== */
 
 .expanded-row td {
@@ -70,13 +100,6 @@
   gap: 1rem;
 }
 
-.preview-actions {
-  width: 100%;
-  max-width: 850px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .order-preview {
   background-color: #fff;
   border: 1px solid var(--color-border);
@@ -84,7 +107,7 @@
   padding: 2.5rem;
   font-family: var(--font-body);
   width: 100%;
-  max-width: 850px; /* Ancho similar a un A4 */
+  max-width: 850px;
   box-shadow: var(--shadow-md);
 }
 
@@ -106,108 +129,49 @@
   letter-spacing: 2px;
 }
 
-.preview-order-id {
-  text-align: right;
-}
+.preview-order-id { text-align: right; }
+.preview-order-id h2 { font-size: 1.5rem; margin: 0; color: var(--color-text-primary); font-weight: 600; }
+.preview-order-id p { font-size: 1.1rem; margin-top: 0.25rem; color: var(--color-destructive); font-weight: 500; }
+.preview-info { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; font-size: 0.9rem; }
+.info-column p { margin: 0 0 0.5rem 0; color: var(--color-text-secondary); }
+.info-column p strong { color: var(--color-text-primary); font-weight: 600; margin-bottom: 0.25rem; }
+.preview-products, .preview-notes { margin-top: 2rem; }
+.preview-products h4, .preview-notes h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--color-text-primary); }
+.preview-notes p { font-size: 0.9rem; line-height: 1.6; color: var(--color-text-secondary); white-space: normal; border: 1px solid var(--color-border); padding: 1rem; border-radius: var(--border-radius); }
+.sub-table { width: 100%; border-collapse: collapse; }
+.ordenes-table .sub-table th, .ordenes-table .sub-table td { text-align: left; border-bottom: 1px solid var(--color-border); font-size: 0.9rem; }
+.sub-table th { font-weight: 600; color: var(--color-text-secondary); padding-bottom: 1rem; border-bottom: 2px solid var(--color-border); }
+.sub-table td { color: var(--color-text-primary); }
+.sub-table tbody tr:last-child td { border-bottom: none; }
+.tabla_expandida tr td { background-color: rgb(255, 255, 255); height: 35px; padding-left: 0px; }
+.td_cantidad, .td_referencia { padding-left: 50px !important; }
+.btn-editar-pedido { height: 40px; }
 
-.preview-order-id h2 {
-  font-size: 1.5rem;
-  margin: 0;
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
+/* === Responsive Media Query === */
+@media (max-width: 768px) {
+  /* Header */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+  .page-header .filters-group,
+  .page-header .actions-group {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .page-header .filters-group > * {
+    flex-grow: 1; /* Allow filters to grow and fill space */
+  }
 
-.preview-order-id p {
-  font-size: 1.1rem;
-  margin-top: 0.25rem;
-  color: var(--color-destructive);
-  font-weight: 500;
-}
-
-.preview-info {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  font-size: 0.9rem;
-}
-
-.info-column p {
-  margin: 0 0 0.5rem 0;
-  color: var(--color-text-secondary);
-}
-
-.info-column p strong {
-  color: var(--color-text-primary);
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.preview-products,
-.preview-notes {
-  margin-top: 2rem;
-}
-
-.preview-products h4,
-.preview-notes h4 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  color: var(--color-text-primary);
-}
-
-.preview-notes p {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-  white-space: normal;
-  border: 1px solid var(--color-border);
-  padding: 1rem;
-  border-radius: var(--border-radius);
-}
-
-.sub-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.ordenes-table th, .ordenes-table td {
-  padding: 1rem !important; /* Specific padding for ordenes table */
-}
-
-.ordenes-table .sub-table th, .ordenes-table .sub-table td {
-  padding: 1rem !important;
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.9rem;
-}
-
-.sub-table th {
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--color-border);
-}
-
-.sub-table td {
-  color: var(--color-text-primary);
-}
-
-.sub-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.tabla_expandida tr td{
-  background-color: rgb(255, 255, 255);
-  height: 35px;
-  padding-left: 0px;
-}
-
-.td_cantidad, 
-.td_referencia {
-  padding-left: 50px !important;
-}
-
-.btn-editar-pedido {
-  height: 40px;
+  /* Table - Re-implement Horizontal Scrolling */
+  .ordenes-container {
+    overflow-x: auto; /* Enable horizontal scrolling */
+    -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
+    /* Container keeps its desktop background/border/shadow */
+  }
+  .ordenes-table {
+    min-width: 1200px; /* Force table to be wide and scroll */
+    table-layout: fixed; /* Keep fixed layout for consistent column widths */
+  }
 }

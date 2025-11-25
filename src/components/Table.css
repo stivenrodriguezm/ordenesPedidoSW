@@ -1,31 +1,28 @@
-/* Hereda los estilos de .page-container, .page-header de index.css */
-
 /* ==========================================================================
-   Base Styles for Tables - Adapted for Proveedores
+   Base Styles for Tables
    ========================================================================== */
-.proveedores-container {
+.table-container {
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-sm);
-  overflow: hidden; /* Added from Table.css */
+  overflow: hidden;
 }
 
 /* ==========================================================================
-   Desktop View (Table) - Adapted for Proveedores
+   Desktop View (Table)
    ========================================================================== */
 .mobile-view {
   display: none;
 }
 
-.desktop-view .proveedores-table {
+.desktop-view .data-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.desktop-view .proveedores-table th,
-.desktop-view .proveedores-table td {
+.desktop-view .data-table th,
+.desktop-view .data-table td {
   padding: 1rem 1.5rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
@@ -34,7 +31,7 @@
   text-overflow: ellipsis;
 }
 
-.desktop-view .proveedores-table th {
+.desktop-view .data-table th {
   background-color: #f8f9fa;
   color: var(--color-text-secondary);
   font-weight: 600;
@@ -43,22 +40,16 @@
   letter-spacing: 0.05em;
 }
 
-.desktop-view .proveedores-table tbody tr:last-child td {
+.desktop-view .data-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.desktop-view .proveedores-table tbody tr:hover {
+.desktop-view .data-table tbody tr:hover {
   background-color: var(--color-primary-light-bg);
 }
 
-/* Anchos y estilos de columna - Proveedores Specific */
-.th-empresa, .td-empresa { width: 35%; font-weight: 500; }
-.th-encargado, .td-encargado { width: 30%; color: var(--color-text-secondary); }
-.th-contacto, .td-contacto { width: 25%; color: var(--color-text-secondary); }
-.th-editar, .td-editar { width: 10%; text-align: center; }
-
 /* ==========================================================================
-   Mobile View (Cards) - Media Query - Adapted for Proveedores
+   Mobile View (Cards) - Media Query
    ========================================================================== */
 @media (max-width: 768px) {
   .desktop-view {
@@ -69,26 +60,23 @@
     display: block;
   }
   
-  .proveedores-container { /* This one needs to be copied as is for mobile, as it's a wrapper */
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    border: none !important; /* Explicitly remove border */
-    overflow: visible !important; /* Explicitly set overflow */
+  .table-container {
+    background-color: transparent;
+    box-shadow: none;
+    border-radius: 0;
   }
 
-  .card { /* These are generic and should probably be in a components/card.css or kept here */
-    background-color: transparent; /* Remove background color */
-    border: none; /* Remove border */
-    border-radius: 0; /* Remove border-radius */
-    box-shadow: none; /* Remove box-shadow */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
     margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
     position: relative;
     padding: 1rem;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    overflow: visible; /* Ensure content is not hidden */
   }
 
   .card-body {

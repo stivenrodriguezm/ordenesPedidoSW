@@ -1,11 +1,22 @@
-/* Hereda estilos de .page-container, .page-header, .table-container, .btn-primary de index.css */
+/* Note: @import "../components/Table.css"; has been removed and its styles integrated below */
 
+/* ==========================================================================
+   Page-Specific Container and Global Styles
+   ========================================================================== */
 .clientes-page-container {
-  max-width: 1600px; /* Contenedor más ancho */
+  max-width: 1600px;
   margin: 0 auto;
 }
 
-.clientes-header .search-input {
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Search input and buttons */
+.search-input {
   padding: 0.75rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -15,8 +26,7 @@
   background-color: var(--color-surface);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
-.clientes-header .search-input:focus {
+.search-input:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-focus-shadow);
@@ -36,25 +46,74 @@
   font-weight: 600;
   transition: all 0.2s ease;
 }
-
 .btn-secondary:hover {
   border-color: var(--color-border-hover);
   background-color: #f8f9fa;
 }
 
-.data-table {
+/* Pagination */
+.pagination-container {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.pagination-container button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.pagination-container button:disabled {
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+}
+.pagination-container button:hover:not(:disabled) {
+  background-color: #e9ecef;
+}
+.pagination-container span {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Table Container & Table Styles (Adapted from Table.css)
+   ========================================================================== */
+.clientes-container {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Desktop View: Table */
+.mobile-view {
+  display: none;
+}
+
+.desktop-view .clientes-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 1200px;
 }
 
-.data-table th, .data-table td {
+.desktop-view .clientes-table th,
+.desktop-view .clientes-table td {
   padding: 1rem 1.5rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.data-table th {
+.desktop-view .clientes-table th {
   background-color: #f8f9fa;
   color: var(--color-text-secondary);
   font-weight: 600;
@@ -63,135 +122,165 @@
   letter-spacing: 0.05em;
 }
 
-.data-table tbody tr:last-child td {
+.desktop-view .clientes-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.data-table tbody tr {
-  transition: background-color 0.15s ease-out;
-}
-
-.data-table tbody tr:hover {
+.desktop-view .clientes-table tbody tr:hover {
   background-color: var(--color-primary-light-bg);
 }
 
-/* Anchos y estilos de columna */
-.th-id, .td-id { width: 5%; text-align: center; }
+/* Column Widths */
+.th-id, .td-id { width: 4%; text-align: center; }
 .th-nombre, .td-nombre { width: 15%; font-weight: 500; }
 .th-cedula, .td-cedula { width: 10%; }
-.th-correo, .td-correo { width: 19%; }
-.th-direccion, .td-direccion { width: 21%; }
+.th-correo, .td-correo { width: 18%; }
+.th-direccion, .td-direccion { width: 22%; }
 .th-ciudad, .td-ciudad { width: 10%; }
-.th-telefono, .td-telefono { width: 10%; }
-.th-accion, .td-accion {
-  width: 10%; /* Ancho ajustado */
-  text-align: center; /* Centra el contenido */
-}
+.th-telefono, .td-telefono { width: 10%; min-width: 120px; }
+.th-telefono-2, .td-telefono-2 { min-width: 140px; }
+.th-accion, .td-accion { width: 5%; text-align: center; }
 
-.td-action-button {
-  white-space: normal !important; /* Fuerza el ajuste de línea */
-  overflow: visible !important; /* Asegura que el contenido no se oculte */
-  text-overflow: clip !important; /* Evita los puntos suspensivos */
-}
-
-.btn-icon {
-  white-space: normal !important; /* Asegura que el botón no trunque su contenido */
-  overflow: visible !important; /* Asegura que el botón no oculte su contenido */
-  text-overflow: clip !important; /* Evita los puntos suspensivos en el botón */
-  /* Mantener el resto de estilos existentes del .btn-icon */
-  flex-shrink: 0; /* Evita que el botón se encoja */
-  /* Mantener el resto de estilos existentes del .btn-icon */
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
-}
-
-.btn-icon:hover {
-  color: var(--color-primary);
-  background-color: var(--color-primary-light-bg);
-}
-
+/* Expanded Row */
 .expanded-row td {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
   background-color: #f8f9fa;
   box-shadow: inset 0 4px 6px -6px rgba(0,0,0,0.1), inset 0 -4px 6px -6px rgba(0,0,0,0.1);
+  white-space: normal;
 }
 
 .details-view {
-  padding: 1.5rem 2rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
   display: flex;
   flex-direction: row;
-  gap: 1.5rem;
-  width: 100%; /* Added to ensure full width */
+  gap: clamp(1rem, 2vw, 2rem);
+  width: 100%;
 }
-
-.details-section h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 0.5rem;
-}
-
-.details-section ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.details-section ul li {
-  padding: 0.5rem 0;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-}
-
-.details-actions {
-  grid-column: 1 / -1; /* Ocupa todo el ancho */
+.details-view-section { flex: 1; }
+.details-view-actions {
+  flex: 1;
   display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  border-top: 1px solid var(--color-border);
-  padding-top: 1.5rem;
-  margin-top: 1rem;
-}
-
-.pagination-container {
-  margin-top: 1.5rem;
-  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   justify-content: center;
-  align-items: center;
-  gap: 10px;
+}
+.details-view h4,
+.details-view-section h4 {
+  font-size: clamp(0.9rem, 1.2vw, 1rem);
+  font-weight: 600;
+  margin-bottom: 1rem;
 }
 
-.pagination-container button {
-  padding: 0.5rem 1rem;
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
+/* ==========================================================================
+   Mobile View (Cards) - Media Query
+   ========================================================================== */
+@media (max-width: 992px) {
+  .desktop-view {
+    display: none;
+  }
 
-.pagination-container button:disabled {
-  color: var(--color-text-placeholder);
-  cursor: not-allowed;
-}
+  .mobile-view {
+    display: block;
+  }
 
-.pagination-container button:hover:not(:disabled) {
-  background-color: #e9ecef;
-}
+  /* Remove container styles on mobile, as per /proveedores */
+  .clientes-container {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
 
-.pagination-container span {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  .page-header { flex-direction: column; align-items: stretch; gap: 1rem; }
+  .search-input { width: 100%; min-width: 0; }
+
+  /* Card Styles */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-clientes {
+    display: flex;
+    flex-direction: column !important;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    cursor: pointer;
+    width: 100%;
+  }
+  .card-header:hover { background-color: var(--color-primary-light-bg); }
+
+  .chevron-icon { transition: transform 0.3s ease; }
+  .card.expanded .chevron-icon { transform: rotate(180deg); }
+
+  .card-details-wrapper {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out;
+  }
+  .card.expanded .card-details-wrapper {
+    max-height: 1500px;
+  }
+  
+  .card-expanded-content {
+    padding: 1rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9rem;
+    gap: 0.25rem;
+  }
+  .detail-item strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+  .detail-item span {
+    color: var(--color-text-secondary);
+  }
+  
+  .details-section h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .details-section ul {
+    list-style: none;
+    padding-left: 0;
+  }
+  .details-section li {
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+    color: var(--color-text-secondary);
+  }
+
+  .card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1rem;
+  }
+  .card-actions .btn-primary,
+  .card-actions .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pagination-container { flex-wrap: wrap; }
 }
