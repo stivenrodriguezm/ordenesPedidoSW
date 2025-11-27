@@ -58,26 +58,13 @@ export function AppProvider({ children }) {
     fetchProveedores();
   }, [fetchProveedores]);
 
+  // fetchClientes removed to prevent backend timeout (page_size=1000)
+  // Clientes page now handles its own data fetching with pagination.
   const fetchClientes = useCallback(async () => {
-    if (!token) {
-      setIsLoadingClientes(false);
-      return;
-    }
-    setIsLoadingClientes(true);
-    try {
-      const response = await API.get('/clientes/?page_size=1000');
-      setClientes(response.data.results || []);
-    } catch (error) {
-      console.error("Error al cargar clientes:", error);
-      setClientes([]);
-    } finally {
-      setIsLoadingClientes(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchClientes();
-  }, [fetchClientes]);
+    // No-op or minimal fetch if absolutely needed, but for now we disable the global heavy fetch.
+    setClientes([]);
+    setIsLoadingClientes(false);
+  }, []);
 
   return (
     <AppContext.Provider

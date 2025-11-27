@@ -154,10 +154,10 @@ function ReferenciasPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'Referencias');
     XLSX.writeFile(wb, 'Referencias.xlsx');
   };
-  
+
   return (
     <div className="page-container">
-      <AppNotification 
+      <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
@@ -174,40 +174,66 @@ function ReferenciasPage() {
       </div>
 
       <div className="referencias-container">
-        <table className="referencias-table">
-          <thead>
-            <tr>
-              <th className="th-ref-nombre sortable" onClick={() => requestSort('nombre')}>
-                <span>Referencia</span> {getSortIcon('nombre')}
-              </th>
-              <th className="th-ref-proveedor sortable" onClick={() => requestSort('proveedor_name')}>
-                <span>Proveedor</span> {getSortIcon('proveedor_name')}
-              </th>
-              <th className="th-ref-editar">Editar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading || contextLoading || isLoadingProveedores ? (
-              <tr><td colSpan="3"><div className="loading-container"><div className="loader"></div></div></td></tr>
-            ) : isError ? (
-              <tr><td colSpan="3" className="error-cell">Error al cargar datos.</td></tr>
-            ) : sortedReferencias.length > 0 ? (
-              sortedReferencias.map((ref) => (
-                <tr key={ref.id}>
-                  <td className="td-ref-nombre">{ref.nombre}</td>
-                  <td className="td-ref-proveedor">{ref.proveedor_name}</td>
-                  <td className="td-ref-editar">
-                    <button type="button" onClick={() => handleOpenModal(ref)} className="btn-icon" disabled={mutation.isLoading}><FaEdit /></button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr><td colSpan="3" className="empty-cell">No hay referencias disponibles.</td></tr>
-            )}
-          </tbody>
-        </table>
+        {/* Desktop View */}
+        <div className="desktop-view">
+          <table className="referencias-table">
+            <thead>
+              <tr>
+                <th className="th-ref-nombre sortable" onClick={() => requestSort('nombre')}>
+                  <span>Referencia</span> {getSortIcon('nombre')}
+                </th>
+                <th className="th-ref-proveedor sortable" onClick={() => requestSort('proveedor_name')}>
+                  <span>Proveedor</span> {getSortIcon('proveedor_name')}
+                </th>
+                <th className="th-ref-editar">Editar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading || contextLoading || isLoadingProveedores ? (
+                <tr><td colSpan="3"><div className="loading-container"><div className="loader"></div></div></td></tr>
+              ) : isError ? (
+                <tr><td colSpan="3" className="error-cell">Error al cargar datos.</td></tr>
+              ) : sortedReferencias.length > 0 ? (
+                sortedReferencias.map((ref) => (
+                  <tr key={ref.id}>
+                    <td className="td-ref-nombre">{ref.nombre}</td>
+                    <td className="td-ref-proveedor">{ref.proveedor_name}</td>
+                    <td className="td-ref-editar">
+                      <button type="button" onClick={() => handleOpenModal(ref)} className="btn-icon" disabled={mutation.isLoading}><FaEdit /></button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="3" className="empty-cell">No hay referencias disponibles.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="mobile-view">
+          {isLoading || contextLoading || isLoadingProveedores ? (
+            <div className="loading-container"><div className="loader"></div></div>
+          ) : isError ? (
+            <div className="error-cell">Error al cargar datos.</div>
+          ) : sortedReferencias.length > 0 ? (
+            sortedReferencias.map((ref) => (
+              <div className="card" key={ref.id}>
+                <div className="card-body">
+                  <h3 className="card-title">{ref.nombre}</h3>
+                  <p className="card-subtitle">Proveedor: {ref.proveedor_name}</p>
+                </div>
+                <div className="card-footer">
+                  <button type="button" onClick={() => handleOpenModal(ref)} className="btn-icon" disabled={mutation.isLoading}><FaEdit /></button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-cell">No hay referencias disponibles.</div>
+          )}
+        </div>
       </div>
-      <ReferenciaModal 
+      <ReferenciaModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleSave}

@@ -4,39 +4,49 @@ import api from '../services/api';
 import { AppContext } from '../AppContext';
 import { Bar } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
 } from 'chart.js';
+import {
+    FaChartLine,
+    FaTrophy,
+    FaClipboardList,
+    FaMoneyBillWave,
+    FaPlus,
+    FaShoppingCart,
+    FaCashRegister,
+    FaFileInvoiceDollar,
+    FaUsers,
+    FaBox,
+    FaArrowUp,
+    FaArrowDown
+} from 'react-icons/fa';
 import Loader from '../components/Loader';
-import './HomePage.css';
+import './AdminHomePage.css';
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
 );
 
-const HomePage = () => {
-    const { usuario } = useContext(AppContext); // Obtener usuario del contexto de autenticación
+const AdminHomePage = () => {
+    const { usuario } = useContext(AppContext);
     const [greeting, setGreeting] = useState('');
-    const [stats, setStats] = useState({
-        ventas_dia: 0,
-        ventas_mes: 0,
-    });
+    const [stats, setStats] = useState(null);
     const [chartData, setChartData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // 1. Saludo dinámico
         const getGreeting = () => {
             const now = new Date();
             const options = { timeZone: 'America/Bogota', hour: '2-digit', hour12: false };
@@ -48,14 +58,13 @@ const HomePage = () => {
         };
         setGreeting(getGreeting());
 
-        // 2. Fetch de datos
         const fetchData = async () => {
             try {
-                const statsPromise = api.get('/dashboard-stats/');
-                const chartPromise = api.get('/sales-chart-data/');
-                
-                const [statsResponse, chartResponse] = await Promise.all([statsPromise, chartPromise]);
-                
+                const [statsResponse, chartResponse] = await Promise.all([
+                    api.get('/dashboard-stats/'),
+                    api.get('/sales-chart-data/')
+                ]);
+
                 setStats(statsResponse.data);
                 setChartData(chartResponse.data);
 
@@ -71,11 +80,32 @@ const HomePage = () => {
     }, []);
 
     const formatCurrency = (value) => {
+        if (value === null || value === undefined) return '$0';
         return new Intl.NumberFormat('es-CO', {
             style: 'currency',
             currency: 'COP',
             minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(value);
+    };
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('es-CO', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    const getTimeBasedGradient = () => {
+        const now = new Date();
+        const hour = now.getHours();
+
+        if (hour < 12) return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        if (hour < 18) return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+        return 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
     };
 
     const chartOptions = {
@@ -84,106 +114,262 @@ const HomePage = () => {
         plugins: {
             legend: {
                 position: 'top',
+                labels: {
+                    font: {
+                        size: 12,
+                        family: "'Inter', sans-serif",
+                        weight: 600
+                    },
+                    padding: 15,
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
             },
             title: {
                 display: true,
-                text: 'Comparativa de Ventas (Últimos 2 Años)',
-                font: { size: 16 }
+                text: 'Comparativa de Ventas',
+                font: {
+                    size: 18,
+                    family: "'Inter', sans-serif",
+                    weight: 700
+                },
+                padding: 20,
+                color: '#1f2937'
             },
         },
         scales: {
             y: {
+                beginAtZero: true,
                 ticks: {
-                    callback: function(value) {
+                    callback: function (value) {
                         return formatCurrency(value);
+                    },
+                    font: {
+                        size: 11,
+                        family: "'Inter', sans-serif"
                     }
+                },
+                grid: {
+                    color: '#f1f5f9',
+                    drawBorder: false
+                }
+            },
+            x: {
+                ticks: {
+                    font: {
+                        size: 11,
+                        family: "'Inter', sans-serif"
+                    }
+                },
+                grid: {
+                    display: false
                 }
             }
         }
     };
 
     if (loading) {
+        return <Loader text="Cargando dashboard..." />;
+    }
+
+    if (error) {
         return (
-            <div className="homepage-container">
-                <Loader text="Cargando dashboard..." />
+            <div className="admin-home-container">
+                <div className="error-message-box">{error}</div>
             </div>
         );
     }
 
-    if (error) {
-        return <div className="homepage-container error-message"><p>{error}</p></div>;
-    }
-
     return (
-        <div className="homepage-container">
+        <div className="admin-home-container">
+            {/* Hero Section */}
+            <header className="admin-hero" style={{ background: getTimeBasedGradient() }}>
+                <div className="hero-content">
+                    <div className="user-avatar-large">
+                        {usuario?.first_name?.charAt(0)?.toUpperCase() || 'A'}
+                    </div>
+                    <h1 className="admin-greeting">
+                        {greeting}, <span className="user-name">{usuario?.first_name || 'Admin'}</span>!
+                    </h1>
+                    <p className="admin-subtitle">Panel de Control - Muebles Lottus</p>
+                </div>
+            </header>
 
-            <div className="dashboard-layout">
-                {/* Columna Izquierda: Stats y Accesos Rápidos */}
-                <div className="left-column">
-                    <h2 className="greeting-title">{`${greeting}, ${usuario?.first_name || ''}`}!</h2>
-                    <p className="welcome-message">Bienvenido al sistema de gestión de Muebles Lottus.</p>
-                    <div className="stats-and-access">
-                        <div className="stats-grid-condensed">
-                            <div className="stat-card">
-                                <h3>Ventas del Día</h3>
-                                <p>{formatCurrency(stats.ventas_dia)}</p>
-                            </div>
-                            <div className="stat-card">
-                                <h3>Ventas del Mes</h3>
-                                <p>{formatCurrency(stats.ventas_mes)}</p>
-                            </div>
+            {/* Statistics Grid */}
+            <section className="stats-section">
+                <div className="stats-grid-enhanced">
+                    <div className="stat-card-enhanced stat-ventas-dia">
+                        <div className="stat-icon-wrapper">
+                            <FaChartLine className="stat-icon" />
                         </div>
-                        <div className="quick-access-condensed">
-                            <Link to="/nuevaVenta" className="access-button">Nueva Venta</Link>
-                            <Link to="/ordenes/nuevo" className="access-button">Nueva Orden</Link>
-                            <Link to="/caja" state={{ openForm: true }} className="access-button">Movimiento Caja</Link>
-                            <Link to="/recibos-caja" state={{ openForm: true }} className="access-button">Nuevo RC</Link>
+                        <div className="stat-details">
+                            <p className="stat-label">Ventas Hoy</p>
+                            <h3 className="stat-value">{formatCurrency(stats?.ventas_dia || 0)}</h3>
+                            <span className="stat-trend positive">
+                                <FaArrowUp /> Actualizado
+                            </span>
                         </div>
+                        <div className="stat-sparkle"></div>
+                    </div>
+
+                    <div className="stat-card-enhanced stat-ventas-mes">
+                        <div className="stat-icon-wrapper">
+                            <FaTrophy className="stat-icon" />
+                        </div>
+                        <div className="stat-details">
+                            <p className="stat-label">Ventas del Mes</p>
+                            <h3 className="stat-value">{formatCurrency(stats?.ventas_mes || 0)}</h3>
+                            <span className="stat-trend positive">
+                                <FaArrowUp /> En progreso
+                            </span>
+                        </div>
+                        <div className="stat-sparkle"></div>
+                    </div>
+
+                    <div className="stat-card-enhanced stat-ordenes">
+                        <div className="stat-icon-wrapper">
+                            <FaClipboardList className="stat-icon" />
+                        </div>
+                        <div className="stat-details">
+                            <p className="stat-label">Órdenes Activas</p>
+                            <h3 className="stat-value">{stats?.ordenes_abiertas || 0}</h3>
+                            <span className="stat-trend neutral">
+                                <FaMoneyBillWave /> Pendientes
+                            </span>
+                        </div>
+                        <div className="stat-sparkle"></div>
+                    </div>
+
+                    <div className="stat-card-enhanced stat-clientes">
+                        <div className="stat-icon-wrapper">
+                            <FaUsers className="stat-icon" />
+                        </div>
+                        <div className="stat-details">
+                            <p className="stat-label">Clientes Activos</p>
+                            <h3 className="stat-value">{stats?.clientes_activos || 0}</h3>
+                            <span className="stat-trend neutral">
+                                <FaUsers /> Total
+                            </span>
+                        </div>
+                        <div className="stat-sparkle"></div>
                     </div>
                 </div>
+            </section>
 
-                {/* Columna Derecha: Gráfico */}
-                <div className="right-column">
-                    <div className="chart-container">
+            {/* Main Content Grid */}
+            <div className="main-content-grid">
+                {/* Quick Actions */}
+                <section className="quick-actions-section">
+                    <h2 className="section-title">Acciones Rápidas</h2>
+                    <div className="actions-grid-admin">
+                        <Link to="/nuevaVenta" className="action-card-admin action-primary">
+                            <div className="action-icon-bg">
+                                <FaPlus />
+                            </div>
+                            <h3>Nueva Venta</h3>
+                            <p>Registrar venta</p>
+                        </Link>
+
+                        <Link to="/ordenes/nuevo" className="action-card-admin">
+                            <div className="action-icon-bg">
+                                <FaShoppingCart />
+                            </div>
+                            <h3>Nueva Orden</h3>
+                            <p>Crear pedido</p>
+                        </Link>
+
+                        <Link to="/caja" state={{ openForm: true }} className="action-card-admin">
+                            <div className="action-icon-bg">
+                                <FaCashRegister />
+                            </div>
+                            <h3>Mov. Caja</h3>
+                            <p>Gestionar caja</p>
+                        </Link>
+
+                        <Link to="/recibos-caja" state={{ openForm: true }} className="action-card-admin">
+                            <div className="action-icon-bg">
+                                <FaFileInvoiceDollar />
+                            </div>
+                            <h3>Nuevo RC</h3>
+                            <p>Recibo de caja</p>
+                        </Link>
+
+                        <Link to="/clientes" className="action-card-admin">
+                            <div className="action-icon-bg">
+                                <FaUsers />
+                            </div>
+                            <h3>Clientes</h3>
+                            <p>Gestionar clientes</p>
+                        </Link>
+
+                        <Link to="/referencias" className="action-card-admin">
+                            <div className="action-icon-bg">
+                                <FaBox />
+                            </div>
+                            <h3>Productos</h3>
+                            <p>Ver catálogo</p>
+                        </Link>
+                    </div>
+                </section>
+
+                {/* Sales Chart */}
+                <section className="chart-section">
+                    <h2 className="section-title">Análisis de Ventas</h2>
+                    <div className="chart-wrapper">
                         {chartData && <Bar options={chartOptions} data={chartData} />}
                     </div>
-                </div>
+                </section>
             </div>
 
-            {/* Actividad Reciente (se mantiene abajo) */}
-            <div className="recent-activity">
-                <h3>Últimas Ventas Registradas</h3>
-                <table className="activity-table">
-                    <thead>
-                        <tr>
-                            <th>ID Venta</th>
-                            <th>Cliente</th>
-                            <th>Valor Total</th>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {stats.ultimas_ventas && stats.ultimas_ventas.length > 0 ? (
-                            stats.ultimas_ventas.map(venta => (
-                                <tr key={venta.id}>
-                                    <td>{venta.id}</td>
-                                    <td>{venta.cliente_nombre}</td>
-                                    <td>{formatCurrency(venta.valor_total)}</td>
-                                    <td>{new Date(venta.fecha_venta).toLocaleDateString('es-CO')}</td>
-                                    <td><span className={`status-badge status-${venta.estado}`}>{venta.estado}</span></td>
-                                </tr>
-                            ))
-                        ) : (
+            {/* Recent Sales Table */}
+            <section className="recent-sales-section">
+                <div className="section-header">
+                    <h2 className="section-title">Últimas Ventas Registradas</h2>
+                    <Link to="/ventas" className="view-all-link">
+                        Ver todas →
+                    </Link>
+                </div>
+                <div className="table-wrapper">
+                    <table className="sales-table-enhanced">
+                        <thead>
                             <tr>
-                                <td colSpan="5">No hay ventas recientes para mostrar.</td>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Valor Total</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {stats?.ultimas_ventas && stats.ultimas_ventas.length > 0 ? (
+                                stats.ultimas_ventas.map(venta => (
+                                    <tr key={venta.id}>
+                                        <td>
+                                            <span className="sale-id">#{venta.id}</span>
+                                        </td>
+                                        <td className="cliente-cell">{venta.cliente_nombre}</td>
+                                        <td className="valor-cell">{formatCurrency(venta.valor_total)}</td>
+                                        <td className="fecha-cell">{formatDate(venta.fecha_venta)}</td>
+                                        <td>
+                                            <span className={`status-badge-enhanced status-${venta.estado?.toLowerCase()}`}>
+                                                {venta.estado}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="empty-state">
+                                        No hay ventas recientes para mostrar.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
     );
 };
 
-export default HomePage;
+export default AdminHomePage;

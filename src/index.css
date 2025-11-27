@@ -16,33 +16,51 @@
   --font-display: 'Audiowide', cursive;
 
   /* Paleta de Colores Principal - Light Mode Profesional */
-  --color-background: #f7f7f7;       /* Gris muy claro para el fondo */
-  --color-surface: #ffffff;          /* Blanco puro para tarjetas y superficies */
-  --color-border: #dee2e6;           /* Borde sutil y claro */
-  --color-border-hover: #ced4da;      /* Borde más oscuro para interacción */
-  
+  --color-background: #f7f7f7;
+  /* Gris muy claro para el fondo */
+  --color-surface: #ffffff;
+  /* Blanco puro para tarjetas y superficies */
+  --color-border: #dee2e6;
+  /* Borde sutil y claro */
+  --color-border-hover: #ced4da;
+  /* Borde más oscuro para interacción */
+
   /* Paleta de Texto */
-  --color-text-primary: #212529;    /* Negro suave para la máxima legibilidad */
-  --color-text-secondary: #495057;  /* Gris oscuro para texto secundario */
-  --color-text-placeholder: #adb5bd;/* Gris más claro para placeholders */
+  --color-text-primary: #212529;
+  /* Negro suave para la máxima legibilidad */
+  --color-text-secondary: #495057;
+  /* Gris oscuro para texto secundario */
+  --color-text-placeholder: #adb5bd;
+  /* Gris más claro para placeholders */
 
   /* Paleta de Acentos Azules */
-  --color-primary: #1657b8;           /* Azul vibrante principal */
-  --color-primary-hover: #104ca7;    /* Azul más oscuro para interacción */
-  --color-primary-focus-shadow: rgba(13, 110, 253, 0.25); /* Sombra/Glow para focus */
-  --color-primary-light-bg: #f5f7fc; /* Fondo azul claro para estados activos/hover sutiles */
-  
+  --color-primary: #1657b8;
+  /* Azul vibrante principal */
+  --color-primary-hover: #104ca7;
+  /* Azul más oscuro para interacción */
+  --color-primary-focus-shadow: rgba(13, 110, 253, 0.25);
+  /* Sombra/Glow para focus */
+  --color-primary-light-bg: #f5f7fc;
+  /* Fondo azul claro para estados activos/hover sutiles */
+
   /* Paleta Oscura para el Sidebar */
-  --color-sidebar-bg: #091420;           /* Azul marino muy oscuro */
-  --color-sidebar-text: #c8d0d8;        /* Texto gris claro */
-  --color-sidebar-text-hover: #ffffff;   /* Texto blanco para hover/activo */
-  --color-sidebar-active-bg: rgba(13, 110, 253, 0.1); /* Fondo translúcido azul para item activo */
-  --color-sidebar-border: #1d2d44;       /* Borde interno del sidebar */
+  --color-sidebar-bg: #091420;
+  /* Azul marino muy oscuro */
+  --color-sidebar-text: #c8d0d8;
+  /* Texto gris claro */
+  --color-sidebar-text-hover: #ffffff;
+  /* Texto blanco para hover/activo */
+  --color-sidebar-active-bg: rgba(13, 110, 253, 0.1);
+  /* Fondo translúcido azul para item activo */
+  --color-sidebar-border: #1d2d44;
+  /* Borde interno del sidebar */
 
   /* Colores de Estado */
-  --color-destructive: #dc3545;       /* Rojo para acciones de borrado o error */
+  --color-destructive: #dc3545;
+  /* Rojo para acciones de borrado o error */
   --color-destructive-hover: #bb2d3b;
-  --color-success: #198754;           /* Verde para confirmaciones */
+  --color-success: #198754;
+  /* Verde para confirmaciones */
 
   /* Sombras y Radios */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -75,10 +93,24 @@ body {
 
 .main-content {
   flex-grow: 1;
-  margin-left: 260px; /* Nuevo ancho fijo del sidebar */
+  margin-left: 260px;
+  /* Default expanded width */
   padding: 2rem;
-  padding-top: calc(70px + 2rem); /* Deja espacio para el Header fijo */
-  transition: margin-left 0.3s ease-in-out;
+  padding-top: calc(80px + 2rem);
+  /* Match new header height */
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
+  background-color: var(--color-background);
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 80px;
+}
+
+.content-wrapper {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 main {
@@ -136,8 +168,13 @@ main {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-container p {
@@ -147,26 +184,66 @@ main {
 
 /* Estilos unificados para modales */
 .modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: rgba(13, 17, 23, 0.6);
-  display: flex; justify-content: center; align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
   backdrop-filter: blur(4px);
 }
+
 .modal-content {
   background-color: var(--color-surface);
   padding: 2rem;
   border-radius: var(--border-radius);
-  width: 600px; max-width: 90%;
+  width: 600px;
+  max-width: 90%;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-.modal-header h3 { margin: 0; font-size: 1.25rem; color: var(--color-text-primary); font-weight: 600; }
-.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-secondary); }
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--color-text-secondary); font-size: 0.875rem; }
-.form-group input, .form-group select, .form-group textarea {
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--color-border);
@@ -176,11 +253,15 @@ main {
   color: var(--color-text-primary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-focus-shadow);
 }
+
 .modal-submit {
   width: 100%;
   padding: 0.75rem;
@@ -193,7 +274,10 @@ main {
   margin-top: 1rem;
   transition: background-color 0.2s ease;
 }
-.modal-submit:hover { background-color: var(--color-primary-hover); }
+
+.modal-submit:hover {
+  background-color: var(--color-primary-hover);
+}
 
 /* Styles for checkbox groups */
 .form-group.checkbox-group {
@@ -201,15 +285,18 @@ main {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
-  justify-content: flex-start; /* Aligns items to the start */
+  justify-content: flex-start;
+  /* Aligns items to the start */
 }
 
 .form-group.checkbox-group label {
-  margin-bottom: 0; /* Removes bottom margin from label in a checkbox group */
+  margin-bottom: 0;
+  /* Removes bottom margin from label in a checkbox group */
 }
 
 .form-group input[type="checkbox"] {
-  width: auto; /* Overrides the default 100% width */
+  width: auto;
+  /* Overrides the default 100% width */
   height: 1.2em;
   width: 1.2em;
   accent-color: var(--color-primary);

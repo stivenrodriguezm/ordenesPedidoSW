@@ -2,27 +2,27 @@
 
 /* Botón principal de la página */
 .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background-color: var(--color-primary);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 600;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .btn-primary:hover {
-    background-color: var(--color-primary-hover);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-  }
-  
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
 /* ==========================================================================
    Base Styles for Table Container - Referencias Specific
    ========================================================================== */
@@ -35,22 +35,26 @@
 }
 
 /* ==========================================================================
-   Base Styles for Referencias Table (Desktop View equivalent)
+   Desktop View (Table)
    ========================================================================== */
-.referencias-table {
+.mobile-view {
+  display: none;
+}
+
+.desktop-view .referencias-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 
   /* === Anchos de Columna Personalizables === */
-  --ref-nombre-width: 45%;
-  --ref-proveedor-width: 45%;
-  --ref-editar-width: 10%;
+  --ref-nombre-width: 40%;
+  --ref-proveedor-width: 40%;
+  --ref-editar-width: 20%;
   /* ======================================= */
 }
 
-.referencias-table th,
-.referencias-table td {
+.desktop-view .referencias-table th,
+.desktop-view .referencias-table td {
   padding: 1rem 1.5rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
@@ -59,7 +63,7 @@
   text-overflow: ellipsis;
 }
 
-.referencias-table th {
+.desktop-view .referencias-table th {
   background-color: #f8f9fa;
   color: var(--color-text-secondary);
   font-weight: 600;
@@ -68,31 +72,45 @@
   letter-spacing: 0.05em;
 }
 
-.referencias-table tbody tr:last-child td {
+.desktop-view .referencias-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.referencias-table tbody tr {
+.desktop-view .referencias-table tbody tr {
   transition: background-color 0.15s ease-out;
 }
 
-.referencias-table tbody tr:hover {
+.desktop-view .referencias-table tbody tr:hover {
   background-color: var(--color-primary-light-bg);
 }
 
 /* Anchos y estilos de columna (already defined with vars above, but keeping for clarity if needed) */
-.th-ref-nombre, .td-ref-nombre { width: var(--ref-nombre-width); font-weight: 500; }
-.th-ref-proveedor, .td-ref-proveedor { width: var(--ref-proveedor-width); color: var(--color-text-secondary); }
-.th-ref-editar, .td-ref-editar { width: var(--ref-editar-width); text-align: center; }
+.th-ref-nombre,
+.td-ref-nombre {
+  width: var(--ref-nombre-width);
+  font-weight: 500;
+}
+
+.th-ref-proveedor,
+.td-ref-proveedor {
+  width: var(--ref-proveedor-width);
+  color: var(--color-text-secondary);
+}
+
+.th-ref-editar,
+.td-ref-editar {
+  width: var(--ref-editar-width);
+  text-align: center;
+}
 
 /* Ordenamiento */
-.referencias-table th.sortable {
+.desktop-view .referencias-table th.sortable {
   cursor: pointer;
   user-select: none;
   transition: color 0.2s ease;
 }
 
-.referencias-table th.sortable:hover {
+.desktop-view .referencias-table th.sortable:hover {
   color: var(--color-text-primary);
 }
 
@@ -125,7 +143,8 @@
 }
 
 /* Celdas de estado */
-.error-cell, .empty-cell {
+.error-cell,
+.empty-cell {
   text-align: center;
   padding: 3rem;
   color: var(--color-text-secondary);
@@ -148,7 +167,8 @@
   font-weight: 500;
   font-size: 0.875rem;
   color: var(--color-text-secondary);
-  white-space: nowrap; /* Fuerza el texto a una sola línea */
+  white-space: nowrap;
+  /* Fuerza el texto a una sola línea */
 }
 
 .modal-content .form-group input,
@@ -160,38 +180,106 @@
 
 /* Estilos específicos para el modal de Referencias */
 .modal-overlay .modal-content {
-  width: 500px; /* Ajusta el ancho del modal */
-  max-width: 90%; /* Asegura que sea responsivo */
+  width: 500px;
+  /* Ajusta el ancho del modal */
+  max-width: 90%;
+  /* Asegura que sea responsivo */
 }
 
 /* === Media Queries for Responsiveness === */
 
 /* Tablet */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .referencias-table {
+  .desktop-view .referencias-table {
     --ref-nombre-width: 40%;
     --ref-proveedor-width: 40%;
     --ref-editar-width: 20%;
   }
 }
 
-/* Mobile */
+/* ==========================================================================
+   Mobile View (Cards) - Media Query
+   ========================================================================== */
 @media (max-width: 768px) {
+  .desktop-view {
+    display: none;
+  }
 
-  .referencias-table {
+  .mobile-view {
+    display: block;
+  }
+
+  .referencias-container {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .card {
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-body {
+    flex-grow: 1;
+  }
+
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.25rem 0;
+  }
+
+  .card-subtitle {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .card-footer {
+    margin-left: 1rem;
+    flex-shrink: 0;
+  }
+}
+
+/* ==========================================================================
+   Responsive Adjustments (Laptop & Smaller Screens)
+   ========================================================================== */
+@media (max-width: 1440px) {
+
+  .desktop-view .referencias-table th,
+  .desktop-view .referencias-table td {
+    padding: 0.5rem 0.5rem;
+    /* Reduce padding */
+    font-size: 0.85rem;
+    /* Smaller font */
+  }
+
+  .desktop-view .referencias-table th {
+    font-size: 0.7rem;
+    /* Smaller header font */
+  }
+
+  /* Adjust column widths to prevent ellipsis in action column */
+  .desktop-view .referencias-table {
     --ref-nombre-width: 40%;
     --ref-proveedor-width: 40%;
     --ref-editar-width: 20%;
   }
 
-  .referencias-table th,
-  .referencias-table td {
-    padding: 0.8rem 0.5rem; /* Reduced padding */
-    font-size: 0.8rem;     /* Smaller font for content */
-    text-align: center;
-  }
-
-  .referencias-table th {
-    font-size: 0.7rem;     /* Even smaller font for headers */
+  .th-ref-editar,
+  .td-ref-editar {
+    text-overflow: clip;
+    white-space: normal;
   }
 }

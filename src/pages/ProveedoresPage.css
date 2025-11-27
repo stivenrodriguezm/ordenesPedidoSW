@@ -8,7 +8,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-sm);
-  overflow: hidden; /* Added from Table.css */
+  overflow: hidden;
+  /* Added from Table.css */
 }
 
 /* ==========================================================================
@@ -52,10 +53,29 @@
 }
 
 /* Anchos y estilos de columna - Proveedores Specific */
-.th-empresa, .td-empresa { width: 35%; font-weight: 500; }
-.th-encargado, .td-encargado { width: 30%; color: var(--color-text-secondary); }
-.th-contacto, .td-contacto { width: 25%; color: var(--color-text-secondary); }
-.th-editar, .td-editar { width: 10%; text-align: center; }
+.th-empresa,
+.td-empresa {
+  width: 30%;
+  font-weight: 500;
+}
+
+.th-encargado,
+.td-encargado {
+  width: 30%;
+  color: var(--color-text-secondary);
+}
+
+.th-contacto,
+.td-contacto {
+  width: 25%;
+  color: var(--color-text-secondary);
+}
+
+.th-editar,
+.td-editar {
+  width: 15%;
+  text-align: center;
+}
 
 /* ==========================================================================
    Mobile View (Cards) - Media Query - Adapted for Proveedores
@@ -68,27 +88,36 @@
   .mobile-view {
     display: block;
   }
-  
-  .proveedores-container { /* This one needs to be copied as is for mobile, as it's a wrapper */
+
+  .proveedores-container {
+    /* This one needs to be copied as is for mobile, as it's a wrapper */
     background-color: transparent !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    border: none !important; /* Explicitly remove border */
-    overflow: visible !important; /* Explicitly set overflow */
+    border: none !important;
+    /* Explicitly remove border */
+    overflow: visible !important;
+    /* Explicitly set overflow */
   }
 
-  .card { /* These are generic and should probably be in a components/card.css or kept here */
-    background-color: transparent; /* Remove background color */
-    border: none; /* Remove border */
-    border-radius: 0; /* Remove border-radius */
-    box-shadow: none; /* Remove box-shadow */
+  .card {
+    /* These are generic and should probably be in a components/card.css or kept here */
+    background-color: transparent;
+    /* Remove background color */
+    border: none;
+    /* Remove border */
+    border-radius: 0;
+    /* Remove border-radius */
+    box-shadow: none;
+    /* Remove box-shadow */
     margin-bottom: 1rem;
     position: relative;
     padding: 1rem;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    overflow: visible; /* Ensure content is not hidden */
+    overflow: visible;
+    /* Ensure content is not hidden */
   }
 
   .card-body {
@@ -113,14 +142,57 @@
     color: var(--color-text-secondary);
     margin: 0 0 0.25rem 0;
   }
-  
+
   .card-details p strong {
     font-weight: 500;
     color: var(--color-text-primary);
   }
 
   .card-footer {
-    flex-shrink: 0;
     margin-left: 1rem;
+  }
+}
+
+/* ==========================================================================
+   Responsive Adjustments (Laptop & Smaller Screens)
+   ========================================================================== */
+@media (max-width: 1440px) {
+
+  .desktop-view .proveedores-table th,
+  .desktop-view .proveedores-table td {
+    padding: 0.5rem 0.5rem;
+    /* Reduce padding */
+    font-size: 0.85rem;
+    /* Smaller font */
+  }
+
+  .desktop-view .proveedores-table th {
+    font-size: 0.7rem;
+    /* Smaller header font */
+  }
+
+  /* Adjust column widths to prevent ellipsis in action column */
+  .th-empresa,
+  .td-empresa {
+    width: 30%;
+  }
+
+  .th-encargado,
+  .td-encargado {
+    width: 28%;
+  }
+
+  .th-contacto,
+  .td-contacto {
+    width: 22%;
+  }
+
+  .th-editar,
+  .td-editar {
+    width: 20%;
+    text-overflow: clip;
+    /* Prevent ellipsis */
+    white-space: normal;
+    /* Allow wrapping if absolutely necessary */
   }
 }

@@ -4,13 +4,30 @@ import { AppContext } from '../AppContext';
 import './ComprobantesEgreso.css';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
-import { FaFileExport, FaPlus, FaSearch, FaUndo } from 'react-icons/fa';
-import debounce from 'lodash.debounce';
+import {
+  FaFileExport,
+  FaPlus,
+  FaSearch,
+  FaUndo,
+  FaArrowDown,
+  FaMoneyBillWave,
+  FaUniversity,
+  FaCreditCard,
+  FaCalendarDay,
+  FaReceipt
+} from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
-
 import Modal from '../components/Modal';
 
-// Componente de Modal para la creación de Comprobantes de Egreso
+// --- Helper Components ---
+
+const PaymentIcon = ({ method }) => {
+  const m = method ? method.toLowerCase() : '';
+  if (m.includes('efectivo')) return <div className="payment-icon-wrapper cash"><FaMoneyBillWave /></div>;
+  if (m.includes('transferencia') || m.includes('bancolombia')) return <div className="payment-icon-wrapper bank"><FaUniversity /></div>;
+  return <div className="payment-icon-wrapper other"><FaCreditCard /></div>;
+};
+
 const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoading }) => {
   const [newCE, setNewCE] = useState({ id: '', fecha: '', medio_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' });
 
@@ -20,8 +37,15 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
-      const formattedToday = `${year}-${month}-${day}`;
-      setNewCE(prev => ({ ...prev, fecha: formattedToday, medio_pago: '', proveedor: '', valor: '', descripcion: '', concepto: '' }));
+      setNewCE({
+        id: '',
+        fecha: `${year}-${month}-${day}`,
+        medio_pago: '',
+        proveedor: '',
+        valor: '',
+        descripcion: '',
+        concepto: ''
+      });
     }
   }, [isOpen]);
 
@@ -31,69 +55,81 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
   if (!isOpen) return null;
 
   return (
-    <Modal show={isOpen} onClose={onClose} title="Nuevo Comprobante de Egreso">
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>CE:</label>
-          <input type="text" name="id" value={newCE.id} onChange={handleChange} required placeholder="Ingresa el ID del comprobante" />
+    <div className="modal-overlay">
+      <div className="modal-content premium-modal">
+        <div className="modal-header">
+          <h3>Nuevo Comprobante</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <div className="form-group">
-          <label>Fecha:</label>
-          <input type="date" name="fecha" value={newCE.fecha} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Concepto:</label>
-          <input type="text" name="concepto" value={newCE.concepto} onChange={handleChange} required placeholder="Ej: Pago de factura 123" />
-        </div>
-        <div className="form-group">
-          <label>Medio de pago:</label>
-          <select name="medio_pago" value={newCE.medio_pago} onChange={handleChange} required>
-            <option value="">Elegir medio de pago</option>
-            {mediosPago.map((medio) => (<option key={medio.value} value={medio.value}>{medio.label}</option>))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Proveedor:</label>
-          <select name="proveedor" value={newCE.proveedor} onChange={handleChange} required>
-            <option value="">Elegir proveedor</option>
-            {Array.isArray(proveedores) && proveedores.map((proveedor) => (<option key={proveedor.id} value={proveedor.id}>{proveedor.nombre_empresa}</option>))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Valor:</label>
-          <input type="number" name="valor" value={newCE.valor} onChange={handleChange} required min="0" step="any" />
-        </div>
-        <div className="form-group">
-          <label>Descripción:</label>
-          <textarea name="descripcion" value={newCE.descripcion} onChange={handleChange} placeholder="Escribe una nota (opcional)" rows="3" />
-        </div>
-        <button type="submit" className="modal-submit" disabled={isLoading}>
-          {isLoading ? 'Creando...' : 'Crear'}
-        </button>
-      </form>
-    </Modal>
+        <form onSubmit={handleSubmit} className="premium-form">
+          <div className="form-row">
+            <div className="form-group half">
+              <label>No. Comprobante</label>
+              <input type="text" name="id" value={newCE.id} onChange={handleChange} required placeholder="CE-000" className="premium-input" />
+            </div>
+            <div className="form-group half">
+              <label>Fecha</label>
+              <input type="date" name="fecha" value={newCE.fecha} onChange={handleChange} required className="premium-input" />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Proveedor</label>
+            <select name="proveedor" value={newCE.proveedor} onChange={handleChange} required className="premium-input">
+              <option value="">Seleccionar Proveedor</option>
+              {Array.isArray(proveedores) && proveedores.map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Concepto</label>
+            <input type="text" name="concepto" value={newCE.concepto} onChange={handleChange} required placeholder="Ej: Pago Factura #123" className="premium-input" />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group half">
+              <label>Medio de Pago</label>
+              <select name="medio_pago" value={newCE.medio_pago} onChange={handleChange} required className="premium-input">
+                <option value="">Seleccionar</option>
+                {mediosPago.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
+              </select>
+            </div>
+            <div className="form-group half">
+              <label>Valor</label>
+              <div className="input-with-icon">
+                <span className="currency-symbol">$</span>
+                <input type="number" name="valor" value={newCE.valor} onChange={handleChange} required min="0" step="any" placeholder="0.00" className="premium-input" />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Descripción (Opcional)</label>
+            <textarea name="descripcion" value={newCE.descripcion} onChange={handleChange} placeholder="Detalles adicionales..." rows="2" className="premium-input" />
+          </div>
+
+          <button type="submit" className="btn-primary full-width" disabled={isLoading}>
+            {isLoading ? 'Procesando...' : 'Crear Comprobante'}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 };
 
-
 const ComprobantesEgreso = () => {
-  const { proveedores, isLoadingProveedores, usuario } = useContext(AppContext);
+  const { proveedores, usuario } = useContext(AppContext);
   const location = useLocation();
   const [comprobantesData, setComprobantesData] = useState([]);
-  const [filters, setFilters] = useState({
-    fecha_inicio: '',
-    fecha_fin: '',
-    medio_pago: '',
-    proveedor: '',
-    query: ''
-  });
-  
+  const [filters, setFilters] = useState({ fecha_inicio: '', fecha_fin: '', medio_pago: '', proveedor: '', query: '' });
   const [isCreatingCE, setIsCreatingCE] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 30;
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false); // Para el estado de envío de formularios
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
 
   const mediosPago = [
@@ -103,40 +139,30 @@ const ComprobantesEgreso = () => {
 
   const formatCurrency = (value) => {
     if (value === null || isNaN(value)) return '$0';
-    return `$${Math.round(value).toLocaleString('es-CO')}`;
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
   };
-  
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-    const formattedDay = String(date.getDate()).padStart(2, '0');
-    const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    const formattedMonth = monthNames[date.getMonth()];
-    const formattedYear = date.getFullYear();
-    return `${formattedDay}-${formattedMonth}-${formattedYear}`;
+    const dayStr = String(date.getDate()).padStart(2, '0');
+    const monthStr = date.toLocaleString('es-CO', { month: 'short' }).replace('.', '');
+    const yearStr = date.getFullYear();
+    return `${dayStr}-${monthStr}-${yearStr}`;
   };
 
-  // --- Fetching de Datos ---
   const fetchData = useCallback(async (filters, page) => {
     setIsLoading(true);
-    
-    const params = { page, page_size: pageSize };
-    for (const key in filters) {
-      if (filters[key]) {
-        params[key] = filters[key];
-      }
-    }
+    const params = { page, page_size: pageSize, ...filters };
+    Object.keys(params).forEach(key => !params[key] && delete params[key]);
 
     try {
-      const response = await API.get(`/comprobantes-egreso/`, {
-        params
-      });
+      const response = await API.get(`/comprobantes-egreso/`, { params });
       setComprobantesData(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
     } catch (error) {
-      setNotification({ message: 'Error al cargar los comprobantes.', type: 'error' });
-      setComprobantesData([]);
+      setNotification({ message: 'Error al cargar datos.', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -148,148 +174,211 @@ const ComprobantesEgreso = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('action') === 'create') {
-      setIsCreatingCE(true);
-    }
+    if (params.get('action') === 'create') setIsCreatingCE(true);
   }, [location]);
 
   const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setCurrentPage(1);
   };
-  
+
   const clearFilters = () => {
-    setFilters({
-      fecha_inicio: '',
-      fecha_fin: '',
-      medio_pago: '',
-      proveedor: '',
-      query: ''
-    });
+    setFilters({ fecha_inicio: '', fecha_fin: '', medio_pago: '', proveedor: '', query: '' });
     setCurrentPage(1);
-  };
-
-  const formatCurrencyForExport = (value) => {
-    if (value === null || value === undefined) return null;
-    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
-    return isNaN(num) ? null : num;
-  };
-
-  const exportData = async () => {
-    try {
-      const response = await API.get(`/comprobantes-egreso/`, {
-        params: { ...filters, page_size: 9999 }
-      });
-      const dataToExport = (response.data.results || []).map(item => ({
-        ID: item.id,
-        Fecha: formatDate(item.fecha),
-        Proveedor: item.proveedor_nombre || '-',
-        'Medio de Pago': mediosPago.find(medio => medio.value === item.medio_pago)?.label || item.medio_pago,
-        Valor: formatCurrencyForExport(item.valor),
-        Concepto: item.concepto || '-',
-        Descripción: item.descripcion || '-'
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Comprobantes de Egreso');
-      XLSX.writeFile(workbook, 'comprobantes-egreso.xlsx');
-      setNotification({ message: 'Datos exportados exitosamente.', type: 'success' });
-    } catch (error) {
-      setNotification({ message: 'Error al exportar los datos.', type: 'error' });
-    }
   };
 
   const handleCreateCE = async (ceData) => {
     setIsSubmitting(true);
-    setNotification({ message: '', type: '' });
     try {
       await API.post(`/comprobantes-egreso/crear/`, ceData);
-      setNotification({ message: 'Comprobante de Egreso creado exitosamente.', type: 'success' });
+      setNotification({ message: 'Comprobante creado exitosamente.', type: 'success' });
       setIsCreatingCE(false);
-      fetchData(filters, 1); // Refrescar datos en la página 1
+      fetchData(filters, 1);
     } catch (error) {
-       const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : 'Error al crear el comprobante.';
-       setNotification({ message: errorMsg, type: 'error' });
+      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : 'Error al crear.';
+      setNotification({ message: errorMsg, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleOpenCreateModal = () => {
-    setIsCreatingCE(true);
+  const exportData = async () => {
+    try {
+      const response = await API.get(`/comprobantes-egreso/`, { params: { ...filters, page_size: 9999 } });
+      const dataToExport = (response.data.results || []).map(item => ({
+        ID: item.id,
+        Fecha: formatDate(item.fecha),
+        Proveedor: item.proveedor_nombre || '-',
+        'Medio de Pago': item.medio_pago,
+        Valor: item.valor,
+        Concepto: item.concepto || '-',
+        Descripción: item.descripcion || '-'
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Egresos');
+      XLSX.writeFile(workbook, 'Comprobantes_Egreso.xlsx');
+      setNotification({ message: 'Exportación exitosa.', type: 'success' });
+    } catch (error) {
+      setNotification({ message: 'Error al exportar.', type: 'error' });
+    }
   };
 
+  // Calculate stats for current view
+  const stats = useMemo(() => {
+    const total = comprobantesData.reduce((acc, curr) => acc + parseFloat(curr.valor || 0), 0);
+    return { total, count: comprobantesData.length };
+  }, [comprobantesData]);
+
   return (
-    <div className="page-container comprobantes-page-wrapper">
-      <AppNotification 
+    <div className="comprobantes-page-container">
+      <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
 
-      <div className="page-header">
-        <div className="filters-group">
-          <input type="text" className="search-input" name="query" placeholder="Buscar por CE o Proveedor..." value={filters.query} onChange={handleFilterChange} />
-          <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
-          <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
-          <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
-            <option value="">Medio de pago</option>
-            {mediosPago.map((medio) => (<option key={medio.value} value={medio.value}>{medio.label}</option>))}
-          </select>
-          {/* <select name="proveedor" value={filters.proveedor} onChange={handleFilterChange} disabled={isLoadingProveedores}>
-            <option value="">Proveedor</option>
-            {Array.isArray(proveedores) && proveedores.map((proveedor) => (<option key={proveedor.id} value={proveedor.id}>{proveedor.nombre_empresa}</option>))}
-          </select> */}
-          <button className="btn-secondary btn-icon-only" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
+      {/* --- Live Stats Bar --- */}
+      <div className="stats-bar">
+        <div className="stat-item">
+          <div className="stat-icon"><FaMoneyBillWave /></div>
+          <div className="stat-info">
+            <span className="stat-label">Total en Pantalla</span>
+            <span className="stat-value">{formatCurrency(stats.total)}</span>
+          </div>
         </div>
-        <div className="actions-group">
-          {usuario?.role === 'administrador' && <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>}
-          <button className="btn-primary" onClick={handleOpenCreateModal}><FaPlus /> Nuevo Comprobante</button>
+        <div className="stat-divider"></div>
+        <div className="stat-item">
+          <div className="stat-icon secondary"><FaReceipt /></div>
+          <div className="stat-info">
+            <span className="stat-label">Registros</span>
+            <span className="stat-value">{stats.count}</span>
+          </div>
         </div>
-      </div>
-      <div className="comprobantes-container">
-        <table className="comprobantes-table">
-          <thead>
-            <tr>
-              <th className="th-ce-id">CE</th>
-              <th className="th-ce-fecha">Fecha</th>
-              <th className="th-ce-proveedor">Proveedor</th>
-              <th className="th-ce-concepto">Concepto</th>
-              <th className="th-ce-metodo">Medio de Pago</th>
-              <th className="th-ce-valor">Valor</th>
-              <th className="th-ce-descripcion">Descripción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan="7"><div className="loading-container"><div className="loader"></div><p>Cargando comprobantes...</p></div></td></tr>
-            ) : comprobantesData.length > 0 ? (
-              comprobantesData.map((item) => (
-                <tr key={item.id}>
-                  <td className="td-ce-id">{item.id}</td>
-                  <td className="td-ce-fecha">{formatDate(item.fecha)}</td>
-                  <td className="td-ce-proveedor">{item.proveedor_nombre || '—'}</td>
-                  <td className="td-ce-concepto">{item.concepto || '—'}</td>
-                  <td className="td-ce-metodo">{mediosPago.find(medio => medio.value === item.medio_pago)?.label || (item.medio_pago ? item.medio_pago.charAt(0).toUpperCase() + item.medio_pago.slice(1) : '—')}</td>
-                  <td className="td-ce-valor td-valor">{formatCurrency(item.valor)}</td>
-                  <td className="td-ce-descripcion">{item.descripcion || '—'}</td>
-                </tr>
-              ))
-            ) : (
-              <tr><td colSpan="7" className="empty-cell">No hay comprobantes de egreso para mostrar.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="pagination-container">
-        <button disabled={currentPage === 1 || isLoading} onClick={() => setCurrentPage(currentPage - 1)}>Anterior</button>
-        <span>Página {currentPage} de {totalPages}</span>
-        <button disabled={currentPage === totalPages || totalPages <= 1 || isLoading} onClick={() => setCurrentPage(currentPage + 1)}>Siguiente</button>
       </div>
 
-      <CreateCEModal 
+      <div className="glass-header">
+        <div className="header-top-row">
+          <h1 className="page-title">Comprobantes de Egreso</h1>
+          <div className="header-actions">
+            {usuario?.role === 'administrador' && (
+              <button className="btn-ghost" onClick={exportData} title="Exportar">
+                <FaFileExport />
+              </button>
+            )}
+            <button className="btn-primary-glow" onClick={() => setIsCreatingCE(true)}>
+              <FaPlus />
+              <span className="long-text">Nuevo Comprobante</span>
+              <span className="short-text">Nuevo</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="filters-bar">
+          <div className="search-pill">
+            <FaSearch />
+            <input type="text" name="query" placeholder="Buscar CE, Proveedor..." value={filters.query} onChange={handleFilterChange} />
+          </div>
+          <div className="date-range-pill">
+            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
+            <span>a</span>
+            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
+          </div>
+          <div className="select-pill">
+            <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
+              <option value="">Todos los medios</option>
+              {mediosPago.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
+            </select>
+          </div>
+          {(filters.query || filters.fecha_inicio || filters.medio_pago) && (
+            <button className="btn-reset" onClick={clearFilters}><FaUndo /></button>
+          )}
+        </div>
+      </div>
+
+      <div className="content-area">
+        {/* Desktop Table */}
+        <div className="desktop-table-wrapper">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th className="th-ce-id">CE</th>
+                <th className="th-ce-fecha">Fecha</th>
+                <th className="th-ce-proveedor">Proveedor</th>
+                <th className="th-ce-concepto">Concepto</th>
+                <th className="th-ce-metodo">Medio Pago</th>
+                <th className="th-ce-valor text-right">Valor</th>
+                <th className="th-ce-desc">Nota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="skeleton-row"><td colSpan="7"><div className="skeleton-bar"></div></td></tr>
+                ))
+              ) : comprobantesData.length > 0 ? (
+                comprobantesData.map((item) => (
+                  <tr key={item.id} className="table-row-hover">
+                    <td className="font-bold">#{item.id}</td>
+                    <td className="text-muted">{formatDate(item.fecha)}</td>
+                    <td>{item.proveedor_nombre || '—'}</td>
+                    <td className="concept-cell">{item.concepto}</td>
+                    <td>
+                      <div className="method-cell">
+                        <PaymentIcon method={item.medio_pago} />
+                        <span>{item.medio_pago}</span>
+                      </div>
+                    </td>
+                    <td className="text-right font-mono value-expense">
+                      -{formatCurrency(item.valor)}
+                    </td>
+                    <td className="note-cell">{item.descripcion || '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="7" className="empty-state">No se encontraron comprobantes.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Feed */}
+        <div className="mobile-transaction-feed">
+          {isLoading ? (
+            <div className="loading-spinner">Cargando...</div>
+          ) : comprobantesData.length > 0 ? (
+            comprobantesData.map((item) => (
+              <div className="transaction-card" key={item.id}>
+                <div className="card-left">
+                  <PaymentIcon method={item.medio_pago} />
+                  <div className="card-info">
+                    <div className="card-concept">{item.concepto}</div>
+                    <div className="card-meta">
+                      {formatDate(item.fecha)} • {item.proveedor_nombre}
+                    </div>
+                  </div>
+                </div>
+                <div className="card-right">
+                  <div className="card-amount value-expense">
+                    -{formatCurrency(item.valor)}
+                  </div>
+                  <div className="card-id">#{item.id}</div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state-mobile">Sin registros.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="pagination-bar">
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>Anterior</button>
+        <span>{currentPage} / {totalPages}</span>
+        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>Siguiente</button>
+      </div>
+
+      <CreateCEModal
         isOpen={isCreatingCE}
         onClose={() => setIsCreatingCE(false)}
         onSave={handleCreateCE}

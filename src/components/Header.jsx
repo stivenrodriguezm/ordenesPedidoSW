@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"; // Importar el hook
 import "./Header.css";
 import { AppContext } from "../AppContext";
 
-function Header({ onMenuClick }) {
+function Header({ onMenuClick, isCollapsed }) {
   const { usuario, setUsuario } = useContext(AppContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ function Header({ onMenuClick }) {
   }, []);
 
   return (
-    <header className="header">
+    <header className={`header ${isCollapsed ? "collapsed" : ""}`}>
       <div className="header-content">
         <div className="header-left">
           <button className="sidebar-toggle" onClick={onMenuClick}>
@@ -64,7 +64,7 @@ function Header({ onMenuClick }) {
           </button>
           <h2 className="header-title">{getTitle()}</h2>
         </div>
-        
+
         <div className="header-right">
           {usuario ? (
             <div className="user-menu" ref={menuRef}>
@@ -73,7 +73,7 @@ function Header({ onMenuClick }) {
                   <span>{getInitials(usuario.first_name, usuario.last_name)}</span>
                 </div>
               </button>
-              
+
               {menuOpen && (
                 <div className="dropdown-menu">
                   <div className="dropdown-header">
@@ -94,7 +94,7 @@ function Header({ onMenuClick }) {
               )}
             </div>
           ) : (
-             <button onClick={() => navigate('/login')} className="login-button">Iniciar Sesión</button>
+            <button onClick={() => navigate('/login')} className="login-button">Iniciar Sesión</button>
           )}
         </div>
       </div>

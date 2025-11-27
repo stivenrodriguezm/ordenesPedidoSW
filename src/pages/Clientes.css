@@ -302,9 +302,130 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  max-height: 300px;
-  overflow-y: auto;
+  gap: 0.5rem;
+}
+
+.observaciones-list li {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  padding: 0.5rem;
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   Responsive Adjustments (Laptop & Smaller Screens)
+   ========================================================================== */
+@media (max-width: 1440px) {
+  .clientes-page-container {
+    padding: 0 1rem;
+    /* Add some side padding to the page */
+  }
+
+  .desktop-view .clientes-table {
+    min-width: 100%;
+    /* Allow table to shrink to container width */
+    width: 100%;
+  }
+
+  .desktop-view .clientes-table th,
+  .desktop-view .clientes-table td {
+    padding: 0.5rem 0.5rem;
+    /* Reduce padding significantly */
+    font-size: 0.85rem;
+    /* Slightly smaller font */
+  }
+
+  .desktop-view .clientes-table th {
+    font-size: 0.7rem;
+    /* Smaller header font */
+  }
+
+  /* Adjust specific column widths for compactness */
+  .th-id,
+  .td-id {
+    width: 5%;
+    min-width: 50px;
+  }
+
+  .th-nombre,
+  .td-nombre {
+    width: 18%;
+  }
+
+  /* Give name a bit more space relative to others */
+  .th-cedula,
+  .td-cedula {
+    width: 10%;
+  }
+
+  .th-correo,
+  .td-correo {
+    width: 20%;
+  }
+
+  .th-direccion,
+  .td-direccion {
+    width: 15%;
+  }
+
+  .th-ciudad,
+  .td-ciudad {
+    width: 8%;
+  }
+
+  .th-telefono,
+  .td-telefono {
+    width: 10%;
+    min-width: 90px;
+  }
+
+  .th-telefono-2,
+  .td-telefono-2 {
+    min-width: 90px;
+  }
+
+  .th-accion,
+  .td-accion {
+    width: 4%;
+  }
+
+  /* Compact Expanded View */
+  .details-view {
+    padding: 1rem;
+    gap: 1rem;
+    grid-template-columns: 1.2fr 1fr 1fr 180px;
+    /* Adjust grid columns */
+  }
+
+  .details-view h4 {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .info-item span {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 1024px) {
+
+  /* For even smaller screens (tablets/small laptops), maybe switch to a different layout or scroll */
+  .desktop-view .clientes-table {
+    min-width: 900px;
+    /* Force scroll if it gets too small */
+  }
+
+  .clientes-container {
+    overflow-x: auto;
+    /* Enable horizontal scroll on container */
+  }
+
+  .details-view {
+    grid-template-columns: 1fr 1fr;
+    /* Stack details in 2 columns */
+  }
 }
 
 .observacion-item {

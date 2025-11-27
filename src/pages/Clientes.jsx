@@ -1,10 +1,10 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
 import './Clientes.css';
 import { AppContext } from '../AppContext';
-
 import * as XLSX from 'xlsx';
-import { FaChevronDown, FaEdit, FaPlus, FaFileExport } from 'react-icons/fa';
+import { FaChevronDown, FaEdit, FaPlus, FaFileExport, FaSearch } from 'react-icons/fa';
 import API from '../services/api';
+import AppNotification from '../components/AppNotification';
 
 const EditClienteModal = ({ cliente, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -107,41 +107,59 @@ const AddObservationModal = ({ onSave, onClose }) => {
   );
 };
 
-import AppNotification from '../components/AppNotification';
-
 const Clientes = () => {
-  const { clientes: contextClientes, isLoadingClientes, usuario } = useContext(AppContext);
+  const { usuario } = useContext(AppContext);
+  const [clientesData, setClientesData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClienteId, setExpandedClienteId] = useState(null);
   const [expandedData, setExpandedData] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filteredClientes, setFilteredClientes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showObservationModal, setShowObservationModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [notification, setNotification] = useState({ message: '', type: '' });
 
   const pageSize = 30;
 
-  useEffect(() => {
-    if (!Array.isArray(contextClientes)) {
-      setFilteredClientes([]);
-      setTotalPages(1);
-      return;
+  // Server-side fetching
+  const fetchClientes = useCallback(async (page, search) => {
+    setIsLoading(true);
+    try {
+      const params = {
+        page: page,
+        page_size: pageSize,
+        search: search // Assuming backend supports ?search= param for generic search
+      };
+      // If backend doesn't support generic 'search', we might need to adjust this
+      // But usually DRF SearchFilter uses 'search'
+
+      const response = await API.get('/clientes/', { params });
+      setClientesData(response.data.results || []);
+      setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
+    } catch (error) {
+      console.error("Error fetching clientes:", error);
+      setNotification({ message: 'Error al cargar clientes.', type: 'error' });
+      setClientesData([]);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    const lowercasedFilter = searchTerm.toLowerCase();
-    const filtered = contextClientes.filter(cliente =>
-      cliente.id.toString().toLowerCase().includes(lowercasedFilter) ||
-      cliente.nombre.toLowerCase().includes(lowercasedFilter) ||
-      cliente.cedula.toLowerCase().includes(lowercasedFilter)
-    );
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchClientes(1, searchTerm);
+    }, 500); // 500ms debounce
+    return () => clearTimeout(timer);
+  }, [searchTerm, fetchClientes]);
 
-    setFilteredClientes(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize));
-    setTotalPages(Math.ceil(filtered.length / pageSize) || 1);
-  }, [contextClientes, searchTerm, currentPage, pageSize]);
+  // Pagination change
+  useEffect(() => {
+    fetchClientes(currentPage, searchTerm);
+  }, [currentPage, fetchClientes]); // searchTerm is handled by debounce effect, but if page changes we need to refetch with current search
 
   const handleExpandCliente = async (clienteId) => {
     if (expandedClienteId === clienteId) {
@@ -168,41 +186,51 @@ const Clientes = () => {
       setExpandedData(mergedData);
 
     } catch (error) {
-      setErrorMessage('Error al cargar los detalles del cliente.');
+      setNotification({ message: 'Error al cargar los detalles del cliente.', type: 'error' });
     } finally {
       setLoadingDetails(false);
     }
   };
 
-  const exportClientes = () => {
-    const lowercasedFilter = searchTerm.toLowerCase();
-    const filtered = contextClientes.filter(cliente =>
-      cliente.id.toString().toLowerCase().includes(lowercasedFilter) ||
-      cliente.nombre.toLowerCase().includes(lowercasedFilter) ||
-      cliente.cedula.toLowerCase().includes(lowercasedFilter)
-    );
+  const exportClientes = async () => {
+    try {
+      // Export all matching current search
+      const response = await API.get('/clientes/', {
+        params: {
+          search: searchTerm,
+          page_size: 9999 // Large page size for export
+        }
+      });
 
-    const dataToExport = filtered.map(cliente => ({
-      'ID': cliente.id,
-      'Nombre': cliente.nombre,
-      'Cédula': cliente.cedula,
-      'Correo': cliente.correo,
-      'Dirección': cliente.direccion,
-      'Ciudad': cliente.ciudad,
-      'Teléfono 1': cliente.telefono1,
-      'Teléfono 2': cliente.telefono2,
-    }));
+      const dataToExport = (response.data.results || []).map(cliente => ({
+        'ID': cliente.id,
+        'Nombre': cliente.nombre,
+        'Cédula': cliente.cedula,
+        'Correo': cliente.correo,
+        'Dirección': cliente.direccion,
+        'Ciudad': cliente.ciudad,
+        'Teléfono 1': cliente.telefono1,
+        'Teléfono 2': cliente.telefono2,
+      }));
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
-    XLSX.writeFile(wb, 'Clientes.xlsx');
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+      XLSX.writeFile(wb, 'Clientes.xlsx');
+      setNotification({ message: 'Exportación exitosa.', type: 'success' });
+    } catch (error) {
+      setNotification({ message: 'Error al exportar clientes.', type: 'error' });
+    }
   };
 
   const handleEditCliente = async (updatedCliente) => {
     try {
       const response = await API.put(`/clientes/${updatedCliente.id}/`, updatedCliente);
       setExpandedData(prevData => ({ ...prevData, ...response.data }));
+
+      // Update list data locally to reflect changes without refetching
+      setClientesData(prev => prev.map(c => c.id === updatedCliente.id ? { ...c, ...response.data } : c));
+
       setNotification({ message: 'Cliente actualizado correctamente.', type: 'success' });
       setShowEditModal(false);
     } catch (error) {
@@ -222,8 +250,9 @@ const Clientes = () => {
         observaciones_cliente: [...prevData.observaciones_cliente, response.data]
       }));
       setShowObservationModal(false);
+      setNotification({ message: 'Observación agregada.', type: 'success' });
     } catch (error) {
-      setErrorMessage('Error al agregar la observación.');
+      setNotification({ message: 'Error al agregar la observación.', type: 'error' });
     }
   };
 
@@ -235,16 +264,17 @@ const Clientes = () => {
         onClose={() => setNotification({ message: '', type: '' })}
       />
       <div className="page-header">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Buscar por ID, nombre o cédula..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
+        <div className="search-container">
+          <FaSearch className="search-icon" />
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Buscar por ID, nombre o cédula..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
         {usuario?.role === 'administrador' && (
           <button className="btn-secondary" onClick={exportClientes}>
             <FaFileExport /> Exportar
@@ -270,10 +300,10 @@ const Clientes = () => {
               </tr>
             </thead>
             <tbody>
-              {isLoadingClientes ? (
+              {isLoading ? (
                 <tr><td colSpan="9"><div className="loading-container"><div className="loader"></div></div></td></tr>
-              ) : filteredClientes.length > 0 ? (
-                filteredClientes.map((cliente) => (
+              ) : clientesData.length > 0 ? (
+                clientesData.map((cliente) => (
                   <React.Fragment key={cliente.id}>
                     <tr>
                       <td className="td-id">{cliente.id}</td>
@@ -348,10 +378,10 @@ const Clientes = () => {
 
         {/* Mobile View: Cards */}
         <div className="mobile-view">
-          {isLoadingClientes ? (
+          {isLoading ? (
             <div className="loading-container"><div className="loader"></div></div>
-          ) : filteredClientes.length > 0 ? (
-            filteredClientes.map((cliente) => (
+          ) : clientesData.length > 0 ? (
+            clientesData.map((cliente) => (
               <div key={cliente.id} className={`card-clientes card ${expandedClienteId === cliente.id ? 'expanded' : ''}`}>
                 <div className="card-header" onClick={() => handleExpandCliente(cliente.id)}>
                   <div className="card-header-info">
@@ -429,9 +459,9 @@ const Clientes = () => {
       )}
 
       <div className="pagination-container">
-        <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>Anterior</button>
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>Anterior</button>
         <span>Página {currentPage} de {totalPages}</span>
-        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>Siguiente</button>
+        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>Siguiente</button>
       </div>
     </div>
   );

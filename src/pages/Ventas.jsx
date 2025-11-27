@@ -55,6 +55,14 @@ const Ventas = () => {
     const [ventaDetails, setVentaDetails] = useState(null);
     const [expandedNestedOrderId, setExpandedNestedOrderId] = useState(null);
     const [nestedOrderDetails, setNestedOrderDetails] = useState(null);
+    const [detailsError, setDetailsError] = useState(null);
+    const [isPartialData, setIsPartialData] = useState(false);
+
+    // Estados de Carga y Errores
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const pageSize = 50;
 
     // Estados de Carga y Errores
     const [isLoading, setIsLoading] = useState(true);
@@ -151,10 +159,14 @@ const Ventas = () => {
 
     const monthOptions = generateMonthOptions();
 
-    const fetchVentas = useCallback(async () => {
+    const fetchVentas = useCallback(async (page = 1) => {
         setIsLoading(true);
         try {
-            const params = {};
+            const params = {
+                page: page,
+                page_size: pageSize,
+                ordering: '-fecha_venta,-id' // Ensure consistent ordering
+            };
             if (debouncedSearchTerm) {
                 params.search = debouncedSearchTerm;
             } else {
@@ -171,15 +183,22 @@ const Ventas = () => {
                 params.estado = selectedEstado;
             }
             const response = await API.get(`/ventas/`, { params });
-            const sortedVentas = response.data.sort((a, b) => {
-                if (a.fecha_venta < b.fecha_venta) return 1;
-                if (a.fecha_venta > b.fecha_venta) return -1;
-                return b.id - a.id;
-            });
-            setVentas(sortedVentas || []);
+
+            // Handle paginated response
+            if (response.data.results) {
+                setVentas(response.data.results);
+                setTotalCount(response.data.count);
+                setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
+            } else {
+                // Fallback for non-paginated response (shouldn't happen with standard DRF pagination, but good for safety)
+                setVentas(response.data || []);
+                setTotalCount(response.data.length || 0);
+                setTotalPages(1);
+            }
         } catch (error) {
             console.error('Error cargando ventas:', error);
             setNotification({ message: 'Error al cargar las ventas.', type: 'error' });
+            setVentas([]);
         } finally {
             setIsLoading(false);
         }
@@ -196,16 +215,61 @@ const Ventas = () => {
             if (usuario?.role.toLowerCase() === 'vendedor') {
                 params.vendedor = usuario.id;
             }
+            // Note: This might still fail if the dataset is huge, but it won't crash the main list
             const response = await API.get(`/ventas/`, { params });
-            setReportSales(response.data || []);
+            // If response is paginated, we might only get the first page. 
+            // Ideally, we need a summary endpoint. For now, we assume if it's paginated, we use results.
+            const data = response.data.results || response.data;
+            setReportSales(data || []);
         } catch (error) {
             console.error('Error cargando ventas para el informe:', error);
+            // Fail silently for the report, so the user can still see the list
+            setReportSales([]);
         }
     }, [selectedMonthYear, usuario]);
 
     useEffect(() => {
-        fetchVentas();
+        setCurrentPage(1); // Reset to page 1 when filters change
+        fetchVentas(1);
     }, [fetchVentas]);
+
+    useEffect(() => {
+        // Fetch when page changes (but not when filters change, as that's handled above)
+        // Actually, fetchVentas depends on filters. 
+        // We need to separate the trigger.
+        // Let's simplify: 
+        // 1. When filters change, we call setCurrentPage(1).
+        // 2. When currentPage changes, we call fetchVentas(currentPage).
+        // But fetchVentas needs the current filters.
+        // The dependency array of fetchVentas includes filters.
+        // So if filters change, fetchVentas changes.
+        // We want to avoid double fetching.
+
+        // Correct pattern:
+        // We can just call fetchVentas(currentPage) here.
+        // But if filters change, we want to reset to page 1.
+        // So we need a separate effect for filters?
+
+        // Let's rely on the fact that fetchVentas is recreated when filters change.
+        // We can just call it. But we need to pass the page.
+        // If we just use `useEffect(() => { fetchVentas(currentPage); }, [fetchVentas, currentPage])`,
+        // then when filters change, fetchVentas changes, and it runs with OLD currentPage.
+        // We want it to run with page 1.
+
+        // So:
+        // When filters change (debouncedSearchTerm, selectedMonthYear, etc.), we setPage(1).
+        // Then page changes, and we fetch.
+    }, []);
+
+    // Effect for Filters
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado]);
+
+    // Effect for Page Change & Initial Load
+    useEffect(() => {
+        fetchVentas(currentPage);
+    }, [currentPage, fetchVentas]);
 
     useEffect(() => {
         fetchReportSales();
@@ -233,30 +297,83 @@ const Ventas = () => {
     const handleExpandVenta = async (ventaId) => {
         if (expandedVentaId === ventaId) {
             setExpandedVentaId(null);
-        } else {
-            setExpandedVentaId(ventaId);
-            setExpandedNestedOrderId(null); // Reset nested view
-            setLoadingDetails(true);
-            try {
-                const response = await API.get(`/ventas/${ventaId}/`);
-                setVentaDetails(response.data);
-                console.log('Venta Details Response:', response.data);
-                console.log('ventaDetails.cliente:', ventaDetails.cliente);
-            } catch (error) {
-                console.error('Error al obtener detalles de la venta:', error);
-            } finally {
-                setLoadingDetails(false);
+            setVentaDetails(null);
+            return;
+        }
+
+        setExpandedVentaId(ventaId);
+        setLoadingDetails(true);
+        setDetailsError(null);
+        setVentaDetails(null);
+        setIsPartialData(false);
+
+        try {
+            // Fetch Details and Receipts in PARALLEL
+            // We split this to avoid backend timeouts on heavy sales.
+            console.log(`Fetching details and receipts for venta ${ventaId}`);
+            const [detailsRes, recibosRes] = await Promise.allSettled([
+                API.get(`/ventas/${ventaId}/`),
+                API.get('/recibos-caja/', { params: { venta_id: ventaId, page_size: 50 } })
+            ]);
+
+            let detailsData = {};
+            let recibosData = [];
+            let isPartial = false;
+
+            // Handle Details Response
+            if (detailsRes.status === 'fulfilled') {
+                detailsData = detailsRes.value.data;
+            } else {
+                console.error('Error fetching sale details:', detailsRes.reason);
+                // If main details fail, try to use basic info from the list
+                const basicVenta = ventas.find(v => v.id === ventaId);
+                if (basicVenta) {
+                    detailsData = {
+                        ...basicVenta,
+                        cliente: basicVenta.cliente || {},
+                        observaciones_venta: [],
+                        productos_vendidos: [],
+                        ordenes_pedido: []
+                    };
+                    isPartial = true;
+                } else {
+                    throw new Error("No se pudo cargar la información de la venta.");
+                }
             }
+
+            // Handle Receipts Response
+            if (recibosRes.status === 'fulfilled') {
+                recibosData = recibosRes.value.data.results || [];
+                console.log(`Fetched ${recibosData.length} receipts for venta ${ventaId}:`, recibosData);
+            } else {
+                console.error('Error fetching receipts:', recibosRes.reason);
+                // If receipts fail, we just show empty list but don't crash the whole view
+            }
+
+            setVentaDetails({
+                ...detailsData,
+                recibos: recibosData
+            });
+            setIsPartialData(isPartial);
+
+        } catch (error) {
+            console.error('Critical error loading sale details:', error);
+            setDetailsError('Error al cargar los detalles de la venta.');
+        } finally {
+            setLoadingDetails(false);
         }
     };
 
+
     const refreshVentaDetails = async (ventaId) => {
         setLoadingDetails(true);
+        setDetailsError(null);
         try {
             const response = await API.get(`/ventas/${ventaId}/`);
             setVentaDetails(response.data);
         } catch (error) {
             console.error('Error al refrescar detalles de la venta:', error);
+            setDetailsError('Error al actualizar los detalles.');
         } finally {
             setLoadingDetails(false);
         }
@@ -447,179 +564,488 @@ const Ventas = () => {
             </div>
 
             <div className="ventas-container">
-                <table className="ventas-table">
-                    <thead>
-                        <tr>
-                            <th className="th-oc">O.C.</th>
-                            <th className="th-fecha">F. Venta</th>
-                            <th className="th-fecha">F. Entrega</th>
-                            <th className="th-vendedor">Vendedor</th>
-                            <th className="th-cliente">Cliente</th>
-                            <th className="th-valor">Abono</th>
-                            <th className="th-valor">Saldo</th>
-                            <th className="th-valor">Valor</th>
-                            <th className="th-pedidos">PEDIDOS</th>
-                            <th className="th-estado">Estado</th>
-                            <th className="th-accion"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <tr><td colSpan="11"><div className="loading-container"><div className="loader"></div></div></td></tr>
-                        ) : ventas.length > 0 ? (
-                            ventas.map((venta) => (
-                                <React.Fragment key={venta.id}>
-                                    <tr>
-                                        <td className="td-oc">{venta.id}</td>
-                                        <td className="td-fecha">{formatShortDate(venta.fecha_venta)}</td>
-                                        <td className="td-fecha">{formatShortDate(venta.fecha_entrega)}</td>
-                                        <td className="td-vendedor">{venta.vendedor_nombre}</td>
-                                        <td className="td-cliente">{venta.cliente_nombre}</td>
-                                        <td className="td-valor">{formatCurrency(venta.abono)}</td>
-                                        <td className="td-valor">{formatCurrency(venta.saldo)}</td>
-                                        <td className="td-valor td-valor-total">{formatCurrency(venta.valor_total)}</td>
-                                        <td className="td-pedidos">
-                                            <span className={`status-badge ${venta.estado_pedidos ? 'pedido-realizado' : 'pedido-pendiente'}`}>
-                                                {venta.estado_pedidos ? 'Pedido' : 'Pendiente'}
-                                            </span>
-                                        </td>
-                                        <td className="td-estado">{venta.estado ? <span className={`status-badge ${getStatusClass(venta.estado)}`}>{capitalizeEstado(venta.estado)}</span> : ''}</td>
-                                        <td className="td-accion">
-                                            <button className="btn-icon" onClick={() => handleExpandVenta(venta.id)}>
-                                                <FaChevronDown style={{ transform: expandedVentaId === venta.id ? 'rotate(180deg)' : 'none' }} />
-                                            </button>
-                                        </td>
+                {/* Desktop View */}
+                <div className="desktop-view">
+                    <table className="ventas-table">
+                        <thead>
+                            <tr>
+                                <th className="th-oc">ID</th>
+                                <th className="th-fecha">F. Venta</th>
+                                <th className="th-fecha">F. Entrega</th>
+                                <th className="th-vendedor">Vendedor</th>
+                                <th className="th-cliente">Cliente</th>
+                                <th className="th-valor">Abono</th>
+                                <th className="th-valor">Saldo</th>
+                                <th className="th-valor">Total</th>
+                                <th className="th-pedidos">Pedidos</th>
+                                <th className="th-estado">Estado</th>
+                                <th className="th-accion"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {isLoading ? (
+                                // Skeleton Loading Rows
+                                Array.from({ length: 5 }).map((_, index) => (
+                                    <tr key={index} className="skeleton-row">
+                                        <td className="td-oc"><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                                        <td className="td-fecha"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        <td className="td-fecha"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        <td className="td-vendedor"><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                                        <td className="td-cliente"><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
+                                        <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                        <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                        <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        <td className="td-pedidos"><div className="skeleton skeleton-badge"></div></td>
+                                        <td className="td-estado"><div className="skeleton skeleton-badge"></div></td>
+                                        <td className="td-accion"><div className="skeleton skeleton-text" style={{ width: '20px' }}></div></td>
                                     </tr>
-                                    {expandedVentaId === venta.id && (
-                                        <tr className="expanded-row">
-                                            <td colSpan="11">
-                                                {loadingDetails ? (
-                                                    <div className="loading-container"><div className="loader"></div></div>
-                                                ) : ventaDetails ? (
-                                                    <div className="venta-details-view">
-                                                        <div className="details-card cliente-info">
-                                                            <h4>Datos del Cliente</h4>
-                                                            <div className="cliente-data-grid">
-                                                                <p><strong>Nombre:</strong> {ventaDetails.cliente?.nombre || 'N/A'}</p>
-                                                                <p><strong>Cédula:</strong> {ventaDetails.cliente?.cedula || 'N/A'}</p>
-                                                                <p><strong>Correo:</strong> {ventaDetails.cliente?.correo || 'N/A'}</p>
-                                                                <p><strong>Teléfono 1:</strong> {ventaDetails.cliente?.telefono1 || 'N/A'}</p>
-                                                                <p><strong>Teléfono 2:</strong> {ventaDetails.cliente?.telefono2 || 'N/A'}</p>
-                                                                <p><strong>Dirección:</strong> {ventaDetails.cliente?.direccion || 'N/A'}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="pagos-remisiones-wrapper">
-                                                            <div className="pagos-remisiones-group-wrapper">
-                                                                <div className="details-card observaciones-cliente">
-                                                                    <div className="observaciones-header">
-                                                                        <h4>Pagos</h4>
-                                                                    </div>
-                                                                    <ul>
-                                                                        {ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r =>
-                                                                            <li key={r.id}>RC{r.id}: {formatCurrency(r.valor)} ({r.metodo_pago}) - {r.estado === 'Confirmado' ? 'Confirmado' : 'Por confirmar'} {formatShortDate(r.fecha)}</li>
-                                                                        ) : <li>No hay pagos registrados.</li>}
-                                                                    </ul>
-                                                                </div>
-                                                                <div className="details-card observaciones-cliente">
-                                                                    <div className="observaciones-header">
-                                                                        <h4>Remisiones</h4>
-                                                                        <button className="btn-icon" onClick={() => setShowRemisionModal(true)}><FaPlus /></button>
-                                                                    </div>
-                                                                    <ul>
-                                                                        {ventaDetails.remisiones.length > 0 ? ventaDetails.remisiones.map(r =>
-                                                                            <li key={r.codigo}>{r.codigo} - {formatShortDate(r.fecha)}</li>
-                                                                        ) : <li>No hay remisiones registradas.</li>}
-                                                                    </ul>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="observaciones-wrapper">
-                                                            <div className="details-card observaciones-cliente">
-                                                                <div className="observaciones-header">
-                                                                    <h4>Observaciones Cliente</h4>
-                                                                    <button className="btn-icon" onClick={() => setShowObservacionClienteModal(true)}><FaPlus /></button>
-                                                                </div>
-                                                                <ul>{(ventaDetails.cliente.observaciones || []).length > 0 ? ventaDetails.cliente.observaciones.map(o => <li key={o.id}>{o.texto}</li>) : <li>No hay.</li>}</ul>
-                                                            </div>
-                                                            <div className="details-card observaciones-venta">
-                                                                <div className="observaciones-header">
-                                                                    <h4>Observaciones Venta</h4>
-                                                                    <button className="btn-icon" onClick={() => setShowObservacionVentaModal(true)}><FaPlus /></button>
-                                                                </div>
-                                                                <ul>{(ventaDetails.observaciones_venta || []).length > 0 ? ventaDetails.observaciones_venta.map(o => <li key={o.id}>{o.texto}</li>) : <li>No hay.</li>}</ul>
-                                                            </div>
-                                                        </div>
-                                                        <div className="details-card pedidos-info">
-                                                            <div className="pedidos-header">
-                                                                <h4>Órdenes de Pedido Asociadas</h4>
-                                                                {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
-                                                                    <button className="btn-primary" onClick={() => { setShowEditSaleModal(true); setEditSaleData(ventaDetails); }}><FaEdit /> Editar Venta</button>
-                                                                )}
-                                                            </div>
-                                                            <table className="data-table nested-ordenes-table">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>O.P.</th>
-                                                                        <th>Proveedor</th>
-                                                                        <th>F. Pedido</th>
-                                                                        <th>F. Llegada</th>
-                                                                        <th>Tela</th>
-                                                                        <th>Estado</th>
-                                                                        <th>Observación</th>
-                                                                        <th></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {ventaDetails.ordenes_pedido.length > 0 ? ventaDetails.ordenes_pedido.map(op => (
-                                                                        <React.Fragment key={`nested-op-${op.id}`}>
-                                                                            <tr>
-                                                                                <td>{op.id}</td>
-                                                                                <td>{op.proveedor_nombre}</td>
-                                                                                <td>{formatDate(op.fecha_pedido)}</td>
-                                                                                <td>{formatDate(op.fecha_esperada)}</td>
-                                                                                <td><span className={`status-badge ${getStatusClass(op.tela)}`}>{op.tela}</span></td>
-                                                                                <td><span className={`status-badge ${getStatusClass(op.estado)}`}>{capitalizeEstado(op.estado)}</span></td>
-                                                                                <td>{op.observacion || 'N/A'}</td>
-                                                                                <td className="td-accion">
-                                                                                    <button className="btn-icon" onClick={() => handleExpandNestedOrder(op.id)}>
-                                                                                        <FaChevronDown style={{ transform: expandedNestedOrderId === op.id ? 'rotate(180deg)' : 'none' }} />
-                                                                                    </button>
-                                                                                </td>
-                                                                            </tr>
-                                                                            {expandedNestedOrderId === op.id && (
-                                                                                <tr className="nested-expanded-row">
-                                                                                    <td colSpan="8">
-                                                                                        {loadingNestedDetails ? <div className="loading-container-small"><div className="loader"></div></div>
-                                                                                            : nestedOrderDetails ? (
-                                                                                                <div className="nested-order-preview">
-                                                                                                    <h5>Productos del Pedido #{op.id}</h5>
-                                                                                                    <ul>
-                                                                                                        {nestedOrderDetails.map((det, i) => (
-                                                                                                            <li key={i}>{det.cantidad}x {det.referencia} - {det.especificaciones}</li>
-                                                                                                        ))}
-                                                                                                    </ul>
-                                                                                                </div>
-                                                                                            ) : <div className="error-cell">No se encontraron detalles.</div>}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            )}
-                                                                        </React.Fragment>
-                                                                    )) : <tr><td colSpan="8" className="empty-cell">No hay órdenes asociadas.</td></tr>}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                ) : <div className="error-cell">No se pudieron cargar los detalles.</div>}
+                                ))
+                            ) : ventas.length === 0 ? (
+                                <tr>
+                                    <td colSpan="11" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                                        <div className="empty-state-content">
+                                            <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', marginBottom: '1rem' }}>No se encontraron ventas.</p>
+                                            <button className="btn-primary" onClick={() => navigate('/nueva-venta')}>
+                                                Crear Nueva Venta
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                ventas.map((venta) => (
+                                    <React.Fragment key={venta.id}>
+                                        <tr onClick={() => handleExpandVenta(venta.id)} style={{ cursor: 'pointer' }}>
+                                            <td className="td-oc">#{venta.id}</td>
+                                            <td className="td-fecha">{formatShortDate(venta.fecha_venta)}</td>
+                                            <td className="td-fecha">{formatShortDate(venta.fecha_entrega)}</td>
+                                            <td className="td-vendedor">
+                                                {venta.vendedor_nombre || '—'}
+                                            </td>
+                                            <td className="td-cliente">
+                                                {venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}
+                                            </td>
+                                            <td className="td-valor">{formatCurrency(venta.abono)}</td>
+                                            <td className="td-valor">{formatCurrency(venta.saldo)}</td>
+                                            <td className="td-valor td-valor-total">
+                                                {formatCurrency(venta.valor_total)}
+                                            </td>
+                                            <td className="td-pedidos">
+                                                <span className={`status-badge ${venta.estado_pedidos ? 'pedido-realizado' : 'pedido-pendiente'}`}>
+                                                    {venta.estado_pedidos ? 'Pedido' : 'Pendiente'}
+                                                </span>
+                                            </td>
+                                            <td className="td-estado">
+                                                <span className={`status-badge ${getStatusClass(venta.estado)}`}>
+                                                    {capitalizeEstado(venta.estado)}
+                                                </span>
+                                            </td>
+                                            <td className="td-accion">
+                                                <button
+                                                    className={`btn-expand ${expandedVentaId === venta.id ? 'active' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleExpandVenta(venta.id);
+                                                    }}
+                                                >
+                                                    <FaChevronDown />
+                                                </button>
                                             </td>
                                         </tr>
-                                    )}
-                                </React.Fragment>
-                            ))
-                        ) : (
-                            <tr><td colSpan="11" className="empty-cell">No hay ventas para mostrar.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+                                        {expandedVentaId === venta.id && (
+                                            <tr className="expanded-row">
+                                                <td colSpan="11" className="expanded-row-content">
+                                                    {loadingDetails ? (
+                                                        <div className="loading-spinner">Cargando detalles...</div>
+                                                    ) : detailsError ? (
+                                                        <div className="error-message-container">
+                                                            <p className="error-text">{detailsError}</p>
+                                                            <button className="btn-secondary" onClick={() => handleExpandVenta(venta.id)}>
+                                                                Reintentar Carga
+                                                            </button>
+                                                        </div>
+                                                    ) : ventaDetails ? (
+                                                        <div className="venta-details-view">
+                                                            {isPartialData && (
+                                                                <div className="alert-warning" style={{ gridColumn: '1 / -1', marginBottom: '0', padding: '0.75rem', backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                    <strong>Atención:</strong> No se pudieron cargar los productos de esta venta debido a un problema de conexión, pero aquí están los pagos y observaciones recuperados.
+                                                                </div>
+                                                            )}
+
+                                                            {/* Cliente Info */}
+                                                            <div className="details-card cliente-info">
+                                                                <h4>Información del Cliente</h4>
+                                                                <div className="info-row">
+                                                                    <span className="label">Nombre:</span>
+                                                                    <span className="value">{ventaDetails.cliente?.nombre || '—'}</span>
+                                                                </div>
+                                                                <div className="info-row">
+                                                                    <span className="label">Cédula/NIT:</span>
+                                                                    <span className="value">{ventaDetails.cliente?.cedula || '—'}</span>
+                                                                </div>
+                                                                <div className="info-row">
+                                                                    <span className="label">Teléfono 1:</span>
+                                                                    <span className="value">{ventaDetails.cliente?.telefono1 || '—'}</span>
+                                                                </div>
+                                                                {ventaDetails.cliente?.telefono2 && (
+                                                                    <div className="info-row">
+                                                                        <span className="label">Teléfono 2:</span>
+                                                                        <span className="value">{ventaDetails.cliente.telefono2}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="info-row">
+                                                                    <span className="label">Ciudad:</span>
+                                                                    <span className="value">{ventaDetails.cliente?.ciudad || '—'}</span>
+                                                                </div>
+                                                                <div className="info-row">
+                                                                    <span className="label">Dirección:</span>
+                                                                    <span className="value">{ventaDetails.cliente?.direccion || '—'}</span>
+                                                                </div>
+                                                                <div className="info-row">
+                                                                    <span className="label">Correo:</span>
+                                                                    <span className="value">{ventaDetails.cliente?.correo || 'N/A'}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Pagos Realizados (Improved Design) */}
+                                                            <div className="details-card pagos-info">
+                                                                <h4>Pagos Realizados</h4>
+                                                                {ventaDetails.recibos && ventaDetails.recibos.length > 0 ? (
+                                                                    <div className="payments-list">
+                                                                        {ventaDetails.recibos.map((pago, index) => (
+                                                                            <div key={index} className="payment-item">
+                                                                                <div className="payment-icon">
+                                                                                    <div className={`payment-status-dot ${pago.estado === 'Confirmado' ? 'confirmed' : 'pending'}`}></div>
+                                                                                </div>
+                                                                                <div className="payment-details">
+                                                                                    <span className="payment-main-text">
+                                                                                        RC. #{pago.id}, {formatShortDate(pago.fecha)}, {formatCurrency(pago.valor)}
+                                                                                    </span>
+                                                                                    <span className="payment-sub-text">
+                                                                                        <span className={`payment-status ${pago.estado === 'Confirmado' ? 'text-green' : 'text-orange'}`}>
+                                                                                            ({pago.estado})
+                                                                                        </span>{' '}
+                                                                                        <span className="payment-method">{pago.metodo_pago}</span>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-muted">No hay pagos registrados.</p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Remisiones */}
+                                                            <div className="details-card remisiones-info">
+                                                                <h4>
+                                                                    Remisiones
+                                                                    <button className="card-header-action" onClick={() => setShowRemisionModal(true)} title="Generar Remisión"><FaPlus /></button>
+                                                                </h4>
+                                                                <p className="text-muted">Generar nueva remisión para esta venta.</p>
+                                                            </div>
+
+                                                            {/* Observaciones Cliente */}
+                                                            <div className="details-card observaciones-cliente">
+                                                                <h4>
+                                                                    Obs. Cliente
+                                                                    <button className="card-header-action" onClick={() => {
+                                                                        setObservacionClienteText('');
+                                                                        setShowObservacionClienteModal(true);
+                                                                    }} title="Añadir Observación Cliente"><FaPlus /></button>
+                                                                </h4>
+                                                                {isPartialData ? (
+                                                                    <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
+                                                                ) : ventaDetails.cliente.observaciones && ventaDetails.cliente.observaciones.length > 0 ? (
+                                                                    <ul>
+                                                                        {ventaDetails.cliente.observaciones.map((obs, index) => (
+                                                                            <li key={index}>{obs.texto} <small>({formatDate(obs.fecha_creacion)})</small></li>
+                                                                        ))}
+                                                                    </ul>
+                                                                ) : <p className="text-muted">Sin observaciones.</p>}
+                                                            </div>
+
+                                                            {/* Observaciones Venta */}
+                                                            <div className="details-card observaciones-venta">
+                                                                <h4>
+                                                                    Obs. Venta
+                                                                    <button className="card-header-action" onClick={() => {
+                                                                        setObservacionVentaText('');
+                                                                        setShowObservacionVentaModal(true);
+                                                                    }} title="Añadir Observación Venta"><FaPlus /></button>
+                                                                </h4>
+                                                                {isPartialData ? (
+                                                                    <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
+                                                                ) : ventaDetails.observaciones_venta && ventaDetails.observaciones_venta.length > 0 ? (
+                                                                    <ul>
+                                                                        {ventaDetails.observaciones_venta.map((obs, index) => (
+                                                                            <li key={index}>{obs.texto} <small>({formatDate(obs.fecha)})</small></li>
+                                                                        ))}
+                                                                    </ul>
+                                                                ) : <p className="text-muted">Sin observaciones.</p>}
+                                                            </div>
+
+                                                            {/* Órdenes de Pedido (Full Width) */}
+                                                            <div className="details-card details-full-width orders-section">
+                                                                <div className="pedidos-header">
+                                                                    <h4>Órdenes de Pedido</h4>
+                                                                    {usuario?.role === 'administrador' && (
+                                                                        <button className="btn-primary" onClick={() => {
+                                                                            setEditSaleData(ventaDetails);
+                                                                            setShowEditSaleModal(true);
+                                                                        }}>
+                                                                            <FaEdit /> Editar Venta
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+
+                                                                {ventaDetails.ordenes_pedido && ventaDetails.ordenes_pedido.length > 0 ? (
+                                                                    <div className="orders-table-wrapper">
+                                                                        <table className="orders-table-enhanced">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th className="th-order-id">ID</th>
+                                                                                    <th className="th-order-proveedor">Proveedor</th>
+                                                                                    <th className="th-order-date">F. Pedido</th>
+                                                                                    <th className="th-order-date">F. Esperada</th>
+                                                                                    <th className="th-order-tela">Tela</th>
+                                                                                    {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
+                                                                                        <th className="th-order-costo">Costo</th>
+                                                                                    )}
+                                                                                    <th className="th-order-estado">Estado</th>
+                                                                                    <th className="th-order-accion"></th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {ventaDetails.ordenes_pedido.map((pedido) => (
+                                                                                    <React.Fragment key={pedido.id}>
+                                                                                        <tr className={`order-row-enhanced ${expandedNestedOrderId === pedido.id ? 'expanded' : ''}`}>
+                                                                                            <td className="td-order-id">
+                                                                                                <span className="order-id-badge">#{pedido.id}</span>
+                                                                                            </td>
+                                                                                            <td className="td-order-proveedor">
+                                                                                                <span className="proveedor-name">{pedido.proveedor_nombre || '—'}</span>
+                                                                                            </td>
+                                                                                            <td className="td-order-date">
+                                                                                                <span className="date-text">{formatShortDate(pedido.fecha_pedido)}</span>
+                                                                                            </td>
+                                                                                            <td className="td-order-date">
+                                                                                                <span className="date-text">{formatShortDate(pedido.fecha_esperada)}</span>
+                                                                                            </td>
+                                                                                            <td className="td-order-tela">
+                                                                                                <span className="tela-info">{pedido.tela || '—'}</span>
+                                                                                            </td>
+                                                                                            {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
+                                                                                                <td className="td-order-costo">
+                                                                                                    <span className="costo-amount">{formatCurrency(pedido.costo)}</span>
+                                                                                                </td>
+                                                                                            )}
+                                                                                            <td className="td-order-estado">
+                                                                                                <span className={`order-status-badge ${pedido.estado ? pedido.estado.toLowerCase().replace(/[_ ]/g, '-') : ''}`}>
+                                                                                                    {capitalizeEstado(pedido.estado)}
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="td-order-accion">
+                                                                                                <button
+                                                                                                    className={`btn-expand-order ${expandedNestedOrderId === pedido.id ? 'active' : ''}`}
+                                                                                                    onClick={() => handleExpandNestedOrder(pedido.id)}
+                                                                                                    title="Ver Productos"
+                                                                                                >
+                                                                                                    <FaChevronDown />
+                                                                                                </button>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                        {expandedNestedOrderId === pedido.id && (
+                                                                                            <tr className="nested-expanded-row">
+                                                                                                <td colSpan={usuario?.role === 'vendedor' ? '6' : '7'}>
+                                                                                                    <div className="nested-order-details-wrapper">
+                                                                                                        {loadingNestedDetails ? (
+                                                                                                            <div className="loading-container-small"><div className="loader-small"></div></div>
+                                                                                                        ) : nestedOrderDetails ? (
+                                                                                                            <div className="nested-order-content">
+                                                                                                                <h5>Productos en Orden #{pedido.id}</h5>
+                                                                                                                <table className="products-table-enhanced">
+                                                                                                                    <thead>
+                                                                                                                        <tr>
+                                                                                                                            <th>Referencia</th>
+                                                                                                                            <th>Cantidad</th>
+                                                                                                                            <th>Especificaciones</th>
+                                                                                                                        </tr>
+                                                                                                                    </thead>
+                                                                                                                    <tbody>
+                                                                                                                        {nestedOrderDetails.map((detalle, idx) => (
+                                                                                                                            <tr key={idx}>
+                                                                                                                                <td><strong>{detalle.referencia}</strong></td>
+                                                                                                                                <td>{detalle.cantidad}</td>
+                                                                                                                                <td>{detalle.especificaciones || '—'}</td>
+                                                                                                                            </tr>
+                                                                                                                        ))}
+                                                                                                                    </tbody>
+                                                                                                                </table>
+                                                                                                            </div>
+                                                                                                        ) : <div className="error-message">Error al cargar detalles del pedido.</div>}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        )}
+                                                                                    </React.Fragment>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="empty-state-small">
+                                                                        <p>No hay órdenes de pedido asociadas a esta venta.</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="error-message">No se pudieron cargar los detalles.</div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="mobile-view">
+                    {isLoading ? (
+                        // Skeleton Loading Cards
+                        Array.from({ length: 3 }).map((_, index) => (
+                            <div key={index} className="mobile-card">
+                                <div className="mobile-card-header">
+                                    <div className="skeleton skeleton-text" style={{ width: '50px' }}></div>
+                                    <div className="skeleton skeleton-badge"></div>
+                                </div>
+                                <div className="mobile-card-body">
+                                    <div className="skeleton skeleton-text" style={{ width: '70%', height: '1.2rem', marginBottom: '0.5rem' }}></div>
+                                    <div className="skeleton skeleton-text" style={{ width: '40%', marginBottom: '1rem' }}></div>
+                                    <div className="skeleton skeleton-text" style={{ width: '100%', height: '2rem' }}></div>
+                                </div>
+                            </div>
+                        ))
+                    ) : ventas.length === 0 ? (
+                        <div className="empty-state">No se encontraron ventas.</div>
+                    ) : (
+                        ventas.map((venta) => (
+                            <div className="mobile-card" key={venta.id}>
+                                <div className="mobile-card-header" onClick={() => handleExpandVenta(venta.id)}>
+                                    <div className="header-top">
+                                        <span className="card-id">#{venta.id}</span>
+                                        <span className={`status-badge ${getStatusClass(venta.estado)}`}>
+                                            {capitalizeEstado(venta.estado)}
+                                        </span>
+                                    </div>
+                                    <div className="header-date">{formatShortDate(venta.fecha_venta)}</div>
+                                </div>
+                                <div className="mobile-card-body" onClick={() => handleExpandVenta(venta.id)}>
+                                    <h3 className="client-name">{venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}</h3>
+                                    <p className="vendor-name">Vendedor: {venta.vendedor_nombre || '—'}</p>
+                                    <div className="card-total">
+                                        <span>Total</span>
+                                        <strong>{formatCurrency(venta.valor_total)}</strong>
+                                    </div>
+                                </div>
+                                <div className="mobile-card-footer">
+                                    <button className="btn-expand-mobile" onClick={() => handleExpandVenta(venta.id)}>
+                                        {expandedVentaId === venta.id ? 'Ocultar Detalles' : 'Ver Detalles'} <FaChevronDown className={expandedVentaId === venta.id ? 'rotated' : ''} />
+                                    </button>
+                                </div>
+
+                                {/* Mobile Expanded Details */}
+                                {expandedVentaId === venta.id && (
+                                    <div className="mobile-details-container">
+                                        {loadingDetails ? (
+                                            <div className="loading-container-small"><div className="loader-small"></div></div>
+                                        ) : detailsError ? (
+                                            <div className="error-container-small" style={{ padding: '2rem', textAlign: 'center' }}>
+                                                <p style={{ color: 'var(--rose-600)', marginBottom: '1rem' }}>{detailsError}</p>
+                                                <button className="btn-secondary" onClick={() => refreshVentaDetails(venta.id)}>Reintentar</button>
+                                            </div>
+                                        ) : ventaDetails ? (
+                                            <div className="mobile-details-content">
+                                                {/* Reuse the same structure or a simplified one for mobile details. */}
+
+                                                <div className="mobile-section">
+                                                    <h4>Cliente</h4>
+                                                    <p><strong>Nombre:</strong> {ventaDetails.cliente?.nombre || 'N/A'}</p>
+                                                    <p><strong>Teléfono:</strong> {ventaDetails.cliente?.telefono1 || 'N/A'}</p>
+                                                    <p><strong>Dirección:</strong> {ventaDetails.cliente?.direccion || 'N/A'}</p>
+                                                </div>
+
+                                                <div className="mobile-section">
+                                                    <h4>Pagos</h4>
+                                                    <div className="mobile-payments-list">
+                                                        {ventaDetails.recibos && ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r => (
+                                                            <div key={r.id} className="mobile-payment-item">
+                                                                <div className="mobile-payment-header">
+                                                                    <span className="mobile-payment-rc">RC. #{r.id}</span>
+                                                                    <span className="mobile-payment-date">{formatShortDate(r.fecha)}</span>
+                                                                </div>
+                                                                <div className="mobile-payment-body">
+                                                                    <span className="mobile-payment-amount">{formatCurrency(r.valor)}</span>
+                                                                    <span className={`mobile-payment-status ${r.estado === 'Confirmado' ? 'confirmed' : 'pending'}`}>
+                                                                        ({r.estado})
+                                                                    </span>
+                                                                    <span className="mobile-payment-method">{r.metodo_pago}</span>
+                                                                </div>
+                                                            </div>
+                                                        )) : <p className="text-muted">No hay pagos registrados.</p>}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mobile-section">
+                                                    <h4>Observaciones</h4>
+                                                    <ul>
+                                                        {ventaDetails.observaciones_venta && ventaDetails.observaciones_venta.length > 0 ? ventaDetails.observaciones_venta.map((obs, index) => (
+                                                            <li key={index}>{obs.texto}</li>
+                                                        )) : <li>No hay observaciones.</li>}
+                                                    </ul>
+                                                </div>
+
+                                                <div className="mobile-section">
+                                                    <h4>Órdenes de Pedido Asociadas</h4>
+                                                    <ul>
+                                                        {ventaDetails.ordenes_pedido && ventaDetails.ordenes_pedido.length > 0 ? ventaDetails.ordenes_pedido.map(op => (
+                                                            <li key={op.id}>
+                                                                <strong>O.P. {op.id}</strong> - {op.proveedor_nombre} ({capitalizeEstado(op.estado)})
+                                                            </li>
+                                                        )) : <li>No hay órdenes asociadas.</li>}
+                                                    </ul>
+                                                </div>
+
+                                                <div className="mobile-actions">
+                                                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                                                        <button className="btn-primary full-width" onClick={() => {
+                                                            setEditSaleData(ventaDetails);
+                                                            setShowEditSaleModal(true);
+                                                        }}>
+                                                            <FaEdit /> Editar Venta
+                                                        </button>
+                                                    )}
+                                                    <button className="btn-secondary full-width" onClick={() => setShowObservacionClienteModal(true)}>
+                                                        <FaPlus /> Obs. Cliente
+                                                    </button>
+                                                    <button className="btn-secondary full-width" onClick={() => setShowObservacionVentaModal(true)}>
+                                                        <FaPlus /> Obs. Venta
+                                                    </button>
+                                                    <button className="btn-secondary full-width" onClick={() => setShowRemisionModal(true)}>
+                                                        <FaPlus /> Remisión
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : <div className="error-message">Error al cargar detalles.</div>}
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
 
 
@@ -649,22 +1075,24 @@ const Ventas = () => {
                 <button onClick={() => handleAddObservacion('venta')}>Guardar Observación</button>
             </Modal>
 
-            {editSaleData && (
-                <EditSaleModal
-                    key={editSaleData.id}
-                    show={showEditSaleModal}
-                    onClose={() => setShowEditSaleModal(false)}
-                    saleData={editSaleData}
-                    vendedores={vendedores}
-                    estados={estados}
-                    onSaleUpdated={refreshVentaDetails} // Re-fetch current sale details
-                    setNotification={setNotification}
-                    fetchVentas={fetchVentas}
-                    fetchReportSales={fetchReportSales}
-                    fetchClientes={fetchClientes}
-                    usuario={usuario}
-                />
-            )}
+            {
+                editSaleData && (
+                    <EditSaleModal
+                        key={editSaleData.id}
+                        show={showEditSaleModal}
+                        onClose={() => setShowEditSaleModal(false)}
+                        saleData={editSaleData}
+                        vendedores={vendedores}
+                        estados={estados}
+                        onSaleUpdated={refreshVentaDetails} // Re-fetch current sale details
+                        setNotification={setNotification}
+                        fetchVentas={fetchVentas}
+                        fetchReportSales={fetchReportSales}
+                        fetchClientes={fetchClientes}
+                        usuario={usuario}
+                    />
+                )
+            }
             {console.log('Usuario en Ventas.jsx:', usuario)}
             {console.log('Usuario en Ventas.jsx:', usuario)}
 
@@ -674,7 +1102,7 @@ const Ventas = () => {
                 onSave={handleAddRemision}
                 isLoading={isLoading}
             />
-        </div>
+        </div >
     );
 };
 

@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes } from 'react-icons/fa';
+import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { AppContext } from "../AppContext";
 import "./Sidebar.css";
 
-function Sidebar({ isOpen, onClose }) {
+function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
   const { usuario } = useContext(AppContext);
 
   const navSections = [
@@ -39,28 +39,33 @@ function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      <aside className={`sidebar ${isOpen ? "open" : ""}`}>
+      <aside className={`sidebar ${isOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}>
         <div className="sidebar-header">
-          <NavLink to="/" className="logo-link">LOTTUS</NavLink>
+          <NavLink to="/" className="logo-link">
+            {isCollapsed ? "L" : "LOTTUS"}
+          </NavLink>
           <button className="sidebar-close" onClick={onClose}>
             <FaTimes />
           </button>
         </div>
+
         <nav className="sidebar-nav">
           {navSections.map(section => (
             (section.roles.includes(usuario?.role.toLowerCase())) && (
-              <div key={section.title}>
-                <h3 className="nav-subtitle">{section.title}</h3>
+              <div key={section.title} className="nav-section">
+                {!isCollapsed && <h3 className="nav-subtitle">{section.title}</h3>}
+                {isCollapsed && <div className="nav-divider"></div>}
                 <ul>
                   {section.items.map(item => (
                     <li key={item.to}>
-                      <NavLink 
-                        to={item.to} 
+                      <NavLink
+                        to={item.to}
                         className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
                         onClick={onClose}
+                        title={isCollapsed ? item.label : ""}
                       >
                         <div className="nav-icon">{item.icon}</div>
-                        <span>{item.label}</span>
+                        {!isCollapsed && <span>{item.label}</span>}
                       </NavLink>
                     </li>
                   ))}
@@ -69,6 +74,13 @@ function Sidebar({ isOpen, onClose }) {
             )
           ))}
         </nav>
+
+        {/* Desktop Collapse Toggle */}
+        <div className="sidebar-footer">
+          <button className="collapse-btn" onClick={toggleCollapse}>
+            {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+          </button>
+        </div>
       </aside>
       {isOpen && <div className="sidebar-backdrop" onClick={onClose}></div>}
     </>

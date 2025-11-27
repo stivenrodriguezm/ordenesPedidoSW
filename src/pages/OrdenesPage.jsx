@@ -71,7 +71,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading 
 const OrdenesPage = () => {
   const { proveedores, usuario: user, isLoadingProveedores } = useContext(AppContext);
   const navigate = useNavigate();
-  
+
   const [filteredOrdenes, setFilteredOrdenes] = useState([]);
   const [vendedores, setVendedores] = useState([]);
   const [selectedProveedor, setSelectedProveedor] = useState('');
@@ -81,15 +81,15 @@ const OrdenesPage = () => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  
+
   // --- PASO 1: AÑADIR NUEVO ESTADO PARA LA ACTUALIZACIÓN ---
   const [isUpdating, setIsUpdating] = useState(false);
 
-  
+
   const token = localStorage.getItem('accessToken');
 
   const estados = [
@@ -112,7 +112,7 @@ const OrdenesPage = () => {
     // Parsear la cadena YYYY-MM-DD como fecha local
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day); // month - 1 porque los meses son 0-indexados
-    
+
     const formattedDay = String(date.getDate()).padStart(2, '0');
     const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const formattedMonth = monthNames[date.getMonth()];
@@ -124,7 +124,7 @@ const OrdenesPage = () => {
     if (value === null || value === undefined) return '$0';
     const num = parseFloat(String(value).replace(/[^0-9.]/g, '')); // Permite decimales y limpia no-números
     if (isNaN(num)) {
-        return '$0';
+      return '$0';
     }
     return `${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
@@ -158,17 +158,17 @@ const OrdenesPage = () => {
           estado: selectedEstado,
           ordering: '-id',
         };
-        
+
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
-        
+
         const response = await API.get(`/listar-pedidos/`, {
-            params
+          params
         });
-        
+
         let fetchedOrdenes = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
-        
+
         setFilteredOrdenes(fetchedOrdenes);
-        
+
       } catch (error) {
         setErrorMessage('Error al cargar las órdenes.');
         setFilteredOrdenes([]);
@@ -179,8 +179,8 @@ const OrdenesPage = () => {
 
     fetchOrdenes();
   }, [selectedProveedor, selectedVendedor, selectedEstado, token, user]);
-  
-  
+
+
 
   const handleExpandOrder = async (orderId) => {
     if (expandedOrderId === orderId) {
@@ -208,7 +208,7 @@ const OrdenesPage = () => {
     setCurrentOrder(orden);
     setIsEditModalOpen(true);
   };
-  
+
   // --- PASO 2: MODIFICAR LA FUNCIÓN DE ACTUALIZACIÓN ---
   const handleActualizarPedido = async (id, formData) => {
     setIsUpdating(true); // Inicia el estado de carga
@@ -219,13 +219,13 @@ const OrdenesPage = () => {
       tela: formData.tela
     };
     try {
-        await API.patch(`ordenes-pedido/${id}/`, updates);
-        setFilteredOrdenes(prev => prev.map(o => o.id === id ? {...o, ...updates} : o));
-        setIsEditModalOpen(false); // Cierra el modal en caso de éxito
+      await API.patch(`ordenes-pedido/${id}/`, updates);
+      setFilteredOrdenes(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+      setIsEditModalOpen(false); // Cierra el modal en caso de éxito
     } catch (error) {
-        setErrorMessage('Error al actualizar el pedido.');
+      setErrorMessage('Error al actualizar el pedido.');
     } finally {
-        setIsUpdating(false); // Finaliza el estado de carga
+      setIsUpdating(false); // Finaliza el estado de carga
     }
   };
 
@@ -307,111 +307,204 @@ const OrdenesPage = () => {
       </div>
 
       <div className="ordenes-container">
-        <table className="ordenes-table">
-          <thead>
-            <tr>
-              <th className="th-op">O.P.</th>
-              <th className="th-proveedor">Proveedor</th>
-              <th className="th-vendedor">Vendedor</th>
-              <th className="th-venta">Venta</th>
-              <th className="th-fecha-pedido">F. Pedido</th>
-              <th className="th-fecha-llegada">F. Llegada</th>
-              <th className="th-tela">Tela</th>
-              <th className="th-estado">Estado</th>
-              <th className="th-observacion">Observación</th>
-              {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <th className="th-costo">Costo</th>}
-              <th className="th-accion"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={11}><div className="loading-container"><div className="loader"></div></div></td></tr>
-            ) : filteredOrdenes.length > 0 ? (
-              filteredOrdenes.map((orden) => (
-                <React.Fragment key={`orden-${orden.id}`}>
-                  <tr>
-                    <td className="td-op">{orden.id}</td>
-                    <td className="td-proveedor">{orden.proveedor_nombre}</td>
-                    <td className="td-vendedor">{orden.vendedor}</td>
-                    <td className="td-venta">{orden.venta || orden.orden_venta}</td>
-                    <td className="td-fecha-pedido">{formatDate(orden.fecha_pedido)}</td>
-                    <td className="td-fecha-llegada">{formatDate(orden.fecha_esperada)}</td>
-                    <td className="td-tela"><span className={`status-badge ${getTelaClass(orden.tela)}`}>{orden.tela}</span></td>
-                    <td className="td-estado"><span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>{getEstadoText(orden.estado, orden.fecha_esperada)}</span></td>
-                    <td className="td-observacion">{orden.observacion}</td>
-                    {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <td className="td-costo">${formatNumber(orden.costo)}</td>}
-                    <td className="td-accion">
-                      <button className="btn-icon" onClick={() => handleExpandOrder(orden.id)}>
-                         <FaChevronDown style={{ transform: expandedOrderId === orden.id ? 'rotate(180deg)' : 'none' }} />
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedOrderId === orden.id && (
-                    <tr className="expanded-row">
-                      <td colSpan={user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar' ? 11 : 10}>
-                        <div className="details-view-wrapper">
-                          {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
-                            errorMessage ? <div className="error-cell">{errorMessage}</div> :
-                            orderDetails ? (
-                              <>
-                                <div className="order-preview">
-                                  <div className="preview-info">
-                                    <div className="info-column">
-                                      <p><strong>Proveedor:</strong> {orden.proveedor_nombre}</p>
-
-                                      <p><strong>Vendedor:</strong> {orden.vendedor}</p>
-                                      <p><strong>Orden de compra:</strong> {orden.venta || orden.orden_venta}</p>
-                                    </div>
-                                    <div className="info-column">
-                                      <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
-                                      <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
-                                    </div>
-                                    {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
-                                        <button className="btn-primary btn-editar-pedido" onClick={() => handleOpenEditModal(orden)}>
-                                            <FaEdit /> Editar Pedido
-                                        </button>
-                                    )}
-                                  </div>
-                                  <div className="preview-products">
-                                    <h4>Productos:</h4>
-                                    <table className="sub-table">
-                                      <thead><tr><th>Cantidad</th><th>Referencia</th><th>Descripción</th></tr></thead>
-                                      <tbody className='tabla_expandida'>
-                                        {orderDetails.map((p, i) => (<tr key={i}><td className='td_cantidad'>{p.cantidad}</td><td className='td_referencia'>{p.referencia}</td><td className='td_descripcion'>{p.especificaciones}</td></tr>))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                  <div className="preview-notes">
-                                    <h4>Observación:</h4>
-                                    <p>{orden.observacion || 'Sin observaciones.'}</p>
-                                  </div>
-                                </div>
-                              </>
-                            ) : <div className="error-cell">No se pudieron cargar los detalles.</div>
-                          }
-                        </div>
+        {/* Desktop Table View */}
+        <div className="desktop-view">
+          <table className="premium-table">
+            <thead>
+              <tr>
+                <th className="th-op">O.P.</th>
+                <th className="th-proveedor">Proveedor</th>
+                <th className="th-vendedor">Vendedor</th>
+                <th className="th-venta">Venta</th>
+                <th className="th-fecha-pedido">F. Pedido</th>
+                <th className="th-fecha-llegada">F. Llegada</th>
+                <th className="th-tela">Tela</th>
+                <th className="th-estado">Estado</th>
+                <th className="th-observacion">Observación</th>
+                {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <th className="th-costo">Costo</th>}
+                <th className="th-accion"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={11}><div className="loading-container"><div className="loader"></div></div></td></tr>
+              ) : filteredOrdenes.length > 0 ? (
+                filteredOrdenes.map((orden) => (
+                  <React.Fragment key={`orden-${orden.id}`}>
+                    <tr className={expandedOrderId === orden.id ? 'expanded-row-highlight' : ''}>
+                      <td className="td-op"><strong>#{orden.id}</strong></td>
+                      <td className="td-proveedor">{orden.proveedor_nombre}</td>
+                      <td className="td-vendedor">{orden.vendedor}</td>
+                      <td className="td-venta">{orden.venta || orden.orden_venta}</td>
+                      <td className="td-fecha-pedido">{formatDate(orden.fecha_pedido)}</td>
+                      <td className="td-fecha-llegada">{formatDate(orden.fecha_esperada)}</td>
+                      <td className="td-tela"><span className={`status-badge ${getTelaClass(orden.tela)}`}>{orden.tela}</span></td>
+                      <td className="td-estado"><span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>{getEstadoText(orden.estado, orden.fecha_esperada)}</span></td>
+                      <td className="td-observacion"><div className="truncate-text" title={orden.observacion}>{orden.observacion}</div></td>
+                      {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <td className="td-costo font-mono">${formatNumber(orden.costo)}</td>}
+                      <td className="td-accion">
+                        <button className="btn-icon action-btn" onClick={() => handleExpandOrder(orden.id)}>
+                          <FaChevronDown style={{ transform: expandedOrderId === orden.id ? 'rotate(180deg)' : 'none' }} />
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))
-            ) : (
-              <tr><td colSpan={11} className="empty-cell">No hay órdenes para mostrar.</td></tr>
-            )}
-          </tbody>
-        </table>
+                    {expandedOrderId === orden.id && (
+                      <tr className="expanded-row">
+                        <td colSpan={user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar' ? 11 : 10}>
+                          <div className="details-view-wrapper">
+                            {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
+                              errorMessage ? <div className="error-cell">{errorMessage}</div> :
+                                orderDetails ? (
+                                  <>
+                                    <div className="order-preview">
+                                      <div className="preview-header">
+                                        <div className="preview-logo">LOTTUS</div>
+                                        <div className="preview-order-id">
+                                          <h2>ORDEN DE PEDIDO</h2>
+                                          <p>#{orden.id}</p>
+                                        </div>
+                                      </div>
+                                      <div className="preview-info">
+                                        <div className="info-column">
+                                          <p><strong>Proveedor:</strong> {orden.proveedor_nombre}</p>
+
+                                          <p><strong>Vendedor:</strong> {orden.vendedor}</p>
+                                          <p><strong>Orden de compra:</strong> {orden.venta || orden.orden_venta}</p>
+                                        </div>
+                                        <div className="info-column">
+                                          <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
+                                          <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
+                                        </div>
+                                        {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
+                                          <button className="btn-primary btn-editar-pedido" onClick={() => handleOpenEditModal(orden)}>
+                                            <FaEdit /> Editar Pedido
+                                          </button>
+                                        )}
+                                      </div>
+                                      <div className="preview-products">
+                                        <h4>Productos:</h4>
+                                        <table className="sub-table">
+                                          <thead><tr><th>Cantidad</th><th>Referencia</th><th>Descripción</th></tr></thead>
+                                          <tbody className='tabla_expandida'>
+                                            {orderDetails.map((p, i) => (<tr key={i}><td className='td_cantidad'>{p.cantidad}</td><td className='td_referencia'>{p.referencia}</td><td className='td_descripcion'>{p.especificaciones}</td></tr>))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                      <div className="preview-notes">
+                                        <h4>Observación:</h4>
+                                        <p>{orden.observacion || 'Sin observaciones.'}</p>
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : <div className="error-cell">No se pudieron cargar los detalles.</div>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              ) : (
+                <tr><td colSpan={11} className="empty-cell">No hay órdenes para mostrar.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="mobile-view">
+          {isLoading ? (
+            <div className="loading-container"><div className="loader"></div></div>
+          ) : filteredOrdenes.length > 0 ? (
+            filteredOrdenes.map((orden) => (
+              <div className="mobile-card" key={orden.id}>
+                <div className="mobile-card-header" onClick={() => handleExpandOrder(orden.id)}>
+                  <div className="header-top">
+                    <span className="card-id">#{orden.id}</span>
+                    <span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>
+                      {getEstadoText(orden.estado, orden.fecha_esperada)}
+                    </span>
+                  </div>
+                  <div className="header-date">{formatDate(orden.fecha_pedido)}</div>
+                </div>
+                <div className="mobile-card-body" onClick={() => handleExpandOrder(orden.id)}>
+                  <h3 className="proveedor-name">{orden.proveedor_nombre}</h3>
+                  <p className="vendor-name">Vendedor: {orden.vendedor}</p>
+                  <div className="card-details-grid">
+                    <div>
+                      <span className="label">Llegada:</span>
+                      <span className="value">{formatDate(orden.fecha_esperada)}</span>
+                    </div>
+                    <div>
+                      <span className="label">Tela:</span>
+                      <span className={`status-badge small ${getTelaClass(orden.tela)}`}>{orden.tela}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mobile-card-footer">
+                  <button className="btn-expand-mobile" onClick={() => handleExpandOrder(orden.id)}>
+                    {expandedOrderId === orden.id ? 'Ocultar Detalles' : 'Ver Detalles'} <FaChevronDown className={expandedOrderId === orden.id ? 'rotated' : ''} />
+                  </button>
+                </div>
+
+                {expandedOrderId === orden.id && (
+                  <div className="mobile-details-container">
+                    <div className="details-view-wrapper">
+                      {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
+                        errorMessage ? <div className="error-message">{errorMessage}</div> :
+                          orderDetails ? (
+                            <div className="mobile-expanded-content">
+                              {/* Simplified Mobile Expanded Content */}
+                              <div className="mobile-section">
+                                <h4>Información</h4>
+                                <p><strong>Venta:</strong> {orden.venta || orden.orden_venta}</p>
+                                <p><strong>Observación:</strong> {orden.observacion || 'Ninguna'}</p>
+                                {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
+                                  <p><strong>Costo:</strong> {formatNumber(orden.costo)}</p>
+                                )}
+                              </div>
+
+                              <div className="mobile-section">
+                                <h4>Productos</h4>
+                                <ul className="mobile-products-list">
+                                  {orderDetails.map((p, i) => (
+                                    <li key={i}>
+                                      <strong>{p.referencia}</strong> (x{p.cantidad})
+                                      <br />
+                                      <small>{p.especificaciones}</small>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
+                                <button className="btn-primary btn-full-width" onClick={() => handleOpenEditModal(orden)}>
+                                  <FaEdit /> Editar Pedido
+                                </button>
+                              )}
+                            </div>
+                          ) : <div className="error-message">No se pudieron cargar los detalles.</div>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">No hay órdenes para mostrar.</div>
+          )}
+        </div>
       </div>
-      
+
       {isEditModalOpen && (
-        <OrdenModal 
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            onSave={handleActualizarPedido}
-            orden={currentOrder}
-            telas={telas}
-            estados={modalEstados}
-            // --- PASO 3: CORREGIR EL PROP PASADO AL MODAL ---
-            isLoading={isUpdating}
+        <OrdenModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleActualizarPedido}
+          orden={currentOrder}
+          telas={telas}
+          estados={modalEstados}
+          // --- PASO 3: CORREGIR EL PROP PASADO AL MODAL ---
+          isLoading={isUpdating}
         />
       )}
     </div>

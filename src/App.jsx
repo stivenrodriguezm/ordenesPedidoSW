@@ -23,18 +23,34 @@ import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
 const MainLayout = ({ children }) => {
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false); // Mobile toggle
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    // Desktop collapse state (persisted)
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
+  const toggleCollapse = () => {
+    const newState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', newState);
+  };
+
   return (
-    <div className={`app-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className={`app-container ${isSidebarOpen ? "sidebar-open" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        toggleCollapse={toggleCollapse}
+      />
       <div className="main-content">
-        <Header onMenuClick={toggleSidebar} />
-        <main>{children}</main>
+        <Header onMenuClick={toggleSidebar} isCollapsed={isSidebarCollapsed} />
+        <main className="content-wrapper">{children}</main>
       </div>
     </div>
   );

@@ -1,22 +1,38 @@
-import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppContext } from '../AppContext';
 import './Caja.css';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
-import { FaFileExport, FaPlus, FaSearch, FaUndo, FaLock } from 'react-icons/fa';
+import {
+  FaFileExport,
+  FaPlus,
+  FaUndo,
+  FaLock,
+  FaSearch,
+  FaArrowUp,
+  FaArrowDown,
+  FaExchangeAlt,
+  FaWallet,
+  FaCalendarDay,
+  FaChartLine
+} from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
-import '../components/AppNotification.css';
 import CierreCajaModal from '../components/CierreCajaModal';
 
-// Modal para creación de movimientos
+// --- Helper Components ---
+
+const TransactionIcon = ({ type }) => {
+  if (type === 'ingreso') return <div className="icon-wrapper income"><FaArrowUp /></div>;
+  if (type === 'egreso') return <div className="icon-wrapper expense"><FaArrowDown /></div>;
+  return <div className="icon-wrapper closure"><FaLock /></div>;
+};
+
 const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
   const [formState, setFormState] = useState({ tipo: 'ingreso', concepto: '', valor: '' });
 
   useEffect(() => {
-    if (isOpen) {
-      setFormState({ tipo: 'ingreso', concepto: '', valor: '' });
-    }
+    if (isOpen) setFormState({ tipo: 'ingreso', concepto: '', valor: '' });
   }, [isOpen]);
 
   const handleChange = (e) => {
@@ -33,29 +49,65 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content premium-modal">
         <div className="modal-header">
-          <h3>Nuevo Movimiento de Caja</h3>
+          <h3>Nuevo Movimiento</h3>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="premium-form">
           <div className="form-group">
             <label>Tipo de Movimiento</label>
-            <select name="tipo" value={formState.tipo} onChange={handleChange} required>
-              <option value="ingreso">Ingreso</option>
-              <option value="egreso">Egreso</option>
-            </select>
+            <div className="type-selector">
+              <button
+                type="button"
+                className={`type-btn income ${formState.tipo === 'ingreso' ? 'active' : ''}`}
+                onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
+              >
+                <FaArrowUp /> Ingreso
+              </button>
+              <button
+                type="button"
+                className={`type-btn expense ${formState.tipo === 'egreso' ? 'active' : ''}`}
+                onClick={() => setFormState(prev => ({ ...prev, tipo: 'egreso' }))}
+              >
+                <FaArrowDown /> Egreso
+              </button>
+            </div>
+            <input type="hidden" name="tipo" value={formState.tipo} />
           </div>
+
           <div className="form-group">
             <label>Concepto</label>
-            <input type="text" name="concepto" value={formState.concepto} onChange={handleChange} required placeholder="Ej: Abono OC-123" />
+            <input
+              type="text"
+              name="concepto"
+              value={formState.concepto}
+              onChange={handleChange}
+              required
+              placeholder="Ej: Pago de servicios, Abono..."
+              className="premium-input"
+            />
           </div>
+
           <div className="form-group">
             <label>Valor</label>
-            <input type="number" name="valor" value={formState.valor} onChange={handleChange} required step="any" placeholder="$50000" />
+            <div className="input-with-icon">
+              <span className="currency-symbol">$</span>
+              <input
+                type="number"
+                name="valor"
+                value={formState.valor}
+                onChange={handleChange}
+                required
+                step="any"
+                placeholder="0.00"
+                className="premium-input"
+              />
+            </div>
           </div>
-          <button type="submit" className="modal-submit" disabled={isLoading}>
-            {isLoading ? 'Guardando...' : 'Crear Movimiento'}
+
+          <button type="submit" className="btn-primary full-width" disabled={isLoading}>
+            {isLoading ? 'Procesando...' : 'Registrar Movimiento'}
           </button>
         </form>
       </div>
@@ -83,22 +135,23 @@ const Caja = () => {
     const num = parseFloat(value);
     if (isNaN(num)) return '$0';
     return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(num);
   };
 
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return '—';
     const date = new Date(dateTimeStr);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    return date.toLocaleString('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const fetchData = useCallback(async (page, currentFilters) => {
@@ -112,7 +165,7 @@ const Caja = () => {
       setCajaData(response.data.movimientos.results || []);
       setTotalPages(Math.ceil(response.data.movimientos.count / pageSize) || 1);
     } catch (error) {
-      setNotification({ message: 'Error al cargar los datos de Caja.', type: 'error' });
+      setNotification({ message: 'Error al cargar datos.', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -137,11 +190,11 @@ const Caja = () => {
     setIsSubmitting(true);
     try {
       await API.post(`/caja/`, movimientoData);
-      setNotification({ message: 'Movimiento creado exitosamente.', type: 'success' });
+      setNotification({ message: 'Movimiento registrado.', type: 'success' });
       setIsCreateModalOpen(false);
       fetchData(1, filters);
     } catch (error) {
-      setNotification({ message: 'Error al crear el movimiento.', type: 'error' });
+      setNotification({ message: 'Error al crear movimiento.', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -155,16 +208,10 @@ const Caja = () => {
       setIsCierreModalOpen(false);
       fetchData(1, filters);
     } catch (error) {
-      setNotification({ message: 'Error al realizar el cierre de caja.', type: 'error' });
+      setNotification({ message: 'Error al realizar cierre.', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const formatCurrencyForExport = (value) => {
-    if (value === null || value === undefined) return null;
-    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
-    return isNaN(num) ? null : num;
   };
 
   const exportData = async () => {
@@ -176,109 +223,194 @@ const Caja = () => {
       const dataToExport = (response.data.movimientos.results || []).map(item => ({
         ID: item.id,
         Usuario: item.usuario_nombre,
-        'Fecha y Hora': formatDateTime(item.fecha_hora),
+        'Fecha': formatDateTime(item.fecha_hora),
         Concepto: item.concepto,
         Tipo: item.tipo,
-        Valor: formatCurrencyForExport(item.valor),
-        'Total Acumulado': formatCurrencyForExport(item.total_acumulado)
+        Valor: item.valor,
+        'Total Acumulado': item.total_acumulado
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos de Caja');
-      XLSX.writeFile(workbook, 'movimientos-caja.xlsx');
-      setNotification({ message: 'Datos exportados exitosamente.', type: 'success' });
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos');
+      XLSX.writeFile(workbook, 'Caja_Movimientos.xlsx');
+      setNotification({ message: 'Exportación exitosa.', type: 'success' });
     } catch (error) {
-      setNotification({ message: 'Error al exportar los datos.', type: 'error' });
+      setNotification({ message: 'Error al exportar.', type: 'error' });
     }
   };
 
   return (
-    <div className="page-container caja-page-wrapper">
-      <AppNotification 
+    <div className="caja-page-container">
+      <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
 
-      <div className="stats-container">
-        <div className="stat-card">
-          <h4>Ingresos de Hoy</h4>
-          <p>{formatCurrency(stats.ingresos_hoy)}</p>
+      {/* --- Live Stats Bar --- */}
+      <div className="stats-dashboard">
+        <div className="stat-card income">
+          <div className="stat-icon"><FaArrowUp /></div>
+          <div className="stat-content">
+            <span className="stat-label">Ingresos Hoy</span>
+            <span className="stat-value">{formatCurrency(stats.ingresos_hoy)}</span>
+          </div>
         </div>
-        <div className="stat-card">
-          <h4>Egresos de Hoy</h4>
-          <p>{formatCurrency(stats.egresos_hoy)}</p>
+        <div className="stat-card expense">
+          <div className="stat-icon"><FaArrowDown /></div>
+          <div className="stat-content">
+            <span className="stat-label">Egresos Hoy</span>
+            <span className="stat-value">{formatCurrency(stats.egresos_hoy)}</span>
+          </div>
         </div>
-        <div className="stat-card saldo">
-          <h4>Saldo Actual en Caja</h4>
-          <p>{formatCurrency(stats.saldo_actual)}</p>
-        </div>
-      </div>
-      
-      <div className="page-header">
-        <div className="filters-group">
-          <input type="text" className="search-input" name="query" placeholder="Buscar por ID o concepto..." value={filters.query} onChange={handleFilterChange} />
-          <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
-          <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
-          <button className="btn-secondary btn-icon-only" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
-        </div>
-        <div className="actions-group">
-          {usuario?.role === 'administrador' && <button className="btn-secondary" onClick={exportData}><FaFileExport /> Exportar</button>}
-          <button className="btn-primary" onClick={() => setIsCreateModalOpen(true)}><FaPlus /> Nuevo Movimiento</button>
-          <button className="btn-secondary" onClick={() => setIsCierreModalOpen(true)}><FaLock /> Cierre de Caja</button>
+        <div className="stat-card balance">
+          <div className="stat-icon"><FaWallet /></div>
+          <div className="stat-content">
+            <span className="stat-label">Saldo Actual</span>
+            <span className="stat-value">{formatCurrency(stats.saldo_actual)}</span>
+          </div>
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="data-table caja-table">
-          <thead>
-            <tr>
-              <th className="th-caja-id">ID</th>
-              <th className="th-caja-usuario">Usuario</th>
-              <th className="th-caja-fecha">Fecha y Hora</th>
-              <th className="th-caja-concepto">Concepto</th>
-              <th className="th-caja-tipo">Tipo</th>
-              <th className="th-caja-valor">Valor</th>
-              <th className="th-caja-total">Total Acumulado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan="7"><div className="loading-container"><div className="loader"></div></div></td></tr>
-            ) : cajaData.length > 0 ? (
-              cajaData.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.id}</td>
-                  <td>{item.usuario_nombre}</td>
-                  <td>{formatDateTime(item.fecha_hora)}</td>
-                  <td>{item.concepto}</td>
-                  <td><span className={`tipo-badge tipo-${item.tipo}`}>{item.tipo}</span></td>
-                  <td className={`valor-cell ${item.tipo}`}>{formatCurrency(item.valor)}</td>
-                  <td>{formatCurrency(item.total_acumulado)}</td>
-                </tr>
-              ))
-            ) : (
-              <tr><td colSpan="7" className="empty-cell">No hay movimientos de caja para mostrar.</td></tr>
+      <div className="glass-header">
+        <div className="header-top-row">
+          <h1 className="page-title">Movimientos de Caja</h1>
+          <div className="header-actions">
+            {usuario?.role === 'administrador' && (
+              <button className="btn-ghost" onClick={exportData} title="Exportar">
+                <FaFileExport />
+              </button>
             )}
-          </tbody>
-        </table>
+            <button className="btn-secondary-glow" onClick={() => setIsCierreModalOpen(true)}>
+              <FaLock />
+              <span className="long-text">Cierre Caja</span>
+              <span className="short-text">Cierre</span>
+            </button>
+            <button className="btn-primary-glow" onClick={() => setIsCreateModalOpen(true)}>
+              <FaPlus />
+              <span className="long-text">Nuevo Movimiento</span>
+              <span className="short-text">Nuevo</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="filters-bar">
+          <div className="search-pill">
+            <FaSearch />
+            <input
+              type="text"
+              name="query"
+              placeholder="Buscar..."
+              value={filters.query}
+              onChange={handleFilterChange}
+            />
+          </div>
+          <div className="date-range-pill">
+            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
+            <span>a</span>
+            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
+          </div>
+          {(filters.query || filters.fecha_inicio) && (
+            <button className="btn-reset" onClick={clearFilters}><FaUndo /></button>
+          )}
+        </div>
       </div>
 
-      <div className="pagination-container">
-        <button disabled={currentPage === 1 || isLoading} onClick={() => setCurrentPage(currentPage - 1)}>Anterior</button>
-        <span>Página {currentPage} de {totalPages}</span>
-        <button disabled={currentPage === totalPages || totalPages <= 1 || isLoading} onClick={() => setCurrentPage(currentPage + 1)}>Siguiente</button>
+      <div className="content-area">
+        {/* Desktop Table View */}
+        <div className="desktop-table-wrapper">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Concepto</th>
+                <th>Tipo</th>
+                <th className="text-right">Valor</th>
+                <th className="text-right">Acumulado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="skeleton-row">
+                    <td colSpan="7"><div className="skeleton-bar"></div></td>
+                  </tr>
+                ))
+              ) : cajaData.length > 0 ? (
+                cajaData.map((item) => (
+                  <tr key={item.id} className="table-row-hover">
+                    <td className="font-bold">#{item.id}</td>
+                    <td className="text-muted">{formatDateTime(item.fecha_hora)}</td>
+                    <td>{item.usuario_nombre}</td>
+                    <td className="concept-cell">{item.concepto}</td>
+                    <td>
+                      <span className={`type-badge ${item.tipo}`}>
+                        {item.tipo === 'ingreso' ? <FaArrowUp /> : item.tipo === 'egreso' ? <FaArrowDown /> : <FaLock />}
+                        {item.tipo}
+                      </span>
+                    </td>
+                    <td className={`text-right font-mono value-${item.tipo}`}>
+                      {item.tipo === 'egreso' ? '-' : '+'}{formatCurrency(item.valor)}
+                    </td>
+                    <td className="text-right font-mono text-muted">{formatCurrency(item.total_acumulado)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="7" className="empty-state">No hay movimientos registrados.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Transaction Feed */}
+        <div className="mobile-transaction-feed">
+          {isLoading ? (
+            <div className="loading-spinner">Cargando...</div>
+          ) : cajaData.length > 0 ? (
+            cajaData.map((item) => (
+              <div className="transaction-card" key={item.id}>
+                <div className="card-left">
+                  <TransactionIcon type={item.tipo} />
+                  <div className="card-info">
+                    <div className="card-concept">{item.concepto}</div>
+                    <div className="card-meta">
+                      {formatDateTime(item.fecha_hora)} • {item.usuario_nombre}
+                    </div>
+                  </div>
+                </div>
+                <div className="card-right">
+                  <div className={`card-amount value-${item.tipo}`}>
+                    {item.tipo === 'egreso' ? '-' : '+'}{formatCurrency(item.valor)}
+                  </div>
+                  <div className="card-balance">
+                    Saldo: {formatCurrency(item.total_acumulado)}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state-mobile">Sin movimientos.</div>
+          )}
+        </div>
       </div>
 
-      <CreateCajaModal 
+      <div className="pagination-bar">
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>Anterior</button>
+        <span>{currentPage} / {totalPages}</span>
+        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>Siguiente</button>
+      </div>
+
+      <CreateCajaModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleCreateMovimiento}
         isLoading={isSubmitting}
       />
 
-      <CierreCajaModal 
+      <CierreCajaModal
         isOpen={isCierreModalOpen}
         onClose={() => setIsCierreModalOpen(false)}
         onSave={handleCierreCaja}
