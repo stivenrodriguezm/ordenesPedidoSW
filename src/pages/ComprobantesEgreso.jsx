@@ -14,7 +14,9 @@ import {
   FaUniversity,
   FaCreditCard,
   FaCalendarDay,
-  FaReceipt
+  FaReceipt,
+  FaChevronLeft,
+  FaChevronRight
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
@@ -345,7 +347,7 @@ const ComprobantesEgreso = () => {
         {/* Mobile Feed */}
         <div className="mobile-transaction-feed">
           {isLoading ? (
-            <div className="loading-spinner">Cargando...</div>
+            <div className="loading-spinner"></div>
           ) : comprobantesData.length > 0 ? (
             comprobantesData.map((item) => (
               <div className="transaction-card" key={item.id}>
@@ -373,9 +375,13 @@ const ComprobantesEgreso = () => {
       </div>
 
       <div className="pagination-bar">
-        <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>Anterior</button>
-        <span>{currentPage} / {totalPages}</span>
-        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>Siguiente</button>
+        <button className="pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
+          <FaChevronLeft />
+        </button>
+        <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+        <button className="pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
+          <FaChevronRight />
+        </button>
       </div>
 
       <CreateCEModal

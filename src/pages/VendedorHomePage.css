@@ -23,7 +23,7 @@
     --vendor-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 
     --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-dark-blue: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%);
     --gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     --gradient-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
     --gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
@@ -68,13 +68,13 @@
 .vendedor-hero::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: rgba(255, 255, 255, 0.1);
+    top: -30%;
+    left: -10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 50%;
-    filter: blur(60px);
+    filter: blur(80px);
 }
 
 .hero-content {
@@ -86,16 +86,17 @@
     width: 80px;
     height: 80px;
     margin: 0 auto 1.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    border: 3px solid rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border: 3px solid rgba(255, 255, 255, 0.95);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2rem;
     font-weight: 700;
+    color: white;
     animation: scaleIn 0.5s ease 0.2s both;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(255, 255, 255, 0.2);
 }
 
 @keyframes scaleIn {
@@ -237,34 +238,34 @@
     flex-shrink: 0;
 }
 
-.stat-ventas-dia {
+.stat-ventas-pendientes {
+    color: var(--vendor-warning);
+}
+
+.stat-ventas-pendientes .stat-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.stat-pedidos-pendientes {
     color: var(--vendor-info);
 }
 
-.stat-ventas-dia .stat-icon {
+.stat-pedidos-pendientes .stat-icon {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.stat-ventas-mes {
-    color: var(--vendor-success);
+.stat-ordenes-atrasadas {
+    color: var(--vendor-danger);
 }
 
-.stat-ventas-mes .stat-icon {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.stat-ordenes-atrasadas .stat-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.stat-ordenes {
-    color: var(--vendor-warning);
-}
-
-.stat-ordenes .stat-icon {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .stat-content {

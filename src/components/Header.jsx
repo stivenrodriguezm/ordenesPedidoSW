@@ -69,7 +69,7 @@ function Header({ onMenuClick, isCollapsed }) {
           {usuario ? (
             <div className="user-menu" ref={menuRef}>
               <button className="user-button" onClick={() => setMenuOpen(prev => !prev)}>
-                <div className="user-avatar">
+                <div className="header-user-avatar">
                   <span>{getInitials(usuario.first_name, usuario.last_name)}</span>
                 </div>
               </button>

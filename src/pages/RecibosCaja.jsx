@@ -16,7 +16,10 @@ import {
   FaMobileAlt,
   FaEllipsisH,
   FaCalendarDay,
-  FaWallet
+  FaWallet,
+  FaChevronLeft,
+  FaChevronRight,
+  FaCalculator
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
@@ -27,7 +30,7 @@ const PaymentIcon = ({ method }) => {
   const m = method ? method.toLowerCase() : '';
   if (m.includes('efectivo')) return <div className="payment-icon-wrapper cash"><FaMoneyBillWave /></div>;
   if (m.includes('davivienda') || m.includes('bancolombia')) return <div className="payment-icon-wrapper bank"><FaUniversity /></div>;
-  if (m.includes('bold') || m.includes('datafono')) return <div className="payment-icon-wrapper card"><FaCreditCard /></div>;
+  if (m.includes('bold') || m.includes('datafono')) return <div className="payment-icon-wrapper card"><FaCalculator /></div>;
   return <div className="payment-icon-wrapper other"><FaMobileAlt /></div>;
 };
 
@@ -294,14 +297,7 @@ const RecibosCaja = () => {
 
       {/* --- Live Stats Bar --- */}
       <div className="stats-bar">
-        <div className="stat-item">
-          <div className="stat-icon"><FaWallet /></div>
-          <div className="stat-info">
-            <span className="stat-label">Total en Pantalla</span>
-            <span className="stat-value">{formatCurrency(stats.total)}</span>
-          </div>
-        </div>
-        <div className="stat-divider"></div>
+
         <div className="stat-item">
           <div className="stat-icon warning"><FaCalendarDay /></div>
           <div className="stat-info">
@@ -421,7 +417,7 @@ const RecibosCaja = () => {
         {/* Mobile Transaction List View */}
         <div className="mobile-transaction-list">
           {isLoading ? (
-            <div className="loading-spinner">Cargando...</div>
+            <div className="loading-spinner"></div>
           ) : recibosData.length > 0 ? (
             recibosData.map((item) => (
               <div className="transaction-card" key={item.id}>
@@ -450,9 +446,13 @@ const RecibosCaja = () => {
       </div>
 
       <div className="pagination-bar">
-        <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>Anterior</button>
-        <span>{currentPage} / {totalPages}</span>
-        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>Siguiente</button>
+        <button className="pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
+          <FaChevronLeft />
+        </button>
+        <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+        <button className="pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
+          <FaChevronRight />
+        </button>
       </div>
 
       <CreateRCModal

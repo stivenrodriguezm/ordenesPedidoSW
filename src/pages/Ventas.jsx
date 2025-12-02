@@ -10,6 +10,8 @@ import RemisionModal from '../components/RemisionModal';
 import SalesSummaryReport from '../components/SalesSummaryReport';
 import { AppContext } from '../AppContext';
 import './Ventas.css';
+import './VentasImprovements.css';
+import './VentasModalForms.css';
 import '../components/Modal.css';
 import '../components/AppNotification.css';
 
@@ -655,7 +657,10 @@ const Ventas = () => {
                                             <tr className="expanded-row">
                                                 <td colSpan="11" className="expanded-row-content">
                                                     {loadingDetails ? (
-                                                        <div className="loading-spinner">Cargando detalles...</div>
+                                                        <div className="loader-container">
+                                                            <div className="loader-spinner"></div>
+                                                            <p className="loader-text">Cargando detalles...</p>
+                                                        </div>
                                                     ) : detailsError ? (
                                                         <div className="error-message-container">
                                                             <p className="error-text">{detailsError}</p>
@@ -741,7 +746,25 @@ const Ventas = () => {
                                                                     Remisiones
                                                                     <button className="card-header-action" onClick={() => setShowRemisionModal(true)} title="Generar Remisión"><FaPlus /></button>
                                                                 </h4>
-                                                                <p className="text-muted">Generar nueva remisión para esta venta.</p>
+                                                                {isPartialData ? (
+                                                                    <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
+                                                                ) : ventaDetails.remisiones && ventaDetails.remisiones.length > 0 ? (
+                                                                    <div className="remisiones-list">
+                                                                        {ventaDetails.remisiones.map((remision, index) => (
+                                                                            <div key={index} className="remision-card">
+                                                                                <div className="remision-icon">
+                                                                                    <span className="icon-document">📄</span>
+                                                                                </div>
+                                                                                <div className="remision-info">
+                                                                                    <p className="remision-code"><strong>Código:</strong> {remision.codigo}</p>
+                                                                                    <p className="remision-date"><strong>Fecha:</strong> {formatShortDate(remision.fecha)}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-muted">No hay remisiones asociadas. Haz clic en el botón + para generar una.</p>
+                                                                )}
                                                             </div>
 
                                                             {/* Observaciones Cliente */}
@@ -756,12 +779,17 @@ const Ventas = () => {
                                                                 {isPartialData ? (
                                                                     <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
                                                                 ) : ventaDetails.cliente.observaciones && ventaDetails.cliente.observaciones.length > 0 ? (
-                                                                    <ul>
+                                                                    <div className="observaciones-list">
                                                                         {ventaDetails.cliente.observaciones.map((obs, index) => (
-                                                                            <li key={index}>{obs.texto} <small>({formatDate(obs.fecha_creacion)})</small></li>
+                                                                            <div key={index} className="observacion-card">
+                                                                                <div className="observacion-icon">💬</div>
+                                                                                <div className="observacion-content">
+                                                                                    <p className="observacion-text">{obs.texto}</p>
+                                                                                </div>
+                                                                            </div>
                                                                         ))}
-                                                                    </ul>
-                                                                ) : <p className="text-muted">Sin observaciones.</p>}
+                                                                    </div>
+                                                                ) : <p className="text-muted">Sin observaciones de cliente.</p>}
                                                             </div>
 
                                                             {/* Observaciones Venta */}
@@ -776,12 +804,17 @@ const Ventas = () => {
                                                                 {isPartialData ? (
                                                                     <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
                                                                 ) : ventaDetails.observaciones_venta && ventaDetails.observaciones_venta.length > 0 ? (
-                                                                    <ul>
+                                                                    <div className="observaciones-list">
                                                                         {ventaDetails.observaciones_venta.map((obs, index) => (
-                                                                            <li key={index}>{obs.texto} <small>({formatDate(obs.fecha)})</small></li>
+                                                                            <div key={index} className="observacion-card">
+                                                                                <div className="observacion-icon">📝</div>
+                                                                                <div className="observacion-content">
+                                                                                    <p className="observacion-text">{obs.texto}</p>
+                                                                                </div>
+                                                                            </div>
                                                                         ))}
-                                                                    </ul>
-                                                                ) : <p className="text-muted">Sin observaciones.</p>}
+                                                                    </div>
+                                                                ) : <p className="text-muted">Sin observaciones de venta.</p>}
                                                             </div>
 
                                                             {/* Órdenes de Pedido (Full Width) */}
@@ -912,20 +945,16 @@ const Ventas = () => {
                     </table>
                 </div>
 
-                {/* Mobile View */}
+                {/* Mobile View - Accordion List */}
                 <div className="mobile-view">
                     {isLoading ? (
-                        // Skeleton Loading Cards
-                        Array.from({ length: 3 }).map((_, index) => (
-                            <div key={index} className="mobile-card">
-                                <div className="mobile-card-header">
-                                    <div className="skeleton skeleton-text" style={{ width: '50px' }}></div>
-                                    <div className="skeleton skeleton-badge"></div>
-                                </div>
-                                <div className="mobile-card-body">
-                                    <div className="skeleton skeleton-text" style={{ width: '70%', height: '1.2rem', marginBottom: '0.5rem' }}></div>
-                                    <div className="skeleton skeleton-text" style={{ width: '40%', marginBottom: '1rem' }}></div>
-                                    <div className="skeleton skeleton-text" style={{ width: '100%', height: '2rem' }}></div>
+                        // Skeleton Loading List
+                        Array.from({ length: 5 }).map((_, index) => (
+                            <div key={index} className="mobile-sale-item skeleton-item">
+                                <div className="mobile-sale-summary">
+                                    <div className="skeleton skeleton-text" style={{ width: '40px' }}></div>
+                                    <div className="skeleton skeleton-text" style={{ width: '120px' }}></div>
+                                    <div className="skeleton skeleton-text" style={{ width: '80px' }}></div>
                                 </div>
                             </div>
                         ))
@@ -933,108 +962,139 @@ const Ventas = () => {
                         <div className="empty-state">No se encontraron ventas.</div>
                     ) : (
                         ventas.map((venta) => (
-                            <div className="mobile-card" key={venta.id}>
-                                <div className="mobile-card-header" onClick={() => handleExpandVenta(venta.id)}>
-                                    <div className="header-top">
-                                        <span className="card-id">#{venta.id}</span>
+                            <div className={`mobile-sale-item ${expandedVentaId === venta.id ? 'expanded' : ''}`} key={venta.id}>
+                                <div className="mobile-sale-summary" onClick={() => handleExpandVenta(venta.id)}>
+                                    <div className="summary-row-top">
+                                        <span className="summary-id">#{venta.id}</span>
                                         <span className={`status-badge ${getStatusClass(venta.estado)}`}>
                                             {capitalizeEstado(venta.estado)}
                                         </span>
                                     </div>
-                                    <div className="header-date">{formatShortDate(venta.fecha_venta)}</div>
-                                </div>
-                                <div className="mobile-card-body" onClick={() => handleExpandVenta(venta.id)}>
-                                    <h3 className="client-name">{venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}</h3>
-                                    <p className="vendor-name">Vendedor: {venta.vendedor_nombre || '—'}</p>
-                                    <div className="card-total">
-                                        <span>Total</span>
-                                        <strong>{formatCurrency(venta.valor_total)}</strong>
+                                    <div className="summary-row-main">
+                                        <h3 className="summary-vendor">{venta.vendedor_nombre || 'Vendedor no asignado'}</h3>
+                                        <p className="summary-client-sub">{venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}</p>
                                     </div>
-                                </div>
-                                <div className="mobile-card-footer">
-                                    <button className="btn-expand-mobile" onClick={() => handleExpandVenta(venta.id)}>
-                                        {expandedVentaId === venta.id ? 'Ocultar Detalles' : 'Ver Detalles'} <FaChevronDown className={expandedVentaId === venta.id ? 'rotated' : ''} />
-                                    </button>
+                                    <div className="summary-row-bottom">
+                                        <span className="summary-date">{formatShortDate(venta.fecha_venta)}</span>
+                                        <span className="summary-total">{formatCurrency(venta.valor_total)}</span>
+                                    </div>
+                                    <div className="summary-expand-icon">
+                                        <FaChevronDown />
+                                    </div>
                                 </div>
 
                                 {/* Mobile Expanded Details */}
                                 {expandedVentaId === venta.id && (
-                                    <div className="mobile-details-container">
+                                    <div className="mobile-sale-details">
                                         {loadingDetails ? (
                                             <div className="loading-container-small"><div className="loader-small"></div></div>
                                         ) : detailsError ? (
-                                            <div className="error-container-small" style={{ padding: '2rem', textAlign: 'center' }}>
-                                                <p style={{ color: 'var(--rose-600)', marginBottom: '1rem' }}>{detailsError}</p>
-                                                <button className="btn-secondary" onClick={() => refreshVentaDetails(venta.id)}>Reintentar</button>
+                                            <div className="error-container-small">
+                                                <p className="error-text">{detailsError}</p>
+                                                <button className="btn-secondary btn-sm" onClick={() => refreshVentaDetails(venta.id)}>Reintentar</button>
                                             </div>
                                         ) : ventaDetails ? (
                                             <div className="mobile-details-content">
-                                                {/* Reuse the same structure or a simplified one for mobile details. */}
-
-                                                <div className="mobile-section">
-                                                    <h4>Cliente</h4>
-                                                    <p><strong>Nombre:</strong> {ventaDetails.cliente?.nombre || 'N/A'}</p>
-                                                    <p><strong>Teléfono:</strong> {ventaDetails.cliente?.telefono1 || 'N/A'}</p>
-                                                    <p><strong>Dirección:</strong> {ventaDetails.cliente?.direccion || 'N/A'}</p>
-                                                </div>
-
-                                                <div className="mobile-section">
-                                                    <h4>Pagos</h4>
-                                                    <div className="mobile-payments-list">
-                                                        {ventaDetails.recibos && ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r => (
-                                                            <div key={r.id} className="mobile-payment-item">
-                                                                <div className="mobile-payment-header">
-                                                                    <span className="mobile-payment-rc">RC. #{r.id}</span>
-                                                                    <span className="mobile-payment-date">{formatShortDate(r.fecha)}</span>
-                                                                </div>
-                                                                <div className="mobile-payment-body">
-                                                                    <span className="mobile-payment-amount">{formatCurrency(r.valor)}</span>
-                                                                    <span className={`mobile-payment-status ${r.estado === 'Confirmado' ? 'confirmed' : 'pending'}`}>
-                                                                        ({r.estado})
-                                                                    </span>
-                                                                    <span className="mobile-payment-method">{r.metodo_pago}</span>
-                                                                </div>
-                                                            </div>
-                                                        )) : <p className="text-muted">No hay pagos registrados.</p>}
+                                                <div className="mobile-detail-section">
+                                                    <h4>Información del Cliente</h4>
+                                                    <div className="detail-grid">
+                                                        <div className="detail-item full-width">
+                                                            <span className="label">Razón Social / Nombre</span>
+                                                            <span className="value">{ventaDetails.cliente?.nombre || '—'}</span>
+                                                        </div>
+                                                        <div className="detail-item">
+                                                            <span className="label">NIT / CC</span>
+                                                            <span className="value">{ventaDetails.cliente?.cedula || '—'}</span>
+                                                        </div>
+                                                        <div className="detail-item">
+                                                            <span className="label">Teléfono 1</span>
+                                                            <span className="value">{ventaDetails.cliente?.telefono1 || '—'}</span>
+                                                        </div>
+                                                        <div className="detail-item">
+                                                            <span className="label">Teléfono 2</span>
+                                                            <span className="value">{ventaDetails.cliente?.telefono2 || '—'}</span>
+                                                        </div>
+                                                        <div className="detail-item full-width">
+                                                            <span className="label">Email</span>
+                                                            <span className="value">{ventaDetails.cliente?.correo || '—'}</span>
+                                                        </div>
+                                                        <div className="detail-item full-width">
+                                                            <span className="label">Dirección</span>
+                                                            <span className="value">{ventaDetails.cliente?.direccion || '—'}</span>
+                                                        </div>
+                                                        <div className="detail-item full-width">
+                                                            <span className="label">Ciudad</span>
+                                                            <span className="value">{ventaDetails.cliente?.ciudad || '—'}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="mobile-section">
-                                                    <h4>Observaciones</h4>
-                                                    <ul>
-                                                        {ventaDetails.observaciones_venta && ventaDetails.observaciones_venta.length > 0 ? ventaDetails.observaciones_venta.map((obs, index) => (
-                                                            <li key={index}>{obs.texto}</li>
-                                                        )) : <li>No hay observaciones.</li>}
-                                                    </ul>
+                                                <div className="mobile-detail-section">
+                                                    <h4>Estado Financiero</h4>
+                                                    <div className="financial-summary">
+                                                        <div className="fin-item">
+                                                            <span className="label">Abonado</span>
+                                                            <span className="value text-success">{formatCurrency(venta.abono)}</span>
+                                                        </div>
+                                                        <div className="fin-item">
+                                                            <span className="label">Saldo</span>
+                                                            <span className="value text-danger">{formatCurrency(venta.saldo)}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
 
-                                                <div className="mobile-section">
-                                                    <h4>Órdenes de Pedido Asociadas</h4>
-                                                    <ul>
+                                                <div className="mobile-detail-section">
+                                                    <h4>Pagos ({ventaDetails.recibos?.length || 0})</h4>
+                                                    <div className="mobile-payments-list">
+                                                        {ventaDetails.recibos && ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r => (
+                                                            <div key={r.id} className="mobile-payment-compact">
+                                                                <div className="mp-left">
+                                                                    <span className="mp-rc">RC-{r.id}</span>
+                                                                    <span className="mp-date">{formatShortDate(r.fecha)}</span>
+                                                                </div>
+                                                                <div className="mp-right">
+                                                                    <span className="mp-amount">{formatCurrency(r.valor)}</span>
+                                                                    <span className={`mp-status-dot ${r.estado === 'Confirmado' ? 'bg-success' : 'bg-warning'}`}></span>
+                                                                </div>
+                                                            </div>
+                                                        )) : <p className="text-muted text-sm">Sin pagos registrados.</p>}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mobile-detail-section">
+                                                    <h4>Órdenes de Pedido</h4>
+                                                    <div className="mobile-orders-list">
                                                         {ventaDetails.ordenes_pedido && ventaDetails.ordenes_pedido.length > 0 ? ventaDetails.ordenes_pedido.map(op => (
-                                                            <li key={op.id}>
-                                                                <strong>O.P. {op.id}</strong> - {op.proveedor_nombre} ({capitalizeEstado(op.estado)})
-                                                            </li>
-                                                        )) : <li>No hay órdenes asociadas.</li>}
-                                                    </ul>
+                                                            <div key={op.id} className="mobile-order-compact">
+                                                                <div className="mo-header">
+                                                                    <span className="mo-id">OP-{op.id}</span>
+                                                                    <span className={`status-badge-sm ${op.estado?.toLowerCase()}`}>{capitalizeEstado(op.estado)}</span>
+                                                                </div>
+                                                                <div className="mo-body">
+                                                                    <span className="mo-provider">{op.proveedor_nombre}</span>
+                                                                    <span className="mo-date">Entrega: {formatShortDate(op.fecha_esperada)}</span>
+                                                                </div>
+                                                            </div>
+                                                        )) : <p className="text-muted text-sm">Sin órdenes asociadas.</p>}
+                                                    </div>
                                                 </div>
 
-                                                <div className="mobile-actions">
+                                                <div className="mobile-actions-grid">
                                                     {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
-                                                        <button className="btn-primary full-width" onClick={() => {
+                                                        <button className="btn-action-mobile primary" onClick={() => {
                                                             setEditSaleData(ventaDetails);
                                                             setShowEditSaleModal(true);
                                                         }}>
-                                                            <FaEdit /> Editar Venta
+                                                            <FaEdit /> Editar
                                                         </button>
                                                     )}
-                                                    <button className="btn-secondary full-width" onClick={() => setShowObservacionClienteModal(true)}>
+                                                    <button className="btn-action-mobile" onClick={() => setShowObservacionClienteModal(true)}>
                                                         <FaPlus /> Obs. Cliente
                                                     </button>
-                                                    <button className="btn-secondary full-width" onClick={() => setShowObservacionVentaModal(true)}>
+                                                    <button className="btn-action-mobile" onClick={() => setShowObservacionVentaModal(true)}>
                                                         <FaPlus /> Obs. Venta
                                                     </button>
-                                                    <button className="btn-secondary full-width" onClick={() => setShowRemisionModal(true)}>
+                                                    <button className="btn-action-mobile" onClick={() => setShowRemisionModal(true)}>
                                                         <FaPlus /> Remisión
                                                     </button>
                                                 </div>
@@ -1054,12 +1114,23 @@ const Ventas = () => {
                 onClose={() => setShowObservacionClienteModal(false)}
                 title="Agregar Observación al Cliente"
             >
-                <textarea
-                    value={observacionClienteText}
-                    onChange={(e) => setObservacionClienteText(e.target.value)}
-                    placeholder="Escribe la observación para el cliente..."
-                ></textarea>
-                <button onClick={() => handleAddObservacion('cliente')}>Guardar Observación</button>
+                <div className="modal-form-container">
+                    <div className="form-group">
+                        <label htmlFor="obs-cliente-text" className="form-label">Observación</label>
+                        <textarea
+                            id="obs-cliente-text"
+                            className="form-textarea"
+                            value={observacionClienteText}
+                            onChange={(e) => setObservacionClienteText(e.target.value)}
+                            placeholder="Escribe la observación para el cliente..."
+                            rows={5}
+                        ></textarea>
+                    </div>
+                    <div className="modal-actions">
+                        <button className="btn-secondary-modal" onClick={() => setShowObservacionClienteModal(false)}>Cancelar</button>
+                        <button className="btn-primary-modal" onClick={() => handleAddObservacion('cliente')}>Guardar Observación</button>
+                    </div>
+                </div>
             </Modal>
 
             <Modal
@@ -1067,12 +1138,23 @@ const Ventas = () => {
                 onClose={() => setShowObservacionVentaModal(false)}
                 title="Agregar Observación a la Venta"
             >
-                <textarea
-                    value={observacionVentaText}
-                    onChange={(e) => setObservacionVentaText(e.target.value)}
-                    placeholder="Escribe la observación para la venta..."
-                ></textarea>
-                <button onClick={() => handleAddObservacion('venta')}>Guardar Observación</button>
+                <div className="modal-form-container">
+                    <div className="form-group">
+                        <label htmlFor="obs-venta-text" className="form-label">Observación</label>
+                        <textarea
+                            id="obs-venta-text"
+                            className="form-textarea"
+                            value={observacionVentaText}
+                            onChange={(e) => setObservacionVentaText(e.target.value)}
+                            placeholder="Escribe la observación para la venta..."
+                            rows={5}
+                        ></textarea>
+                    </div>
+                    <div className="modal-actions">
+                        <button className="btn-secondary-modal" onClick={() => setShowObservacionVentaModal(false)}>Cancelar</button>
+                        <button className="btn-primary-modal" onClick={() => handleAddObservacion('venta')}>Guardar Observación</button>
+                    </div>
+                </div>
             </Modal>
 
             {

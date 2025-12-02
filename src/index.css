@@ -309,4 +309,9 @@ main {
     padding: 1.5rem;
     padding-top: calc(70px + 1.5rem);
   }
+
+  .sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    /* Override collapsed sidebar margin on tablets and mobile */
+  }
 }

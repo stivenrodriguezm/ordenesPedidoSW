@@ -15,7 +15,8 @@ import {
 import {
     FaChartLine,
     FaTrophy,
-    FaClipboardList,
+    FaHourglassHalf,
+    FaClock,
     FaMoneyBillWave,
     FaPlus,
     FaShoppingCart,
@@ -103,9 +104,9 @@ const AdminHomePage = () => {
         const now = new Date();
         const hour = now.getHours();
 
-        if (hour < 12) return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        if (hour < 18) return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-        return 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+        if (hour < 12) return 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'; // Morning - Deep Blue
+        if (hour < 18) return 'linear-gradient(135deg, #1e40af 0%, #0ea5e9 100%)'; // Afternoon - Bright Blue
+        return 'linear-gradient(135deg, #0c4a6e 0%, #0891b2 100%)'; // Evening - Ocean Blue
     };
 
     const chartOptions = {
@@ -198,19 +199,6 @@ const AdminHomePage = () => {
             {/* Statistics Grid */}
             <section className="stats-section">
                 <div className="stats-grid-enhanced">
-                    <div className="stat-card-enhanced stat-ventas-dia">
-                        <div className="stat-icon-wrapper">
-                            <FaChartLine className="stat-icon" />
-                        </div>
-                        <div className="stat-details">
-                            <p className="stat-label">Ventas Hoy</p>
-                            <h3 className="stat-value">{formatCurrency(stats?.ventas_dia || 0)}</h3>
-                            <span className="stat-trend positive">
-                                <FaArrowUp /> Actualizado
-                            </span>
-                        </div>
-                        <div className="stat-sparkle"></div>
-                    </div>
 
                     <div className="stat-card-enhanced stat-ventas-mes">
                         <div className="stat-icon-wrapper">
@@ -226,29 +214,29 @@ const AdminHomePage = () => {
                         <div className="stat-sparkle"></div>
                     </div>
 
-                    <div className="stat-card-enhanced stat-ordenes">
+                    <div className="stat-card-enhanced stat-pedidos-pendientes">
                         <div className="stat-icon-wrapper">
-                            <FaClipboardList className="stat-icon" />
+                            <FaHourglassHalf className="stat-icon" />
                         </div>
                         <div className="stat-details">
-                            <p className="stat-label">Órdenes Activas</p>
-                            <h3 className="stat-value">{stats?.ordenes_abiertas || 0}</h3>
+                            <p className="stat-label">Ventas con pedidos pendientes</p>
+                            <h3 className="stat-value">{stats?.pedidos_pendientes || 0}</h3>
                             <span className="stat-trend neutral">
-                                <FaMoneyBillWave /> Pendientes
+                                <FaHourglassHalf /> Pendientes
                             </span>
                         </div>
                         <div className="stat-sparkle"></div>
                     </div>
 
-                    <div className="stat-card-enhanced stat-clientes">
+                    <div className="stat-card-enhanced stat-ordenes-atrasadas">
                         <div className="stat-icon-wrapper">
-                            <FaUsers className="stat-icon" />
+                            <FaClock className="stat-icon" />
                         </div>
                         <div className="stat-details">
-                            <p className="stat-label">Clientes Activos</p>
-                            <h3 className="stat-value">{stats?.clientes_activos || 0}</h3>
-                            <span className="stat-trend neutral">
-                                <FaUsers /> Total
+                            <p className="stat-label">Órdenes de pedido atrasadas</p>
+                            <h3 className="stat-value">{stats?.ordenes_atrasadas || 0}</h3>
+                            <span className="stat-trend warning">
+                                <FaClock /> Atrasadas
                             </span>
                         </div>
                         <div className="stat-sparkle"></div>

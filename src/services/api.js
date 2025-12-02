@@ -34,7 +34,7 @@ API.interceptors.response.use(
         console.error("Error 401: No autorizado. Redirigiendo al login.");
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        window.location.href = "/login"; // Forzar recarga para limpiar estado
+        window.location.href = "/#/login"; // Forzar recarga para limpiar estado
 
       } else if (status === 400) {
         // Error de validación (Bad Request)
@@ -70,12 +70,12 @@ export const fetchOrdenes = (filtros = {}, userId) => {
   if (filtros.proveedor) params.append('id_proveedor', filtros.proveedor);
   if (filtros.vendedor) params.append('id_vendedor', filtros.vendedor);
   if (filtros.estado) params.append('estado', filtros.estado);
-  
+
   const queryString = params.toString();
   if (queryString) {
     endpoint += `?${queryString}`;
   }
-  
+
   return API.get(endpoint).then((res) => res.data);
 };
 

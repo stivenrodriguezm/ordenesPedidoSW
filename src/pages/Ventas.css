@@ -92,35 +92,40 @@
   margin-bottom: 2rem;
   background: white;
   padding: 1rem 1.5rem;
-  border-radius: 20px;
-  border: 1px solid rgba(229, 231, 235, 0.5);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
-  flex-wrap: wrap;
-  gap: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--ventas-border);
+  box-shadow: var(--shadow-soft);
+  flex-wrap: nowrap;
+  /* Prevent wrapping on desktop */
+  gap: 1rem;
 }
 
 .filters-group {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  /* Prevent wrapping */
+  min-width: 0;
+  /* Allow shrinking */
 }
 
 /* Search Input */
 .search-wrapper {
   position: relative;
-  min-width: 280px;
-  flex-shrink: 0;
+  min-width: 150px;
+  /* Allow shrinking further */
+  flex: 1;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.75rem;
-  border: 2px solid transparent;
-  background-color: #f3f4f6;
-  border-radius: 14px;
-  font-size: 0.95rem;
+  padding: 0.6rem 1rem 0.6rem 2.5rem;
+  border: 1px solid var(--ventas-border);
+  background-color: #f9fafb;
+  border-radius: 10px;
+  font-size: 0.9rem;
   color: var(--ventas-text-dark);
   transition: all 0.2s ease;
   font-weight: 500;
@@ -135,18 +140,80 @@
   outline: none;
   background-color: white;
   border-color: var(--ventas-primary);
-  box-shadow: 0 0 0 4px var(--ventas-primary-soft);
+  box-shadow: 0 0 0 3px var(--ventas-primary-soft);
 }
 
 .search-icon {
   position: absolute;
-  left: 1rem;
+  left: 0.8rem;
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
-  font-size: 1rem;
+  font-size: 0.9rem;
   pointer-events: none;
-  transition: color 0.2s ease;
+}
+
+.filters-group select {
+  padding: 0.6rem 2rem 0.6rem 1rem;
+  border: 1px solid var(--ventas-border);
+  border-radius: 10px;
+  background-color: white;
+  color: var(--ventas-text-dark);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+  /* Allow shrinking further */
+  flex-shrink: 1;
+}
+
+.filters-group select:focus {
+  outline: none;
+  border-color: var(--ventas-primary);
+  box-shadow: 0 0 0 3px var(--ventas-primary-soft);
+}
+
+.actions-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Mobile & Tablet Adjustments */
+@media (max-width: 992px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .filters-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    /* Reset for mobile stack */
+  }
+
+  .search-wrapper,
+  .filters-group select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .actions-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .actions-group button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .search-input:focus+.search-icon {
@@ -351,6 +418,8 @@
 .td-fecha {
   color: var(--ventas-text-medium);
   font-size: 0.85rem;
+  white-space: nowrap;
+  min-width: 95px;
 }
 
 /* Status Badges - Premium Look */
@@ -588,6 +657,9 @@
 /* ==========================================================================
    Mobile View (Ticket Cards)
    ========================================================================== */
+/* ==========================================================================
+   Mobile View (Accordion List)
+   ========================================================================== */
 .mobile-view {
   display: none;
 }
@@ -598,7 +670,10 @@
   }
 
   .mobile-view {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0;
   }
 
   .ventas-container {
@@ -606,116 +681,303 @@
     border: none;
     box-shadow: none;
     overflow: visible;
+    padding: 0;
   }
 
-  .mobile-card {
+  /* Sale Item Container */
+  .mobile-sale-item {
     background: white;
-    border-radius: 16px;
-    margin-bottom: 1rem;
-    box-shadow: var(--shadow-soft);
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--ventas-border);
     overflow: hidden;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-sale-item.expanded {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--ventas-primary-soft);
+  }
+
+  /* Summary Header (Always Visible) */
+  .mobile-sale-summary {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    cursor: pointer;
     position: relative;
   }
 
-  /* Ticket perforation effect */
-  .mobile-card::before,
-  .mobile-card::after {
-    content: '';
-    position: absolute;
-    top: 70px;
-    /* Adjust based on header height */
-    width: 20px;
-    height: 20px;
-    background-color: var(--ventas-bg);
-    border-radius: 50%;
-    z-index: 1;
+  .mobile-sale-summary:active {
+    background-color: #f9fafb;
   }
 
-  .mobile-card::before {
-    left: -10px;
-  }
-
-  .mobile-card::after {
-    right: -10px;
-  }
-
-  .mobile-card-header {
-    padding: 1rem 1.5rem;
-    background: #f8fafc;
-    /* Slate 50 */
-    border-bottom: 1px dashed var(--ventas-border);
-    /* Dashed line for ticket feel */
+  .summary-row-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .card-id {
+  .summary-id {
     font-family: 'Roboto Mono', monospace;
-    font-weight: 700;
-    color: var(--ventas-text-dark);
+    font-size: 0.85rem;
+    color: var(--ventas-text-light);
+    font-weight: 600;
   }
 
-  .mobile-card-body {
-    padding: 1.5rem;
+  .summary-row-main {
+    padding-right: 2rem;
+    /* Space for chevron */
   }
 
-  .client-name {
-    font-size: 1.25rem;
+  .summary-vendor {
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--ventas-text-dark);
     margin: 0 0 0.25rem 0;
+    line-height: 1.3;
   }
 
-  .vendor-name {
-    font-size: 0.85rem;
-    color: var(--ventas-text-light);
-    margin-bottom: 1.5rem;
-  }
-
-  .card-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-
-  .card-total span {
+  .summary-client-sub {
     font-size: 0.85rem;
     color: var(--ventas-text-medium);
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .summary-row-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.25rem;
+  }
+
+  .summary-date {
+    font-size: 0.85rem;
+    color: var(--ventas-text-medium);
+  }
+
+  .summary-total {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--ventas-primary);
+  }
+
+  .summary-expand-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ventas-text-light);
+    transition: transform 0.3s ease;
+  }
+
+  .mobile-sale-item.expanded .summary-expand-icon {
+    transform: translateY(-50%) rotate(180deg);
+    color: var(--ventas-primary);
+  }
+
+  /* Expanded Details Section */
+  .mobile-sale-details {
+    background-color: #f8fafc;
+    border-top: 1px solid var(--ventas-border);
+    animation: slideDown 0.3s ease;
+  }
+
+  .mobile-details-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .mobile-detail-section h4 {
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-  }
-
-  .card-total strong {
-    font-size: 1.5rem;
+    color: var(--ventas-text-light);
+    margin-bottom: 0.75rem;
     font-weight: 700;
-    color: var(--ventas-primary);
-    line-height: 1;
   }
 
-  .mobile-card-footer {
-    padding: 0;
+  /* Detail Grid */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
   }
 
-  .btn-expand-mobile {
-    width: 100%;
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .detail-item.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .detail-item .label {
+    font-size: 0.75rem;
+    color: var(--ventas-text-medium);
+  }
+
+  .detail-item .value {
+    font-size: 0.9rem;
+    color: var(--ventas-text-dark);
+    font-weight: 500;
+  }
+
+  /* Financial Summary */
+  .financial-summary {
+    display: flex;
+    gap: 1rem;
+    background: white;
     padding: 1rem;
-    background: #f8fafc;
-    border: none;
-    border-top: 1px solid var(--ventas-border);
-    color: var(--ventas-primary);
+    border-radius: 8px;
+    border: 1px solid var(--ventas-border);
+  }
+
+  .fin-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .fin-item .value {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .text-success {
+    color: #059669;
+  }
+
+  .text-danger {
+    color: #dc2626;
+  }
+
+  /* Compact Lists (Payments & Orders) */
+  .mobile-payment-compact,
+  .mobile-order-compact {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--ventas-border);
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mp-left,
+  .mo-header,
+  .mo-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mp-rc,
+  .mo-id {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--ventas-text-dark);
+  }
+
+  .mp-date,
+  .mo-date {
+    font-size: 0.75rem;
+    color: var(--ventas-text-light);
+  }
+
+  .mp-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+
+  .mp-amount {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--ventas-text-dark);
+  }
+
+  .mp-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .bg-success {
+    background-color: #10b981;
+  }
+
+  .bg-warning {
+    background-color: #f59e0b;
+  }
+
+  .status-badge-sm {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
     font-weight: 600;
-    cursor: pointer;
+    display: inline-block;
+  }
+
+  .status-badge-sm.pendiente {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .status-badge-sm.en-proceso {
+    background: #eff6ff;
+    color: #1e40af;
+  }
+
+  .status-badge-sm.finalizado {
+    background: #f0fdf4;
+    color: #15803d;
+  }
+
+  /* Actions Grid */
+  .mobile-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .btn-action-mobile {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--ventas-border);
+    background: white;
+    color: var(--ventas-text-dark);
+    font-weight: 600;
+    font-size: 0.85rem;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    transition: background 0.2s;
+    cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .btn-expand-mobile:active {
-    background: #e2e8f0;
+  .btn-action-mobile.primary {
+    background: var(--ventas-primary);
+    color: white;
+    border-color: var(--ventas-primary);
+    grid-column: 1 / -1;
+  }
+
+  .btn-action-mobile:active {
+    transform: scale(0.98);
   }
 }
 
@@ -874,6 +1136,7 @@
 .products-table tr:last-child td {
   border-bottom: none;
 }
+
 /* ==========================================================================
    Payments List (Premium)
    ========================================================================== */
@@ -914,12 +1177,14 @@
 }
 
 .payment-status-dot.confirmed {
-  background-color: #10b981; /* Emerald 500 */
+  background-color: #10b981;
+  /* Emerald 500 */
   box-shadow: 0 0 0 2px #d1fae5;
 }
 
 .payment-status-dot.pending {
-  background-color: #f59e0b; /* Amber 500 */
+  background-color: #f59e0b;
+  /* Amber 500 */
   box-shadow: 0 0 0 2px #fef3c7;
 }
 
@@ -945,12 +1210,14 @@
 }
 
 .payment-status.text-green {
-  color: #059669; /* Emerald 600 */
+  color: #059669;
+  /* Emerald 600 */
   font-weight: 600;
 }
 
 .payment-status.text-orange {
-  color: #d97706; /* Amber 600 */
+  color: #d97706;
+  /* Amber 600 */
   font-weight: 600;
 }
 
@@ -1022,12 +1289,10 @@
   color: var(--ventas-text-medium);
   margin-left: auto;
 }
+
 /* ==========================================================================
    Enhanced Orders Table Styles
    ========================================================================== */
-.orders-section {
-  padding: 0 !important;
-}
 
 .orders-table-wrapper {
   overflow-x: auto;
@@ -1095,7 +1360,7 @@
   display: inline-flex;
   align-items: center;
   padding: 0.4rem 0.75rem;
-  background: linear-gradient(135deg,var(--ventas-primary-soft) 0%, #dbeafe 100%);
+  background: linear-gradient(135deg, var(--ventas-primary-soft) 0%, #dbeafe 100%);
   color: var(--ventas-primary);
   border-radius: 8px;
   font-family: 'Roboto Mono', monospace;
@@ -1226,6 +1491,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1287,6 +1553,7 @@
 
 /* Responsive Design */
 @media (max-width: 1440px) {
+
   .orders-table-enhanced th,
   .orders-table-enhanced td {
     padding: 0.75rem 1rem;

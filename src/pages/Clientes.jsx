@@ -130,7 +130,7 @@ const Clientes = () => {
       const params = {
         page: page,
         page_size: pageSize,
-        search: search // Assuming backend supports ?search= param for generic search
+        query: search // Changed from 'search' to 'query' to match other endpoints
       };
       // If backend doesn't support generic 'search', we might need to adjust this
       // But usually DRF SearchFilter uses 'search'

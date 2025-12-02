@@ -5,6 +5,7 @@ import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
 import { AppContext } from '../AppContext';
 import API from '../services/api';
+import logoFinal from '../assets/logoFinal.png';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
 const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading }) => {
@@ -354,49 +355,56 @@ const OrdenesPage = () => {
                           <div className="details-view-wrapper">
                             {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
                               errorMessage ? <div className="error-cell">{errorMessage}</div> :
-                                orderDetails ? (
-                                  <>
-                                    <div className="order-preview">
-                                      <div className="preview-header">
-                                        <div className="preview-logo">LOTTUS</div>
-                                        <div className="preview-order-id">
-                                          <h2>ORDEN DE PEDIDO</h2>
-                                          <p>#{orden.id}</p>
-                                        </div>
-                                      </div>
-                                      <div className="preview-info">
-                                        <div className="info-column">
-                                          <p><strong>Proveedor:</strong> {orden.proveedor_nombre}</p>
-
-                                          <p><strong>Vendedor:</strong> {orden.vendedor}</p>
-                                          <p><strong>Orden de compra:</strong> {orden.venta || orden.orden_venta}</p>
-                                        </div>
-                                        <div className="info-column">
-                                          <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
-                                          <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
-                                        </div>
-                                        {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
-                                          <button className="btn-primary btn-editar-pedido" onClick={() => handleOpenEditModal(orden)}>
-                                            <FaEdit /> Editar Pedido
-                                          </button>
-                                        )}
-                                      </div>
-                                      <div className="preview-products">
-                                        <h4>Productos:</h4>
-                                        <table className="sub-table">
-                                          <thead><tr><th>Cantidad</th><th>Referencia</th><th>Descripción</th></tr></thead>
-                                          <tbody className='tabla_expandida'>
-                                            {orderDetails.map((p, i) => (<tr key={i}><td className='td_cantidad'>{p.cantidad}</td><td className='td_referencia'>{p.referencia}</td><td className='td_descripcion'>{p.especificaciones}</td></tr>))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                      <div className="preview-notes">
-                                        <h4>Observación:</h4>
-                                        <p>{orden.observacion || 'Sin observaciones.'}</p>
+                                <>
+                                  <div className="order-preview">
+                                    <div className="preview-header">
+                                      <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
+                                      <div className="numPedido">
+                                        <h2>Orden de Pedido</h2>
+                                        <p className="numeroOP">No. {orden.id}</p>
                                       </div>
                                     </div>
-                                  </>
-                                ) : <div className="error-cell">No se pudieron cargar los detalles.</div>
+                                    <div className="preview-info">
+                                      <div className="info-column">
+                                        <p><strong>Proveedor:</strong> {orden.proveedor_nombre}</p>
+                                        <p><strong>Vendedor:</strong> {orden.vendedor}</p>
+                                        <p><strong>Orden de compra:</strong> {orden.venta || orden.orden_venta}</p>
+                                      </div>
+                                      <div className="info-column">
+                                        <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
+                                        <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
+                                      </div>
+                                      {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
+                                        <button className="btn-primary btn-editar-pedido" onClick={() => handleOpenEditModal(orden)}>
+                                          <FaEdit /> Editar Pedido
+                                        </button>
+                                      )}
+                                    </div>
+                                    <h3 className="preview-productos-title">Productos:</h3>
+                                    <table className="preview-productos-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Cantidad</th>
+                                          <th>Referencia</th>
+                                          <th>Descripción</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {orderDetails.map((p, i) => (
+                                          <tr key={i}>
+                                            <td>{p.cantidad}</td>
+                                            <td>{p.referencia}</td>
+                                            <td className="desc-preview">{p.especificaciones}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                    <div className="preview-nota">
+                                      <h3>Observación:</h3>
+                                      <p>{orden.observacion || 'Sin observaciones'}</p>
+                                    </div>
+                                  </div>
+                                </>
                             }
                           </div>
                         </td>

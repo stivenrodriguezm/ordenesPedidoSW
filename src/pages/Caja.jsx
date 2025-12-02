@@ -15,7 +15,9 @@ import {
   FaExchangeAlt,
   FaWallet,
   FaCalendarDay,
-  FaChartLine
+  FaChartLine,
+  FaChevronLeft,
+  FaChevronRight
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import CierreCajaModal from '../components/CierreCajaModal';
@@ -368,7 +370,7 @@ const Caja = () => {
         {/* Mobile Transaction Feed */}
         <div className="mobile-transaction-feed">
           {isLoading ? (
-            <div className="loading-spinner">Cargando...</div>
+            <div className="loading-spinner"></div>
           ) : cajaData.length > 0 ? (
             cajaData.map((item) => (
               <div className="transaction-card" key={item.id}>
@@ -398,9 +400,13 @@ const Caja = () => {
       </div>
 
       <div className="pagination-bar">
-        <button disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>Anterior</button>
-        <span>{currentPage} / {totalPages}</span>
-        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>Siguiente</button>
+        <button className="pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
+          <FaChevronLeft />
+        </button>
+        <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+        <button className="pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
+          <FaChevronRight />
+        </button>
       </div>
 
       <CreateCajaModal

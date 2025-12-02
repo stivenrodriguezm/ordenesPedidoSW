@@ -15,10 +15,24 @@
 
 .lottus-loader-text {
   font-family: var(--font-display);
-  font-size: 6rem; /* Tamaño considerable */
-  color: #e0e0e0; /* Gris claro inicial */
+  font-size: 6rem;
+  /* Tamaño considerable */
+  color: #e0e0e0;
+  /* Gris claro inicial */
   position: relative;
   user-select: none;
+}
+
+@media (max-width: 768px) {
+  .lottus-loader-text {
+    font-size: 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lottus-loader-text {
+    font-size: 2.5rem;
+  }
 }
 
 .lottus-loader-text::before {
@@ -28,7 +42,8 @@
   left: 0;
   width: 0%;
   height: 100%;
-  color: #000000; /* Negro final */
+  color: #000000;
+  /* Negro final */
   overflow: hidden;
   animation: fill-text 2s ease-in-out forwards;
 }
@@ -37,6 +52,7 @@
   0% {
     width: 0%;
   }
+
   100% {
     width: 100%;
   }

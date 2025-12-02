@@ -6,11 +6,12 @@ import {
     FaPlus,
     FaClipboardList,
     FaFileInvoiceDollar,
-    FaChartLine,
     FaUsers,
-    FaTrophy,
     FaHistory,
-    FaShoppingCart
+    FaShoppingCart,
+    FaExclamationTriangle,
+    FaClock,
+    FaHourglassHalf
 } from 'react-icons/fa';
 import './VendedorHomePage.css';
 import Loader from '../components/Loader';
@@ -90,9 +91,9 @@ const VendedorHomePage = () => {
         const now = new Date();
         const hour = now.getHours();
 
-        if (hour < 12) return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; // Morning
-        if (hour < 18) return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'; // Afternoon
-        return 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'; // Evening
+        if (hour < 12) return 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)'; // Morning - Deep Blue
+        if (hour < 18) return 'linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%)'; // Afternoon - Dark Blue
+        return 'linear-gradient(135deg, #0c4a6e 0%, #0891b2 100%)'; // Evening - Ocean Blue
     };
 
     if (loading) {
@@ -104,9 +105,6 @@ const VendedorHomePage = () => {
             {/* Hero Section */}
             <header className="vendedor-hero" style={{ background: getTimeBasedGradient() }}>
                 <div className="hero-content">
-                    <div className="user-avatar">
-                        {usuario?.first_name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
                     <h1 className="vendedor-greeting">
                         {greeting}, <span className="user-name">{usuario?.first_name || 'Vendedor'}</span>!
                     </h1>
@@ -117,35 +115,35 @@ const VendedorHomePage = () => {
             {/* Statistics Dashboard */}
             <section className="stats-dashboard">
                 <div className="stats-grid">
-                    <div className="stat-card stat-ventas-dia">
+                    <div className="stat-card stat-ventas-pendientes">
                         <div className="stat-icon">
-                            <FaChartLine />
+                            <FaExclamationTriangle />
                         </div>
                         <div className="stat-content">
-                            <p className="stat-label">Ventas Hoy</p>
-                            <h3 className="stat-value">{formatCurrency(stats?.ventas_dia || 0)}</h3>
+                            <p className="stat-label">Ventas pendientes por entregar</p>
+                            <h3 className="stat-value">{stats?.ventas_pendientes || 0}</h3>
                         </div>
                         <div className="stat-decoration"></div>
                     </div>
 
-                    <div className="stat-card stat-ventas-mes">
+                    <div className="stat-card stat-pedidos-pendientes">
                         <div className="stat-icon">
-                            <FaTrophy />
+                            <FaHourglassHalf />
                         </div>
                         <div className="stat-content">
-                            <p className="stat-label">Ventas del Mes</p>
-                            <h3 className="stat-value">{formatCurrency(stats?.ventas_mes || 0)}</h3>
+                            <p className="stat-label">Ventas con pedidos pendientes</p>
+                            <h3 className="stat-value">{stats?.pedidos_pendientes || 0}</h3>
                         </div>
                         <div className="stat-decoration"></div>
                     </div>
 
-                    <div className="stat-card stat-ordenes">
+                    <div className="stat-card stat-ordenes-atrasadas">
                         <div className="stat-icon">
-                            <FaClipboardList />
+                            <FaClock />
                         </div>
                         <div className="stat-content">
-                            <p className="stat-label">Órdenes Activas</p>
-                            <h3 className="stat-value">{stats?.ordenes_abiertas || 0}</h3>
+                            <p className="stat-label">Órdenes de pedido atrasadas</p>
+                            <h3 className="stat-value">{stats?.ordenes_atrasadas || 0}</h3>
                         </div>
                         <div className="stat-decoration"></div>
                     </div>
@@ -156,14 +154,6 @@ const VendedorHomePage = () => {
             <section className="quick-actions">
                 <h2 className="section-title">Accesos Rápidos</h2>
                 <div className="actions-grid">
-                    <Link to="/nuevaVenta" className="action-card action-primary">
-                        <div className="action-icon-wrapper">
-                            <FaPlus className="action-icon" />
-                        </div>
-                        <h3>Nueva Venta</h3>
-                        <p>Registra una nueva venta rápidamente</p>
-                        <span className="action-arrow">→</span>
-                    </Link>
 
                     <Link to="/ordenes/nuevo" className="action-card">
                         <div className="action-icon-wrapper">
@@ -192,14 +182,6 @@ const VendedorHomePage = () => {
                         <span className="action-arrow">→</span>
                     </Link>
 
-                    <Link to="/clientes" className="action-card">
-                        <div className="action-icon-wrapper">
-                            <FaUsers className="action-icon" />
-                        </div>
-                        <h3>Clientes</h3>
-                        <p>Administra tu cartera de clientes</p>
-                        <span className="action-arrow">→</span>
-                    </Link>
                 </div>
             </section>
 

@@ -224,28 +224,28 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 <div className="kpi-card">
                     <div className="kpi-icon blue"><FaChartLine /></div>
                     <div className="kpi-content">
-                        <h3>Total Facturado</h3>
+                        <h3>Ventas Mes</h3>
                         <p className="kpi-value">{formatCurrency(kpis.totalSales)}</p>
                     </div>
                 </div>
                 <div className="kpi-card">
                     <div className="kpi-icon green"><FaMoneyBillWave /></div>
                     <div className="kpi-content">
-                        <h3>Dinero Recaudado</h3>
+                        <h3>Abonos</h3>
                         <p className="kpi-value">{formatCurrency(kpis.totalRecaudo)}</p>
                     </div>
                 </div>
                 <div className="kpi-card">
                     <div className="kpi-icon red"><FaWallet /></div>
                     <div className="kpi-content">
-                        <h3>Cartera (Saldo)</h3>
+                        <h3>Saldos</h3>
                         <p className="kpi-value">{formatCurrency(kpis.totalSaldo)}</p>
                     </div>
                 </div>
                 <div className="kpi-card">
                     <div className="kpi-icon purple"><FaShoppingCart /></div>
                     <div className="kpi-content">
-                        <h3>Total Pedidos</h3>
+                        <h3>Total Ventas</h3>
                         <p className="kpi-value">{kpis.salesCount}</p>
                     </div>
                 </div>

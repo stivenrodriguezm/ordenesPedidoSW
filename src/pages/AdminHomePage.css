@@ -32,6 +32,12 @@
     background: var(--admin-bg);
     padding: 2rem;
     animation: fadeIn 0.5s ease;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+    width: 100%;
+    /* Ensure container doesn't exceed viewport */
+    box-sizing: border-box;
+    /* Include padding in width calculation */
 }
 
 @keyframes fadeIn {
@@ -78,14 +84,13 @@
 }
 
 .user-avatar-large {
-    width: 90px;
-    height: 90px;
-    margin: 0 auto 1.5rem;
+    width: 55px;
+    height: 55px;
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(10px);
     border: 3px solid rgba(255, 255, 255, 0.4);
     border-radius: 50%;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     font-size: 2.5rem;
@@ -110,6 +115,9 @@
     margin: 0 0 0.75rem 0;
     animation: slideInFromTop 0.6s ease 0.3s both;
     text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: white;
+    word-wrap: break-word;
+    /* Prevent text overflow */
 }
 
 .user-name {
@@ -160,7 +168,7 @@
 
 .stats-grid-enhanced {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
     gap: 1.5rem;
 }
 
@@ -615,6 +623,9 @@
 /* ==========================================================================
    Responsive Design
    ========================================================================== */
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
 @media (max-width: 1400px) {
     .stats-grid-enhanced {
         grid-template-columns: repeat(2, 1fr);
@@ -655,58 +666,228 @@
     .actions-grid-admin {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .recent-sales-section {
+        display: none;
+        /* Hide table on iPad Air and smaller screens */
+    }
 }
 
 @media (max-width: 768px) {
     .admin-home-container {
         padding: 1rem;
+        overflow-x: hidden;
+        /* Prevent horizontal scroll on the main container */
+    }
+
+    .admin-hero {
+        padding: 2rem 1rem;
+        border-radius: 16px;
+    }
+
+    .admin-hero::before {
+        width: 250px;
+        /* Reduce size on mobile */
+        height: 250px;
+        right: -25%;
+        /* Adjust position */
     }
 
     .user-avatar-large {
-        width: 70px;
-        height: 70px;
-        font-size: 2rem;
+        width: 60px;
+        height: 60px;
+        font-size: 1.75rem;
     }
 
     .admin-greeting {
         font-size: 1.75rem;
+        margin-bottom: 0.5rem;
     }
 
     .admin-subtitle {
         font-size: 1rem;
     }
 
+    .stat-card-enhanced {
+        padding: 1.25rem;
+        border-radius: 16px;
+        gap: 1rem;
+    }
+
+    .stat-icon-wrapper {
+        width: 60px;
+        height: 60px;
+        font-size: 1.75rem;
+        border-radius: 14px;
+    }
+
     .stat-value {
         font-size: 1.5rem;
     }
 
+    .stat-label {
+        font-size: 0.8rem;
+    }
+
     .section-title {
         font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .quick-actions-section,
+    .chart-section,
+    .recent-sales-section {
+        border-radius: 16px;
+        padding: 1.25rem;
     }
 
     .table-wrapper {
-        overflow-x: scroll;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Use negative margins to extend to screen edges */
+        margin-left: -1.25rem;
+        margin-right: -1.25rem;
+        margin-bottom: 0;
+        width: calc(100% + 2.5rem);
+        /* Compensate for padding */
+        border-radius: 0;
+        border: none;
+        border-top: 1px solid var(--admin-border);
+        border-bottom: 1px solid var(--admin-border);
     }
 
     .sales-table-enhanced {
         min-width: 600px;
     }
+
+    .sales-table-enhanced th,
+    .sales-table-enhanced td {
+        padding: 0.75rem 1rem;
+    }
+
+    .sales-table-enhanced th:first-child,
+    .sales-table-enhanced td:first-child {
+        padding-left: 1.25rem;
+        /* Align first column with section padding */
+    }
+
+    .sales-table-enhanced th:last-child,
+    .sales-table-enhanced td:last-child {
+        padding-right: 1.25rem;
+        /* Align last column with section padding */
+    }
 }
 
 @media (max-width: 480px) {
-    .actions-grid-admin {
-        grid-template-columns: 1fr;
+    .admin-home-container {
+        padding: 0.75rem;
+    }
+
+    .admin-hero {
+        padding: 1.5rem 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .admin-hero::before {
+        width: 180px;
+        /* Further reduce on very small screens */
+        height: 180px;
+        right: -30%;
+    }
+
+    .admin-greeting {
+        font-size: 1.5rem;
+    }
+
+    .user-name {
+        padding: 0.2rem 0.75rem;
+    }
+
+    .stats-grid-enhanced {
+        gap: 0.75rem;
+    }
+
+    .stat-card-enhanced {
+        padding: 1rem;
     }
 
     .stat-icon-wrapper {
-        width: 56px;
-        height: 56px;
-        font-size: 1.5rem;
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+        border-radius: 12px;
+    }
+
+    .stat-value {
+        font-size: 1.35rem;
+    }
+
+    .actions-grid-admin {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .action-card-admin {
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        gap: 1rem;
+    }
+
+    .action-icon-bg {
+        margin: 0;
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .action-card-admin h3 {
+        margin-bottom: 0.25rem;
+        font-size: 0.95rem;
+    }
+
+    .action-card-admin p {
+        font-size: 0.8rem;
+    }
+
+    .quick-actions-section,
+    .chart-section,
+    .recent-sales-section {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .table-wrapper {
+        /* Adjust for smaller padding on very small screens */
+        margin-left: -1rem;
+        margin-right: -1rem;
+        width: calc(100% + 2rem);
+    }
+
+    .sales-table-enhanced th:first-child,
+    .sales-table-enhanced td:first-child {
+        padding-left: 1rem;
+    }
+
+    .sales-table-enhanced th:last-child,
+    .sales-table-enhanced td:last-child {
+        padding-right: 1rem;
     }
 
     .section-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1rem;
+        gap: 0.75rem;
+    }
+
+    .view-all-link {
+        font-size: 0.85rem;
+    }
+
+    .chart-wrapper {
+        height: 300px;
+        /* Reduce chart height on mobile */
     }
 }
