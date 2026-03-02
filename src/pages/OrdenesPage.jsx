@@ -8,8 +8,12 @@ import API from '../services/api';
 import logoFinal from '../assets/logoFinal.png';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
-const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading }) => {
+const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading, userRole }) => {
   const [formState, setFormState] = useState({ costo: '', estado: '', tela: '' });
+  const isFullEdit = userRole === 'administrador' || userRole === 'auxiliar';
+
+  // Cambio 1: Vendedor no puede editar estado de tela si ya está "En fabrica"
+  const telaLockedForVendedor = userRole === 'vendedor' && orden?.tela === 'En fabrica';
 
   useEffect(() => {
     if (orden) {
@@ -29,7 +33,11 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(orden.id, formState);
+    if (isFullEdit) {
+      onSave(orden.id, formState);
+    } else {
+      onSave(orden.id, { tela: formState.tela });
+    }
   };
 
   if (!isOpen) return null;
@@ -42,23 +50,38 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading 
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Costo</label>
-            <input type="number" name="costo" value={formState.costo} onChange={handleChange} />
-          </div>
-          <div className="form-group">
-            <label>Estado del Pedido</label>
-            <select name="estado" value={formState.estado} onChange={handleChange}>
-              {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-            </select>
-          </div>
+          {isFullEdit && (
+            <>
+              <div className="form-group">
+                <label>Costo</label>
+                <input type="number" name="costo" value={formState.costo} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label>Estado del Pedido</label>
+                <select name="estado" value={formState.estado} onChange={handleChange}>
+                  {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+                </select>
+              </div>
+            </>
+          )}
           <div className="form-group">
             <label>Estado de Tela</label>
-            <select name="tela" value={formState.tela} onChange={handleChange}>
+            <select
+              name="tela"
+              value={formState.tela}
+              onChange={handleChange}
+              disabled={telaLockedForVendedor}
+              style={telaLockedForVendedor ? { backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', opacity: 0.7 } : {}}
+            >
               {telas.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
+            {telaLockedForVendedor && (
+              <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                🔒 No se puede modificar el estado de tela cuando ya está "En fabrica".
+              </p>
+            )}
           </div>
-          <button type="submit" className="modal-submit" disabled={isLoading}>
+          <button type="submit" className="modal-submit" disabled={isLoading || telaLockedForVendedor}>
             {isLoading ? 'Actualizando...' : 'Actualizar Pedido'}
           </button>
         </form>
@@ -80,6 +103,7 @@ const OrdenesPage = () => {
   const [selectedEstado, setSelectedEstado] = useState('en_proceso');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
+  const [orderTelas, setOrderTelas] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
 
@@ -89,6 +113,7 @@ const OrdenesPage = () => {
 
   // --- PASO 1: AÑADIR NUEVO ESTADO PARA LA ACTUALIZACIÓN ---
   const [isUpdating, setIsUpdating] = useState(false);
+  const [telaEstadoModal, setTelaEstadoModal] = useState({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
 
 
   const token = localStorage.getItem('accessToken');
@@ -186,15 +211,24 @@ const OrdenesPage = () => {
   const handleExpandOrder = async (orderId) => {
     if (expandedOrderId === orderId) {
       setExpandedOrderId(null);
+      setOrderTelas([]);
       return;
     }
     setExpandedOrderId(orderId);
     setLoadingDetails(true);
     setOrderDetails(null); // Reset details on new expand
+    setOrderTelas([]);    // Reset telas on new expand
     setErrorMessage(''); // Reset error message
     try {
       const response = await API.get(`pedidos/${orderId}/detalles/`);
-      setOrderDetails(response.data);
+      let data = [];
+      if (response.data.detalles && Array.isArray(response.data.detalles)) {
+        data = response.data.detalles;
+      } else if (Array.isArray(response.data)) {
+        data = response.data;
+      }
+      setOrderDetails(data);
+      setOrderTelas(Array.isArray(response.data.pedidos_telas) ? response.data.pedidos_telas : []);
     } catch (error) {
       console.error("Error fetching order details:", error);
       const errorMsg = error.response?.data?.error || 'Error al cargar los detalles del pedido.';
@@ -230,6 +264,28 @@ const OrdenesPage = () => {
     }
   };
 
+  // --- Helpers para editar estado de PedidoTela desde /ordenes ---
+  const canEditTelaEstado = (currentEstado) => {
+    if (!user) return false;
+    const role = user.role?.toLowerCase();
+    if (role === 'administrador') return true;
+    return currentEstado !== 'En fabrica';
+  };
+
+  const handleSaveTelaEstado = async () => {
+    if (!telaEstadoModal.newEstado) return;
+    try {
+      const response = await API.patch(`pedidos-telas/${telaEstadoModal.pedidoId}/`, { estado: telaEstadoModal.newEstado });
+      // Update orderTelas state locally
+      setOrderTelas(prev => prev.map(pt =>
+        pt.id === telaEstadoModal.pedidoId ? { ...pt, estado: response.data.estado } : pt
+      ));
+      setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
+    } catch (error) {
+      alert(error.response?.data?.error || 'Error al actualizar el estado.');
+    }
+  };
+
   const formatCurrencyForExport = (value) => {
     if (value === null || value === undefined) return null;
     const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
@@ -260,22 +316,31 @@ const OrdenesPage = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Ordenes');
     XLSX.writeFile(wb, 'Ordenes.xlsx');
   };
+  // Parsea cualquier formato de fecha (YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, ISO, etc.)
+  // como fecha LOCAL y devuelve true si es ESTRICTAMENTE anterior a hoy.
+  const isOverdue = (fechaStr) => {
+    if (!fechaStr) return false;
+    // Toma solo los primeros 10 caracteres → siempre "YYYY-MM-DD"
+    const dateOnly = String(fechaStr).slice(0, 10);
+    const parts = dateOnly.split('-').map(Number);
+    if (parts.length < 3 || parts.some(isNaN)) return false;
+    const [year, month, day] = parts;
+    const fecha = new Date(year, month - 1, day); // medianoche local
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);                   // medianoche local de hoy
+    return fecha < today;                           // true solo si es ANTES de hoy
+  };
+
   const getEstadoClass = (estado, fechaEsperada) => {
-    if (estado === 'en_proceso') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const fechaEsperadaDate = new Date(fechaEsperada + 'T00:00:00');
-      return fechaEsperadaDate < today ? 'atrasado' : 'en-proceso';
+    if (estado === 'en_proceso' || estado === 'pendiente') {
+      return isOverdue(fechaEsperada) ? 'atrasado' : 'en-proceso';
     }
     return estado;
   };
 
   const getEstadoText = (estado, fechaEsperada) => {
-    if (estado === 'en_proceso') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const fechaEsperadaDate = new Date(fechaEsperada + 'T00:00:00');
-      return fechaEsperadaDate < today ? 'Atrasado' : 'En proceso';
+    if (estado === 'en_proceso' || estado === 'pendiente') {
+      return isOverdue(fechaEsperada) ? 'Atrasado' : 'Pendiente';
     }
     return capitalizeEstado(estado);
   };
@@ -356,6 +421,7 @@ const OrdenesPage = () => {
                             {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
                               errorMessage ? <div className="error-cell">{errorMessage}</div> :
                                 <>
+                                  {/* Columna izquierda: resumen de la orden */}
                                   <div className="order-preview">
                                     <div className="preview-header">
                                       <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
@@ -374,9 +440,18 @@ const OrdenesPage = () => {
                                         <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
                                         <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
                                       </div>
-                                      {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
-                                        <button className="btn-primary btn-editar-pedido" onClick={() => handleOpenEditModal(orden)}>
-                                          <FaEdit /> Editar Pedido
+                                      {/* Cambio 2: Solo admin puede editar si la orden está anulada */}
+                                      {orden.estado === 'anulado' && user?.role?.toLowerCase() !== 'administrador' ? (
+                                        <button
+                                          className="btn-editar-pedido btn-editar-pedido--disabled"
+                                          disabled
+                                          title="Solo el administrador puede editar órdenes anuladas"
+                                        >
+                                          <FaEdit /> Editar
+                                        </button>
+                                      ) : (
+                                        <button className="btn-editar-pedido" onClick={() => handleOpenEditModal(orden)} title="Editar pedido">
+                                          <FaEdit /> Editar
                                         </button>
                                       )}
                                     </div>
@@ -390,7 +465,7 @@ const OrdenesPage = () => {
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {orderDetails.map((p, i) => (
+                                        {Array.isArray(orderDetails) && orderDetails.map((p, i) => (
                                           <tr key={i}>
                                             <td>{p.cantidad}</td>
                                             <td>{p.referencia}</td>
@@ -403,6 +478,49 @@ const OrdenesPage = () => {
                                       <h3>Observación:</h3>
                                       <p>{orden.observacion || 'Sin observaciones'}</p>
                                     </div>
+                                  </div>
+
+                                  {/* Columna derecha: listado de pedidos de tela */}
+                                  <div className="telas-preview">
+                                    <div className="telas-preview-header">
+                                      <span className="telas-preview-icon">🧵</span>
+                                      <h4>Pedidos de Tela</h4>
+                                    </div>
+                                    {orderTelas.length === 0 ? (
+                                      <p className="telas-empty">No hay pedidos de tela registrados para esta orden.</p>
+                                    ) : (
+                                      <div className="telas-list">
+                                        {orderTelas.map((pt) => (
+                                          <div className="tela-card" key={pt.id}>
+                                            <div className="tela-card-top">
+                                              <span className="tela-card-id">PT #{pt.id}</span>
+                                              <span
+                                                className={`status-badge tela-estado-badge ${pt.estado?.toLowerCase().replace(/ /g, '-')}`}
+                                                onClick={() => setTelaEstadoModal({ open: true, pedidoId: pt.id, currentEstado: pt.estado, newEstado: pt.estado })}
+                                                style={{ cursor: 'pointer' }}
+                                                title="Clic para editar estado"
+                                              >
+                                                {pt.estado} ✏️
+                                              </span>
+                                            </div>
+                                            <p className="tela-card-proveedor">{pt.proveedor}</p>
+                                            {pt.fecha_creacion && (
+                                              <p className="tela-card-fecha">{formatDate(pt.fecha_creacion)}</p>
+                                            )}
+                                            {pt.detalles && pt.detalles.length > 0 && (
+                                              <ul className="tela-detalles-list">
+                                                {pt.detalles.map((dt, i) => (
+                                                  <li key={i}>
+                                                    <span className="tela-nombre">{dt.tela}</span>
+                                                    <span className="tela-cantidad">×{dt.cantidad}</span>
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </>
                             }
@@ -475,7 +593,7 @@ const OrdenesPage = () => {
                               <div className="mobile-section">
                                 <h4>Productos</h4>
                                 <ul className="mobile-products-list">
-                                  {orderDetails.map((p, i) => (
+                                  {Array.isArray(orderDetails) && orderDetails.map((p, i) => (
                                     <li key={i}>
                                       <strong>{p.referencia}</strong> (x{p.cantidad})
                                       <br />
@@ -485,9 +603,18 @@ const OrdenesPage = () => {
                                 </ul>
                               </div>
 
-                              {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
-                                <button className="btn-primary btn-full-width" onClick={() => handleOpenEditModal(orden)}>
-                                  <FaEdit /> Editar Pedido
+                              {/* Cambio 2 (mobile): Solo admin puede editar si la orden está anulada */}
+                              {orden.estado === 'anulado' && user?.role?.toLowerCase() !== 'administrador' ? (
+                                <button
+                                  className="btn-editar-pedido btn-editar-pedido--disabled btn-full-width"
+                                  disabled
+                                  title="Solo el administrador puede editar órdenes anuladas"
+                                >
+                                  <FaEdit /> Editar
+                                </button>
+                              ) : (
+                                <button className="btn-editar-pedido btn-full-width" onClick={() => handleOpenEditModal(orden)}>
+                                  <FaEdit /> Editar
                                 </button>
                               )}
                             </div>
@@ -511,9 +638,45 @@ const OrdenesPage = () => {
           orden={currentOrder}
           telas={telas}
           estados={modalEstados}
-          // --- PASO 3: CORREGIR EL PROP PASADO AL MODAL ---
           isLoading={isUpdating}
+          userRole={user?.role?.toLowerCase()}
         />
+      )}
+
+      {/* Modal editar estado de Pedido Tela (desde /ordenes) */}
+      {telaEstadoModal.open && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Editar Estado de Tela</h3>
+              <button className="modal-close" type="button" onClick={() => setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>×</button>
+            </div>
+            <div className="form-group">
+              <label>PT #{telaEstadoModal.pedidoId} &mdash; Estado actual: <strong>{telaEstadoModal.currentEstado}</strong></label>
+              <select
+                value={telaEstadoModal.newEstado}
+                onChange={(e) => setTelaEstadoModal(prev => ({ ...prev, newEstado: e.target.value }))}
+                disabled={!canEditTelaEstado(telaEstadoModal.currentEstado)}
+                style={!canEditTelaEstado(telaEstadoModal.currentEstado) ? { backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', opacity: 0.7 } : {}}
+              >
+                <option value="Pendiente">Pendiente</option>
+                <option value="En fabrica">En fabrica</option>
+                <option value="En Lottus">En Lottus</option>
+              </select>
+              {!canEditTelaEstado(telaEstadoModal.currentEstado) && (
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem', fontStyle: 'italic' }}>🔒 No se puede editar un pedido en estado "En fabrica".</p>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button className="btn-secondary" onClick={() => setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>Cancelar</button>
+              <button
+                className="btn-primary"
+                onClick={handleSaveTelaEstado}
+                disabled={!canEditTelaEstado(telaEstadoModal.currentEstado)}
+              >Guardar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -19,6 +19,7 @@ import Caja from "./pages/Caja";
 import RecibosCaja from "./pages/RecibosCaja";
 import ComprobantesEgreso from "./pages/ComprobantesEgreso";
 import TestOrdenes from "./pages/TestOrdenes";
+import TelasPage from "./pages/TelasPage";
 import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
@@ -82,6 +83,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/ordenes" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><OrdenesPage /></PrivateRoute>} />
+                  <Route path="/telas" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><TelasPage /></PrivateRoute>} />
                   <Route path="/referencias" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ReferenciasPage /></PrivateRoute>} />
                   <Route path="/proveedores" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ProveedoresPage /></PrivateRoute>} />
                   <Route path="/ordenes/nuevo" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><CrearPedidoPage /></PrivateRoute>} />

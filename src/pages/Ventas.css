@@ -350,6 +350,8 @@
   overflow: hidden;
   /* For rounded corners */
   border: 1px solid var(--ventas-border);
+  overflow-x: auto;
+  /* Enable horizontal scroll */
 }
 
 .ventas-table {
@@ -600,6 +602,25 @@
 /* ==========================================================================
    Compact Desktop View (Laptops & Tablets Landscape)
    ========================================================================== */
+/* ==========================================================================
+   Compact Desktop View (Laptops & Tablets Landscape)
+   ========================================================================== */
+@media (max-width: 1680px) {
+  .ventas-container {
+    overflow-x: auto;
+  }
+
+  .ventas-table th,
+  .ventas-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .td-fecha {
+    font-size: 0.8rem;
+  }
+}
+
 @media (max-width: 1440px) {
   .ventas-container {
     overflow-x: auto;

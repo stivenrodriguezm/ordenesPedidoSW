@@ -7,7 +7,7 @@ import API from '../services/api';
 
 const NuevaVenta = () => {
   const navigate = useNavigate();
-  
+
   // Estados para el cliente
   const [clienteId, setClienteId] = useState('');
   const [isClienteNuevo, setIsClienteNuevo] = useState(true);
@@ -162,24 +162,24 @@ const NuevaVenta = () => {
     } catch (error) {
       let friendlyError = 'Error al crear la venta.';
       if (error.response && error.response.data) {
-          const errorData = error.response.data;
-          if (errorData.venta && errorData.venta.id && errorData.venta.id[0].includes('ya existe')) {
-              friendlyError = 'El ID de la venta ya existe.';
-          } else if (errorData.cliente && errorData.cliente.cedula && errorData.cliente.cedula[0].includes('ya existe')) {
-              friendlyError = 'La cédula del cliente ya existe.';
-          } else if (typeof errorData === 'string') {
-              friendlyError = errorData;
-          } else {
-              const firstErrorKey = Object.keys(errorData)[0];
-              if (firstErrorKey) {
-                  const firstError = errorData[firstErrorKey];
-                  if (Array.isArray(firstError)) {
-                      friendlyError = firstError[0];
-                  } else {
-                     friendlyError = JSON.stringify(errorData);
-                  }
-              }
+        const errorData = error.response.data;
+        if (errorData.venta && errorData.venta.id && errorData.venta.id[0].includes('ya existe')) {
+          friendlyError = 'El ID de la venta ya existe.';
+        } else if (errorData.cliente && errorData.cliente.cedula && errorData.cliente.cedula[0].includes('ya existe')) {
+          friendlyError = 'La cédula del cliente ya existe.';
+        } else if (typeof errorData === 'string') {
+          friendlyError = errorData;
+        } else {
+          const firstErrorKey = Object.keys(errorData)[0];
+          if (firstErrorKey) {
+            const firstError = errorData[firstErrorKey];
+            if (Array.isArray(firstError)) {
+              friendlyError = firstError[0];
+            } else {
+              friendlyError = JSON.stringify(errorData);
+            }
           }
+        }
       }
       setNotification({ message: friendlyError, type: 'error' });
     } finally {
@@ -193,24 +193,24 @@ const NuevaVenta = () => {
   };
 
   return (
-    <div className="nueva-venta-container">
+    <div className="nv-nueva-venta-container">
       <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
       {isLoading && (
-        <div className="loader-container">
-          <div className="loader"></div>
+        <div className="nv-loader-container">
+          <div className="nv-loader"></div>
         </div>
       )}
-      
-      <div className="form-sections">
+
+      <div className="nv-form-sections">
         {/* Sección de Cliente Antiguo/Nuevo */}
-        <div className="cliente-section card">
+        <div className="cliente-section nv-card">
           <div className="cliente-antiguo">
             <h3>Buscar Cliente Antiguo</h3>
-            <div className="search-cliente">
+            <div className="nv-search-cliente">
               <input
                 type="text"
                 placeholder="ID del cliente"
@@ -223,9 +223,9 @@ const NuevaVenta = () => {
 
           <div className="cliente-form">
             <h3>{clienteTitle}</h3>
-            <div className="cliente-data-columns">
+            <div className="nv-cliente-data-columns">
               <div className="column">
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label>Nombre:</label>
                   <input
                     type="text"
@@ -235,7 +235,7 @@ const NuevaVenta = () => {
                     required
                   />
                 </div>
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label>Cédula:</label>
                   <input
                     type="text"
@@ -245,7 +245,7 @@ const NuevaVenta = () => {
                     required
                   />
                 </div>
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label className="label-correo">Correo:</label>
                   <input
                     type="email"
@@ -255,7 +255,7 @@ const NuevaVenta = () => {
                     required
                   />
                 </div>
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label>Teléfono 1:</label>
                   <input
                     type="text"
@@ -266,7 +266,7 @@ const NuevaVenta = () => {
                 </div>
               </div>
               <div className="column">
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label>Ciudad:</label>
                   <input
                     type="text"
@@ -275,7 +275,7 @@ const NuevaVenta = () => {
                     onChange={handleClienteChange}
                   />
                 </div>
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label className="label-direccion">Dirección:</label>
                   <input
                     type="text"
@@ -284,7 +284,7 @@ const NuevaVenta = () => {
                     onChange={handleClienteChange}
                   />
                 </div>
-                <div className="form-group">
+                <div className="nv-form-group">
                   <label>Teléfono 2:</label>
                   <input
                     type="text"
@@ -299,10 +299,10 @@ const NuevaVenta = () => {
         </div>
 
         {/* Sección de Datos de la Venta y Observación */}
-        <div className="venta-section card">
+        <div className="venta-section nv-card">
           <div className="venta-form">
             <h3>Datos de la Venta</h3>
-            <div className="form-group">
+            <div className="nv-form-group">
               <label>ID Venta:</label>
               <input
                 type="text"
@@ -312,7 +312,7 @@ const NuevaVenta = () => {
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="nv-form-group">
               <label>Vendedor:</label>
               <select
                 name="id_vendedor"
@@ -328,7 +328,7 @@ const NuevaVenta = () => {
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="nv-form-group">
               <label>Fecha de Venta:</label>
               <input
                 type="date"
@@ -338,7 +338,7 @@ const NuevaVenta = () => {
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="nv-form-group">
               <label>Fecha de Entrega:</label>
               <input
                 type="date"
@@ -347,7 +347,7 @@ const NuevaVenta = () => {
                 onChange={handleVentaChange}
               />
             </div>
-            <div className="form-group">
+            <div className="nv-form-group">
               <label>Valor Total:</label>
               <input
                 type="number"
@@ -358,28 +358,31 @@ const NuevaVenta = () => {
               />
             </div>
           </div>
-
-          <div className="observacion-form">
-            <h3>Observación:</h3>
-            <textarea
-              value={observacion}
-              onChange={(e) => setObservacion(e.target.value)}
-              rows="4"
-              placeholder="Escribe una observación (opcional)..."
-            />
-          </div>
         </div>
       </div>
 
-      <div className="form-actions">
-        <button className="cancel-button" onClick={handleCancel} disabled={isLoading}>
+      {/* Sección Observación independiente */}
+      <div className="observacion-section nv-card" style={{ marginBottom: '2rem' }}>
+        <div className="nv-observacion-form">
+          <h3>Observación:</h3>
+          <textarea
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+            rows="4"
+            placeholder="Escribe una observación (opcional)..."
+          />
+        </div>
+      </div>
+
+      <div className="nv-form-actions">
+        <button className="nv-cancel-button" onClick={handleCancel} disabled={isLoading}>
           Cancelar
         </button>
-        <button className="submit-button" onClick={handleSubmit} disabled={isLoading}>
+        <button className="nv-submit-button" onClick={handleSubmit} disabled={isLoading}>
           Crear Venta
         </button>
       </div>
-    </div>
+    </div >
   );
 };
 

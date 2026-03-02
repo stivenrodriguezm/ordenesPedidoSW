@@ -51,15 +51,25 @@ function CrearPedidoPage() {
 
   const createOrderMutation = useMutation({
     mutationFn: (newOrder) =>
-      API.post("ordenes-pedido/", newOrder, { headers: { Authorization: `Bearer ${token}` } }),
+      API.post("ordenes-pedido/", newOrder),
     onSuccess: (response) => {
       setNumeroOP(response.data.id);
       queryClient.invalidateQueries({ queryKey: ['ordenes'] });
     },
     onError: (error) => {
-      const errorMsg = error.response?.data?.detalles || error.response?.data?.error || "Error al crear la orden.";
-      alert(`Error: ${JSON.stringify(errorMsg)}`);
-      console.error("Error creating order:", error.response);
+      console.error("Error creando orden - respuesta del servidor:", error.response?.data);
+      const data = error.response?.data;
+      if (!data) {
+        alert("Error de conexión. El servidor no respondió.");
+        return;
+      }
+      // DRF puede retornar: {"field": ["msg"]}, {"detail": "msg"}, {"error": "msg"}
+      const msg =
+        data.detail ||
+        data.error ||
+        data.detalles ||
+        (typeof data === 'object' ? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n') : String(data));
+      alert(`Error al crear el pedido:\n${msg}`);
     },
   });
 
@@ -114,17 +124,33 @@ function CrearPedidoPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Validación explícita para cubrir casos donde HTML5 validation no aplica
+    if (!pedido.proveedor) {
+      alert("Por favor seleccione un proveedor.");
+      return;
+    }
+    if (!pedido.fecha) {
+      alert("Por favor ingrese la fecha esperada de llegada.");
+      return;
+    }
+    const productoInvalido = pedido.productos.find(p => !p.referencia);
+    if (productoInvalido) {
+      alert("Por favor seleccione una referencia para cada producto.");
+      return;
+    }
+
     createOrderMutation.mutate({
-      proveedor: pedido.proveedor,
+      proveedor: parseInt(pedido.proveedor),
       fecha_esperada: pedido.fecha,
-      notas: pedido.nota,
+      observacion: pedido.nota || null,
       detalles: pedido.productos.map((producto) => ({
-        cantidad: producto.cantidad,
-        referencia: producto.referencia,
-        especificaciones: producto.descripcion,
+        cantidad: parseInt(producto.cantidad) || 1,
+        referencia: parseInt(producto.referencia),
+        especificaciones: producto.descripcion || '-',
       })),
       tela: llevaTela ? "Por pedir" : "Sin tela",
-      venta: pedido.ordenCompra,
+      venta: pedido.ordenCompra ? parseInt(pedido.ordenCompra) : null,
     });
   };
 
@@ -169,84 +195,84 @@ function CrearPedidoPage() {
 
   return (
     <div className="page-container crear-pedido-container recuadro_contenedor">
-        <div className="form-title-header">
-            <h1>Crear Nuevo Pedido</h1>
-            <div className="header-actions">
-               <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
-                Cancelar
-              </button>
-              <button type="submit" form="main-form" className="btn-primary" disabled={createOrderMutation.isLoading}>
-                {createOrderMutation.isLoading ? "Creando..." : "Crear Pedido"}
-              </button>
-            </div>
+      <div className="form-title-header">
+        <h1>Crear Nuevo Pedido</h1>
+        <div className="header-actions">
+          <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
+            Cancelar
+          </button>
+          <button type="submit" form="main-form" className="btn-primary" disabled={createOrderMutation.isLoading}>
+            {createOrderMutation.isLoading ? "Creando..." : "Crear Pedido"}
+          </button>
         </div>
+      </div>
 
       <form id="main-form" className="form-main-layout" onSubmit={handleSubmit}>
-          {/* --- COLUMNA IZQUIERDA: CONFIGURACIÓN --- */}
-          <div className="form-left-column">
-            <div className="form-section-container">
-              <h3 className="form-section-title">Información Principal</h3>
-              <div className="form-group">
-                <label htmlFor="proveedor">Proveedor:</label>
-                <select id="proveedor" name="proveedor" value={pedido.proveedor} onChange={handleProveedorChange} required>
-                  <option value="">Seleccione un proveedor</option>
-                  {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre_empresa}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="ordenCompra">Orden de Compra:</label>
-                {ventasError ? <p className="error-text">No se pudieron cargar las órdenes.</p>
-                  : ventasPendientes.length === 0 ? <p className="info-text">No hay O.C. pendientes.</p>
+        {/* --- COLUMNA IZQUIERDA: CONFIGURACIÓN --- */}
+        <div className="form-left-column">
+          <div className="form-section-container">
+            <h3 className="form-section-title">Información Principal</h3>
+            <div className="form-group">
+              <label htmlFor="proveedor">Proveedor:</label>
+              <select id="proveedor" name="proveedor" value={pedido.proveedor} onChange={handleProveedorChange} required>
+                <option value="">Seleccione un proveedor</option>
+                {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre_empresa}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="ordenCompra">Orden de Compra:</label>
+              {ventasError ? <p className="error-text">No se pudieron cargar las órdenes.</p>
+                : ventasPendientes.length === 0 ? <p className="info-text">No hay O.C. pendientes.</p>
                   : (
-                  <select id="ordenCompra" name="ordenCompra" value={pedido.ordenCompra} onChange={handleChange} required>
-                    <option value="">Seleccione una O.C.</option>
-                    {ventasPendientes.map((id) => <option key={id} value={id}>{id}</option>)}
-                  </select>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="fecha">Fecha Esperada:</label>
-                <input id="fecha" type="date" name="fecha" value={pedido.fecha} onChange={handleChange} required />
-              </div>
-              <div className="form-group checkbox-group">
-                <input id="llevaTela" type="checkbox" checked={llevaTela} onChange={(e) => setLlevaTela(e.target.checked)} />
-                <label htmlFor="llevaTela">¿Se debe pedir tela?</label>
-              </div>
-            </div>
-          </div>
-
-          {/* --- COLUMNA DERECHA: DETALLES --- */}
-          <div className="form-right-column">
-            <div className="form-section-container">
-              <div className="form-section-header">
-                <h3 className="form-section-title">Productos</h3>
-                <button type="button" className="btn-secondary" onClick={handleAddProduct}>
-                  <FaPlus /> Agregar
-                </button>
-              </div>
-              <div className="productos-list">
-                {pedido.productos.map((producto, index) => (
-                  <div key={index} className="producto-item">
-                    <input type="number" value={producto.cantidad} onChange={(e) => handleChange(e, index, "cantidad")} required placeholder="Cant." className="input-cantidad" min="1" />
-                    <select value={producto.referencia} onChange={(e) => handleChange(e, index, "referencia")} required className="select-referencia" disabled={referenciasLoading || !proveedorId}>
-                      <option value="">{referenciasLoading ? "Cargando..." : "Referencia"}</option>
-                      {referencias.map((ref) => <option key={ref.id} value={ref.id}>{ref.nombre}</option>)}
+                    <select id="ordenCompra" name="ordenCompra" value={pedido.ordenCompra} onChange={handleChange} required>
+                      <option value="">Seleccione una O.C.</option>
+                      {ventasPendientes.map((id) => <option key={id} value={id}>{id}</option>)}
                     </select>
-                    <textarea value={producto.descripcion} onChange={(e) => handleChange(e, index, "descripcion")} placeholder="Descripción del producto" className="textarea-descripcion" rows="1"></textarea>
-                    {pedido.productos.length > 1 && (
-                      <button type="button" className="remove-btn" onClick={() => handleRemoveProduct(index)} aria-label="Eliminar producto">
-                        <FaTrashAlt />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  )}
             </div>
-            <div className="form-section-container">
-               <h3 className="form-section-title">Observaciones</h3>
-               <textarea id="nota" name="nota" value={pedido.nota} onChange={handleChange} placeholder="Añadir observaciones generales sobre el pedido..." rows="5" />
+            <div className="form-group">
+              <label htmlFor="fecha">Fecha Esperada:</label>
+              <input id="fecha" type="date" name="fecha" value={pedido.fecha} onChange={handleChange} required />
+            </div>
+            <div className="form-group checkbox-group">
+              <input id="llevaTela" type="checkbox" checked={llevaTela} onChange={(e) => setLlevaTela(e.target.checked)} />
+              <label htmlFor="llevaTela">¿Se debe pedir tela?</label>
             </div>
           </div>
+        </div>
+
+        {/* --- COLUMNA DERECHA: DETALLES --- */}
+        <div className="form-right-column">
+          <div className="form-section-container">
+            <div className="form-section-header">
+              <h3 className="form-section-title">Productos</h3>
+              <button type="button" className="btn-secondary" onClick={handleAddProduct}>
+                <FaPlus /> Agregar
+              </button>
+            </div>
+            <div className="productos-list">
+              {pedido.productos.map((producto, index) => (
+                <div key={index} className="producto-item">
+                  <input type="number" value={producto.cantidad} onChange={(e) => handleChange(e, index, "cantidad")} required placeholder="Cant." className="input-cantidad" min="1" />
+                  <select value={producto.referencia} onChange={(e) => handleChange(e, index, "referencia")} required className="select-referencia" disabled={referenciasLoading || !proveedorId}>
+                    <option value="">{referenciasLoading ? "Cargando..." : "Referencia"}</option>
+                    {referencias.map((ref) => <option key={ref.id} value={ref.id}>{ref.nombre}</option>)}
+                  </select>
+                  <textarea value={producto.descripcion} onChange={(e) => handleChange(e, index, "descripcion")} placeholder="Descripción del producto" className="textarea-descripcion" rows="1"></textarea>
+                  {pedido.productos.length > 1 && (
+                    <button type="button" className="remove-btn" onClick={() => handleRemoveProduct(index)} aria-label="Eliminar producto">
+                      <FaTrashAlt />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="form-section-container">
+            <h3 className="form-section-title">Observaciones</h3>
+            <textarea id="nota" name="nota" value={pedido.nota} onChange={handleChange} placeholder="Añadir observaciones generales sobre el pedido..." rows="5" />
+          </div>
+        </div>
       </form>
 
       {/* --- VISTA PREVIA PARA IMAGEN (SIN CAMBIOS) --- */}

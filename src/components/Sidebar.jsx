@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaScroll } from 'react-icons/fa';
 import { AppContext } from "../AppContext";
 import "./Sidebar.css";
 
@@ -14,6 +14,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
         { to: "/", icon: <FaHome />, label: "Inicio" },
         { to: "/ventas", icon: <FaFileInvoiceDollar />, label: "Ventas" },
         { to: "/ordenes", icon: <FaClipboardList />, label: "Pedidos" },
+        { to: "/telas", icon: <FaScroll />, label: "Telas" },
       ],
       roles: ["administrador", "vendedor", "auxiliar"]
     },

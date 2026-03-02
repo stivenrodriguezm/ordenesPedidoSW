@@ -389,7 +389,16 @@ const Ventas = () => {
             setLoadingNestedDetails(true);
             try {
                 const response = await API.get(`/pedidos/${orderId}/detalles/`);
-                setNestedOrderDetails(response.data);
+                // Ensure we handle paginated ({ results: [...] }), object wrapper ({ detalles: [...] }), and non-paginated ([...]) responses
+                let data = [];
+                if (response.data.detalles && Array.isArray(response.data.detalles)) {
+                    data = response.data.detalles;
+                } else if (response.data.results && Array.isArray(response.data.results)) {
+                    data = response.data.results;
+                } else if (Array.isArray(response.data)) {
+                    data = response.data;
+                }
+                setNestedOrderDetails(data);
             } catch (error) {
                 console.error('Error cargando detalles del pedido anidado:', error);
             } finally {
@@ -905,13 +914,21 @@ const Ventas = () => {
                                                                                                                         </tr>
                                                                                                                     </thead>
                                                                                                                     <tbody>
-                                                                                                                        {nestedOrderDetails.map((detalle, idx) => (
-                                                                                                                            <tr key={idx}>
-                                                                                                                                <td><strong>{detalle.referencia}</strong></td>
-                                                                                                                                <td>{detalle.cantidad}</td>
-                                                                                                                                <td>{detalle.especificaciones || '—'}</td>
+                                                                                                                        {Array.isArray(nestedOrderDetails) && nestedOrderDetails.length > 0 ? (
+                                                                                                                            nestedOrderDetails.map((detalle, idx) => (
+                                                                                                                                <tr key={idx}>
+                                                                                                                                    <td><strong>{detalle.referencia}</strong></td>
+                                                                                                                                    <td>{detalle.cantidad}</td>
+                                                                                                                                    <td>{detalle.especificaciones || '—'}</td>
+                                                                                                                                </tr>
+                                                                                                                            ))
+                                                                                                                        ) : (
+                                                                                                                            <tr>
+                                                                                                                                <td colSpan="3" style={{ textAlign: 'center', color: '#6b7280' }}>
+                                                                                                                                    No hay detalles disponibles para esta orden.
+                                                                                                                                </td>
                                                                                                                             </tr>
-                                                                                                                        ))}
+                                                                                                                        )}
                                                                                                                     </tbody>
                                                                                                                 </table>
                                                                                                             </div>
