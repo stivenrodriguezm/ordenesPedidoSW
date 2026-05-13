@@ -98,6 +98,7 @@ body {
   padding: 2rem;
   padding-top: calc(80px + 2rem);
   /* Match new header height */
+  min-width: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 100vh;
   background-color: var(--color-background);
@@ -123,6 +124,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  overflow-x: hidden;
 }
 
 /* Estilo unificado para los encabezados de página */

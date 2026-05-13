@@ -3,14 +3,30 @@ import API from "./services/api"; // Usaremos la instancia de API centralizada
 
 export const AppContext = createContext();
 
+export const usePermissions = () => {
+  const { usuario } = useContext(AppContext);
+  const permissions = usuario?.permissions || [];
+  
+  const hasPermission = (feature) => {
+    if (!usuario) return false;
+    if (permissions.includes('ALL')) return true;
+    return permissions.includes(feature);
+  };
+  return hasPermission;
+};
+
 export function AppProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoggingIn, setIsLoggingIn] = useState(false); // Nuevo estado para el loader de login
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [proveedores, setProveedores] = useState([]);
   const [isLoadingProveedores, setIsLoadingProveedores] = useState(true);
   const [clientes, setClientes] = useState([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(true);
+  // Counter to force re-verify when admin saves new permissions
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  // Read token at render time — when it changes, useEffect re-runs
   const token = localStorage.getItem("accessToken");
 
   useEffect(() => {
@@ -20,22 +36,29 @@ export function AppProvider({ children }) {
         setUsuario(null);
         return;
       }
-
       setIsLoading(true);
       try {
         const userRes = await API.get("/user/");
         setUsuario(userRes.data);
       } catch (error) {
-        console.error("Error verificando el usuario:", error);
-        setUsuario(null);
-        localStorage.clear();
+        // Only kill session on 401 (expired/invalid token).
+        // 403 (permission denied) and other errors must NOT clear the session.
+        if (error?.response?.status === 401) {
+          setUsuario(null);
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+        }
       } finally {
         setIsLoading(false);
       }
     };
-
     verifyUser();
-  }, [token]);
+  }, [token, reloadTrigger]); // re-runs on login/logout OR when reloadTrigger increments
+
+  // Called after admin saves role permissions — forces fresh user data
+  const reloadUser = useCallback(() => {
+    setReloadTrigger(t => t + 1);
+  }, []);
 
   const fetchProveedores = useCallback(async () => {
     if (!token) {
@@ -46,8 +69,8 @@ export function AppProvider({ children }) {
     try {
       const response = await API.get('/proveedores/');
       setProveedores(response.data.results || []);
-    } catch (error) {
-      console.error("Error al cargar proveedores:", error);
+    } catch {
+      // Silently ignore — vendedores without VER_PROVEEDORES get 403 here
       setProveedores([]);
     } finally {
       setIsLoadingProveedores(false);
@@ -55,13 +78,10 @@ export function AppProvider({ children }) {
   }, [token]);
 
   useEffect(() => {
-    fetchProveedores();
-  }, [fetchProveedores]);
+    if (usuario) fetchProveedores();
+  }, [usuario, fetchProveedores]);
 
-  // fetchClientes removed to prevent backend timeout (page_size=1000)
-  // Clientes page now handles its own data fetching with pagination.
   const fetchClientes = useCallback(async () => {
-    // No-op or minimal fetch if absolutely needed, but for now we disable the global heavy fetch.
     setClientes([]);
     setIsLoadingClientes(false);
   }, []);
@@ -72,14 +92,15 @@ export function AppProvider({ children }) {
         usuario,
         setUsuario,
         isLoading,
-        isLoggingIn, // Proveer el nuevo estado
-        setIsLoggingIn, // Proveer la función para modificarlo
+        isLoggingIn,
+        setIsLoggingIn,
+        reloadUser,
         proveedores,
         isLoadingProveedores,
         fetchProveedores,
         clientes,
         isLoadingClientes,
-        fetchClientes, // Expose the function
+        fetchClientes,
       }}
     >
       {children}

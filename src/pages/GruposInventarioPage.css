@@ -1,0 +1,359 @@
+/* ───────────────────────────────────────────────
+   GruposInventarioPage.css — Lottus
+─────────────────────────────────────────────── */
+
+/* ── Empty state ─────────────────────────── */
+.grupos-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 4rem 2rem;
+    color: #64748b;
+}
+.grupos-empty-icon {
+    font-size: 3rem;
+    opacity: 0.35;
+    color: #94a3b8;
+}
+.grupos-empty p {
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* ── Search ──────────────────────────────── */
+.grupos-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.grupos-search-icon {
+    position: absolute;
+    left: 10px;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    pointer-events: none;
+}
+.grupos-search-wrap .filter-inline-input {
+    padding-left: 2rem;
+}
+
+/* ── Table tweaks ────────────────────────── */
+.grupos-table td { vertical-align: middle; }
+
+.grupo-name-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+.grupo-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1e293b, #334155);
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.grupo-nombre {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #e2e8f0;
+    display: block;
+}
+.grupo-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Componentes chips */
+.grupo-comp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.comp-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+.comp-chip--more {
+    background: #0f172a;
+    color: #64748b;
+    font-style: italic;
+}
+
+/* Items count badge */
+.inv-count-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.inv-count--ok {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.inv-count--empty {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+    border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* Actions */
+.grupos-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+.action-btn--danger { color: #ef4444 !important; }
+.action-btn--danger:hover { background: rgba(239, 68, 68, 0.1) !important; }
+
+/* Expanded */
+.grupo-expanded {
+    padding: 1.25rem 1.5rem;
+}
+.grupo-expanded-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin: 0 0 1rem;
+}
+.cantidad-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* ── Modal ───────────────────────────────── */
+.grupos-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    padding: 1rem;
+}
+.grupos-overlay-visible { opacity: 1; }
+
+.grupos-modal {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 850px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    overflow: hidden;
+}
+.grupos-modal-visible {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.grupos-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #1e293b;
+    flex-shrink: 0;
+}
+.grupos-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.grupos-modal-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #334155, #1e293b);
+    border-radius: 10px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.grupos-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+.grupos-modal-close {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+}
+.grupos-modal-close:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+/* Form body */
+.grupos-form { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.grupos-form-body { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+.grupos-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.grupos-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #1e293b;
+}
+.grupos-section-hint {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0;
+}
+.grupos-fields-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Form group */
+.gfg-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.gfg-grow { flex: 1; min-width: 180px; }
+.gfg-qty { width: 70px; flex-shrink: 0; }
+.gfg-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.gfg-input {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.85rem;
+    transition: border-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+.gfg-input:focus { outline: none; border-color: #64748b; }
+.gfg-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.gfg-input select { appearance: none; }
+
+/* Componente row */
+.gfg-comp-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #1a2234;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+}
+.gfg-comp-num {
+    width: 22px;
+    height: 22px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #64748b;
+    flex-shrink: 0;
+    margin-top: 24px;
+}
+.gfg-comp-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    flex: 1;
+}
+.gfg-remove-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    margin-top: 20px;
+    flex-shrink: 0;
+    transition: color 0.2s, background 0.2s;
+}
+.gfg-remove-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+.gfg-add-comp-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px dashed #334155;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.25rem;
+}
+.gfg-add-comp-btn:hover { border-color: #64748b; color: #94a3b8; }
+
+/* Footer */
+.grupos-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #1e293b;
+    flex-shrink: 0;
+}

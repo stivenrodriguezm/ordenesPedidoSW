@@ -1,40 +1,47 @@
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaScroll } from 'react-icons/fa';
-import { AppContext } from "../AppContext";
+import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaScroll, FaBoxOpen, FaTruck, FaLayerGroup } from 'react-icons/fa';
+import { AppContext, usePermissions } from "../AppContext";
 import "./Sidebar.css";
 
 function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
   const { usuario } = useContext(AppContext);
+  const hasPermission = usePermissions();
 
   const navSections = [
     {
       title: "General",
       items: [
-        { to: "/", icon: <FaHome />, label: "Inicio" },
-        { to: "/ventas", icon: <FaFileInvoiceDollar />, label: "Ventas" },
-        { to: "/ordenes", icon: <FaClipboardList />, label: "Pedidos" },
-        { to: "/telas", icon: <FaScroll />, label: "Telas" },
-      ],
-      roles: ["administrador", "vendedor", "auxiliar"]
+        { to: "/", icon: <FaHome />, label: "Inicio", feature: "VER_INICIO" },
+        { to: "/ventas", icon: <FaFileInvoiceDollar />, label: "Ventas", feature: "VER_VENTAS" },
+        { to: "/ordenes", icon: <FaClipboardList />, label: "Pedidos", feature: "VER_ORDENES" },
+        { to: "/telas", icon: <FaScroll />, label: "Telas", feature: "VER_TELAS" },
+      ]
     },
     {
       title: "Finanzas",
       items: [
-        { to: "/caja", icon: <FaCashRegister />, label: "Caja" },
-        { to: "/recibos-caja", icon: <FaReceipt />, label: "Recibos de Caja" },
-        { to: "/comprobantes-egreso", icon: <FaFileInvoice />, label: "Egresos" },
-      ],
-      roles: ["administrador", "auxiliar"]
+        { to: "/caja", icon: <FaCashRegister />, label: "Caja", feature: "VER_CAJA" },
+        { to: "/recibos-caja", icon: <FaReceipt />, label: "Recibos de Caja", feature: "VER_CAJA" },
+        { to: "/comprobantes-egreso", icon: <FaFileInvoice />, label: "Egresos", feature: "VER_CAJA" },
+      ]
     },
     {
       title: "Bases de Datos",
       items: [
-        { to: "/clientes", icon: <FaUsers />, label: "Clientes" },
-        { to: "/proveedores", icon: <FaWarehouse />, label: "Proveedores" },
-        { to: "/referencias", icon: <FaBoxes />, label: "Referencias" },
-      ],
-      roles: ["administrador", "auxiliar"]
+        { to: "/clientes", icon: <FaUsers />, label: "Clientes", feature: "VER_CLIENTES" },
+        { to: "/proveedores", icon: <FaWarehouse />, label: "Proveedores", feature: "VER_PROVEEDORES" },
+        { to: "/referencias", icon: <FaBoxes />, label: "Referencias", feature: "VER_REFERENCIAS" },
+      ]
+    },
+    {
+      title: "Suministros",
+      items: [
+        { to: "/suministros/facturas", icon: <FaFileInvoice />, label: "Facturas Proveedor", feature: "VER_FACTURAS" },
+        { to: "/suministros/remisiones", icon: <FaTruck />, label: "Remisiones", feature: "VER_REMISIONES" },
+        { to: "/suministros/inventario", icon: <FaLayerGroup />, label: "Inventario", feature: "VER_INVENTARIO" },
+        { to: "/suministros/grupos", icon: <FaBoxOpen />, label: "Grupos", feature: "VER_INVENTARIO" },
+      ]
     }
   ];
 
@@ -51,13 +58,17 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
         </div>
 
         <nav className="sidebar-nav">
-          {navSections.map(section => (
-            (section.roles.includes(usuario?.role.toLowerCase())) && (
+          {navSections.map(section => {
+            const allowedItems = section.items.filter(item => hasPermission(item.feature));
+
+            if (allowedItems.length === 0) return null;
+
+            return (
               <div key={section.title} className="nav-section">
                 {!isCollapsed && <h3 className="nav-subtitle">{section.title}</h3>}
                 {isCollapsed && <div className="nav-divider"></div>}
                 <ul>
-                  {section.items.map(item => (
+                  {allowedItems.map(item => (
                     <li key={item.to}>
                       <NavLink
                         to={item.to}
@@ -72,8 +83,8 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
                   ))}
                 </ul>
               </div>
-            )
-          ))}
+            );
+          })}
         </nav>
 
         {/* Desktop Collapse Toggle */}

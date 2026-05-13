@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaSignOutAlt, FaUser, FaBars } from "react-icons/fa";
+import { FaSignOutAlt, FaUser, FaBars, FaUserShield } from "react-icons/fa";
 import { useQueryClient } from "@tanstack/react-query"; // Importar el hook
 import "./Header.css";
 import { AppContext } from "../AppContext";
@@ -16,6 +16,13 @@ function Header({ onMenuClick, isCollapsed }) {
   const getTitle = () => {
     const path = location.pathname;
     if (path === "/") return "Inicio";
+    // Handle nested suministros routes
+    const nestedTitles = {
+      '/suministros/remisiones': 'Remisiones',
+      '/suministros/facturas': 'Facturas',
+      '/suministros/inventario': 'Inventario',
+    };
+    if (nestedTitles[path]) return nestedTitles[path];
     const title = path.split('/')[1] || 'inicio';
     return title
       .replace(/-/g, ' ')
@@ -34,6 +41,11 @@ function Header({ onMenuClick, isCollapsed }) {
 
   const handleNavigateToProfile = () => {
     navigate("/perfil");
+    setMenuOpen(false);
+  };
+
+  const handleNavigateToUsuarios = () => {
+    navigate("/gestion-usuarios");
     setMenuOpen(false);
   };
 
@@ -85,6 +97,12 @@ function Header({ onMenuClick, isCollapsed }) {
                       <FaUser className="dropdown-icon" />
                       <span>Mi Perfil</span>
                     </li>
+                    {usuario.role === 'administrador' && (
+                      <li onClick={handleNavigateToUsuarios}>
+                        <FaUserShield className="dropdown-icon" />
+                        <span>Gestión de Usuarios</span>
+                      </li>
+                    )}
                     <li onClick={handleLogout} className="logout-item">
                       <FaSignOutAlt className="dropdown-icon" />
                       <span>Cerrar Sesión</span>

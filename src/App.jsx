@@ -8,6 +8,7 @@ import OrdenesPage from "./pages/OrdenesPage";
 
 import CrearPedidoPage from "./pages/CrearPedidoPage";
 import PerfilPage from "./pages/PerfilPage";
+import UsuariosPage from "./pages/UsuariosPage";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import HomePage from "./pages/HomePage";
@@ -20,6 +21,11 @@ import RecibosCaja from "./pages/RecibosCaja";
 import ComprobantesEgreso from "./pages/ComprobantesEgreso";
 import TestOrdenes from "./pages/TestOrdenes";
 import TelasPage from "./pages/TelasPage";
+
+import FacturasProveedorPage from "./pages/FacturasProveedorPage";
+import RemisionesPage from "./pages/RemisionesPage";
+import InventarioPage from "./pages/InventarioPage";
+import GruposInventarioPage from "./pages/GruposInventarioPage";
 import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
@@ -82,20 +88,26 @@ function App() {
               <MainLayout>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/ordenes" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><OrdenesPage /></PrivateRoute>} />
-                  <Route path="/telas" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><TelasPage /></PrivateRoute>} />
-                  <Route path="/referencias" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ReferenciasPage /></PrivateRoute>} />
-                  <Route path="/proveedores" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ProveedoresPage /></PrivateRoute>} />
-                  <Route path="/ordenes/nuevo" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><CrearPedidoPage /></PrivateRoute>} />
+                  <Route path="/ordenes" element={<PrivateRoute feature="VER_ORDENES"><OrdenesPage /></PrivateRoute>} />
+                  <Route path="/telas" element={<PrivateRoute feature="VER_TELAS"><TelasPage /></PrivateRoute>} />
+                  <Route path="/referencias" element={<PrivateRoute feature="VER_REFERENCIAS"><ReferenciasPage /></PrivateRoute>} />
+                  <Route path="/proveedores" element={<PrivateRoute feature="VER_PROVEEDORES"><ProveedoresPage /></PrivateRoute>} />
+                  <Route path="/ordenes/nuevo" element={<PrivateRoute feature="CREAR_ORDEN"><CrearPedidoPage /></PrivateRoute>} />
                   <Route path="/perfil" element={<PrivateRoute><PerfilPage /></PrivateRoute>} />
-                  <Route path="/clientes" element={<PrivateRoute roles={['administrador', 'auxiliar']}><Clientes /></PrivateRoute>} />
-                  <Route path="/ventas" element={<PrivateRoute roles={['administrador', 'auxiliar', 'vendedor']}><Ventas /></PrivateRoute>} />
-                  <Route path="/nuevaVenta" element={<PrivateRoute roles={['administrador', 'auxiliar']}><NuevaVenta /></PrivateRoute>} />
-                  <Route path="/EditarVenta/:id/" element={<PrivateRoute roles={['administrador', 'auxiliar']}><EditarVenta /></PrivateRoute>} />
-                  <Route path="/caja" element={<PrivateRoute roles={['administrador', 'auxiliar']}><Caja /></PrivateRoute>} />
-                  <Route path="/recibos-caja" element={<PrivateRoute roles={['administrador', 'auxiliar']}><RecibosCaja /></PrivateRoute>} />
-                  <Route path="/comprobantes-egreso" element={<PrivateRoute roles={['administrador', 'auxiliar']}><ComprobantesEgreso /></PrivateRoute>} />
+                  <Route path="/gestion-usuarios" element={<PrivateRoute feature="GESTION_USUARIOS"><UsuariosPage /></PrivateRoute>} />
+                  <Route path="/clientes" element={<PrivateRoute feature="VER_CLIENTES"><Clientes /></PrivateRoute>} />
+                  <Route path="/ventas" element={<PrivateRoute feature="VER_VENTAS"><Ventas /></PrivateRoute>} />
+                  <Route path="/nuevaVenta" element={<PrivateRoute feature="CREAR_VENTA"><NuevaVenta /></PrivateRoute>} />
+                  <Route path="/EditarVenta/:id/" element={<PrivateRoute feature="EDITAR_VENTA"><EditarVenta /></PrivateRoute>} />
+                  <Route path="/caja" element={<PrivateRoute feature="VER_CAJA"><Caja /></PrivateRoute>} />
+                  <Route path="/recibos-caja" element={<PrivateRoute feature="VER_CAJA"><RecibosCaja /></PrivateRoute>} />
+                  <Route path="/comprobantes-egreso" element={<PrivateRoute feature="VER_CAJA"><ComprobantesEgreso /></PrivateRoute>} />
                   <Route path="/test-ordenes" element={<TestOrdenes />} />
+
+                  <Route path="/suministros/facturas" element={<PrivateRoute feature="VER_FACTURAS"><FacturasProveedorPage /></PrivateRoute>} />
+                  <Route path="/suministros/remisiones" element={<PrivateRoute feature="VER_REMISIONES"><RemisionesPage /></PrivateRoute>} />
+                  <Route path="/suministros/inventario" element={<PrivateRoute feature="VER_INVENTARIO"><InventarioPage /></PrivateRoute>} />
+                  <Route path="/suministros/grupos" element={<PrivateRoute feature="VER_INVENTARIO"><GruposInventarioPage /></PrivateRoute>} />
                 </Routes>
               </MainLayout>
             </PrivateRoute>
