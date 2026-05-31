@@ -57,23 +57,25 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         });
 
         ventas.forEach(venta => {
-            const valor = parseFloat(venta.valor_total) || 0;
+            const numSellers = 1 + (venta.vendedores_compartidos ? venta.vendedores_compartidos.length : 0);
+            const valorFull = parseFloat(venta.valor_total) || 0;
+            const valorPerSeller = valorFull / numSellers;
             const abono = parseFloat(venta.abono) || 0;
             const saldo = parseFloat(venta.saldo) || 0;
 
             // KPIs
-            totalSales += valor;
+            totalSales += valorFull;
             totalRecaudo += abono;
             totalSaldo += saldo;
 
             if (venta.fecha_venta === todayStr) {
-                salesToday += valor;
+                salesToday += valorFull;
             }
 
             // Chart Data: Trend (Daily Sales)
             const date = venta.fecha_venta; // Assuming YYYY-MM-DD
             if (date) {
-                salesByDate[date] = (salesByDate[date] || 0) + valor;
+                salesByDate[date] = (salesByDate[date] || 0) + valorFull;
             }
 
             // Chart Data: Status
@@ -86,12 +88,20 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             }
 
             // Chart Data: Top Sellers
-            // Find vendor ID by name if needed, or use ID if available in venta
-            // The previous code mapped name to ID, let's try to match robustly
+            // Primary seller
             const vendorId = vendedores.find(v => v.first_name === venta.vendedor_nombre)?.id;
             if (vendorId && salesByVendedorMap[vendorId]) {
-                salesByVendedorMap[vendorId].total += valor;
-                salesByVendedorMap[vendorId].count++;
+                salesByVendedorMap[vendorId].total += valorPerSeller;
+                salesByVendedorMap[vendorId].count += (1 / numSellers);
+            }
+            // Shared sellers
+            if (venta.vendedores_compartidos) {
+                venta.vendedores_compartidos.forEach(vId => {
+                    if (salesByVendedorMap[vId]) {
+                        salesByVendedorMap[vId].total += valorPerSeller;
+                        salesByVendedorMap[vId].count += (1 / numSellers);
+                    }
+                });
             }
         });
 

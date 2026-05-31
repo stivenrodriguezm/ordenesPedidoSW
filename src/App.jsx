@@ -25,7 +25,6 @@ import TelasPage from "./pages/TelasPage";
 import FacturasProveedorPage from "./pages/FacturasProveedorPage";
 import RemisionesPage from "./pages/RemisionesPage";
 import InventarioPage from "./pages/InventarioPage";
-import GruposInventarioPage from "./pages/GruposInventarioPage";
 import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
@@ -107,7 +106,6 @@ function App() {
                   <Route path="/suministros/facturas" element={<PrivateRoute feature="VER_FACTURAS"><FacturasProveedorPage /></PrivateRoute>} />
                   <Route path="/suministros/remisiones" element={<PrivateRoute feature="VER_REMISIONES"><RemisionesPage /></PrivateRoute>} />
                   <Route path="/suministros/inventario" element={<PrivateRoute feature="VER_INVENTARIO"><InventarioPage /></PrivateRoute>} />
-                  <Route path="/suministros/grupos" element={<PrivateRoute feature="VER_INVENTARIO"><GruposInventarioPage /></PrivateRoute>} />
                 </Routes>
               </MainLayout>
             </PrivateRoute>

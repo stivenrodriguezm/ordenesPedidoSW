@@ -12,6 +12,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     cliente_id: '',
     fecha_venta: '',
     vendedor_id: '',
+    vendedores_compartidos: [],
+    traslado: false,
+    sede: 'Lottus 1',
     valor_total: '',
     estado: '',
     estado_pedidos: false,
@@ -25,6 +28,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         fecha_venta: saleData.fecha_venta,
         fecha_entrega: saleData.fecha_entrega || '', // Add fecha_entrega
         vendedor_id: saleData.vendedor || '',
+        vendedores_compartidos: saleData.vendedores_compartidos || [],
+        traslado: saleData.traslado || false,
+        sede: saleData.sede || 'Lottus 1',
         valor_total: parseInt(saleData.valor_total),
         estado: saleData.estado,
         estado_pedidos: saleData.estado_pedidos,
@@ -70,6 +76,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         fecha_venta: formData.fecha_venta,
         fecha_entrega: formData.fecha_entrega || null, // Include fecha_entrega
         vendedor: formData.vendedor_id,
+        vendedores_compartidos: formData.vendedores_compartidos,
+        traslado: formData.traslado,
+        sede: formData.sede,
         valor_total: parseFloat(formData.valor_total),
         estado: formData.estado,
         estado_pedidos: formData.estado_pedidos,
@@ -117,12 +126,52 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <input type="date" name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isAuxiliar} />
         </div>
         <div className="form-group">
-          <label>Vendedor:</label>
-          <select name="vendedor_id" value={formData.vendedor_id} onChange={handleChange} required disabled={isAuxiliar}>
+          <label>Vendedor Principal:</label>
+          <select name="vendedor_id" value={formData.vendedor_id} onChange={(e) => {
+                  handleChange(e);
+                  setFormData(prev => ({
+                    ...prev, 
+                    vendedores_compartidos: prev.vendedores_compartidos.filter(id => id.toString() !== e.target.value.toString())
+                  }));
+                }} required disabled={isAuxiliar}>
             <option value="">Seleccionar vendedor</option>
             {vendedores.map(vendedor => (
               <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
             ))}
+          </select>
+        </div>
+        {formData.vendedor_id && !isAuxiliar && (
+          <div className="form-group">
+            <label>Vendedores Compartidos:</label>
+            <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '10px', background: 'var(--ventas-bg-medium)', borderRadius: '8px'}}>
+              {vendedores.filter(v => v.id.toString() !== formData.vendedor_id.toString()).map(v => (
+                <label key={v.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer'}}>
+                  <input 
+                    type="checkbox" 
+                    value={v.id} 
+                    checked={formData.vendedores_compartidos.includes(v.id) || formData.vendedores_compartidos.includes(v.id.toString())}
+                    onChange={(e) => {
+                      if(e.target.checked) {
+                        setFormData(prev => ({...prev, vendedores_compartidos: [...prev.vendedores_compartidos, v.id]}));
+                      } else {
+                        setFormData(prev => ({...prev, vendedores_compartidos: prev.vendedores_compartidos.filter(id => id.toString() !== v.id.toString())}));
+                      }
+                    }}
+                  /> {v.first_name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="form-group checkbox-group">
+          <label>Traslado:</label>
+          <input type="checkbox" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isAuxiliar} />
+        </div>
+        <div className="form-group">
+          <label>Sede:</label>
+          <select name="sede" value={formData.sede} onChange={handleChange} disabled={isAuxiliar}>
+            <option value="Lottus 1">Lottus 1</option>
+            <option value="Lottus 2">Lottus 2</option>
           </select>
         </div>
         <div className="form-group">

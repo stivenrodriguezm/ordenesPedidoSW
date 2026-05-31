@@ -191,8 +191,8 @@
 /* --- Summary cards row --- */
 .inv-summary-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.85rem;
     margin-bottom: 1.5rem;
 }
 
@@ -263,54 +263,62 @@
     overflow-x: auto;
 }
 
-.premium-table {
+.inventario-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    table-layout: fixed;
+    min-width: 1050px;
 }
 
-.premium-table th {
+.inventario-table th {
     background-color: #f8fafc;
     color: #64748b;
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 1rem 1.25rem;
+    letter-spacing: 0.02em;
+    padding: 0.6rem 0.35rem;
     border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.premium-table td {
-    padding: 0.85rem 1.25rem;
+
+.inventario-table td {
+    padding: 0.4rem 0.35rem;
     color: #334155;
-    font-size: 0.875rem;
+    font-size: 0.72rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.premium-table tbody tr {
+.inventario-table tbody tr {
     transition: background-color 0.2s;
 }
 
-.premium-table tbody tr:hover {
+.inventario-table tbody tr:hover {
     background-color: #f8fafc;
 }
 
-.premium-table tbody tr:last-child td {
+.inventario-table tbody tr:last-child td {
     border-bottom: none;
 }
 
 /* --- ID badge --- */
 .inv-id-badge {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     color: #475569;
     background: #f1f5f9;
     border: 1px solid #e2e8f0;
     border-radius: 5px;
-    padding: 0.15rem 0.45rem;
+    padding: 0.1rem 0.35rem;
 }
 
 /* --- Product name cell --- */
@@ -324,6 +332,7 @@
 .inv-prod-name {
     font-weight: 600;
     color: #1e293b;
+    font-size: 0.75rem;
 }
 
 /* --- Proveedor text --- */
@@ -350,17 +359,17 @@
 
 .cat-badge--standalone {
     margin-left: 0;
-    font-size: 0.78rem;
-    padding: 0.2rem 0.65rem;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
 }
 
 /* --- Disponibilidad badge --- */
 .disp-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.2rem 0.6rem;
+    padding: 0.15rem 0.5rem;
     border-radius: 9999px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -369,6 +378,12 @@
     background: #eff6ff;
     color: #1d4ed8;
     border: 1px solid #bfdbfe;
+}
+
+.disp-venta {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #86efac;
 }
 
 .disp-exhibicion {
@@ -453,10 +468,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 0.82rem;
+    font-size: 0.72rem;
     color: #64748b;
     font-style: italic;
-    max-width: 160px;
+    max-width: 140px;
 }
 
 .obs-tooltip-popup {
@@ -932,3 +947,737 @@
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* ==========================================================================
+   Premium Glass Header & Filters (Ventas-style, adapted for Inventario)
+   ========================================================================== */
+.v-glass-header {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 1rem;
+    z-index: 50;
+}
+
+.v-btn-primary-glow {
+    background: #274385;
+    color: white;
+    border: none;
+    padding: 0 0.85rem;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.v-btn-primary-glow:hover {
+    background: #1a2d59;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px #192b54;
+}
+
+.v-btn-ghost {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 0 0.6rem;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.v-btn-ghost:hover {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.v-filters-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow-x: auto;
+}
+
+.v-search-pill {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 0 0.6rem;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
+    cursor: text;
+    flex-shrink: 0;
+}
+
+.v-search-pill:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.v-search-pill:focus-within {
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    background: #ffffff;
+}
+
+.v-search-pill svg {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.v-search-pill input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 0.82rem;
+    color: #475569;
+    background: transparent !important;
+    width: 150px;
+    padding: 0;
+    height: 100%;
+}
+
+.v-select-pill {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.v-select-pill select {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 0 0.8rem;
+    height: 100%;
+    font-size: 0.82rem;
+    color: #475569;
+    cursor: pointer;
+    appearance: auto;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.v-select-pill select:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.v-select-pill select:focus {
+    outline: none !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+}
+
+.inv-clear-pill {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.inv-clear-pill:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* ==========================================================================
+   Inventario Table — Column widths optimized for 14" laptop + open sidebar
+   ========================================================================== */
+.inventario-table th:nth-child(1)  { width: 6%;  min-width: 60px; }  /* ID */
+.inventario-table th:nth-child(2)  { width: 10%; min-width: 90px; }  /* Proveedor */
+.inventario-table th:nth-child(3)  { width: 7%;  min-width: 70px; }  /* Factura */
+.inventario-table th:nth-child(4)  { width: 5%;  min-width: 50px; }  /* Venta */
+.inventario-table th:nth-child(5)  { width: 9%;  min-width: 90px; }  /* Disp */
+.inventario-table th:nth-child(6)  { width: 8%;  min-width: 80px; }  /* Fecha */
+.inventario-table th:nth-child(7)  { width: 16%; min-width: 120px; } /* Referencia */
+.inventario-table th:nth-child(8)  { width: 9%;  min-width: 80px; }  /* Categoria */
+.inventario-table th:nth-child(9)  { width: 9%;  min-width: 80px; }  /* Subcat */
+.inventario-table th:nth-child(10) { width: 9%;  min-width: 80px; }  /* Variacion */
+.inventario-table th:nth-child(11) { width: 9%;  min-width: 80px; }  /* Obs */
+.inventario-table th:nth-child(12) { width: 3%;  min-width: 45px; text-align: center; } /* Acciones */
+
+/* ==========================================================================
+   Group Row Styles — Collapsed group header
+   ========================================================================== */
+.inv-group-header-row {
+    cursor: pointer;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+    border-left: 3px solid #3b82f6;
+    transition: background 0.2s;
+}
+
+.inv-group-header-row:hover {
+    background: linear-gradient(135deg, #dbeafe 0%, #bae6fd 100%);
+}
+
+.inv-group-header-row td {
+    font-weight: 600;
+}
+
+.inv-group-child-row {
+    background: #f8fafc;
+    border-left: 3px solid #bfdbfe;
+}
+
+.inv-group-child-row td {
+    font-size: 0.75rem !important;
+}
+
+.inv-group-child-row:hover {
+    background: #eff6ff !important;
+}
+
+.inv-group-count-badge {
+    background: #3b82f6 !important;
+    color: white !important;
+    border-color: #2563eb !important;
+    font-weight: 800 !important;
+    min-width: 26px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inv-group-name-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 9999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.72rem;
+}
+
+.inv-group-toggle {
+    background: transparent;
+    border: 1px solid #93c5fd;
+    color: #3b82f6;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+}
+
+.inv-group-toggle:hover {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.inv-group-toggle.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #2563eb;
+}
+
+/* ==========================================================================
+   Nuevos estilos del Sistema de Grupos Rediseñado
+   ========================================================================== */
+
+.inv-group-id-badge {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #1e3a8a;
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 5px;
+    padding: 0.15rem 0.45rem;
+    letter-spacing: 0.02em;
+    display: inline-block;
+}
+
+.disp-badge.inv-disp-mixto {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.inv-group-nombre {
+    font-weight: 700;
+    color: #1e3a8a;
+    font-size: 0.85rem;
+}
+
+.inv-group-count-pill {
+    font-size: 0.68rem;
+    background: #3b82f6;
+    color: white;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    margin-left: 0.35rem;
+}
+
+.inv-group-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.inv-group-edit-btn {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.inv-group-edit-btn:hover {
+    background: #2563eb;
+    color: white;
+    border-color: #1d4ed8;
+    transform: scale(1.08);
+}
+
+/* Modal editar grupo y sus hijos */
+.inv-grupo-edit-modal {
+    background: white;
+    width: 95%;
+    max-width: 650px;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(-40px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.25s ease;
+    margin: 0 auto;
+}
+
+/*
+ * FIX: .inv-grupo-edit-modal has opacity:0 and appears AFTER .inv-modal-visible (opacity:1)
+ * in the stylesheet, so cascade order makes it always hidden.
+ * Higher specificity (double class) ensures the visible state wins.
+ */
+.inv-grupo-edit-modal.inv-modal-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.inv-grupo-edit-body {
+    padding: 1.5rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.inv-grupo-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.inv-grupo-section-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1e3a8a;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 2px solid #eff6ff;
+    padding-bottom: 0.35rem;
+    margin-top: 0.5rem;
+}
+
+.inv-grupo-items-list,
+.inv-grupo-add-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem;
+    background: #f8fafc;
+}
+
+.inv-grupo-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    justify-content: space-between;
+}
+
+.inv-grupo-item-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inv-grupo-item-name em {
+    font-style: italic;
+    color: #64748b;
+    font-weight: 400;
+}
+
+.inv-grupo-item-remove {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+}
+
+.inv-grupo-item-remove:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.inv-grupo-empty {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 1rem;
+    font-style: italic;
+}
+
+.inv-grupo-item-addable {
+    border-color: #e2e8f0;
+}
+
+.inv-grupo-item-add-btn {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+}
+
+.inv-grupo-item-add-btn:hover {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+/* ==========================================================================
+   NUEVOS ESTILOS — Mejoras 2025
+   ========================================================================== */
+
+/* ── Header wrapper ─────────────────────────────────────────────────────── */
+.inv-header-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    overflow: visible;
+}
+
+/* ── Fix overlay de editar grupo (centrar vertical) ─────────────────────── */
+.inv-overlay-grupo {
+    align-items: center !important;
+}
+
+/* ── Summary cards responsive ───────────────────────────────────────────── */
+@media (max-width: 1400px) {
+    .inv-summary-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+    .inv-summary-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── View mode toggle ───────────────────────────────────────────────────── */
+.inv-view-mode-toggle {
+    display: flex;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.inv-view-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    width: 30px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.inv-view-btn:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.inv-view-btn.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* ── v-btn-ghost active (cost toggle) ───────────────────────────────────── */
+.v-btn-ghost--active {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    border-color: #bfdbfe !important;
+}
+
+/* ── Sort indicators ────────────────────────────────────────────────────── */
+.th-sort-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sort-icon {
+    font-size: 0.62rem;
+    flex-shrink: 0;
+}
+
+.sort-icon--idle   { color: #cbd5e1; }
+.sort-icon--active { color: #2563eb; }
+
+/* ── Inline group badge (products_only) ─────────────────────────────────── */
+.inv-inline-group-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+    border-radius: 9999px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    white-space: nowrap;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+/* ── Inline disponibilidad edit (C) ─────────────────────────────────────── */
+.inv-disp-clickable {
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.15s;
+}
+
+.inv-disp-clickable:hover {
+    filter: brightness(0.9);
+    transform: scale(1.04);
+}
+
+.inv-inline-disp-select {
+    border: 1.5px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    padding: 0.15rem 0.35rem;
+    background: white;
+    color: #334155;
+    outline: none;
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    font-family: inherit;
+}
+
+/* ── Cost column ────────────────────────────────────────────────────────── */
+.inv-costo-col {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* ===== NUEVO MENÚ DE FILTROS ===== */
+.inv-filters-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.inv-filters-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 320px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    z-index: 1000;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    animation: fadeInSlideDown 0.2s ease-out;
+}
+
+@keyframes fadeInSlideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.inv-filters-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.inv-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.inv-filter-group label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.inv-filter-group select,
+.inv-filter-group input {
+    padding: 0.4rem 0.6rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #334155;
+    outline: none;
+    transition: all 0.2s;
+    background: white;
+}
+
+.inv-filter-group select:focus,
+.inv-filter-group input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.inv-filters-actions {
+    padding-top: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.inv-clear-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.inv-clear-pill:hover {
+    background: #fee2e2;
+}
+
+.v-btn-ghost.active {
+    background: #e0f2fe;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+/* ── Robust Table Column Widths ── */
+.col-id { width: 6.5%; min-width: 65px; }
+.col-prov { width: 9%; min-width: 90px; }
+.col-fac { width: 5%; min-width: 50px; }
+.col-ven { width: 5%; min-width: 50px; }
+.col-disp { width: 8%; min-width: 90px; }
+.col-fec { width: 7.5%; min-width: 75px; }
+.col-ref { width: 12%; min-width: 120px; }
+.col-grp { width: 10%; min-width: 100px; }
+.col-cat { width: 6.5%; min-width: 65px; }
+.col-subcat { width: 7.5%; min-width: 75px; }
+.col-var { width: 8%; min-width: 80px; }
+.col-obs { width: 9%; min-width: 90px; }
+.col-costo { width: 7.5%; min-width: 80px; }
+.col-acc { width: 60px; min-width: 60px; }
+
+

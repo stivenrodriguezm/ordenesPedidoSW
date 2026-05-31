@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
 import "./ReferenciasPage.css";
-import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaTags, FaTrash, FaSitemap } from "react-icons/fa";
+import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaTags, FaTrash, FaSearch, FaTimes, FaSitemap, FaSave } from "react-icons/fa";
 import * as XLSX from 'xlsx';
 import { AppContext } from "../AppContext";
 import AppNotification from '../components/AppNotification';
@@ -30,6 +30,14 @@ const CategoriasModal = ({ isOpen, onClose }) => {
   const [notif, setNotif] = useState({ message: '', type: '' });
   const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
+
+  // Auto-dismiss notification
+  useEffect(() => {
+    if (notif.message) {
+      const t = setTimeout(() => setNotif({ message: '', type: '' }), 3500);
+      return () => clearTimeout(t);
+    }
+  }, [notif.message]);
 
   const { data: categorias = [], isLoading } = useQuery({
     queryKey: ['suministros-categorias'],
@@ -130,6 +138,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   const [categoriaId, setCategoriaId] = useState('');
   const [filterCatId, setFilterCatId] = useState(''); // for list filtering
   const [notif, setNotif] = useState({ message: '', type: '' });
+  const [editingSubcat, setEditingSubcat] = useState(null);
   const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
 
@@ -140,6 +149,24 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
       return () => clearTimeout(t);
     }
   }, [notif.message]);
+
+  // Set form fields when editing changes
+  useEffect(() => {
+    if (editingSubcat) {
+      setNombre(editingSubcat.nombre || '');
+      setCategoriaId(editingSubcat.categoria || '');
+    } else {
+      setNombre('');
+      setCategoriaId('');
+    }
+  }, [editingSubcat]);
+
+  const handleClose = () => {
+    setEditingSubcat(null);
+    setNombre('');
+    setCategoriaId('');
+    onClose();
+  };
 
   const { data: subcategorias = [], isLoading } = useQuery({
     queryKey: ['suministros-subcategorias'],
@@ -155,6 +182,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['productos-all'] });
+      queryClient.invalidateQueries({ queryKey: ['referencias'] });
       setNombre('');
       setCategoriaId('');
       setNotif({ message: 'Subcategoría creada exitosamente.', type: 'success' });
@@ -165,12 +193,32 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => API.put(`/suministros/subcategorias/${id}/`, data, { headers: { Authorization: `Bearer ${token}` } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
+      queryClient.invalidateQueries({ queryKey: ['productos-all'] });
+      queryClient.invalidateQueries({ queryKey: ['referencias'] });
+      setNombre('');
+      setCategoriaId('');
+      setEditingSubcat(null);
+      setNotif({ message: 'Subcategoría actualizada exitosamente.', type: 'success' });
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.nombre?.[0] || err.response?.data?.detail || 'Error al actualizar la subcategoría.';
+      setNotif({ message: msg, type: 'error' });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id) => API.delete(`/suministros/subcategorias/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['referencias'] });
       setNotif({ message: 'Subcategoría eliminada.', type: 'success' });
+      if (editingSubcat && String(editingSubcat.id) === String(id)) {
+        setEditingSubcat(null);
+      }
     },
     onError: (err) => {
       setNotif({ message: err.response?.data?.detail || 'Error al eliminar la subcategoría.', type: 'error' });
@@ -196,7 +244,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
               <p className="subcat-modal__subtitle">{subcategorias.length} subcategorías registradas</p>
             </div>
           </div>
-          <button className="subcat-modal__close" onClick={onClose} title="Cerrar">×</button>
+          <button className="subcat-modal__close" onClick={handleClose} title="Cerrar">×</button>
         </div>
 
         <div className="subcat-modal__body">
@@ -210,13 +258,18 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
 
           {/* ── Nueva Subcategoría form ── */}
           <div className="subcat-section">
-            <p className="subcat-section__label">Nueva subcategoría</p>
+            <p className="subcat-section__label">{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</p>
             <form
               className="subcat-form"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!nombre.trim() || !categoriaId) return;
-                createMutation.mutate({ nombre: nombre.trim(), categoria: categoriaId });
+                const data = { nombre: nombre.trim(), categoria: categoriaId };
+                if (editingSubcat) {
+                  updateMutation.mutate({ id: editingSubcat.id, data });
+                } else {
+                  createMutation.mutate(data);
+                }
               }}
             >
               <div className="subcat-form__row">
@@ -246,14 +299,27 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                   />
                 </div>
               </div>
-              <button
-                type="submit"
-                className="subcat-form__submit"
-                disabled={createMutation.isLoading}
-              >
-                <FaPlus style={{ marginRight: 6 }} />
-                {createMutation.isLoading ? 'Agregando...' : 'Agregar Subcategoría'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button
+                  type="submit"
+                  className="subcat-form__submit"
+                  disabled={createMutation.isLoading || updateMutation.isLoading}
+                  style={{ flex: 1, margin: 0, height: '36px' }}
+                >
+                  {editingSubcat ? <FaSave style={{ marginRight: 6 }} /> : <FaPlus style={{ marginRight: 6 }} />}
+                  {createMutation.isLoading || updateMutation.isLoading ? 'Guardando...' : (editingSubcat ? 'Guardar Cambios' : 'Agregar Subcategoría')}
+                </button>
+                {editingSubcat && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setEditingSubcat(null)}
+                    style={{ padding: '0 1rem', height: '36px', borderRadius: '8px' }}
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -298,17 +364,29 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                         <span className="subcat-list__name">{sub.nombre}</span>
                         <span className="subcat-list__cat">{catName}</span>
                       </div>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`¿Eliminar la subcategoría "${sub.nombre}"?`))
-                            deleteMutation.mutate(sub.id);
-                        }}
-                        className="delete-btn"
-                        title="Eliminar subcategoría"
-                        disabled={deleteMutation.isLoading}
-                      >
-                        <FaTrash size={12} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSubcat(sub)}
+                          className="action-btn"
+                          title="Editar subcategoría"
+                          style={{ padding: '0.35rem', color: '#1e3a8a' }}
+                        >
+                          <FaEdit size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Eliminar la subcategoría "${sub.nombre}"?`))
+                              deleteMutation.mutate(sub.id);
+                          }}
+                          className="delete-btn"
+                          title="Eliminar subcategoría"
+                          disabled={deleteMutation.isLoading}
+                          style={{ padding: '0.35rem' }}
+                        >
+                          <FaTrash size={12} />
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -319,7 +397,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
 
         {/* ── Footer ── */}
         <div className="subcat-modal__footer">
-          <button className="btn-secondary" onClick={onClose}>Cerrar</button>
+          <button className="btn-secondary" onClick={handleClose}>Cerrar</button>
         </div>
       </div>
     </div>
@@ -330,37 +408,43 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
 const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isLoading, categorias, subcategorias }) => {
   const [nombre, setNombre] = useState('');
   const [proveedorId, setProveedorId] = useState('');
-  const [categoriaId, setCategoriaId] = useState('');
-  const [subcategoriaId, setSubcategoriaId] = useState('');
+  const [categoriasSelected, setCategoriasSelected] = useState([]);
+  const [subcategoriasSelected, setSubcategoriasSelected] = useState([]);
 
   useEffect(() => {
     if (referencia) {
       setNombre(referencia.nombre || '');
       setProveedorId(referencia.proveedor || '');
-      setCategoriaId(referencia.categoria ?? '');
-      setSubcategoriaId(referencia.subcategoria ?? '');
+      setCategoriasSelected(referencia.categorias || []);
+      setSubcategoriasSelected(referencia.subcategorias || []);
     } else {
       setNombre('');
       setProveedorId('');
-      setCategoriaId('');
-      setSubcategoriaId('');
+      setCategoriasSelected([]);
+      setSubcategoriasSelected([]);
     }
   }, [referencia, isOpen]);
 
-  // When category changes, reset subcategory if it doesn't belong to the new category
-  const handleCategoriaChange = (e) => {
-    const newCatId = e.target.value;
-    setCategoriaId(newCatId);
-    const sub = subcategorias.find(s => String(s.id) === String(subcategoriaId));
-    if (!sub || String(sub.categoria) !== String(newCatId)) {
-      setSubcategoriaId('');
+  const handleToggleCategory = (catId) => {
+    let updated;
+    if (categoriasSelected.includes(catId)) {
+      updated = categoriasSelected.filter(id => id !== catId);
+      // Also filter out any subcategories that belong to the deselected category
+      const subsToRemove = subcategorias.filter(sub => sub.categoria === catId).map(sub => sub.id);
+      setSubcategoriasSelected(prev => prev.filter(id => !subsToRemove.includes(id)));
+    } else {
+      updated = [...categoriasSelected, catId];
     }
+    setCategoriasSelected(updated);
   };
 
-  // Subcategorias filtered by selected category
-  const filteredSubcategorias = subcategorias.filter(
-    (s) => categoriaId && String(s.categoria) === String(categoriaId)
-  );
+  const handleToggleSubcategory = (subId) => {
+    if (subcategoriasSelected.includes(subId)) {
+      setSubcategoriasSelected(subcategoriasSelected.filter(id => id !== subId));
+    } else {
+      setSubcategoriasSelected([...subcategoriasSelected, subId]);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -368,12 +452,16 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
       id: referencia?.id,
       nombre,
       proveedor: proveedorId,
-      categoria: categoriaId !== '' ? categoriaId : null,
-      subcategoria: subcategoriaId !== '' ? subcategoriaId : null,
+      categorias: categoriasSelected,
+      subcategorias: subcategoriasSelected,
     });
   };
 
   if (!isOpen) return null;
+
+  const availableSubcategories = subcategorias.filter(sub =>
+    categoriasSelected.includes(sub.categoria)
+  );
 
   return (
     <div className="modal-overlay">
@@ -405,33 +493,51 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
           </div>
 
           <div className="form-group">
-            <label>Categoría <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
-            <select value={categoriaId} onChange={handleCategoriaChange}>
-              <option value="">Sin categoría</option>
-              {categorias.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-              ))}
-            </select>
+            <label>Categorías</label>
+            <div className="multi-chips-selector">
+              {categorias.map((cat) => {
+                const isSelected = categoriasSelected.includes(cat.id);
+                return (
+                  <button
+                    type="button"
+                    key={cat.id}
+                    className={`interactive-chip ${isSelected ? 'interactive-chip--selected' : ''}`}
+                    onClick={() => handleToggleCategory(cat.id)}
+                  >
+                    {cat.nombre}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="form-group">
-            <label>Subcategoría <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
-            <select
-              value={subcategoriaId}
-              onChange={(e) => setSubcategoriaId(e.target.value)}
-              disabled={!categoriaId || filteredSubcategorias.length === 0}
-            >
-              <option value="">
-                {!categoriaId
-                  ? 'Seleccione primero una categoría'
-                  : filteredSubcategorias.length === 0
-                  ? 'Sin subcategorías disponibles'
-                  : 'Sin subcategoría'}
-              </option>
-              {filteredSubcategorias.map((sub) => (
-                <option key={sub.id} value={sub.id}>{sub.nombre}</option>
-              ))}
-            </select>
+            <label>Subcategorías</label>
+            {categoriasSelected.length === 0 ? (
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                Seleccione al menos una categoría para ver subcategorías.
+              </p>
+            ) : availableSubcategories.length === 0 ? (
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                No hay subcategorías registradas para las categorías seleccionadas.
+              </p>
+            ) : (
+              <div className="multi-chips-selector">
+                {availableSubcategories.map((sub) => {
+                  const isSelected = subcategoriasSelected.includes(sub.id);
+                  return (
+                    <button
+                      type="button"
+                      key={sub.id}
+                      className={`interactive-chip ${isSelected ? 'interactive-chip--selected' : ''}`}
+                      onClick={() => handleToggleSubcategory(sub.id)}
+                    >
+                      {sub.nombre}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="modal-actions">
@@ -458,6 +564,11 @@ function ReferenciasPage() {
   const [notification, setNotification] = useState({ message: '', type: '' });
   const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
+
+  // Filtros
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterProveedor, setFilterProveedor] = useState('');
 
   // ── Categorías ──
   const { data: categorias = [] } = useQuery({
@@ -498,19 +609,53 @@ function ReferenciasPage() {
     },
   });
 
+  const filteredReferencias = useMemo(() => {
+    return referencias.filter(ref => {
+      if (filterProveedor && String(ref.proveedor) !== filterProveedor) return false;
+      if (filterCategoria && !ref.categorias?.map(String).includes(filterCategoria)) return false;
+      if (filterSearch) {
+        const q = filterSearch.toLowerCase();
+        return (
+          (ref.nombre || '').toLowerCase().includes(q) ||
+          (ref.proveedor_name || '').toLowerCase().includes(q) ||
+          (ref.categorias_nombres || []).some(name => name.toLowerCase().includes(q)) ||
+          (ref.subcategorias_nombres || []).some(name => name.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [referencias, filterSearch, filterCategoria, filterProveedor]);
+
   const sortedReferencias = useMemo(() => {
-    let sortableItems = [...referencias];
+    let sortableItems = [...filteredReferencias];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const valA = (a[sortConfig.key] ?? '').toString().toLowerCase();
-        const valB = (b[sortConfig.key] ?? '').toString().toLowerCase();
+        let valA = '';
+        let valB = '';
+        if (sortConfig.key === 'categoria_nombre') {
+          valA = (a.categorias_nombres || []).join(', ').toLowerCase();
+          valB = (b.categorias_nombres || []).join(', ').toLowerCase();
+        } else if (sortConfig.key === 'subcategoria_nombre') {
+          valA = (a.subcategorias_nombres || []).join(', ').toLowerCase();
+          valB = (b.subcategorias_nombres || []).join(', ').toLowerCase();
+        } else {
+          valA = (a[sortConfig.key] ?? '').toString().toLowerCase();
+          valB = (b[sortConfig.key] ?? '').toString().toLowerCase();
+        }
         if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
         return 0;
       });
     }
     return sortableItems;
-  }, [referencias, sortConfig]);
+  }, [filteredReferencias, sortConfig]);
+
+  const hasFilters = filterSearch || filterCategoria || filterProveedor;
+  const clearFilters = () => {
+    setFilterSearch('');
+    setFilterCategoria('');
+    setFilterProveedor('');
+  };
 
   const requestSort = (key) => {
     let direction = 'ascending';
@@ -552,8 +697,8 @@ function ReferenciasPage() {
     const dataToExport = sortedReferencias.map(ref => ({
       'Referencia': ref.nombre,
       'Proveedor': ref.proveedor_name,
-      'Categoría': ref.categoria_nombre || '—',
-      'Subcategoría': ref.subcategoria_nombre || '—',
+      'Categorías': (ref.categorias_nombres || []).join(', ') || '—',
+      'Subcategorías': (ref.subcategorias_nombres || []).join(', ') || '—',
     }));
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
@@ -568,31 +713,60 @@ function ReferenciasPage() {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="page-header">
-        <div className="header-title-group">
-          <h2 className="page-title">Catálogo de Referencias</h2>
-          <span className="page-subtitle">{sortedReferencias.length} referencias registradas</span>
+      <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="v-search-pill">
+            <FaSearch />
+            <input
+              type="text"
+              placeholder="Buscar referencia..."
+              value={filterSearch}
+              onChange={e => setFilterSearch(e.target.value)}
+            />
+          </div>
+          <div className="v-select-pill">
+            <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)}>
+              <option value="">Categoría: Todas</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div className="v-select-pill">
+            <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
+              <option value="">Proveedor: Todos</option>
+              {proveedores.map(p => (
+                <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
+              ))}
+            </select>
+          </div>
+          {hasFilters && (
+            <button className="inv-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+              <FaTimes />
+            </button>
+          )}
         </div>
-        <div className="actions-group">
+
+        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {/* Categorías */}
-          <button className="btn-secondary" onClick={() => setIsCategoriasModalOpen(true)} title="Gestionar categorías">
+          <button className="v-btn-ghost" onClick={() => setIsCategoriasModalOpen(true)} title="Gestionar categorías">
             <FaTags /> Categorías
           </button>
 
           {/* Subcategorías */}
-          <button className="btn-secondary" onClick={() => setIsSubcategoriasModalOpen(true)} title="Gestionar subcategorías">
+          <button className="v-btn-ghost" onClick={() => setIsSubcategoriasModalOpen(true)} title="Gestionar subcategorías">
             <FaSitemap /> Subcategorías
           </button>
 
           {/* Exportar */}
           {usuario?.role === 'administrador' && (
-            <button className="btn-secondary" onClick={exportReferencias}>
+            <button className="v-btn-ghost" onClick={exportReferencias} title="Exportar a Excel">
               <FaFileExport /> Exportar
             </button>
           )}
 
           {/* Nueva Referencia */}
-          <button className="btn-primary" onClick={() => handleOpenModal()}>
+          <button className="v-btn-primary-glow" onClick={() => handleOpenModal()}>
             <FaPlus /> Nueva Referencia
           </button>
         </div>
@@ -629,16 +803,26 @@ function ReferenciasPage() {
                     <td><span className="product-name">{ref.nombre}</span></td>
                     <td><span>{ref.proveedor_name}</span></td>
                     <td>
-                      {ref.categoria_nombre
-                        ? <span className="categoria-badge">{ref.categoria_nombre}</span>
-                        : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
-                      }
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {ref.categorias_nombres && ref.categorias_nombres.length > 0 ? (
+                          ref.categorias_nombres.map((cName, idx) => (
+                            <span key={idx} className="categoria-badge">{cName}</span>
+                          ))
+                        ) : (
+                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
+                        )}
+                      </div>
                     </td>
                     <td>
-                      {ref.subcategoria_nombre
-                        ? <span className="subcategoria-badge">{ref.subcategoria_nombre}</span>
-                        : <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
-                      }
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {ref.subcategorias_nombres && ref.subcategorias_nombres.length > 0 ? (
+                          ref.subcategorias_nombres.map((sName, idx) => (
+                            <span key={idx} className="subcategoria-badge">{sName}</span>
+                          ))
+                        ) : (
+                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button

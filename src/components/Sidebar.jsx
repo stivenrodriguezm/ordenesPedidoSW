@@ -40,7 +40,6 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
         { to: "/suministros/facturas", icon: <FaFileInvoice />, label: "Facturas Proveedor", feature: "VER_FACTURAS" },
         { to: "/suministros/remisiones", icon: <FaTruck />, label: "Remisiones", feature: "VER_REMISIONES" },
         { to: "/suministros/inventario", icon: <FaLayerGroup />, label: "Inventario", feature: "VER_INVENTARIO" },
-        { to: "/suministros/grupos", icon: <FaBoxOpen />, label: "Grupos", feature: "VER_INVENTARIO" },
       ]
     }
   ];

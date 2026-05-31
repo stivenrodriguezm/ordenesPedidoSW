@@ -20,6 +20,8 @@ const emptyRef = () => ({
     variacion: '', 
     costo: '', 
     costoDisplay: '', 
+    cantidad: 1,
+    grupoLocalId: '',
     observacion: '', 
     disponibilidad: 'exhibicion', 
     ventaId: '', 
@@ -36,7 +38,14 @@ const emptyForm = () => ({
     proveedorId: '',
     observaciones: '',
     productos: [{ ...emptyRef(), visible: true }],
+    grupoInstances: [],  // { localId, nombre } — grupos NUEVOS a crear
 });
+
+let _grupoCounter = 0;
+const newGrupoLocalId = () => `g_${++_grupoCounter}_${Date.now()}`;
+
+// Devuelve si un grupoLocalId es un ID existente en el backend (numérico)
+const isExistingGrupoId = (localId) => localId && !String(localId).startsWith('g_') && !isNaN(parseInt(localId));
 
 const formatCOPInt = (value) => {
     const n = parseInt(value) || 0;
@@ -67,10 +76,10 @@ function FacturasProveedorPage() {
     const [categorias, setCategorias] = useState([]);
     const [subcategorias, setSubcategorias] = useState([]);
     const [ordenesPendientes, setOrdenesPendientes] = useState([]);
-    const [grupos, setGrupos] = useState([]);
-    const [selectedGrupoId, setSelectedGrupoId] = useState('');
+    const [gruposActivos, setGruposActivos] = useState([]);  // grupos activos del backend
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState(emptyForm());
+    const [newGrupoName, setNewGrupoName] = useState('');   // input para crear grupo en el modal
     const [expandedId, setExpandedId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -96,13 +105,16 @@ function FacturasProveedorPage() {
         const fetchAll = async () => {
             setIsLoading(true);
             try {
-                const [facRes, catRes, subRes, ordRes, grupoRes] = await Promise.all([
+                const [facRes, catRes, subRes, ordRes, gruRes] = await Promise.all([
                     API.get('/suministros/facturas/'),
                     API.get('/suministros/categorias/'),
                     API.get('/suministros/subcategorias/'),
                     API.get('/get-pendientes-ids/'),
-                    API.get('/suministros/grupos/')
+                    API.get('/suministros/grupos/'),
                 ]);
+                // Solo grupos activos (sin estado despachado / sin activo=false)
+                const allGrupos = gruRes.data.results || gruRes.data || [];
+                setGruposActivos(allGrupos.filter(g => g.activo !== false));
                 
                 const formattedFacturas = (facRes.data.results || facRes.data).map(f => ({
                     ...f,
@@ -110,24 +122,20 @@ function FacturasProveedorPage() {
                     fechaFactura: f.fecha_factura,
                     fechaPago: f.fecha_pago,
                     proveedorNombre: f.proveedor_nombre,
-                    // items_inventario viene directamente del backend
-                    // lo mapeamos a "productos" para mantener el estado interno igual
                     productos: (f.items_inventario || []).map(p => ({
                         ...p,
-                        id: p.id_referencia,          // id del inventario
+                        id: p.id_referencia,
                         referenciaId: p.referencia,
                         categoriaId: p.categoria,
                         subcategoriaId: p.subcategoria,
-                        ventaId: p.venta_id,          // viene del SerializerMethodField
-                        costo: p.costo_especifico,    // campo renombrado
-                        // los *_nombre ya vienen del serializer
+                        ventaId: p.venta_id,
+                        costo: p.costo_especifico,
                     }))
                 }));
                 setFacturas(formattedFacturas);
                 setCategorias(catRes.data.results || catRes.data);
                 setSubcategorias(subRes.data.results || subRes.data);
                 setOrdenesPendientes(ordRes.data || []);
-                setGrupos(grupoRes.data.results || grupoRes.data || []);
             } catch (err) {
                 console.error("Error fetching facturas", err);
             } finally {
@@ -177,30 +185,41 @@ function FacturasProveedorPage() {
         }, 20);
     };
 
-    // Import all components of a group as pre-filled rows
-    const addGrupoRows = () => {
-        if (!selectedGrupoId) return;
-        const grupo = grupos.find(g => String(g.id) === String(selectedGrupoId));
-        if (!grupo) return;
+    // ─── Gestión de grupos dentro de la factura ────────────────────────────
+    // grupoInstances = grupos NUEVOS que se crearán al guardar { localId, nombre }
+    // El select por fila también puede apuntar a un grupo existente (ID numérico del backend)
 
-        const newRows = grupo.componentes.flatMap(comp => {
-            const count = comp.cantidad || 1;
-            return Array.from({ length: count }, () => ({
-                ...emptyRef(),
-                referenciaId: String(comp.referencia),
-                categoriaId: comp.categoria ? String(comp.categoria) : '',
-                subcategoriaId: comp.subcategoria ? String(comp.subcategoria) : '',
-                variacion: comp.variacion || '',
-                visible: true,
-                _grupoNombre: grupo.nombre,
-            }));
-        });
-
+    const addGrupoInstance = () => {
+        const nombre = newGrupoName.trim();
+        if (!nombre) return;
+        // Verificar que no exista ya un grupo nuevo con ese nombre en esta factura
+        const yaExiste = form.grupoInstances.some(g => g.nombre.toLowerCase() === nombre.toLowerCase());
+        if (yaExiste) { alert('Ya existe un grupo con ese nombre en esta factura.'); return; }
+        const localId = newGrupoLocalId();
         setForm(prev => ({
             ...prev,
-            productos: [...prev.productos.filter(p => p.referenciaId), ...newRows],
+            grupoInstances: [...prev.grupoInstances, { localId, nombre }],
         }));
-        setSelectedGrupoId('');
+        setNewGrupoName('');
+    };
+
+    const removeGrupoInstance = (localId) => {
+        setForm(prev => ({
+            ...prev,
+            productos: prev.productos.map(p =>
+                p.grupoLocalId === localId ? { ...p, grupoLocalId: '' } : p
+            ),
+            grupoInstances: prev.grupoInstances.filter(g => g.localId !== localId),
+        }));
+    };
+
+    const renameGrupoInstance = (localId, nombre) => {
+        setForm(prev => ({
+            ...prev,
+            grupoInstances: prev.grupoInstances.map(g =>
+                g.localId === localId ? { ...g, nombre } : g
+            ),
+        }));
     };
 
     const removeRefRow = index => setForm(prev => ({
@@ -208,14 +227,38 @@ function FacturasProveedorPage() {
         productos: prev.productos.filter((_, i) => i !== index),
     }));
 
-    const totalCostos = form.productos.reduce((acc, p) => acc + (parseInt(p.costo) || 0), 0);
+    // Total = sum of (cost * quantity) per row
+    const totalCostos = form.productos.reduce((acc, p) => acc + ((parseInt(p.costo) || 0) * (parseInt(p.cantidad) || 1)), 0);
     const valorFactura = parseInt(form.valor) || 0;
     const canSubmit = valorFactura > 0 && totalCostos === valorFactura;
 
     const handleSubmit = async e => {
         e.preventDefault();
         if (!canSubmit) return;
-        
+
+        // Paso 1: Crear grupos NUEVOS (localId string) que tengan al menos una fila asignada
+        const grupoIdMap = {}; // localId → id real en BD
+        for (const instance of form.grupoInstances) {
+            const hasFila = form.productos.some(p => p.grupoLocalId === instance.localId && p.referenciaId);
+            if (!hasFila) continue;
+            try {
+                const res = await API.post('/suministros/grupos/', {
+                    nombre: instance.nombre,
+                    descripcion: '',
+                    activo: true,
+                    componentes: [],
+                });
+                grupoIdMap[instance.localId] = res.data.id;
+                // Actualizar grupos activos localmente
+                setGruposActivos(prev => [...prev, res.data]);
+            } catch (err) {
+                console.error('Error creando grupo', instance.nombre, err);
+                alert(`Error al crear el grupo "${instance.nombre}". Intenta de nuevo.`);
+                return;
+            }
+        }
+
+        // Paso 2: Registrar la factura con los IDs reales de grupo
         const payload = {
             id_manual: form.idManual,
             valor: parseCOP(form.valor),
@@ -230,6 +273,13 @@ function FacturasProveedorPage() {
                 subcategoria: p.subcategoriaId ? parseInt(p.subcategoriaId) : null,
                 variacion: p.variacion,
                 costo: parseCOP(p.costo),
+                cantidad: parseInt(p.cantidad) || 1,
+                // Si es ID existente del backend, usarlo directo; si es localId nuevo, buscar en mapa
+                grupo_id: p.grupoLocalId
+                    ? (isExistingGrupoId(p.grupoLocalId)
+                        ? parseInt(p.grupoLocalId)
+                        : (grupoIdMap[p.grupoLocalId] || null))
+                    : null,
                 observacion: p.observacion,
                 disponibilidad: p.disponibilidad,
                 venta_id: p.ventaId,
@@ -324,53 +374,53 @@ function FacturasProveedorPage() {
 
     return (
         <div className="page-container">
-            <div className="page-header">
-                <div className="header-actions-wrapper">
-                    <div className="filtros-inline">
-                        <div className="filter-item">
-                            <div className="rem-filter-search-wrap">
-                                <FaSearch className="rem-filter-icon" />
-                                <input
-                                    type="text"
-                                    placeholder="ID Factura..."
-                                    value={filterSearch}
-                                    onChange={e => setFilterSearch(e.target.value)}
-                                    className="filter-inline-input"
-                                />
-                            </div>
-                        </div>
-                        <div className="filter-item">
-                            <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
-                                <option value="">Estado: Todos</option>
-                                {ESTADOS_FACTURA.map(e => (
-                                    <option key={e.value} value={e.value}>{e.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="filter-item">
-                            <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
-                                <option value="">Proveedor: Todos</option>
-                                {[...new Set(facturas.map(f => f.proveedorNombre))].filter(Boolean).map(n => (
-                                    <option key={n} value={n}>{n}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="filter-item filter-fecha">
-                            <label className="filter-fecha-label">Desde</label>
-                            <input type="date" value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)} />
-                        </div>
-                        <div className="filter-item filter-fecha">
-                            <label className="filter-fecha-label">Hasta</label>
-                            <input type="date" value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)} />
-                        </div>
-                        {hasFilters && (
-                            <button className="clear-filters-btn" onClick={handleClearFilters} title="Limpiar filtros">
-                                <FaTimes />
-                            </button>
-                        )}
+            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
+                    <div className="v-search-pill">
+                        <FaSearch />
+                        <input
+                            type="text"
+                            placeholder="ID Factura..."
+                            value={filterSearch}
+                            onChange={e => setFilterSearch(e.target.value)}
+                        />
                     </div>
-                    <button className="btn-primary" onClick={() => setShowModal(true)}>
-                        <FaPlus /> Nueva Factura
+                    <div className="v-select-pill">
+                        <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
+                            <option value="">Estado: Todos</option>
+                            {ESTADOS_FACTURA.map(e => (
+                                <option key={e.value} value={e.value}>{e.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="v-select-pill">
+                        <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
+                            <option value="">Proveedor: Todos</option>
+                            {[...new Set(facturas.map(f => f.proveedorNombre))].filter(Boolean).map(n => (
+                                <option key={n} value={n}>{n}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', paddingLeft: '0.5rem' }}>Desde</label>
+                        <input type="date" value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569', fontWeight: 600, padding: '0.2rem 0.3rem', cursor: 'pointer', outline: 'none' }} />
+                    </div>
+                    <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', paddingLeft: '0.5rem' }}>Hasta</label>
+                        <input type="date" value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569', fontWeight: 600, padding: '0.2rem 0.3rem', cursor: 'pointer', outline: 'none' }} />
+                    </div>
+                    {hasFilters && (
+                        <button className="fct-clear-pill" onClick={handleClearFilters} title="Limpiar filtros">
+                            <FaTimes />
+                        </button>
+                    )}
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                    <button className="v-btn-primary-glow" onClick={() => setShowModal(true)}>
+                        <FaPlus />
+                        <span>Nueva Factura</span>
                     </button>
                 </div>
             </div>
@@ -615,7 +665,56 @@ function FacturasProveedorPage() {
                                     </div>
                                 </div>
 
-                                {/* References section */}
+                                {/* ── Sección de Grupos ── */}
+                                <div className="fct-section-label">Grupos de esta Factura</div>
+                                <div className="fct-grupos-panel">
+                                    {/* Chips de grupos nuevos (a crear) */}
+                                    <div className="fct-grupos-instancias">
+                                        {form.grupoInstances.length === 0 ? (
+                                            <span className="fct-grupos-empty">Sin grupos nuevos — puedes asignar ítems a grupos existentes desde el select de cada referencia</span>
+                                        ) : form.grupoInstances.map(gi => (
+                                            <div key={gi.localId} className="fct-grupo-chip">
+                                                <FaLayerGroup style={{ fontSize: '0.75rem', color: '#2563eb', flexShrink: 0 }} />
+                                                <input
+                                                    type="text"
+                                                    className="fct-grupo-chip-name"
+                                                    value={gi.nombre}
+                                                    onChange={e => renameGrupoInstance(gi.localId, e.target.value)}
+                                                    placeholder="Nombre del grupo..."
+                                                />
+                                                <span className="fct-grupo-chip-count">
+                                                    {form.productos.filter(p => p.grupoLocalId === gi.localId && p.referenciaId).length} ref.
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="fct-grupo-chip-remove"
+                                                    onClick={() => removeGrupoInstance(gi.localId)}
+                                                    title="Quitar grupo"
+                                                >✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* Input libre + botón crear grupo */}
+                                    <div className="fct-grupo-create-row">
+                                        <input
+                                            type="text"
+                                            className="fct-grupo-name-input"
+                                            placeholder="Nombre del nuevo grupo (ej: Comedor Qatar)..."
+                                            value={newGrupoName}
+                                            onChange={e => setNewGrupoName(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addGrupoInstance(); } }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="fct-grupo-create-btn"
+                                            onClick={addGrupoInstance}
+                                            disabled={!newGrupoName.trim()}
+                                        >
+                                            <FaPlus /> Crear Grupo
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="fct-section-label">Referencias que Ingresan</div>
 
                                 {form.productos.map((row, index) => {
@@ -629,8 +728,8 @@ function FacturasProveedorPage() {
 
                                     // Step 3: refs filtered by category + subcategory
                                     const filteredRefs = providerRefs.filter(r => {
-                                        if (row.categoriaId && String(r.categoria) !== String(row.categoriaId)) return false;
-                                        if (row.subcategoriaId && String(r.subcategoria) !== String(row.subcategoriaId)) return false;
+                                        if (row.categoriaId && !r.categorias?.map(String).includes(String(row.categoriaId))) return false;
+                                        if (row.subcategoriaId && !r.subcategorias?.map(String).includes(String(row.subcategoriaId))) return false;
                                         return true;
                                     });
 
@@ -713,16 +812,32 @@ function FacturasProveedorPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Fila 2: Costo | Disponibilidad | (Venta) | Observación | Imagen | Trash */}
+                                            {/* Fila 2: Costo | Cantidad | Disponibilidad | (Venta) | Grupo | Observación | Imagen | Trash */}
                                             <div className={`fct-ref-row2${row.disponibilidad === 'venta' ? ' fct-ref-row2-venta' : ''}`}>
                                                 <div className="fct-field fct-field-costo">
-                                                    <label>Costo</label>
+                                                    <label>Costo Unitario</label>
                                                     <div className="fct-prefix-wrap">
                                                         <span className="fct-prefix">$</span>
                                                         <input required type="text" placeholder="0"
                                                             className="fct-prefix-input"
                                                             value={row.costoDisplay} onChange={e => handleRefRow(index, 'costoDisplay', e.target.value)} />
                                                     </div>
+                                                </div>
+                                                <div className="fct-field fct-field-cantidad">
+                                                    <label>Cantidad</label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max="200"
+                                                        className="fct-cantidad-input"
+                                                        value={row.cantidad}
+                                                        onChange={e => handleRefRow(index, 'cantidad', Math.max(1, parseInt(e.target.value) || 1))}
+                                                    />
+                                                    {(parseInt(row.costo) > 0 && parseInt(row.cantidad) > 1) && (
+                                                        <span className="fct-subtotal-hint">
+                                                            = {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format((parseInt(row.costo) || 0) * (parseInt(row.cantidad) || 1))}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="fct-field">
                                                     <label>Disponibilidad</label>
@@ -743,6 +858,37 @@ function FacturasProveedorPage() {
                                                         </select>
                                                     </div>
                                                 )}
+                                                <div className="fct-field fct-field-grupo">
+                                                    <label>
+                                                        Grupo
+                                                        <span className="fct-grupo-optional"> (opcional)</span>
+                                                    </label>
+                                                    <select
+                                                        value={row.grupoLocalId}
+                                                        onChange={e => handleRefRow(index, 'grupoLocalId', e.target.value)}
+                                                        className={`fct-grupo-row-select${row.grupoLocalId ? ' fct-grupo-row-select--active' : ''}`}
+                                                    >
+                                                        <option value="">Individual</option>
+                                                        {/* Grupos existentes activos del backend */}
+                                                        {gruposActivos.length > 0 && (
+                                                            <optgroup label="── Grupos existentes ──">
+                                                                {gruposActivos.map(g => (
+                                                                    <option key={`existing-${g.id}`} value={String(g.id)}>
+                                                                        G{String(g.id).padStart(3, '0')} — {g.nombre}
+                                                                    </option>
+                                                                ))}
+                                                            </optgroup>
+                                                        )}
+                                                        {/* Grupos nuevos creados en esta factura */}
+                                                        {form.grupoInstances.length > 0 && (
+                                                            <optgroup label="── Nuevos en esta factura ──">
+                                                                {form.grupoInstances.map(gi => (
+                                                                    <option key={gi.localId} value={gi.localId}>{gi.nombre}</option>
+                                                                ))}
+                                                            </optgroup>
+                                                        )}
+                                                    </select>
+                                                </div>
                                                 <div className="fct-field fct-field-obs">
                                                     <label>Observación del Ítem</label>
                                                     <input type="text" placeholder="Opcional..."
@@ -778,6 +924,7 @@ function FacturasProveedorPage() {
                                                 )}
                                             </div>
                                         </div>
+
                                     );
                                 })}
 
@@ -785,28 +932,6 @@ function FacturasProveedorPage() {
                                     <button type="button" className="fct-add-ref" onClick={addRefRow}>
                                         <FaPlus /> Agregar Referencia
                                     </button>
-                                    <div className="fct-grupo-import">
-                                        <FaLayerGroup className="fct-grupo-icon" />
-                                        <select
-                                            value={selectedGrupoId}
-                                            onChange={e => setSelectedGrupoId(e.target.value)}
-                                            className="fct-grupo-select"
-                                        >
-                                            <option value="">Ingresar por Grupo...</option>
-                                            {grupos.filter(g => g.activo).map(g => (
-                                                <option key={g.id} value={g.id}>{g.nombre}</option>
-                                            ))}
-                                        </select>
-                                        <button
-                                            type="button"
-                                            className="fct-grupo-btn"
-                                            onClick={addGrupoRows}
-                                            disabled={!selectedGrupoId}
-                                            title="Agregar todas las referencias del grupo"
-                                        >
-                                            <FaPlus />
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
 

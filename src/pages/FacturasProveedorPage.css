@@ -1340,22 +1340,32 @@
     justify-content: center;
     align-items: flex-start;
     z-index: 1200;
-    overflow-y: auto;
     padding: 2rem 1rem;
     box-sizing: border-box;
+    overflow-y: auto;
 }
 
-/* Modal container: grows with content */
+/* Modal container: altura fija con scroll interno para que el header sticky funcione */
 .fct-modal {
     background: white;
     width: 100%;
     max-width: 1100px;
+    max-height: calc(100vh - 4rem);
     border-radius: 14px;
     box-shadow: 0 32px 80px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     animation: fctModalIn 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) both;
     margin: auto;
+}
+
+.fct-modal form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 @keyframes fctModalIn {
@@ -1363,7 +1373,7 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Header */
+/* Header: sticky dentro del modal (el modal es el scroll container) */
 .fct-header {
     display: flex;
     align-items: center;
@@ -1371,10 +1381,9 @@
     padding: 1rem 1.75rem;
     background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
     border-radius: 14px 14px 0 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
     flex-shrink: 0;
+    position: relative;
+    z-index: 10;
 }
 
 .fct-header h3 {
@@ -1404,10 +1413,11 @@
 
 .fct-close:hover { background: rgba(255,255,255,0.3); }
 
-/* Scrollable body */
+/* Scrollable body: ocupa el espacio restante y scrollea */
 .fct-body {
     padding: 1.25rem 1.5rem;
     flex: 1;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -1784,4 +1794,414 @@
 .fct-grupo-btn:disabled {
     background: #cbd5e1;
     cursor: not-allowed;
-}
+}
+
+/* ================================================================
+   CAMPOS POR FILA: CANTIDAD Y GRUPO
+   ================================================================ */
+
+/* Contenedor del campo Cantidad — más angosto que el resto */
+.fct-field-cantidad {
+    min-width: 90px;
+    max-width: 140px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* Input numérico de cantidad */
+.fct-cantidad-input {
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1e293b;
+    background: #f8fafc;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.fct-cantidad-input::-webkit-outer-spin-button,
+.fct-cantidad-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.fct-cantidad-input:focus {
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Sugerencia de subtotal (aparece cuando cantidad > 1) */
+.fct-subtotal-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #059669;
+    text-align: center;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+/* Contenedor del campo Grupo por fila */
+.fct-field-grupo {
+    min-width: 160px;
+    flex: 1;
+}
+
+/* Texto "(opcional)" junto al label */
+.fct-grupo-optional {
+    font-weight: 400;
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Select de grupo dentro de cada fila de referencia */
+.fct-grupo-row-select {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #334155;
+    background: #f8fafc;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+}
+
+.fct-grupo-row-select:focus {
+    border-color: #2563eb;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Cuando tiene un grupo seleccionado → resaltar en azul suave */
+.fct-grupo-row-select--active {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+/* ================================================================
+   PANEL DE GRUPOS EN LA FACTURA
+   ================================================================ */
+
+.fct-grupos-panel {
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Contenedor de chips (instancias creadas) */
+.fct-grupos-instancias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    min-height: 32px;
+}
+
+.fct-grupos-empty {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Chip de instancia de grupo */
+.fct-grupo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: white;
+    border: 1.5px solid #93c5fd;
+    border-radius: 8px;
+    padding: 0.2rem 0.4rem 0.2rem 0.6rem;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Input editable con el nombre del grupo dentro del chip */
+.fct-grupo-chip-name {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e40af;
+    min-width: 80px;
+    max-width: 160px;
+    font-family: inherit;
+}
+
+/* Contador de referencias asignadas al grupo */
+.fct-grupo-chip-count {
+    font-size: 0.68rem;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-radius: 4px;
+    padding: 0.05rem 0.35rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Botón ✕ del chip */
+.fct-grupo-chip-remove {
+    background: transparent;
+    border: none;
+    color: #93c5fd;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0 0.1rem;
+    transition: color 0.15s;
+}
+
+.fct-grupo-chip-remove:hover {
+    color: #ef4444;
+}
+
+/* Fila de entrada para crear grupo libre */
+.fct-grupo-create-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
+.fct-grupo-name-input {
+    flex: 1;
+    padding: 0.45rem 0.75rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    outline: none;
+    transition: all 0.2s;
+    background: white;
+    color: #334155;
+}
+
+.fct-grupo-name-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.fct-grupo-create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1rem;
+    border-radius: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.fct-grupo-create-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.fct-grupo-create-btn:disabled {
+    background: #cbd5e1;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Texto informativo en el select de grupo cuando no hay instancias */
+.fct-no-grupos-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-style: italic;
+    display: inline-block;
+    padding: 0.45rem 0;
+}
+
+/* ==========================================================================
+   Premium Glass Header & Filters (Ventas-style, adapted for Facturas)
+   ========================================================================== */
+.v-glass-header {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 1rem;
+    z-index: 50;
+}
+
+.v-btn-primary-glow {
+    background: #274385;
+    color: white;
+    border: none;
+    padding: 0 0.85rem;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.v-btn-primary-glow:hover {
+    background: #1a2d59;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px #192b54;
+}
+
+.v-btn-ghost {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 0 0.6rem;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.v-btn-ghost:hover {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.v-filters-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow-x: auto;
+}
+
+.v-search-pill {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 0 0.6rem;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
+    cursor: text;
+    flex-shrink: 0;
+}
+
+.v-search-pill:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.v-search-pill:focus-within {
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    background: #ffffff;
+}
+
+.v-search-pill svg {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.v-search-pill input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 0.82rem;
+    color: #475569;
+    background: transparent !important;
+    width: 120px;
+    padding: 0;
+    height: 100%;
+}
+
+.v-select-pill {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.v-select-pill select {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    padding: 0 0.8rem;
+    height: 100%;
+    font-size: 0.82rem;
+    color: #475569;
+    cursor: pointer;
+    appearance: auto;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.v-select-pill select:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.v-select-pill select:focus {
+    outline: none !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+}
+
+.fct-clear-pill {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.fct-clear-pill:hover {
+    background: #ef4444;
+    color: white;
+}
+
+
+
+

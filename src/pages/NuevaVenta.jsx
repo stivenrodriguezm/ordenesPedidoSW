@@ -26,6 +26,9 @@ const NuevaVenta = () => {
   const [ventaData, setVentaData] = useState({
     id: '',
     id_vendedor: '',
+    vendedores_compartidos: [],
+    traslado: false,
+    sede: 'Lottus 1',
     fecha_venta: '',
     fecha_entrega: '',
     valor_total: ''
@@ -46,7 +49,7 @@ const NuevaVenta = () => {
     const fetchVendedores = async () => {
       try {
         const response = await API.get(`/vendedores/`);
-        setVendedores(response.data);
+        setVendedores(response.data || []);
       } catch (error) {
         console.error('Error cargando vendedores:', error);
         setNotification({ message: 'Error al cargar los vendedores.', type: 'error' });
@@ -143,6 +146,9 @@ const NuevaVenta = () => {
       venta: {
         id: ventaData.id,
         id_vendedor: ventaData.id_vendedor,
+        vendedores_compartidos: ventaData.vendedores_compartidos,
+        traslado: ventaData.traslado,
+        sede: ventaData.sede,
         fecha_venta: ventaData.fecha_venta,
         fecha_entrega: ventaData.fecha_entrega || null,
         valor_total: parseFloat(ventaData.valor_total)
@@ -193,7 +199,7 @@ const NuevaVenta = () => {
   };
 
   return (
-    <div className="nv-nueva-venta-container">
+    <div className="nueva-venta-container">
       <AppNotification
         message={notification.message}
         type={notification.type}
@@ -313,19 +319,71 @@ const NuevaVenta = () => {
               />
             </div>
             <div className="nv-form-group">
-              <label>Vendedor:</label>
+              <label>Vendedor Principal:</label>
               <select
                 name="id_vendedor"
                 value={ventaData.id_vendedor}
-                onChange={handleVentaChange}
+                onChange={(e) => {
+                  handleVentaChange(e);
+                  // Remove the new main vendor from shared vendors if they were there
+                  setVentaData(prev => ({
+                    ...prev, 
+                    vendedores_compartidos: prev.vendedores_compartidos.filter(id => id !== e.target.value)
+                  }));
+                }}
                 required
               >
                 <option value="">Seleccionar vendedor</option>
-                {vendedores.map((vendedor) => (
-                  <option key={vendedor.id} value={vendedor.id}>
-                    {vendedor.first_name}
+                {(vendedores || []).map((vendedor) => (
+                  <option key={vendedor?.id} value={vendedor?.id}>
+                    {vendedor?.first_name}
                   </option>
                 ))}
+              </select>
+            </div>
+            {ventaData.id_vendedor && (
+              <div className="nv-form-group">
+                <label>Vendedores Compartidos (Opcional):</label>
+                <div className="nv-checkbox-group" style={{display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '10px', background: 'var(--ventas-bg-medium)', borderRadius: '8px'}}>
+                  {(vendedores || []).filter(v => v?.id?.toString() !== ventaData?.id_vendedor?.toString()).map(v => (
+                    <label key={v?.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer'}}>
+                      <input 
+                        type="checkbox" 
+                        value={v?.id} 
+                        checked={ventaData?.vendedores_compartidos?.includes(v?.id?.toString()) || ventaData?.vendedores_compartidos?.includes(v?.id)}
+                        onChange={(e) => {
+                          if(e.target.checked) {
+                            setVentaData(prev => ({...prev, vendedores_compartidos: [...(prev.vendedores_compartidos || []), v.id]}));
+                          } else {
+                            setVentaData(prev => ({...prev, vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== v?.id?.toString())}));
+                          }
+                        }}
+                      /> {v?.first_name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="nv-form-group" style={{flexDirection: 'row', alignItems: 'center', gap: '10px'}}>
+              <input
+                type="checkbox"
+                name="traslado"
+                id="traslado"
+                checked={ventaData.traslado}
+                onChange={(e) => setVentaData(prev => ({...prev, traslado: e.target.checked}))}
+              />
+              <label htmlFor="traslado" style={{marginBottom: 0}}>¿Incluye Traslado?</label>
+            </div>
+            <div className="nv-form-group">
+              <label>Sede:</label>
+              <select
+                name="sede"
+                value={ventaData.sede}
+                onChange={handleVentaChange}
+                required
+              >
+                <option value="Lottus 1">Lottus 1</option>
+                <option value="Lottus 2">Lottus 2</option>
               </select>
             </div>
             <div className="nv-form-group">

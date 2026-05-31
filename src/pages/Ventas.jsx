@@ -49,6 +49,7 @@ const Ventas = () => {
     const [selectedMonthYear, setSelectedMonthYear] = useState(getDefaultMonthYear());
     const [selectedVendedor, setSelectedVendedor] = useState('');
     const [selectedEstado, setSelectedEstado] = useState('');
+    const [selectedSede, setSelectedSede] = useState('');
 
 
 
@@ -108,12 +109,7 @@ const Ventas = () => {
 
         if (isNaN(num)) return '$0';
 
-        return new Intl.NumberFormat('es-CO', {
-            style: 'currency',
-            currency: 'COP',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(num);
+        return `$${num.toLocaleString('es-CO')}`;
     };
 
     const capitalizeEstado = (estado) => estado ? estado.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
@@ -183,6 +179,9 @@ const Ventas = () => {
                     params.vendedor = selectedVendedor;
                 }
                 params.estado = selectedEstado;
+                if (selectedSede) {
+                    params.sede = selectedSede;
+                }
             }
             const response = await API.get(`/ventas/`, { params });
 
@@ -266,7 +265,7 @@ const Ventas = () => {
     // Effect for Filters
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado]);
+    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado, selectedSede]);
 
     // Effect for Page Change & Initial Load
     useEffect(() => {
@@ -493,7 +492,9 @@ const Ventas = () => {
             'O.C.': venta.id,
             'F. Venta': formatShortDate(venta.fecha_venta),
             'F. Entrega': formatShortDate(venta.fecha_entrega),
-            'Vendedor': venta.vendedor_nombre,
+            'Vendedor': `${venta.vendedor_nombre}${venta.vendedores_compartidos_nombres ? `, ${venta.vendedores_compartidos_nombres}` : ''}`,
+            'Sede': venta.sede,
+            'Traslado': venta.traslado ? 'Sí' : 'No',
             'Cliente': venta.cliente_nombre,
             'Abono': formatCurrencyForExport(venta.abono),
             'Saldo': formatCurrencyForExport(venta.saldo),
@@ -544,33 +545,64 @@ const Ventas = () => {
                 </div>
             )}
 
-            <div className="page-header">
-                <div className="filters-group">
-                    <div className="search-wrapper">
-                        <input type="text" className="search-input" placeholder="Buscar por Cliente o OC..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); }} />
-                        <FaSearch className="search-icon" />
+            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
+                    <div className="v-search-pill">
+                        <FaSearch />
+                        <input
+                            type="text"
+                            placeholder="Buscar OC o Cliente..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <select value={selectedMonthYear} onChange={(e) => { setSelectedMonthYear(e.target.value); }}>
-                        {monthOptions.map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                    <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
-                        <option value="">Todos los estados</option>
-                        {estados.map(e => <option key={e} value={e}>{capitalizeEstado(e)}</option>)}
-                    </select>
-                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
-                        <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
-                            <option value="">Todos los vendedores</option>
-                            {vendedores.map(vendedor => (
-                                <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
-                            ))}
-                        </select>
+                    {!searchTerm && (
+                        <>
+                            <div className="v-select-pill">
+                                <select value={selectedMonthYear} onChange={(e) => { setSelectedMonthYear(e.target.value); }}>
+                                    {monthOptions.map(option => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="v-select-pill">
+                                <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
+                                    <option value="">Estado: Todos</option>
+                                    {estados.map(e => <option key={e} value={e}>{capitalizeEstado(e)}</option>)}
+                                </select>
+                            </div>
+                            <div className="v-select-pill">
+                                <select value={selectedSede} onChange={(e) => { setSelectedSede(e.target.value); }}>
+                                    <option value="">Sede: Todas</option>
+                                    <option value="Lottus 1">Lottus 1</option>
+                                    <option value="Lottus 2">Lottus 2</option>
+                                </select>
+                            </div>
+                            {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                                <div className="v-select-pill">
+                                    <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
+                                        <option value="">Vendedor: Todos</option>
+                                        {vendedores.map(v => <option key={v.id} value={v.id}>{v.first_name}</option>)}
+                                    </select>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
-                <div className="actions-group">
-                    {usuario?.role.toLowerCase() === 'administrador' && <button className="btn-secondary" onClick={exportVentas}><FaFileExport /> Exportar</button>}
-                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && <button className="btn-primary" onClick={() => navigate('/nuevaVenta')}><FaPlus /> Nueva Venta</button>}
+                
+                <div className="header-actions" style={{ flexShrink: 0 }}>
+                    {usuario?.role.toLowerCase() === 'administrador' && (
+                        <button className="v-btn-ghost" onClick={exportVentas} title="Exportar Excel">
+                            <FaFileExport />
+                        </button>
+                    )}
+                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                        <button className="v-btn-primary-glow" onClick={() => navigate('/nuevaVenta')}>
+                            <FaPlus />
+                            <span className="long-text">Nueva Venta</span>
+                            <span className="short-text">Nueva</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -584,6 +616,8 @@ const Ventas = () => {
                                 <th className="th-fecha">F. Venta</th>
                                 <th className="th-fecha">F. Entrega</th>
                                 <th className="th-vendedor">Vendedor</th>
+                                <th className="th-sede">Sede</th>
+                                <th className="th-traslado">Trasl.</th>
                                 <th className="th-cliente">Cliente</th>
                                 <th className="th-valor">Abono</th>
                                 <th className="th-valor">Saldo</th>
@@ -602,6 +636,8 @@ const Ventas = () => {
                                         <td className="td-fecha"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                                         <td className="td-fecha"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                                         <td className="td-vendedor"><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                                        <td className="td-sede"><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                                        <td className="td-traslado"><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
                                         <td className="td-cliente"><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
                                         <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                                         <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
@@ -616,7 +652,7 @@ const Ventas = () => {
                                     <td colSpan="11" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
                                         <div className="empty-state-content">
                                             <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', marginBottom: '1rem' }}>No se encontraron ventas.</p>
-                                            <button className="btn-primary" onClick={() => navigate('/nueva-venta')}>
+                                            <button className="btn-primary" onClick={() => navigate('/nuevaVenta')}>
                                                 Crear Nueva Venta
                                             </button>
                                         </div>
@@ -626,13 +662,20 @@ const Ventas = () => {
                                 ventas.map((venta) => (
                                     <React.Fragment key={venta.id}>
                                         <tr onClick={() => handleExpandVenta(venta.id)} style={{ cursor: 'pointer' }}>
-                                            <td className="td-oc">#{venta.id}</td>
+                                            <td className="td-oc">{venta.id}</td>
                                             <td className="td-fecha">{formatShortDate(venta.fecha_venta)}</td>
                                             <td className="td-fecha">{formatShortDate(venta.fecha_entrega)}</td>
                                             <td className="td-vendedor">
                                                 {venta.vendedor_nombre || '—'}
+                                                {venta.vendedores_compartidos_nombres ? `, ${venta.vendedores_compartidos_nombres}` : ''}
                                             </td>
-                                            <td className="td-cliente">
+                                            <td className="td-sede" style={{ textAlign: 'center' }}>
+                                                {venta.sede === 'Lottus 1' ? '1' : venta.sede === 'Lottus 2' ? '2' : venta.sede}
+                                            </td>
+                                            <td className="td-traslado" style={{ textAlign: 'center' }}>
+                                                {venta.traslado ? 'Sí' : 'No'}
+                                            </td>
+                                            <td className="td-cliente" title={venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}>
                                                 {venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}
                                             </td>
                                             <td className="td-valor">{formatCurrency(venta.abono)}</td>
