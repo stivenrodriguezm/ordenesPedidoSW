@@ -132,7 +132,7 @@ function InventarioPage() {
     const [grupoEditSaving, setGrupoEditSaving] = useState(false);
 
     // ── Nuevo Grupo Modal ─────────────────────────────────────────────────────
-    const [nuevoGrupoModal, setNuevoGrupoModal] = useState({ open: false, nombre: '', subcategoriaId: '', observacion: '' });
+    const [nuevoGrupoModal, setNuevoGrupoModal] = useState({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' });
     const [nuevoGrupoSaving, setNuevoGrupoSaving] = useState(false);
 
     // ── Fetch ─────────────────────────────────────────────────────────────────
@@ -249,7 +249,9 @@ function InventarioPage() {
             grupo, 
             nombre: grupo.nombre, 
             disponibilidad: '', 
+            categoriaId: grupo.categoria_id || '',
             subcategoriaId: grupo.subcategoria_id || '',
+            descripcion: grupo.descripcion || '',
             observacion: grupo.observacion || '',
             costo_total: grupo.costo_total || 0,
             items: [...grupoItems], 
@@ -278,13 +280,16 @@ function InventarioPage() {
         try {
             const payload = {
                 nombre: nuevoGrupoModal.nombre,
+                categoria_id: nuevoGrupoModal.categoriaId ? parseInt(nuevoGrupoModal.categoriaId) : null,
                 subcategoria_id: nuevoGrupoModal.subcategoriaId ? parseInt(nuevoGrupoModal.subcategoriaId) : null,
+                descripcion: nuevoGrupoModal.descripcion || '',
                 observacion: nuevoGrupoModal.observacion,
+                venta_id: nuevoGrupoModal.ventaId || null,
             };
             await API.post('/suministros/grupos/', payload);
             const gruRes = await API.get('/suministros/grupos/');
             setGrupos(gruRes.data.results || gruRes.data || []);
-            setNuevoGrupoModal({ open: false, nombre: '', subcategoriaId: '', observacion: '' });
+            setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' });
         } catch (err) {
             console.error('Error creando grupo:', err);
             alert('Error al crear el grupo.');
@@ -296,12 +301,15 @@ function InventarioPage() {
     const saveGrupoEdit = async () => {
         if (!grupoEditModal) return;
         setGrupoEditSaving(true);
-        const { grupo, nombre, disponibilidad, subcategoriaId, observacion, removedDbIds, addedItems, items: gItems } = grupoEditModal;
+        const { grupo, nombre, disponibilidad, categoriaId, subcategoriaId, descripcion, observacion, removedDbIds, addedItems, items: gItems, ventaId } = grupoEditModal;
         try {
             const payload = { 
                 nombre,
+                categoria_id: categoriaId ? parseInt(categoriaId) : null,
                 subcategoria_id: subcategoriaId ? parseInt(subcategoriaId) : null,
-                observacion
+                descripcion: descripcion || '',
+                observacion,
+                venta_id: ventaId || null,
             };
             await API.patch(`/suministros/grupos/${grupo.id}/`, payload);
             await Promise.all(removedDbIds.map(dbId => API.patch(`/suministros/inventario/${dbId}/`, { grupo: null })));
@@ -481,16 +489,16 @@ function InventarioPage() {
         return (
             <tr key={key} className={extraClass}>
                 <td><span className="inv-id-badge">{inv.id}</span></td>
-                <td className="inv-proveedor-col">{inv.proveedorNombre}</td>
-                <td className="inv-factura-col">{inv.facturaManual}</td>
-                <td className="inv-numeric">{inv.ventaId}</td>
-                <td>{renderDispBadge(inv)}</td>
-                <td>{inv.fechaIngreso ? inv.fechaIngreso.split('-').reverse().join('/') : '—'}</td>
-                <td><span className="inv-prod-name">{inv.prod?.nombre || '—'}</span></td>
+                <td className="inv-proveedor-col" title={inv.proveedorNombre}>{inv.proveedorNombre}</td>
+                <td className="inv-factura-col" title={inv.facturaManual}>{inv.facturaManual}</td>
+                <td className="inv-numeric" title={inv.ventaId}>{inv.ventaId}</td>
+                <td title={inv.disponibilidad}>{renderDispBadge(inv)}</td>
+                <td title={inv.fechaIngreso}>{inv.fechaIngreso ? inv.fechaIngreso.split('-').reverse().join('/') : '—'}</td>
+                <td title={inv.prod?.nombre || ''}><span className="inv-prod-name">{inv.prod?.nombre || '—'}</span></td>
                 {showGroupCol && (
                     <td>
                         {grupoObj ? (
-                            <div className="inv-grupo-col-cell">
+                            <div className="inv-grupo-col-cell" title={grupoObj.nombre}>
                                 <span className="inv-group-id-badge" style={{ fontSize: '0.65rem' }}>
                                     G{String(grupoObj.id).padStart(3, '0')}
                                 </span>
@@ -501,37 +509,37 @@ function InventarioPage() {
                         )}
                     </td>
                 )}
-                <td>
+                <td title={inv.cat?.nombre || ''}>
                     {inv.cat?.nombre && (
                         <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': color }}>
                             {inv.cat.nombre}
                         </span>
                     )}
                 </td>
-                <td>{inv.subcat?.nombre || <span className="empty-val">—</span>}</td>
-                <td>{inv.variacion || <span className="empty-val">—</span>}</td>
+                <td title={inv.subcat?.nombre || ''}>{inv.subcat?.nombre || <span className="empty-val">—</span>}</td>
+                <td title={inv.variacion || ''}>{inv.variacion || <span className="empty-val">—</span>}</td>
                 <td className="obs-cell-col"><ObsCell text={inv.observacion} /></td>
                 {showCostoCol && (
                     <td className="inv-costo-col">
                         {inv.costo_especifico > 0 ? formatCOP(inv.costo_especifico) : <span className="empty-val">—</span>}
                     </td>
                 )}
-                <td style={{ textAlign: 'center' }}>
-                    {inv.imagen && (
-                        <button className="btn-view-img" title="Ver imagen"
-                            onClick={() => setPreviewImg({ open: true, url: inv.imagen })}>
-                            <FaImage />
-                        </button>
-                    )}
-                </td>
+                {viewMode !== 'products_only' && (
+                    <td style={{ textAlign: 'center' }}>
+                        {inv.imagen && (
+                            <button className="btn-view-img" title="Ver imagen"
+                                onClick={() => setPreviewImg({ open: true, url: inv.imagen })}>
+                                <FaImage />
+                            </button>
+                        )}
+                    </td>
+                )}
             </tr>
         );
     };
 
     // ── Table body content ────────────────────────────────────────────────────
-    const colSpan = showCostoCol
-        ? (viewMode === 'products_only' ? 14 : 13)
-        : (viewMode === 'products_only' ? 13 : 12);
+    const colSpan = showCostoCol ? 13 : 12;
 
     const renderTableBody = () => {
         if (isLoading) {
@@ -546,63 +554,7 @@ function InventarioPage() {
             return getSorted(filtered).map(inv => renderItemRow(inv, inv.dbId, '', true));
         }
 
-        // ── GROUPS ONLY — only group headers ──────────────────────────────────
-        if (viewMode === 'groups_only') {
-            const groupedById = {};
-            filtered.forEach(inv => {
-                if (inv.grupoId) {
-                    if (!groupedById[inv.grupoId]) groupedById[inv.grupoId] = [];
-                    groupedById[inv.grupoId].push(inv);
-                }
-            });
-            const rows = [];
-            Object.entries(groupedById).forEach(([gIdStr, gItems]) => {
-                const grupoId  = parseInt(gIdStr);
-                const grupoObj = grupos.find(g => g.id === grupoId) || { id: grupoId, nombre: `Grupo ${gIdStr}` };
-                const first    = gItems[0];
-                const color    = first.prod ? getCatColor(first.prod.categoriaId) : '#94a3b8';
-                const dispSet  = new Set(gItems.map(i => i.disponibilidad));
-                const dispUni  = dispSet.size === 1 ? [...dispSet][0] : null;
-                rows.push(
-                    <tr key={`grupo-${grupoId}`} className="inv-group-header-row" onClick={() => toggleGroup(grupoId)}>
-                        <td><span className="inv-group-id-badge">G{String(grupoId).padStart(3, '0')}</span></td>
-                        <td className="empty-val">—</td><td className="empty-val">—</td><td className="empty-val">—</td>
-                        <td>
-                            {dispUni
-                                ? <span className={`disp-badge disp-${dispUni}`}>{DISPONIBILIDAD_LABELS[dispUni]}</span>
-                                : <span className="disp-badge inv-disp-mixto">Mixto</span>}
-                        </td>
-                        <td className="empty-val">—</td>
-                        <td>
-                            <div className="prod-name-cell">
-                                <FaLayerGroup style={{ color: '#3b82f6', fontSize: '0.75rem', flexShrink: 0 }} />
-                                <strong className="inv-group-nombre">{grupoObj.nombre}</strong>
-                                <span className="inv-group-count-pill">{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
-                            </div>
-                        </td>
-                        <td>
-                            {first.cat?.nombre && (
-                                <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': color }}>{first.cat.nombre}</span>
-                            )}
-                        </td>
-                        <td className="empty-val">—</td><td className="empty-val">—</td><td className="empty-val">—</td>
-                        {showCostoCol && <td className="empty-val">—</td>}
-                        <td style={{ textAlign: 'center' }}>
-                            <button className="inv-group-edit-btn" title="Editar grupo"
-                                onClick={e => { e.stopPropagation(); openGrupoEdit(grupoObj, gItems); }}>
-                                <FaEdit />
-                            </button>
-                        </td>
-                    </tr>
-                );
-            });
-            if (rows.length === 0) {
-                return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '2rem' }}>No hay grupos con los filtros actuales.</td></tr>;
-            }
-            return rows;
-        }
-
-        // ── DEFAULT — groups collapsed + ungrouped ────────────────────────────
+        // ── GROUPS + DEFAULT ── groups collapsed/expanded + optional ungrouped
         const groupedById = {};
         const ungrouped   = [];
         filtered.forEach(inv => {
@@ -635,19 +587,23 @@ function InventarioPage() {
                             : <span className="disp-badge inv-disp-mixto">Mixto</span>}
                     </td>
                     <td className="empty-val">—</td>
-                    <td>
+                    <td title={grupoObj.nombre}>
                         <div className="prod-name-cell">
-                            <FaLayerGroup style={{ color: '#3b82f6', fontSize: '0.75rem', flexShrink: 0 }} />
-                            <strong className="inv-group-nombre">{grupoObj.nombre}</strong>
-                            <span className="inv-group-count-pill">{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
+                            <span className="inv-group-nombre-small">{grupoObj.nombre}</span>
                         </div>
                     </td>
                     <td>
-                        {first.cat?.nombre && (
-                            <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': color }}>{first.cat.nombre}</span>
+                        {grupoObj.categoria_nombre && (
+                            <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': getCatColor(grupoObj.categoria_id) || '#94a3b8' }}>
+                                {grupoObj.categoria_nombre}
+                            </span>
                         )}
                     </td>
-                    <td className="empty-val">—</td><td className="empty-val">—</td><td className="empty-val">—</td>
+                    <td title={grupoObj.subcategoria_nombre || ''}>{grupoObj.subcategoria_nombre || <span className="empty-val">—</span>}</td>
+                    <td>
+                        <span className="inv-group-count-pill" style={{ marginLeft: 0 }}>{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
+                    </td>
+                    <td className="empty-val">—</td>
                     {showCostoCol && <td className="empty-val">—</td>}
                     <td style={{ textAlign: 'center' }}>
                         <div className="inv-group-actions">
@@ -671,7 +627,13 @@ function InventarioPage() {
             }
         });
 
-        ungrouped.forEach(inv => rows.push(renderItemRow(inv, inv.dbId)));
+        if (viewMode === 'default') {
+            ungrouped.forEach(inv => rows.push(renderItemRow(inv, inv.dbId)));
+        }
+
+        if (viewMode === 'groups_only' && rows.length === 0) {
+            return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '2rem' }}>No hay grupos con los filtros actuales.</td></tr>;
+        }
 
         return rows;
     };
@@ -785,7 +747,7 @@ function InventarioPage() {
                     <button className="v-btn-ghost" onClick={handleExport} title="Exportar a CSV">
                         <FaFileExport />
                     </button>
-                    <button className="btn-ghost-inv" onClick={() => setNuevoGrupoModal({ open: true, nombre: '', subcategoriaId: '', observacion: '' })}>
+                    <button className="btn-ghost-inv" onClick={() => setNuevoGrupoModal({ open: true, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>
                         <FaLayerGroup /><span>Nuevo Grupo</span>
                     </button>
                     <button className="v-btn-primary-glow" onClick={openModal}>
@@ -825,7 +787,7 @@ function InventarioPage() {
             {/* ── F: TABLE ───────────────────────────────────────── */}
             <div className="ordenes-container">
                     <div className="desktop-view">
-                        <table className={`inventario-table${showCostoCol ? ' inv-table-with-cost' : ''}${viewMode === 'products_only' ? ' inv-table-products-only' : ''}`}>
+                        <table className={`inventario-table${showCostoCol ? ' inv-table-with-cost' : ''}${viewMode === 'products_only' ? ' inv-table-products-only' : ''}${viewMode === 'groups_only' ? ' inv-table-groups-only' : ''}`}>
                             <thead>
                                 <tr>
                                     {sortTh('id', 'ID', 'col-id')}
@@ -841,7 +803,7 @@ function InventarioPage() {
                                     {sortTh('variacion', 'Variación', 'col-var')}
                                     {sortTh('observacion', 'Observación', 'col-obs')}
                                     {showCostoCol && sortTh('costo_especifico', 'Costo', 'col-costo')}
-                                    <th className="col-acc"></th>
+                                    {viewMode !== 'products_only' && <th className="col-acc"></th>}
                                 </tr>
                             </thead>
                             <tbody>{renderTableBody()}</tbody>
@@ -986,14 +948,14 @@ function InventarioPage() {
             {/* ── MODAL: NUEVO GRUPO ──────────────────────────────────────── */}
             {nuevoGrupoModal.open && (
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onClick={e => { if (e.target === e.currentTarget) setNuevoGrupoModal({ open: false, nombre: '', subcategoriaId: '', observacion: '' }); }}>
+                    onClick={e => { if (e.target === e.currentTarget) setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' }); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
                                 <FaLayerGroup className="inv-modal-icon" />
                                 <h3>Nuevo Grupo</h3>
                             </div>
-                            <button className="inv-modal-close" onClick={() => setNuevoGrupoModal({ open: false, nombre: '', subcategoriaId: '', observacion: '' })}>&times;</button>
+                            <button className="inv-modal-close" onClick={() => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>&times;</button>
                         </div>
                         <div className="inv-grupo-edit-body">
                             <div className="inv-grupo-field">
@@ -1004,24 +966,43 @@ function InventarioPage() {
                                     placeholder="Ej: Comedor Qatar..." autoFocus />
                             </div>
                             <div className="inv-grupo-field">
+                                <label className="ifg-label">Categoría <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <select className="ifg-input"
+                                    value={nuevoGrupoModal.categoriaId}
+                                    onChange={e => setNuevoGrupoModal(prev => ({ ...prev, categoriaId: e.target.value, subcategoriaId: '' }))}>
+                                    <option value="">Ninguna</option>
+                                    {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                </select>
+                            </div>
+                            <div className="inv-grupo-field">
                                 <label className="ifg-label">Subcategoría <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
                                 <select className="ifg-input"
                                     value={nuevoGrupoModal.subcategoriaId}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, subcategoriaId: e.target.value }))}>
                                     <option value="">Ninguna</option>
-                                    {SUBCATEGORIAS.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                    {(nuevoGrupoModal.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(nuevoGrupoModal.categoriaId)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                 </select>
                             </div>
+
                             <div className="inv-grupo-field">
                                 <label className="ifg-label">Observación <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
                                 <textarea className="ifg-input ifg-textarea"
                                     value={nuevoGrupoModal.observacion}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, observacion: e.target.value }))}
-                                    placeholder="Notas del grupo..." style={{ minHeight: '60px' }} />
+                                    placeholder="Notas internas del grupo..." style={{ minHeight: '60px' }} />
+                            </div>
+                            <div className="inv-grupo-field">
+                                <label className="ifg-label">Venta asociada <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <select className="ifg-input"
+                                    value={nuevoGrupoModal.ventaId}
+                                    onChange={e => setNuevoGrupoModal(prev => ({ ...prev, ventaId: e.target.value }))}>
+                                    <option value="">Ninguna venta asociada</option>
+                                    {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
+                                </select>
                             </div>
                         </div>
                         <div className="inv-modal-footer">
-                            <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setNuevoGrupoModal({ open: false, nombre: '', subcategoriaId: '', observacion: '' })}>Cancelar</button>
+                            <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>Cancelar</button>
                             <button type="button" className="btn-primary" style={{ width: 'auto' }}
                                 onClick={saveNuevoGrupo} disabled={nuevoGrupoSaving || !nuevoGrupoModal.nombre.trim()}>
                                 <FaPlus /> {nuevoGrupoSaving ? 'Creando...' : 'Crear Grupo'}
@@ -1054,21 +1035,42 @@ function InventarioPage() {
                             </div>
 
                             <div className="inv-grupo-field">
-                                <label className="ifg-label">Subcategoría</label>
+                                <label className="ifg-label">Categoría</label>
                                 <select className="ifg-input"
-                                    value={grupoEditModal.subcategoriaId}
-                                    onChange={e => setGrupoEditModal(prev => ({ ...prev, subcategoriaId: e.target.value }))}>
+                                    value={grupoEditModal.categoriaId || ''}
+                                    onChange={e => setGrupoEditModal(prev => ({ ...prev, categoriaId: e.target.value, subcategoriaId: '' }))}>
                                     <option value="">Ninguna</option>
-                                    {SUBCATEGORIAS.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                    {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
                             </div>
 
                             <div className="inv-grupo-field">
+                                <label className="ifg-label">Subcategoría</label>
+                                <select className="ifg-input"
+                                    value={grupoEditModal.subcategoriaId || ''}
+                                    onChange={e => setGrupoEditModal(prev => ({ ...prev, subcategoriaId: e.target.value }))}>
+                                    <option value="">Ninguna</option>
+                                    {(grupoEditModal.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(grupoEditModal.categoriaId)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                </select>
+                            </div>
+
+
+                            <div className="inv-grupo-field">
                                 <label className="ifg-label">Observación</label>
                                 <textarea className="ifg-input ifg-textarea"
-                                    value={grupoEditModal.observacion}
+                                    value={grupoEditModal.observacion || ''}
                                     onChange={e => setGrupoEditModal(prev => ({ ...prev, observacion: e.target.value }))}
                                     placeholder="Notas del grupo..." style={{ minHeight: '60px' }} />
+                            </div>
+
+                            <div className="inv-grupo-field">
+                                <label className="ifg-label">Venta asociada <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <select className="ifg-input"
+                                    value={grupoEditModal.ventaId || ''}
+                                    onChange={e => setGrupoEditModal(prev => ({ ...prev, ventaId: e.target.value }))}>
+                                    <option value="">Ninguna venta asociada</option>
+                                    {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
+                                </select>
                             </div>
 
                             <div className="inv-grupo-field">
