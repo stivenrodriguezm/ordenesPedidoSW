@@ -1,0 +1,80 @@
+.edit-sale-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.edit-sale-form .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+}
+
+.edit-sale-form .form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ventas-text-light);
+    margin-bottom: 0.35rem;
+}
+
+.edit-sale-form .form-group input:not([type="checkbox"]),
+.edit-sale-form .form-group select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--ventas-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--ventas-text-dark);
+    background-color: #f8fafc;
+    transition: all 0.2s;
+}
+
+.edit-sale-form .form-group input:not([type="checkbox"]):focus,
+.edit-sale-form .form-group select:focus {
+    outline: none;
+    border-color: var(--ventas-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    background-color: #fff;
+}
+
+.edit-sale-form .form-group input:disabled,
+.edit-sale-form .form-group select:disabled {
+    background-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.edit-sale-form .checkbox-inline {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.edit-sale-form .checkbox-inline label {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.edit-sale-form .full-width {
+    grid-column: 1 / -1;
+}
+
+.edit-sale-form .shared-vendors-box {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.75rem;
+    background: #f1f5f9;
+    border-radius: 8px;
+    border: 1px solid var(--ventas-border);
+}
+
+.edit-sale-modal-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ventas-border);
+}

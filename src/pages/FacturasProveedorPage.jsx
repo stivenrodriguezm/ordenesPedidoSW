@@ -1,9 +1,9 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import API from '../services/api';
 import { AppContext } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
-import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup } from 'react-icons/fa';
+import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import './FacturasProveedorPage.css';
 
 const getTodayStr = () => {
@@ -82,6 +82,18 @@ function FacturasProveedorPage() {
     const [newGrupoName, setNewGrupoName] = useState('');   // input para crear grupo en el modal
     const [expandedId, setExpandedId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+
+    // Toast
+    const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
+    const toastTimerRef = useRef(null);
+
+    const showToast = (message, type = 'success') => {
+        setToast({ visible: true, message, type });
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 4000);
+    };
 
     // Filtros
     const [filterEstado, setFilterEstado] = useState('');
@@ -194,7 +206,7 @@ function FacturasProveedorPage() {
         if (!nombre) return;
         // Verificar que no exista ya un grupo nuevo con ese nombre en esta factura
         const yaExiste = form.grupoInstances.some(g => g.nombre.toLowerCase() === nombre.toLowerCase());
-        if (yaExiste) { alert('Ya existe un grupo con ese nombre en esta factura.'); return; }
+        if (yaExiste) { showToast('Ya existe un grupo con ese nombre en esta factura.', 'error'); return; }
         const localId = newGrupoLocalId();
         setForm(prev => ({
             ...prev,
@@ -230,11 +242,21 @@ function FacturasProveedorPage() {
     // Total = sum of (cost * quantity) per row
     const totalCostos = form.productos.reduce((acc, p) => acc + ((parseInt(p.costo) || 0) * (parseInt(p.cantidad) || 1)), 0);
     const valorFactura = parseInt(form.valor) || 0;
-    const canSubmit = valorFactura > 0 && totalCostos === valorFactura;
+    const canSubmit = valorFactura > 0 && totalCostos === valorFactura && form.proveedorId && form.idManual;
 
     const handleSubmit = async e => {
         e.preventDefault();
-        if (!canSubmit) return;
+        
+        if (!form.idManual || !form.proveedorId || valorFactura <= 0) {
+            showToast('Por favor complete los campos obligatorios y asegúrese de que el total sea mayor a 0.', 'error');
+            return;
+        }
+        if (totalCostos !== valorFactura) {
+            showToast(`Error de validación: La suma de los productos agregados (${formatCOPInt(totalCostos)}) no coincide con el Valor Total de la factura (${formatCOPInt(valorFactura)}).`, 'error');
+            return;
+        }
+
+        setIsCreating(true);
 
         // Paso 1: Crear grupos NUEVOS (localId string) que tengan al menos una fila asignada
         const grupoIdMap = {}; // localId → id real en BD
@@ -253,16 +275,20 @@ function FacturasProveedorPage() {
                 setGruposActivos(prev => [...prev, res.data]);
             } catch (err) {
                 console.error('Error creando grupo', instance.nombre, err);
-                alert(`Error al crear el grupo "${instance.nombre}". Intenta de nuevo.`);
+                showToast(`Error al crear el grupo "${instance.nombre}". Intenta de nuevo.`, 'error');
                 return;
             }
         }
+
+        const now = new Date();
+        const timeString = now.toTimeString().split(' ')[0];
+        const fechaConHora = form.fechaFactura.includes('T') ? form.fechaFactura : `${form.fechaFactura}T${timeString}`;
 
         // Paso 2: Registrar la factura con los IDs reales de grupo
         const payload = {
             id_manual: form.idManual,
             valor: parseCOP(form.valor),
-            fecha_factura: form.fechaFactura,
+            fecha_factura: fechaConHora,
             fecha_pago: form.fechaPago || null,
             proveedor: form.proveedorId ? parseInt(form.proveedorId) : null,
             estado: 'pendiente',
@@ -308,29 +334,34 @@ function FacturasProveedorPage() {
             }));
             setFacturas(formattedFacturas);
             resetModal();
+            showToast("Factura creada exitosamente.", "success");
+            setShowModal(false);
         } catch (error) {
-            console.error("Error saving factura", error);
-            alert("Hubo un error al guardar la factura. Verifica la conexión.");
+            console.error("Error creating factura:", error);
+            showToast("Hubo un error al guardar la factura. Verifica la conexión.", "error");
+        } finally {
+            setIsCreating(false);
         }
     };
 
     const toggleExpand = id => setExpandedId(expandedId === id ? null : id);
 
-    // Filtro aplicado
-    const filteredFacturas = facturas.filter(f => {
-        if (filterSearch) {
-            const q = filterSearch.toLowerCase();
-            if (
-                !String(f.id).toLowerCase().includes(q) &&
-                !(f.idManual || '').toLowerCase().includes(q)
-            ) return false;
-        }
-        if (filterEstado && f.estado?.toLowerCase() !== filterEstado.toLowerCase()) return false;
-        if (filterProveedor && f.proveedorNombre?.toLowerCase() !== filterProveedor.toLowerCase()) return false;
-        if (filterFechaDesde && f.fechaFactura < filterFechaDesde) return false;
-        if (filterFechaHasta && f.fechaFactura > filterFechaHasta) return false;
-        return true;
-    });
+    const filteredFacturas = React.useMemo(() => {
+        return facturas.filter(f => {
+            if (filterSearch) {
+                const q = filterSearch.toLowerCase();
+                if (
+                    !String(f.id).toLowerCase().includes(q) &&
+                    !(f.idManual || '').toLowerCase().includes(q)
+                ) return false;
+            }
+            if (filterEstado && f.estado?.toLowerCase() !== filterEstado.toLowerCase()) return false;
+            if (filterProveedor && f.proveedorNombre?.toLowerCase() !== filterProveedor.toLowerCase()) return false;
+            if (filterFechaDesde && f.fechaFactura < filterFechaDesde) return false;
+            if (filterFechaHasta && f.fechaFactura > filterFechaHasta) return false;
+            return true;
+        });
+    }, [facturas, filterSearch, filterEstado, filterProveedor, filterFechaDesde, filterFechaHasta]);
 
     const getEstadoClass = (estado) => {
         const e = (estado || '').toLowerCase();
@@ -355,6 +386,7 @@ function FacturasProveedorPage() {
     // Guardar desde el modal de edición
     const saveEditModal = async () => {
         if (!editModal) return;
+        setIsSavingEdit(true);
         try {
             await API.patch(`/suministros/facturas/${editModal.id}/`, {
                 estado: editModal.estado,
@@ -365,11 +397,15 @@ function FacturasProveedorPage() {
                     ? { ...f, observaciones: editModal.observaciones, estado: editModal.estado }
                     : f
             ));
-        } catch(error) {
-            console.error("Error updating factura:", error);
-            alert("Error al actualizar la factura.");
+            showToast("Factura actualizada correctamente.", "success");
+            setEditModal(null);
+            fetchFacturas();
+        } catch (err) {
+            console.error(err);
+            showToast("Error al actualizar la factura.", "error");
+        } finally {
+            setIsSavingEdit(false);
         }
-        setEditModal(null);
     };
 
     return (
@@ -401,15 +437,17 @@ function FacturasProveedorPage() {
                             ))}
                         </select>
                     </div>
-                    <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', paddingLeft: '0.5rem' }}>Desde</label>
+                    <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Desde</label>
                         <input type="date" value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
-                            style={{ border: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569', fontWeight: 600, padding: '0.2rem 0.3rem', cursor: 'pointer', outline: 'none' }} />
+                            onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
-                    <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap', paddingLeft: '0.5rem' }}>Hasta</label>
+                    <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hasta</label>
                         <input type="date" value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
-                            style={{ border: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569', fontWeight: 600, padding: '0.2rem 0.3rem', cursor: 'pointer', outline: 'none' }} />
+                            onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     {hasFilters && (
                         <button className="fct-clear-pill" onClick={handleClearFilters} title="Limpiar filtros">
@@ -496,59 +534,62 @@ function FacturasProveedorPage() {
                                                         </div>
                                                     </div>
 
-                                                    {/* Items table */}
+                                                    {/* Items list */}
                                                     <div className="expanded-items-section">
                                                         {f.productos && f.productos.length > 0 ? (
-                                                            <table className="items-table">
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Id</th>
-                                                                        <th>Referencia</th>
-                                                                        <th>Categoría</th>
-                                                                        <th>Subcategoría</th>
-                                                                        <th>Variación</th>
-                                                                        <th>Costo</th>
-                                                                        <th>Observación</th>
-                                                                        <th>Disponibilidad</th>
-                                                                        <th>Venta</th>
-                                                                        <th>Imagen</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                 {f.productos.map((p, i) => {
-                                                                        // Use enriched names from serializer directly (avoids type mismatch on .find)
-                                                                        const refNombre = p.referencia_nombre || p.producto_nombre || (p.referenciaId ? `Ref. #${p.referenciaId}` : '—');
-                                                                        const catNombre = p.categoria_nombre || null;
-                                                                        const subNombre = p.subcategoria_nombre || null;
-                                                                        return (
-                                                                            <tr key={i}>
-                                                                                <td title={p.id || '—'}>{p.id || '—'}</td>
-                                                                                <td title={refNombre}><span className="item-ref-name truncate-text">{refNombre}</span></td>
-                                                                                <td title={catNombre || '—'}>{catNombre ? <span className="item-var-badge">{catNombre}</span> : <span className="empty-val">—</span>}</td>
-                                                                                <td title={subNombre || '—'}>{subNombre ? <span className="item-var-badge">{subNombre}</span> : <span className="empty-val">—</span>}</td>
-                                                                                <td title={p.variacion || '—'} className="truncate-text">{p.variacion || '—'}</td>
-                                                                                <td title={formatCOP(p.costo)}><span className="item-costo">{formatCOP(p.costo)}</span></td>
-                                                                                <td title={p.observacion || '—'} className="truncate-text"><span className="item-obs">{p.observacion || '—'}</span></td>
-                                                                                <td title={p.disponibilidad ? (p.disponibilidad.charAt(0).toUpperCase() + p.disponibilidad.slice(1)) : '—'}>
-                                                                                    {p.disponibilidad ? (
-                                                                                        <span className={`disp-badge disp-${p.disponibilidad === 'no_venta' ? 'no_venta' : p.disponibilidad}`}>
-                                                                                            {p.disponibilidad === 'no_venta' ? 'No a la venta' : p.disponibilidad === 'exhibicion' ? 'Exhibición' : p.disponibilidad === 'consignacion' ? 'Consignación' : p.disponibilidad === 'venta' ? 'Venta' : p.disponibilidad === 'por_despachar' ? 'Por Despachar' : (p.disponibilidad.charAt(0).toUpperCase() + p.disponibilidad.slice(1))}
-                                                                                        </span>
-                                                                                    ) : <span className="empty-val">—</span>}
-                                                                                </td>
-                                                                                <td title={p.ventaId ? `Venta #${p.ventaId}` : '—'}>{p.ventaId || '—'}</td>
-                                                                                <td style={{ textAlign: 'center' }}>
-                                                                                    {p.imagen && (
-                                                                                        <button type="button" className="btn-view-img" title="Ver imagen">
-                                                                                            <span className="icon-wrapper"><FaImage /></span>
-                                                                                        </button>
-                                                                                    )}
-                                                                                </td>
-                                                                            </tr>
-                                                                        );
-                                                                    })}
-                                                                </tbody>
-                                                            </table>
+                                                            <div className="expanded-items-list">
+                                                                {f.productos.map((p, i) => {
+                                                                    const refNombre = p.referencia_nombre || p.producto_nombre || (p.referenciaId ? `Ref. #${p.referenciaId}` : '—');
+                                                                    const catNombre = p.categoria_nombre || null;
+                                                                    const subNombre = p.subcategoria_nombre || null;
+                                                                    const grupoNombre = p.grupo_nombre || null;
+                                                                    return (
+                                                                        <div key={i} className="invoice-item-card compact-card">
+                                                                            <div className="compact-col compact-col-main">
+                                                                                <div className="compact-title-group">
+                                                                                    <span className="item-id-badge">#{p.id || '—'}</span>
+                                                                                    <h4 className="item-title" title={refNombre}>{refNombre}</h4>
+                                                                                </div>
+                                                                                <div className="item-tags">
+                                                                                    {grupoNombre && <span className="item-tag" style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
+                                                                                    {catNombre && <span className="item-tag">{catNombre}</span>}
+                                                                                    {subNombre && <span className="item-tag">{subNombre}</span>}
+                                                                                </div>
+                                                                            </div>
+                                                                            
+                                                                            <div className="compact-col compact-col-desc">
+                                                                                <div className="item-desc truncate-text" title={p.variacion || '—'}>
+                                                                                    <span className="desc-label">Var:</span> <span className="desc-val">{p.variacion || '—'}</span>
+                                                                                </div>
+                                                                                <div className="item-desc truncate-text" title={p.observacion || '—'}>
+                                                                                    <span className="desc-label">Obs:</span> <span className="desc-val">{p.observacion || '—'}</span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="compact-col compact-col-status">
+                                                                                {p.disponibilidad ? (
+                                                                                    <span className={`disp-badge disp-${p.disponibilidad === 'no_venta' ? 'no_venta' : p.disponibilidad}`}>
+                                                                                        {p.disponibilidad === 'no_venta' ? 'No a la venta' : p.disponibilidad === 'exhibicion' ? 'Exhibición' : p.disponibilidad === 'consignacion' ? 'Consignación' : p.disponibilidad === 'venta' ? 'Venta' : p.disponibilidad === 'por_despachar' ? 'Por Despachar' : (p.disponibilidad.charAt(0).toUpperCase() + p.disponibilidad.slice(1))}
+                                                                                    </span>
+                                                                                ) : <span className="empty-val">—</span>}
+                                                                                <span className="item-venta-link">{p.ventaId ? `Venta #${p.ventaId}` : 'Sin asignar'}</span>
+                                                                            </div>
+
+                                                                            <div className="compact-col compact-col-price">
+                                                                                <span className="item-costo">{formatCOP(p.costo)}</span>
+                                                                            </div>
+
+                                                                            {p.imagen && (
+                                                                                <div className="compact-col compact-col-action">
+                                                                                    <button type="button" className="btn-view-img" title="Ver imagen">
+                                                                                        <FaImage />
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         ) : (
                                                             <div className="no-items-expanded">No hay referencias registradas en esta factura.</div>
                                                         )}
@@ -566,11 +607,11 @@ function FacturasProveedorPage() {
 
             {/* ===== MODAL EDITAR OBSERVACIÓN + ESTADO ===== */}
             {editModal && (
-                <div className="modal-overlay edit-factura-overlay" onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
+                <div className="fact-modal-overlay edit-factura-overlay" onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
                     <div className="edit-factura-modal">
                         <div className="edit-factura-header">
                             <h3>Editar Factura</h3>
-                            <button className="modal-close" onClick={() => setEditModal(null)}>×</button>
+                            <button className="fact-modal-close" onClick={() => setEditModal(null)}>×</button>
                         </div>
                         <div className="edit-factura-body">
                             <div className="edit-factura-field">
@@ -600,8 +641,10 @@ function FacturasProveedorPage() {
                             </div>
                         </div>
                         <div className="edit-factura-footer">
-                            <button className="btn-secondary" onClick={() => setEditModal(null)}>Cancelar</button>
-                            <button className="btn-primary" onClick={saveEditModal}><FaSave /> Guardar cambios</button>
+                            <button className="fact-btn-secondary" onClick={() => setEditModal(null)} disabled={isSavingEdit}>Cancelar</button>
+                            <button className="fact-btn-primary" onClick={saveEditModal} disabled={isSavingEdit}>
+                                <FaSave /> {isSavingEdit ? 'Guardando...' : 'Guardar cambios'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -936,16 +979,32 @@ function FacturasProveedorPage() {
                             </div>
 
                             <div className="fct-footer">
-                                <button type="button" className="btn-secondary" onClick={resetModal}>Cancelar</button>
-                                <span className={`total-costos-label ${canSubmit ? 'total-match' : totalCostos > 0 ? 'total-mismatch' : ''}`}>
-                                    {formatCOPInt(totalCostos)}
-                                </span>
-                                <button type="submit" className="btn-primary" disabled={!canSubmit}>Registrar Factura</button>
+                                <button type="button" className="fact-btn-secondary" onClick={resetModal} disabled={isCreating}>Cancelar</button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto', marginRight: '1rem' }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Total Productos:</span>
+                                    <span className={`total-costos-label ${totalCostos === valorFactura && valorFactura > 0 ? 'total-match' : totalCostos > 0 ? 'total-mismatch' : ''}`}>
+                                        {formatCOPInt(totalCostos)}
+                                    </span>
+                                </div>
+                                <button type="submit" className="fact-btn-primary" disabled={isCreating}>
+                                    {isCreating ? 'Guardando...' : 'Registrar Factura'}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+            {/* Toast Notification */}
+            <div className={`fct-toast fct-toast--${toast.type}${toast.visible ? ' fct-toast--visible' : ''}`}>
+                {toast.type === 'success'
+                    ? <FaCheckCircle className="fct-toast-icon" />
+                    : <FaExclamationCircle className="fct-toast-icon" />
+                }
+                <span className="fct-toast-msg">{toast.message}</span>
+                <button className="fct-toast-close" onClick={() => setToast(t => ({ ...t, visible: false }))}>
+                    <FaTimes />
+                </button>
+            </div>
         </div>
     );
 }

@@ -1,0 +1,233 @@
+/* ==========================================================================
+   Premium Modal for "Crear Pedido Tela"
+   ========================================================================== */
+
+.pt-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    padding: 2rem 1rem;
+}
+
+.pt-z-max {
+    z-index: 1100;
+}
+
+.pt-modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 650px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.pt-modal-md { max-width: 550px; }
+.pt-modal-sm { max-width: 400px; }
+
+/* Sticky Header */
+.pt-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.75rem 1.25rem;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.pt-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pt-modal-icon {
+    font-size: 1.2rem;
+    background: #eff6ff;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+}
+
+.pt-modal-title h2 { margin: 0; font-size: 1.05rem; color: #0f172a; font-weight: 700; }
+.pt-modal-title p { margin: 0; font-size: 0.75rem; color: #64748b; }
+
+.pt-modal-close {
+    background: none; border: none; font-size: 1.8rem;
+    color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;
+    transition: color 0.2s;
+}
+.pt-modal-close:hover { color: #0f172a; }
+
+/* Scrollable Body */
+.pt-modal-body {
+    padding: 1rem 1.25rem;
+    overflow-y: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Grid Layouts */
+.pt-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Form Groups */
+.pt-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pt-form-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.pt-form-group label svg { color: #3b82f6; }
+
+.pt-select-wrapper select,
+.pt-form-group input,
+.pt-form-group textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #0f172a;
+    transition: all 0.2s;
+}
+
+.pt-select-wrapper select:focus,
+.pt-form-group input:focus,
+.pt-form-group textarea:focus {
+    background: #ffffff;
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.pt-link-btn {
+    align-self: flex-start;
+    background: none; border: none; padding: 0;
+    color: #3b82f6; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; margin-top: 0.25rem;
+}
+.pt-link-btn:hover { text-decoration: underline; }
+
+/* Productos / Detalles Section */
+.pt-section-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.pt-section-header {
+    background: #f8fafc;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.pt-section-header h4 { margin: 0; font-size: 0.9rem; color: #1e293b; font-weight: 600; }
+
+.pt-detalles-list {
+    padding: 0.5rem 1rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+    max-height: 110px !important;
+    overflow-y: auto !important;
+}
+
+.pt-detalle-row {
+    display: flex; gap: 0.75rem; align-items: center;
+}
+
+.pt-detalle-col-main { flex: 2; }
+.pt-detalle-col-qty { flex: 1; }
+.pt-detalle-col-action { flex: 0 0 auto; }
+
+.pt-detalle-row input {
+    width: 100%; padding: 0.4rem 0.6rem;
+    border: 1px solid #e2e8f0; border-radius: 6px;
+    font-size: 0.85rem; transition: border 0.2s;
+}
+.pt-detalle-row input:focus { border-color: #3b82f6; outline: none; }
+
+.pt-btn-icon-danger {
+    background: #fef2f2; color: #ef4444; border: none;
+    width: 32px; height: 32px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
+}
+.pt-btn-icon-danger:hover { background: #fee2e2; }
+
+.pt-btn-add {
+    background: none; border: none; color: #3b82f6;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.6rem 1rem; width: 100%; justify-content: flex-start;
+    transition: background 0.2s;
+}
+.pt-btn-add:hover { background: #f8fafc; }
+
+/* Sticky Footer */
+.pt-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    padding: 0.75rem 1.25rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.pt-btn-secondary {
+    background: #ffffff; color: #475569;
+    border: 1px solid #cbd5e1; padding: 0.4rem 1rem;
+    border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+    transition: all 0.2s;
+}
+.pt-btn-secondary:hover { background: #f1f5f9; color: #0f172a; }
+
+.pt-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white; border: none; padding: 0.4rem 1.5rem;
+    border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s;
+}
+.pt-btn-primary:hover {
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Modals extra */
+.pt-modal-header h3 { margin: 0; color: #1e293b; font-size: 1.25rem; font-weight: 600; }
+.pt-direcciones-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 250px; overflow-y: auto; }
+.pt-direccion-item { display: flex; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+.pt-direccion-item div { display: flex; flex-direction: column; }
+.pt-direccion-item strong { color: #0f172a; font-size: 0.95rem; }
+.pt-direccion-item span { color: #64748b; font-size: 0.85rem; }
+.pt-hr { border: none; border-top: 1px solid #e2e8f0; margin: 1rem 0; }
+.pt-subtitle { margin: 0 0 1rem 0; font-size: 1rem; color: #1e293b; font-weight: 600; }
+.pt-mt-4 { margin-top: 1rem; }
+.pt-empty-text { text-align: center; color: #94a3b8; font-style: italic; }

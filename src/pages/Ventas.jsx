@@ -83,6 +83,9 @@ const Ventas = () => {
     const [showRemisionModal, setShowRemisionModal] = useState(false);
     const [observacionClienteText, setObservacionClienteText] = useState('');
     const [observacionVentaText, setObservacionVentaText] = useState('');
+    const [isSubmittingObs, setIsSubmittingObs] = useState(false);
+    const [isEditingObs, setIsEditingObs] = useState(false);
+    const [selectedObsId, setSelectedObsId] = useState(null);
     const [remisionData, setRemisionData] = useState({ codigo: '', fecha: '' });
 
     // --- Funciones de Formato ---
@@ -408,9 +411,55 @@ const Ventas = () => {
 
     const getStatusClass = (status) => status ? status.toLowerCase().replace(/ /g, '-') : '';
 
+
+    const handleEditObservacionClick = (tipo, obs) => {
+        setIsEditingObs(true);
+        setSelectedObsId(obs.id);
+        if (tipo === 'cliente') {
+            setObservacionClienteText(obs.texto);
+            setShowObservacionClienteModal(true);
+        } else {
+            setObservacionVentaText(obs.texto);
+            setShowObservacionVentaModal(true);
+        }
+    };
+
+    const handleDeleteObservacion = async (tipo) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar esta observación?')) return;
+        setIsSubmittingObs(true);
+        try {
+            await API.delete(`/observaciones-${tipo}/${selectedObsId}/`);
+            setNotification({ message: 'Observación eliminada correctamente.', type: 'success' });
+            if (tipo === 'cliente') {
+                setShowObservacionClienteModal(false);
+                setObservacionClienteText('');
+            } else {
+                setShowObservacionVentaModal(false);
+                setObservacionVentaText('');
+            }
+            API.get(`/ventas/${expandedVentaId}/`).then(response => {
+                setVentaDetails(response.data);
+            }).catch(error => console.error(error));
+        } catch (error) {
+            console.error('Error al eliminar observación:', error);
+            setNotification({ message: 'Error al eliminar la observación.', type: 'error' });
+        } finally {
+            setIsSubmittingObs(false);
+        }
+    };
+
     const handleAddObservacion = async (tipo) => {
         const id = tipo === 'cliente' ? ventaDetails.cliente.id : expandedVentaId;
-        const url = `/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
+        
+        let url;
+        let method = 'POST';
+        
+        if (isEditingObs) {
+            url = `/observaciones-${tipo}/${selectedObsId}/`;
+            method = 'PUT';
+        } else {
+            url = `/${tipo === 'cliente' ? 'clientes' : 'ventas'}/${id}/observaciones/${tipo === 'cliente' ? 'anadir/' : ''}`;
+        }
 
         const texto = tipo === 'cliente' ? observacionClienteText : observacionVentaText;
 
@@ -419,14 +468,16 @@ const Ventas = () => {
             return;
         }
 
+        setIsSubmittingObs(true);
         try {
-            await API.post(url, { texto });
-            setNotification({ message: 'Observación añadida correctamente.', type: 'success' });
-            console.log('Notification set to success:', { message: 'Observación añadida correctamente.', type: 'success' });
-            // Re-fetch venta details to show new observacion without closing the expanded view
-            const response = await API.get(`/ventas/${expandedVentaId}/`);
-            setVentaDetails(response.data);
-
+            if (method === 'POST') {
+                await API.post(url, { texto });
+                setNotification({ message: 'Observación añadida correctamente.', type: 'success' });
+            } else {
+                await API.put(url, { texto });
+                setNotification({ message: 'Observación actualizada correctamente.', type: 'success' });
+            }
+            
             if (tipo === 'cliente') {
                 setShowObservacionClienteModal(false);
                 setObservacionClienteText('');
@@ -434,6 +485,12 @@ const Ventas = () => {
                 setShowObservacionVentaModal(false);
                 setObservacionVentaText('');
             }
+
+            // Re-fetch venta details to show new observacion in the background
+            API.get(`/ventas/${expandedVentaId}/`).then(response => {
+                setVentaDetails(response.data);
+            }).catch(error => console.error(error));
+
         } catch (error) {
             console.error(`Error al añadir observación de ${tipo}:`, error);
             let friendlyError = 'Error al añadir la observación.';
@@ -448,6 +505,8 @@ const Ventas = () => {
             }
             setNotification({ message: friendlyError, type: 'error' });
             console.log('Notification set to error:', { message: friendlyError, type: 'error' });
+        } finally {
+            setIsSubmittingObs(false);
         }
     };
 
@@ -510,12 +569,12 @@ const Ventas = () => {
 
     const formatReportTitle = (monthYear) => {
         if (!monthYear || monthYear === 'all') {
-            return 'Informe de Ventas - Todas las fechas';
+            return 'Todas las fechas';
         }
         const [month, year] = monthYear.split('-');
         const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const monthName = monthNames[parseInt(month, 10) - 1];
-        return `Informe de Ventas - ${monthName} ${year}`;
+        return `${monthName} ${year}`;
     };
 
     return (
@@ -590,7 +649,7 @@ const Ventas = () => {
                     )}
                 </div>
                 
-                <div className="header-actions" style={{ flexShrink: 0 }}>
+                <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {usuario?.role.toLowerCase() === 'administrador' && (
                         <button className="v-btn-ghost" onClick={exportVentas} title="Exportar Excel">
                             <FaFileExport />
@@ -649,7 +708,7 @@ const Ventas = () => {
                                 ))
                             ) : ventas.length === 0 ? (
                                 <tr>
-                                    <td colSpan="11" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                                    <td colSpan="13" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
                                         <div className="empty-state-content">
                                             <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', marginBottom: '1rem' }}>No se encontraron ventas.</p>
                                             <button className="btn-primary" onClick={() => navigate('/nuevaVenta')}>
@@ -707,9 +766,9 @@ const Ventas = () => {
                                         </tr>
                                         {expandedVentaId === venta.id && (
                                             <tr className="expanded-row">
-                                                <td colSpan="11" className="expanded-row-content">
+                                                <td colSpan="13" className="expanded-row-content">
                                                     {loadingDetails ? (
-                                                        <div className="loader-container">
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '1rem', width: '100%', textAlign: 'center' }}>
                                                             <div className="loader-spinner"></div>
                                                             <p className="loader-text">Cargando detalles...</p>
                                                         </div>
@@ -815,72 +874,82 @@ const Ventas = () => {
                                                                         ))}
                                                                     </div>
                                                                 ) : (
-                                                                    <p className="text-muted">No hay remisiones asociadas. Haz clic en el botón + para generar una.</p>
+                                                                    <p className="text-muted">Sin remisiones asociadas.</p>
                                                                 )}
                                                             </div>
 
-                                                            {/* Observaciones Cliente */}
-                                                            <div className="details-card observaciones-cliente">
-                                                                <h4>
-                                                                    Obs. Cliente
-                                                                    <button className="card-header-action" onClick={() => {
-                                                                        setObservacionClienteText('');
-                                                                        setShowObservacionClienteModal(true);
-                                                                    }} title="Añadir Observación Cliente"><FaPlus /></button>
-                                                                </h4>
-                                                                {isPartialData ? (
-                                                                    <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
-                                                                ) : ventaDetails.cliente.observaciones && ventaDetails.cliente.observaciones.length > 0 ? (
-                                                                    <div className="observaciones-list">
-                                                                        {ventaDetails.cliente.observaciones.map((obs, index) => (
-                                                                            <div key={index} className="observacion-card">
-                                                                                <div className="observacion-icon">💬</div>
-                                                                                <div className="observacion-content">
-                                                                                    <p className="observacion-text">{obs.texto}</p>
+                                                            {/* Observaciones Unidas */}
+                                                            <div className="details-card observaciones-unidas" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                                <div>
+                                                                    <h4>
+                                                                        Obs. Cliente
+                                                                        <button className="card-header-action" onClick={() => {
+                                                                            setIsEditingObs(false);
+                                                                            setSelectedObsId(null);
+                                                                            setObservacionClienteText('');
+                                                                            setShowObservacionClienteModal(true);
+                                                                        }} title="Añadir Observación Cliente"><FaPlus /></button>
+                                                                    </h4>
+                                                                    {isPartialData ? (
+                                                                        <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
+                                                                    ) : ventaDetails.cliente.observaciones && ventaDetails.cliente.observaciones.length > 0 ? (
+                                                                        <div className="observaciones-list">
+                                                                            {ventaDetails.cliente.observaciones.map((obs, index) => (
+                                                                                <div key={index} className="observacion-card" onClick={() => handleEditObservacionClick('cliente', obs)}>
+                                                                                    <div className="observacion-icon">💬</div>
+                                                                                    <div className="observacion-content">
+                                                                                        <p className="observacion-text">{obs.texto}</p>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : <p className="text-muted">Sin observaciones de cliente.</p>}
-                                                            </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : <p className="text-muted">Sin observaciones de cliente.</p>}
+                                                                </div>
 
-                                                            {/* Observaciones Venta */}
-                                                            <div className="details-card observaciones-venta">
-                                                                <h4>
-                                                                    Obs. Venta
-                                                                    <button className="card-header-action" onClick={() => {
-                                                                        setObservacionVentaText('');
-                                                                        setShowObservacionVentaModal(true);
-                                                                    }} title="Añadir Observación Venta"><FaPlus /></button>
-                                                                </h4>
-                                                                {isPartialData ? (
-                                                                    <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
-                                                                ) : ventaDetails.observaciones_venta && ventaDetails.observaciones_venta.length > 0 ? (
-                                                                    <div className="observaciones-list">
-                                                                        {ventaDetails.observaciones_venta.map((obs, index) => (
-                                                                            <div key={index} className="observacion-card">
-                                                                                <div className="observacion-icon">📝</div>
-                                                                                <div className="observacion-content">
-                                                                                    <p className="observacion-text">{obs.texto}</p>
+                                                                <div>
+                                                                    <h4>
+                                                                        Obs. Venta
+                                                                        <button className="card-header-action" onClick={() => {
+                                                                            setIsEditingObs(false);
+                                                                            setSelectedObsId(null);
+                                                                            setObservacionVentaText('');
+                                                                            setShowObservacionVentaModal(true);
+                                                                        }} title="Añadir Observación Venta"><FaPlus /></button>
+                                                                    </h4>
+                                                                    {isPartialData ? (
+                                                                        <p className="text-muted" style={{ fontStyle: 'italic' }}>Información no disponible en vista parcial.</p>
+                                                                    ) : ventaDetails.observaciones_venta && ventaDetails.observaciones_venta.length > 0 ? (
+                                                                        <div className="observaciones-list">
+                                                                            {ventaDetails.observaciones_venta.map((obs, index) => (
+                                                                                <div key={index} className="observacion-card" onClick={() => handleEditObservacionClick('venta', obs)}>
+                                                                                    <div className="observacion-icon">📝</div>
+                                                                                    <div className="observacion-content">
+                                                                                        <p className="observacion-text">{obs.texto}</p>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : <p className="text-muted">Sin observaciones de venta.</p>}
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : <p className="text-muted">Sin observaciones de venta.</p>}
+                                                                </div>
                                                             </div>
 
                                                             {/* Órdenes de Pedido (Full Width) */}
                                                             <div className="details-card details-full-width orders-section">
                                                                 <div className="pedidos-header">
                                                                     <h4>Órdenes de Pedido</h4>
-                                                                    {usuario?.role === 'administrador' && (
-                                                                        <button className="btn-primary" onClick={() => {
-                                                                            setEditSaleData(ventaDetails);
-                                                                            setShowEditSaleModal(true);
-                                                                        }}>
-                                                                            <FaEdit /> Editar Venta
+                                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                                        <button className="v-btn-primary-glow" onClick={() => navigate('/ordenes/nuevo', { state: { ventaId: venta.id } })}>
+                                                                            <FaPlus /> Agregar Pedido
                                                                         </button>
-                                                                    )}
+                                                                        {usuario?.role === 'administrador' && (
+                                                                            <button className="v-btn-primary-glow" onClick={() => {
+                                                                                setEditSaleData(ventaDetails);
+                                                                                setShowEditSaleModal(true);
+                                                                            }}>
+                                                                                <FaEdit /> Editar Venta
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
 
                                                                 {ventaDetails.ordenes_pedido && ventaDetails.ordenes_pedido.length > 0 ? (
@@ -1172,7 +1241,7 @@ const Ventas = () => {
             <Modal
                 show={showObservacionClienteModal}
                 onClose={() => setShowObservacionClienteModal(false)}
-                title="Agregar Observación al Cliente"
+                title={isEditingObs ? "Editar Observación" : "Agregar Observación al Cliente"}
             >
                 <div className="modal-form-container">
                     <div className="form-group">
@@ -1186,9 +1255,16 @@ const Ventas = () => {
                             rows={5}
                         ></textarea>
                     </div>
-                    <div className="modal-actions">
-                        <button className="btn-secondary-modal" onClick={() => setShowObservacionClienteModal(false)}>Cancelar</button>
-                        <button className="btn-primary-modal" onClick={() => handleAddObservacion('cliente')}>Guardar Observación</button>
+                    <div className="modal-actions" style={{ justifyContent: isEditingObs ? 'space-between' : 'flex-end', width: '100%' }}>
+                        {isEditingObs && (
+                            <button className="btn-danger-modal" onClick={() => handleDeleteObservacion('cliente')} disabled={isSubmittingObs} style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                                Eliminar
+                            </button>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn-secondary-modal" onClick={() => setShowObservacionClienteModal(false)}>Cancelar</button>
+                            <button className="btn-primary-modal" onClick={() => handleAddObservacion('cliente')} disabled={isSubmittingObs}>{isSubmittingObs ? 'Guardando...' : 'Guardar Cambios'}</button>
+                        </div>
                     </div>
                 </div>
             </Modal>
@@ -1196,7 +1272,7 @@ const Ventas = () => {
             <Modal
                 show={showObservacionVentaModal}
                 onClose={() => setShowObservacionVentaModal(false)}
-                title="Agregar Observación a la Venta"
+                title={isEditingObs ? "Editar Observación" : "Agregar Observación a la Venta"}
             >
                 <div className="modal-form-container">
                     <div className="form-group">
@@ -1210,9 +1286,16 @@ const Ventas = () => {
                             rows={5}
                         ></textarea>
                     </div>
-                    <div className="modal-actions">
-                        <button className="btn-secondary-modal" onClick={() => setShowObservacionVentaModal(false)}>Cancelar</button>
-                        <button className="btn-primary-modal" onClick={() => handleAddObservacion('venta')}>Guardar Observación</button>
+                    <div className="modal-actions" style={{ justifyContent: isEditingObs ? 'space-between' : 'flex-end', width: '100%' }}>
+                        {isEditingObs && (
+                            <button className="btn-danger-modal" onClick={() => handleDeleteObservacion('venta')} disabled={isSubmittingObs} style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                                Eliminar
+                            </button>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn-secondary-modal" onClick={() => setShowObservacionVentaModal(false)}>Cancelar</button>
+                            <button className="btn-primary-modal" onClick={() => handleAddObservacion('venta')} disabled={isSubmittingObs}>{isSubmittingObs ? 'Guardando...' : 'Guardar Cambios'}</button>
+                        </div>
                     </div>
                 </div>
             </Modal>

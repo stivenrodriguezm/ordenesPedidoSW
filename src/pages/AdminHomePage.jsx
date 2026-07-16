@@ -248,7 +248,7 @@ const AdminHomePage = () => {
             <div className="main-content-grid">
                 {/* Quick Actions */}
                 <section className="quick-actions-section">
-                    <h2 className="section-title">Acciones Rápidas</h2>
+                    <div className="section-header"><h2>Acciones Rápidas</h2></div>
                     <div className="actions-grid-admin">
                         <Link to="/nuevaVenta" className="action-card-admin action-primary">
                             <div className="action-icon-bg">
@@ -302,7 +302,7 @@ const AdminHomePage = () => {
 
                 {/* Sales Chart */}
                 <section className="chart-section">
-                    <h2 className="section-title">Análisis de Ventas</h2>
+                    <div className="section-header"><h2>Análisis de Ventas</h2></div>
                     <div className="chart-wrapper">
                         {chartData && <Bar options={chartOptions} data={chartData} />}
                     </div>
@@ -312,7 +312,7 @@ const AdminHomePage = () => {
             {/* Recent Sales Table */}
             <section className="recent-sales-section">
                 <div className="section-header">
-                    <h2 className="section-title">Últimas Ventas Registradas</h2>
+                    <h2>Últimas Ventas Registradas</h2>
                     <Link to="/ventas" className="view-all-link">
                         Ver todas →
                     </Link>
@@ -339,7 +339,7 @@ const AdminHomePage = () => {
                                         <td className="valor-cell">{formatCurrency(venta.valor_total)}</td>
                                         <td className="fecha-cell">{formatDate(venta.fecha_venta)}</td>
                                         <td>
-                                            <span className={`status-badge-enhanced status-${venta.estado?.toLowerCase()}`}>
+                                            <span className={`status-badge ${venta.estado?.toLowerCase()}`}>
                                                 {venta.estado}
                                             </span>
                                         </td>

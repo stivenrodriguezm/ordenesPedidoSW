@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
 import { AppContext } from '../AppContext';
+import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
 import API from '../services/api';
 import logoFinal from '../assets/logoFinal.png';
 
@@ -44,7 +45,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content edit-order-modal">
         <div className="modal-header">
           <h3>Actualizar Pedido O.P. #{orden.id}</h3>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -101,6 +102,7 @@ const OrdenesPage = () => {
   const [selectedProveedor, setSelectedProveedor] = useState('');
   const [selectedVendedor, setSelectedVendedor] = useState('');
   const [selectedEstado, setSelectedEstado] = useState('en_proceso');
+  const [selectedExhibicion, setSelectedExhibicion] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderTelas, setOrderTelas] = useState([]);
@@ -109,6 +111,7 @@ const OrdenesPage = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isTelaModalOpen, setIsTelaModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // --- PASO 1: AÑADIR NUEVO ESTADO PARA LA ACTUALIZACIÓN ---
@@ -182,6 +185,7 @@ const OrdenesPage = () => {
           id_proveedor: selectedProveedor,
           id_vendedor: selectedVendedor,
           estado: selectedEstado,
+          es_exhibicion: selectedExhibicion,
           ordering: '-id',
         };
 
@@ -204,7 +208,7 @@ const OrdenesPage = () => {
     };
 
     fetchOrdenes();
-  }, [selectedProveedor, selectedVendedor, selectedEstado, token, user]);
+  }, [selectedProveedor, selectedVendedor, selectedEstado, selectedExhibicion, token, user]);
 
 
 
@@ -350,25 +354,47 @@ const OrdenesPage = () => {
   return (
     <div className="page-container">
       {/* ... (código JSX sin cambios hasta el modal) ... */}
-      <div className="page-header">
-        <div className="filters-group">
-          <select value={selectedProveedor} onChange={(e) => { setSelectedProveedor(e.target.value); }} disabled={isLoadingProveedores}>
-            <option value="">{isLoadingProveedores ? "Cargando proveedores..." : "Todos los proveedores"}</option>
-            {!isLoadingProveedores && Array.isArray(proveedores) && proveedores.map((prov) => (<option key={prov.id} value={prov.id}>{prov.nombre_empresa}</option>))}
-          </select>
-          {(user?.role === 'administrador' || user?.role === 'auxiliar') && (
-            <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
-              <option value="">Todos los vendedores</option>
-              {vendedores.map((vendedor) => (<option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>))}
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="o-select-pill">
+            <select value={selectedProveedor} onChange={(e) => { setSelectedProveedor(e.target.value); }} disabled={isLoadingProveedores}>
+              <option value="">{isLoadingProveedores ? "Cargando proveedores..." : "Proveedor: Todos"}</option>
+              {!isLoadingProveedores && Array.isArray(proveedores) && proveedores.map((prov) => (<option key={prov.id} value={prov.id}>{prov.nombre_empresa}</option>))}
             </select>
+          </div>
+          {(user?.role === 'administrador' || user?.role === 'auxiliar') && (
+            <div className="o-select-pill">
+              <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
+                <option value="">Vendedor: Todos</option>
+                {vendedores.map((vendedor) => (<option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>))}
+              </select>
+            </div>
           )}
-          <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
-            {estados.map((estado) => (<option key={estado.value} value={estado.value}>{estado.label}</option>))}
-          </select>
+          <div className="o-select-pill">
+            <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
+              {estados.map((estado) => (<option key={estado.value} value={estado.value}>{estado.label === 'Todos' ? 'Estado: Todos' : estado.label}</option>))}
+            </select>
+          </div>
+          <div className="o-select-pill">
+            <select value={selectedExhibicion} onChange={(e) => { setSelectedExhibicion(e.target.value); }}>
+              <option value="">Exhibición: Todos</option>
+              <option value="true">Sí (Exhibición)</option>
+              <option value="false">No (Exhibición)</option>
+            </select>
+          </div>
         </div>
-        <div className="actions-group">
-          {(user?.role === 'administrador' || user?.role === 'auxiliar') && <button className="btn-secondary" onClick={exportOrdenes}><FaFileExport /> Exportar</button>}
-          <button className="btn-primary" onClick={() => navigate('/ordenes/nuevo')}><FaPlus /> Crear Pedido</button>
+
+        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {(user?.role === 'administrador' || user?.role === 'auxiliar') && (
+            <button className="o-btn-ghost" onClick={exportOrdenes} title="Exportar Excel">
+              <FaFileExport />
+            </button>
+          )}
+          <button className="o-btn-primary-glow" onClick={() => navigate('/ordenes/nuevo')}>
+            <FaPlus />
+            <span className="long-text">Crear Pedido</span>
+            <span className="short-text">Crear</span>
+          </button>
         </div>
       </div>
 
@@ -387,17 +413,18 @@ const OrdenesPage = () => {
                 <th className="th-tela">Tela</th>
                 <th className="th-estado">Estado</th>
                 <th className="th-observacion">Observación</th>
+                <th className="th-exh" title="¿Es para exhibición?">Exh.</th>
                 {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <th className="th-costo">Costo</th>}
                 <th className="th-accion"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={11}><div className="loading-container"><div className="loader"></div></div></td></tr>
+                <tr><td colSpan={12}><div className="loading-container"><div className="loader"></div></div></td></tr>
               ) : filteredOrdenes.length > 0 ? (
                 filteredOrdenes.map((orden) => (
                   <React.Fragment key={`orden-${orden.id}`}>
-                    <tr className={expandedOrderId === orden.id ? 'expanded-row-highlight' : ''}>
+                    <tr className={`table-row-clickable ${expandedOrderId === orden.id ? 'expanded-row-highlight' : ''}`} onClick={() => handleExpandOrder(orden.id)} style={{ cursor: 'pointer' }}>
                       <td className="td-op"><strong>#{orden.id}</strong></td>
                       <td className="td-proveedor">{orden.proveedor_nombre}</td>
                       <td className="td-vendedor">{orden.vendedor}</td>
@@ -407,19 +434,23 @@ const OrdenesPage = () => {
                       <td className="td-tela"><span className={`status-badge ${getTelaClass(orden.tela)}`}>{orden.tela}</span></td>
                       <td className="td-estado"><span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>{getEstadoText(orden.estado, orden.fecha_esperada)}</span></td>
                       <td className="td-observacion"><div className="truncate-text" title={orden.observacion}>{orden.observacion}</div></td>
+                      <td className="td-exh">{orden.es_exhibicion ? <span className="exh-badge exh-si">Sí</span> : <span className="exh-badge exh-no">No</span>}</td>
                       {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <td className="td-costo font-mono">${formatNumber(orden.costo)}</td>}
                       <td className="td-accion">
-                        <button className="btn-icon action-btn" onClick={() => handleExpandOrder(orden.id)}>
+                        <button className="btn-icon action-btn" onClick={(e) => { e.stopPropagation(); handleExpandOrder(orden.id); }}>
                           <FaChevronDown style={{ transform: expandedOrderId === orden.id ? 'rotate(180deg)' : 'none' }} />
                         </button>
                       </td>
                     </tr>
                     {expandedOrderId === orden.id && (
                       <tr className="expanded-row">
-                        <td colSpan={user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar' ? 11 : 10}>
+                        <td colSpan={user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar' ? 12 : 11}>
+                          {loadingDetails ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
+                              <div className="loader"></div>
+                            </div>
+                          ) : errorMessage ? <div className="error-cell">{errorMessage}</div> : (
                           <div className="details-view-wrapper">
-                            {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
-                              errorMessage ? <div className="error-cell">{errorMessage}</div> :
                                 <>
                                   {/* Columna izquierda: resumen de la orden */}
                                   <div className="order-preview">
@@ -482,9 +513,20 @@ const OrdenesPage = () => {
 
                                   {/* Columna derecha: listado de pedidos de tela */}
                                   <div className="telas-preview">
-                                    <div className="telas-preview-header">
-                                      <span className="telas-preview-icon">🧵</span>
-                                      <h4>Pedidos de Tela</h4>
+                                    <div className="telas-preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span className="telas-preview-icon">🧵</span>
+                                        <h4 style={{ margin: 0 }}>Pedidos de Tela</h4>
+                                      </div>
+                                      <button 
+                                        type="button" 
+                                        className="btn-ghost-primary" 
+                                        onClick={() => setIsTelaModalOpen(true)}
+                                        style={{ padding: '0.5rem', fontSize: '0.9rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                        title="Crear Nuevo Pedido de Tela"
+                                      >
+                                        <FaPlus />
+                                      </button>
                                     </div>
                                     {orderTelas.length === 0 ? (
                                       <p className="telas-empty">No hay pedidos de tela registrados para esta orden.</p>
@@ -523,15 +565,15 @@ const OrdenesPage = () => {
                                     )}
                                   </div>
                                 </>
-                            }
-                          </div>
+                           </div>
+                           )}
                         </td>
                       </tr>
                     )}
                   </React.Fragment>
                 ))
               ) : (
-                <tr><td colSpan={11} className="empty-cell">No hay órdenes para mostrar.</td></tr>
+                <tr><td colSpan={12} className="empty-cell">No hay órdenes para mostrar.</td></tr>
               )}
             </tbody>
           </table>
@@ -576,7 +618,11 @@ const OrdenesPage = () => {
                 {expandedOrderId === orden.id && (
                   <div className="mobile-details-container">
                     <div className="details-view-wrapper">
-                      {loadingDetails ? <div className="loading-container"><div className="loader"></div></div> :
+                      {loadingDetails ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
+                              <div className="loader"></div>
+                            </div>
+                          ) :
                         errorMessage ? <div className="error-message">{errorMessage}</div> :
                           orderDetails ? (
                             <div className="mobile-expanded-content">
@@ -678,6 +724,24 @@ const OrdenesPage = () => {
           </div>
         </div>
       )}
+      <CrearPedidoTelaModal 
+        isOpen={isTelaModalOpen}
+        onClose={() => setIsTelaModalOpen(false)}
+        initialOrdenAsociadaId={expandedOrderId}
+        onSuccess={async () => {
+          setIsTelaModalOpen(false);
+          if (expandedOrderId) {
+             try {
+                const telasRes = await API.get('pedidos-telas/');
+                const telasData = telasRes.data.results || telasRes.data || [];
+                const telasAsociadas = telasData.filter(pt => String(pt.orden_asociada_id) === String(expandedOrderId));
+                setOrderTelas(telasAsociadas);
+             } catch (e) {
+                console.error(e);
+             }
+          }
+        }}
+      />
     </div>
   );
 };

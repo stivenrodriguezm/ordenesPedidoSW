@@ -3,8 +3,8 @@ import API from '../services/api';
 import { AppContext } from '../AppContext';
 import './TelasPage.css';
 import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog } from 'react-icons/fa';
-import html2canvas from 'html2canvas';
 import logoFinal from '../assets/logoFinal.png';
+import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
 
 const TelasPage = () => {
     const { usuario } = useContext(AppContext);
@@ -371,7 +371,7 @@ const TelasPage = () => {
                             <tbody>
                                 {pedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
-                                        <tr className={expandedPedidoId === pedido.id ? 'expanded-row-highlight' : ''}>
+                                        <tr className={`table-row-clickable ${expandedPedidoId === pedido.id ? 'expanded-row-highlight' : ''}`} onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
                                             <td className="font-mono">{pedido.id}</td>
                                             <td>{pedido.usuario_nombre}</td>
                                             <td>{pedido.proveedor_nombre}</td>
@@ -384,7 +384,7 @@ const TelasPage = () => {
                                             <td>{pedido.orden_id ? `#${pedido.orden_id}` : '-'}</td>
                                             <td className="truncate-text" style={{ maxWidth: '200px' }}>{pedido.direccion_entrega}</td>
                                             <td>
-                                                <button className="action-btn" onClick={() => toggleExpand(pedido.id)}>
+                                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(pedido.id); }}>
                                                     {expandedPedidoId === pedido.id ? <FaChevronUp /> : <FaChevronDown />}
                                                 </button>
                                             </td>

@@ -14,10 +14,13 @@
 .modal-content {
   background-color: white;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  width: 500px;
-  max-width: 90%;
+  width: 650px;
+  max-width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -42,4 +45,6 @@
 
 .modal-body {
   padding-top: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }

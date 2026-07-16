@@ -10,6 +10,9 @@ export const usePermissions = () => {
   const hasPermission = (feature) => {
     if (!usuario) return false;
     if (permissions.includes('ALL')) return true;
+    if (feature === 'BASES_DATOS') {
+      return permissions.includes('VER_CLIENTES') || permissions.includes('VER_PROVEEDORES') || permissions.includes('VER_REFERENCIAS');
+    }
     return permissions.includes(feature);
   };
   return hasPermission;

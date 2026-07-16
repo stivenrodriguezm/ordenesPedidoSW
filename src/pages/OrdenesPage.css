@@ -845,3 +845,218 @@
     padding: 1rem;
   }
 }
+
+/* === O.P Glass Header Styles === */
+/* ==========================================================================
+   Premium Glass Header & Filters (Ventas Specific to avoid global collisions)
+   ========================================================================== */
+.o-glass-header {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 1rem;
+  z-index: 50;
+}
+
+.o-btn-primary-glow {
+  background: #274385;
+  color: white;
+  border: none;
+  padding: 0 0.85rem;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.o-btn-primary-glow:hover {
+  background: #1a2d59;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px #192b54;
+}
+
+.o-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--slate-200, #e2e8f0);
+  color: var(--slate-600, #475569);
+  padding: 0 0.6rem;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.o-btn-ghost:hover {
+  background: var(--slate-50, #f8fafc);
+  color: var(--slate-900, #0f172a);
+}
+
+.o-filters-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.o-search-pill {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--slate-200, #e2e8f0);
+  border-radius: 9999px;
+  padding: 0 0.6rem;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s;
+  cursor: text;
+  flex-shrink: 0;
+}
+
+.o-search-pill:hover {
+  background: var(--slate-50, #f8fafc);
+  border-color: var(--slate-300, #cbd5e1);
+}
+
+.o-search-pill:focus-within {
+  border-color: var(--slate-300, #cbd5e1) !important;
+  box-shadow: none !important;
+  background: var(--surface, #ffffff);
+}
+
+.o-search-pill input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-size: 0.82rem;
+  color: var(--slate-600, #475569);
+  background: transparent !important;
+  width: 120px;
+  padding: 0;
+  height: 100%;
+}
+
+.o-select-pill {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.o-select-pill select {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--slate-200, #e2e8f0);
+  border-radius: 9999px;
+  padding: 0 0.8rem;
+  height: 100%;
+  font-size: 0.82rem;
+  color: var(--slate-600, #475569);
+  cursor: pointer;
+  appearance: auto;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.o-select-pill select:hover {
+  background: var(--slate-50, #f8fafc);
+  border-color: var(--slate-300, #cbd5e1);
+}
+
+.o-select-pill select:focus {
+  outline: none !important;
+  border-color: var(--slate-300, #cbd5e1) !important;
+  box-shadow: none !important;
+}
+
+/* Hide long text on mobile if needed */
+.short-text { display: none; }
+@media (max-width: 768px) {
+  .long-text { display: none; }
+  .short-text { display: inline; }
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+}
+.info-row .label {
+  font-weight: 600;
+  color: var(--ventas-text-light);
+}
+
+
+   Vista Previa para Imagen (Sin Cambios Visuales)
+   ========================================================================== */
+#pedido-preview {
+  width: 700px; background-color: #ffffff !important; border: 1px solid #e0e0e0;
+  border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 20px;
+  font-family: Arial, sans-serif; font-size: 14px; color: #333;
+  position: absolute; left: -9999px; top: -9999px;
+}
+.preview-container, .order-preview { display: flex; flex-direction: column; gap: 15px; background-color: #ffffff; }
+.preview-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #131931; padding-bottom: 10px; margin-bottom: 0; }
+.logoPedido { width: 200px; height: auto; }
+.numPedido h2 { margin: 0; font-size: 20px; color: #131931; text-align: right; }
+.numPedido .numeroOP { margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #dc3545; text-align: right; }
+.preview-info { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 0; }
+.info-column { flex: 1; }
+.info-column p { margin: 5px 0; font-size: 14px; }
+.info-column p strong { color: #131931; }
+.preview-productos-title { margin: 15px 0 10px; font-size: 18px; font-weight: 600; color: #131931; }
+.preview-productos-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.preview-productos-table th, .preview-productos-table td { padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: left; background-color: #ffffff; }
+.preview-productos-table th { background-color: #f9f9f9; color: #131931; font-weight: 600; }
+.preview-productos-table th:nth-child(1), .preview-productos-table td:nth-child(1) { width: 20%; }
+.preview-productos-table th:nth-child(2), .preview-productos-table td:nth-child(2) { width: 30%; }
+.preview-productos-table th:nth-child(3), .preview-productos-table td:nth-child(3) { width: 50%; }
+.preview-productos-table .desc-preview { word-wrap: break-word; max-width: 100%; white-space: normal; }
+.preview-nota { margin-top: 15px; }
+.preview-nota h3 { margin: 0 0 5px; font-size: 16px; font-weight: 600; color: #131931; }
+.preview-nota p { margin: 0; padding: 10px; background-color: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 14px; line-height: 1.5; }
+
+
+/* --- Exhibicion Column --- */
+.th-exh, .td-exh {
+  width: 52px;
+  text-align: center;
+}
+.exh-badge {
+  display: inline-block;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.exh-badge.exh-si {
+  background: #dcfce7;
+  color: #15803d;
+}
+.exh-badge.exh-no {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+/* Override for Edit Order Modal */
+.edit-order-modal {
+  max-width: 420px !important;
+  width: 100% !important;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
@@ -8,8 +8,17 @@ import API from '../services/api';
 const NuevaVenta = () => {
   const navigate = useNavigate();
 
-  // Estados para el cliente
-  const [clienteId, setClienteId] = useState('');
+  // ── Estado: Búsqueda de cliente ────────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSharedVendors, setShowSharedVendors] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  // ── Estado: cliente ─────────────────────────────────────────────────────────
+  const [clienteId, setClienteId] = useState(null); // ID del cliente existente seleccionado
   const [isClienteNuevo, setIsClienteNuevo] = useState(true);
   const [clienteTitle, setClienteTitle] = useState('Cliente Nuevo');
   const [clienteData, setClienteData] = useState({
@@ -22,7 +31,7 @@ const NuevaVenta = () => {
     telefono2: ''
   });
 
-  // Estados para la venta
+  // ── Estado: venta ───────────────────────────────────────────────────────────
   const [ventaData, setVentaData] = useState({
     id: '',
     id_vendedor: '',
@@ -34,13 +43,8 @@ const NuevaVenta = () => {
     valor_total: ''
   });
 
-  // Estado para la observación
   const [observacion, setObservacion] = useState('');
-
-  // Estado para los vendedores
   const [vendedores, setVendedores] = useState([]);
-
-  // Estados para manejo de errores y carga
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -57,60 +61,98 @@ const NuevaVenta = () => {
     };
     fetchVendedores();
 
-    // Establecer la fecha de venta por defecto
     const today = new Date();
     const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Enero es 0!
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    const formattedToday = `${yyyy}-${mm}-${dd}`;
-    setVentaData(prev => ({ ...prev, fecha_venta: formattedToday }));
+    setVentaData(prev => ({ ...prev, fecha_venta: `${yyyy}-${mm}-${dd}` }));
   }, []);
 
-  // Manejar búsqueda de cliente antiguo
-  const handleBuscarCliente = async () => {
-    if (!clienteId) {
-      setNotification({ message: 'Por favor, ingrese un ID de cliente.', type: 'error' });
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Búsqueda con debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setShowDropdown(true);
+
+    // Limpiar selección previa si el usuario modifica el texto
+    if (clienteId) {
+      setClienteId(null);
+      setIsClienteNuevo(true);
+      setClienteTitle('Cliente Nuevo');
+      setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
+    }
+
+    clearTimeout(debounceRef.current);
+    if (!value.trim() || value.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
       return;
     }
-
-    setIsLoading(true);
-    try {
-      const response = await API.get(`/clientes/${clienteId}/`);
-
-      const cliente = response.data;
-      setClienteData({
-        nombre: cliente.nombre || '',
-        cedula: cliente.cedula || '',
-        correo: cliente.correo || '',
-        direccion: cliente.direccion || '',
-        ciudad: cliente.ciudad || 'Bogotá',
-        telefono1: cliente.telefono1 || '',
-        telefono2: cliente.telefono2 || ''
-      });
-      setClienteTitle('Cliente Antiguo');
-      setIsClienteNuevo(false);
-      setNotification({ message: '', type: '' });
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setNotification({ message: 'Cliente no existe.', type: 'error' });
-      } else {
-        setNotification({ message: 'Error al buscar el cliente.', type: 'error' });
+    debounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await API.get(`/clientes/?search=${encodeURIComponent(value)}&limit=8`);
+        const results = res.data?.results || res.data || [];
+        setSearchResults(results);
+        setShowDropdown(true);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
       }
-      // Limpiar el formulario si no se encuentra el cliente
-      setClienteData({
-        nombre: '',
-        cedula: '',
-        correo: '',
-        direccion: '',
-        ciudad: 'Bogotá',
-        telefono1: '',
-        telefono2: ''
-      });
-      setClienteTitle('Cliente Nuevo');
-      setIsClienteNuevo(true);
-    } finally {
-      setIsLoading(false);
-    }
+    }, 350);
+  };
+
+  // Seleccionar cliente del dropdown
+  const handleSelectCliente = (cliente) => {
+    setClienteId(cliente.id);
+    setSearchTerm(`${cliente.nombre} ${cliente.cedula ? `— Céd: ${cliente.cedula}` : ''}`.trim());
+    setShowDropdown(false);
+    setSearchResults([]);
+    setClienteData({
+      nombre: cliente.nombre || '',
+      cedula: cliente.cedula || '',
+      correo: cliente.correo || '',
+      direccion: cliente.direccion || '',
+      ciudad: cliente.ciudad || 'Bogotá',
+      telefono1: cliente.telefono1 || '',
+      telefono2: cliente.telefono2 || '',
+    });
+    setClienteTitle('Cliente Existente');
+    setIsClienteNuevo(false);
+  };
+
+  // Cambiar a pestaña Cliente Existente
+  const handleTabExistente = () => {
+    setIsClienteNuevo(false);
+    setClienteTitle('Buscar Cliente Existente');
+    setClienteId(null);
+    setSearchTerm('');
+    setSearchResults([]);
+    setShowDropdown(false);
+    setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
+  };
+
+  // Nuevo cliente: limpiar todo y habilitar edición
+  const handleNuevoCliente = () => {
+    setClienteId(null);
+    setSearchTerm('');
+    setSearchResults([]);
+    setShowDropdown(false);
+    setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
+    setIsClienteNuevo(true);
+    setClienteTitle('Cliente Nuevo');
   };
 
   // Manejar cambios en los campos del cliente
@@ -212,22 +254,93 @@ const NuevaVenta = () => {
       )}
 
       <div className="nv-form-sections">
-        {/* Sección de Cliente Antiguo/Nuevo */}
+      {/* ── Sección de búsqueda de cliente ── */}
         <div className="cliente-section nv-card">
-          <div className="cliente-antiguo">
-            <h3>Buscar Cliente Antiguo</h3>
-            <div className="nv-search-cliente">
-              <input
-                type="text"
-                placeholder="ID del cliente"
-                value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
-              />
-              <button onClick={handleBuscarCliente} disabled={isLoading}>Buscar</button>
+          <div className="nv-cliente-search-header">
+            <div className="nv-cliente-tabs">
+              <button
+                type="button"
+                className={`nv-tab-btn ${isClienteNuevo ? 'active' : ''}`}
+                onClick={handleNuevoCliente}
+              >
+                Nuevo Cliente
+              </button>
+              <button
+                type="button"
+                className={`nv-tab-btn ${!isClienteNuevo ? 'active' : ''}`}
+                onClick={handleTabExistente}
+              >
+                Existente
+              </button>
             </div>
           </div>
 
-          <div className="cliente-form">
+          {/* Buscador por nombre/cédula - Solo visible si es Existente */}
+          {!isClienteNuevo && (
+            <div className="nv-search-wrapper" ref={searchRef}>
+            <div className="nv-search-cliente">
+              <div className="nv-search-input-wrap">
+                <svg className="nv-search-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar cliente por nombre o cédula..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                  autoComplete="off"
+                />
+                {isSearching && <div className="nv-search-spinner" />}
+                {searchTerm && !isSearching && (
+                  <button
+                    type="button"
+                    className="nv-search-clear"
+                    onClick={handleNuevoCliente}
+                    title="Limpiar búsqueda"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Dropdown de resultados */}
+            {showDropdown && searchResults.length > 0 && (
+              <ul className="nv-search-dropdown">
+                {searchResults.map(cliente => (
+                  <li
+                    key={cliente.id}
+                    className="nv-search-item"
+                    onMouseDown={() => handleSelectCliente(cliente)}
+                  >
+                    <div className="nv-search-item-name">{cliente.nombre}</div>
+                    <div className="nv-search-item-meta">
+                      {cliente.cedula && <span>Céd: {cliente.cedula}</span>}
+                      {cliente.ciudad && <span>{cliente.ciudad}</span>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {showDropdown && !isSearching && searchTerm.length >= 2 && searchResults.length === 0 && (
+              <div className="nv-search-empty">Sin resultados.</div>
+            )}
+          </div>
+          )}
+
+          {/* Indicador de cliente seleccionado */}
+          {!isClienteNuevo && clienteId && (
+            <div className="nv-cliente-badge">
+              <span className="nv-badge-dot" />
+              <span>Cliente existente seleccionado (puedes editar sus datos si lo deseas)</span>
+              <button type="button" onClick={handleTabExistente} className="nv-badge-clear">Cambiar</button>
+            </div>
+          )}
+
+          {/* Formulario del cliente (Visible siempre en Nuevo, o si ya seleccionó un Existente) */}
+          {(isClienteNuevo || (!isClienteNuevo && clienteId)) && (
+            <div className="cliente-form">
             <h3>{clienteTitle}</h3>
             <div className="nv-cliente-data-columns">
               <div className="column">
@@ -302,14 +415,17 @@ const NuevaVenta = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Sección de Datos de la Venta y Observación */}
         <div className="venta-section nv-card">
           <div className="venta-form">
             <h3>Datos de la Venta</h3>
-            <div className="nv-form-group">
-              <label>ID Venta:</label>
+            <div className="nv-cliente-data-columns">
+              <div className="column">
+                <div className="nv-form-group">
+                  <label>ID Venta:</label>
               <input
                 type="text"
                 name="id"
@@ -341,39 +457,6 @@ const NuevaVenta = () => {
                 ))}
               </select>
             </div>
-            {ventaData.id_vendedor && (
-              <div className="nv-form-group">
-                <label>Vendedores Compartidos (Opcional):</label>
-                <div className="nv-checkbox-group" style={{display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '10px', background: 'var(--ventas-bg-medium)', borderRadius: '8px'}}>
-                  {(vendedores || []).filter(v => v?.id?.toString() !== ventaData?.id_vendedor?.toString()).map(v => (
-                    <label key={v?.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer'}}>
-                      <input 
-                        type="checkbox" 
-                        value={v?.id} 
-                        checked={ventaData?.vendedores_compartidos?.includes(v?.id?.toString()) || ventaData?.vendedores_compartidos?.includes(v?.id)}
-                        onChange={(e) => {
-                          if(e.target.checked) {
-                            setVentaData(prev => ({...prev, vendedores_compartidos: [...(prev.vendedores_compartidos || []), v.id]}));
-                          } else {
-                            setVentaData(prev => ({...prev, vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== v?.id?.toString())}));
-                          }
-                        }}
-                      /> {v?.first_name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="nv-form-group" style={{flexDirection: 'row', alignItems: 'center', gap: '10px'}}>
-              <input
-                type="checkbox"
-                name="traslado"
-                id="traslado"
-                checked={ventaData.traslado}
-                onChange={(e) => setVentaData(prev => ({...prev, traslado: e.target.checked}))}
-              />
-              <label htmlFor="traslado" style={{marginBottom: 0}}>¿Incluye Traslado?</label>
-            </div>
             <div className="nv-form-group">
               <label>Sede:</label>
               <select
@@ -386,8 +469,20 @@ const NuevaVenta = () => {
                 <option value="Lottus 2">Lottus 2</option>
               </select>
             </div>
-            <div className="nv-form-group">
-              <label>Fecha de Venta:</label>
+            <div className="nv-form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
+              <input
+                type="checkbox"
+                name="traslado"
+                id="traslado"
+                checked={ventaData.traslado}
+                onChange={(e) => setVentaData(prev => ({...prev, traslado: e.target.checked}))}
+              />
+              <label htmlFor="traslado" style={{marginBottom: 0}}>¿Incluye Traslado?</label>
+            </div>
+              </div>
+              <div className="column">
+                <div className="nv-form-group">
+                  <label>Fecha de Venta:</label>
               <input
                 type="date"
                 name="fecha_venta"
@@ -406,29 +501,58 @@ const NuevaVenta = () => {
               />
             </div>
             <div className="nv-form-group">
-              <label>Valor Total:</label>
-              <input
-                type="number"
-                name="valor_total"
-                value={ventaData.valor_total}
-                onChange={handleVentaChange}
-                required
+                  <label>Valor Total:</label>
+                  <input
+                    type="number"
+                    name="valor_total"
+                    value={ventaData.valor_total}
+                    onChange={handleVentaChange}
+                    required
+                  />
+                </div>
+              <div className="nv-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={showSharedVendors || (ventaData.vendedores_compartidos && ventaData.vendedores_compartidos.length > 0)} 
+                    onChange={(e) => setShowSharedVendors(e.target.checked)} 
+                  /> 
+                  Venta Compartida (Opcional)
+                </label>
+                {(showSharedVendors || (ventaData.vendedores_compartidos && ventaData.vendedores_compartidos.length > 0)) && (
+                  <div className="nv-checkbox-group" style={{display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '10px', background: 'var(--ventas-bg-medium)', borderRadius: '8px', marginTop: '0.5rem'}}>
+                    {(vendedores || []).filter(v => v?.id?.toString() !== ventaData?.id_vendedor?.toString()).map(v => (
+                      <label key={v?.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: 0}}>
+                        <input 
+                          type="checkbox" 
+                          value={v?.id} 
+                          checked={ventaData?.vendedores_compartidos?.includes(v?.id?.toString()) || ventaData?.vendedores_compartidos?.includes(v?.id)}
+                          onChange={(e) => {
+                            if(e.target.checked) {
+                              setVentaData(prev => ({...prev, vendedores_compartidos: [...(prev.vendedores_compartidos || []), v.id]}));
+                            } else {
+                              setVentaData(prev => ({...prev, vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== v?.id?.toString())}));
+                            }
+                          }}
+                        /> {v?.first_name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              </div>
+            </div>
+            <div className="nv-form-group" style={{ marginTop: '0.5rem' }}>
+              <label>Observación (opcional):</label>
+              <textarea
+                value={observacion}
+                onChange={(e) => setObservacion(e.target.value)}
+                rows="3"
+                placeholder="Escribe una observación..."
+                style={{ minHeight: '60px' }}
               />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Sección Observación independiente */}
-      <div className="observacion-section nv-card" style={{ marginBottom: '2rem' }}>
-        <div className="nv-observacion-form">
-          <h3>Observación:</h3>
-          <textarea
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-            rows="4"
-            placeholder="Escribe una observación (opcional)..."
-          />
         </div>
       </div>
 

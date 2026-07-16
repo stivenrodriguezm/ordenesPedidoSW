@@ -1,123 +1,197 @@
-:root {
-    --perfil-card-bg: #ffffff;
-    --perfil-header-bg: #f8f9fa;
-    --perfil-avatar-icon-color: #adb5bd;
+/* PerfilPage.css */
+.perfil-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
 }
 
-.perfil-page-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Alinea la tarjeta arriba */
-    padding: 2rem;
-    min-height: 100%;
-    background-color: var(--color-background);
+.perfil-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+@media (min-width: 992px) {
+    .perfil-grid {
+        grid-template-columns: 350px 1fr;
+    }
 }
 
 .perfil-card {
-    width: 100%;
-    max-width: 550px;
-    background-color: var(--perfil-card-bg);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-    animation: fadeIn 0.5s ease-out;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    padding: 2rem;
 }
 
 .perfil-card-header {
-    background-color: var(--perfil-header-bg);
-    padding: 2rem;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--color-border);
 }
 
-.perfil-avatar {
-    height: 80px;
-    width: 80px;
-    border-radius: 50%;
-    background-color: var(--color-primary);
-    color: white;
+.perfil-card-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.perfil-card-header p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.perfil-icon-bg {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 2.5rem;
-    margin: 0 auto 1rem auto;
-    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
-}
-
-.perfil-avatar span {
-    line-height: 1;
-}
-
-.perfil-user-name {
+    width: 48px;
+    height: 48px;
+    background-color: var(--color-primary-light-bg);
+    color: var(--color-primary);
+    border-radius: 12px;
     font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0;
 }
 
-.perfil-user-role {
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 0.25rem;
-}
-
-.perfil-card-body {
-    padding: 2rem;
-}
-
-.form-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-
-.notification-banner {
+.perfil-avatar {
+    width: 100px;
+    height: 100px;
+    background-color: var(--color-primary-light-bg);
+    color: var(--color-primary);
+    border: 2px solid var(--color-border);
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-radius: 6px;
-    margin-top: 1.5rem;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 auto 1.5rem auto;
+}
+
+.perfil-info {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.perfil-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--color-text-primary);
+}
+
+.perfil-info p {
+    margin: 0.5rem 0 0 0;
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
-.notification-banner.success {
-    background-color: #d1e7dd; /* Verde claro */
-    color: #0f5132;
-    border: 1px solid #badbcc;
+.perfil-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-top: 1rem;
 }
 
-.notification-banner.error {
-    background-color: #f8d7da; /* Rojo claro */
-    color: #842029;
-    border: 1px solid #f5c2c7;
+.perfil-details-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.submit-button {
+.perfil-details-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.perfil-details-list li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.detail-label {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.detail-value {
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.badge-active {
+    background-color: #e8f5e9;
+    color: var(--color-success);
+    border: 1px solid #c8e6c9;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.btn-primary {
     width: 100%;
-    padding: 0.85rem;
+    padding: 0.875rem;
+    background-color: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
-    color: #fff;
-    background-color: var(--color-primary);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 1.5rem;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
-.submit-button:hover {
+.btn-primary:hover:not(:disabled) {
     background-color: var(--color-primary-hover);
-    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
 }
 
-.submit-button:disabled {
-    background-color: #a0c7ff;
+.btn-primary:disabled {
+    opacity: 0.7;
     cursor: not-allowed;
+}
+
+.notification-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.notification-box.success {
+    background-color: #e8f5e9;
+    color: var(--color-success);
+    border: 1px solid #c8e6c9;
+}
+
+.notification-box.error {
+    background-color: #fce8e8;
+    color: var(--color-destructive);
+    border: 1px solid #f8d7da;
 }

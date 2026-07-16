@@ -29,9 +29,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
     {
       title: "Bases de Datos",
       items: [
-        { to: "/clientes", icon: <FaUsers />, label: "Clientes", feature: "VER_CLIENTES" },
-        { to: "/proveedores", icon: <FaWarehouse />, label: "Proveedores", feature: "VER_PROVEEDORES" },
-        { to: "/referencias", icon: <FaBoxes />, label: "Referencias", feature: "VER_REFERENCIAS" },
+        { to: "/bases-de-datos", icon: <FaLayerGroup />, label: "Bases de Datos", feature: "BASES_DATOS" },
       ]
     },
     {

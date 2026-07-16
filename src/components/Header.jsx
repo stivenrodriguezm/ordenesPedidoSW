@@ -16,6 +16,9 @@ function Header({ onMenuClick, isCollapsed }) {
   const getTitle = () => {
     const path = location.pathname;
     if (path === "/") return "Inicio";
+    if (path === "/perfil") return "Mi Perfil";
+    if (path === "/gestion-usuarios") return "Gestión de Usuarios";
+    if (path === "/nuevaVenta") return "Nueva Venta";
     // Handle nested suministros routes
     const nestedTitles = {
       '/suministros/remisiones': 'Remisiones',

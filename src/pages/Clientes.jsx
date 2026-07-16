@@ -28,11 +28,11 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
+    <div className="cli-modal-overlay">
+      <div className="cli-modal-content">
+        <div className="cli-modal-header">
           <h3>Editar cliente #{cliente.id}</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="cli-modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -63,7 +63,7 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
             <label>Teléfono 2:</label>
             <input type="text" name="telefono2" value={formData.telefono2} onChange={handleChange} />
           </div>
-          <button type="submit" className="modal-submit">Guardar Cambios</button>
+          <button type="submit" className="cli-btn-primary">Guardar Cambios</button>
         </form>
       </div>
     </div>
@@ -83,11 +83,11 @@ const AddObservationModal = ({ onSave, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
+    <div className="cli-modal-overlay">
+      <div className="cli-modal-content">
+        <div className="cli-modal-header">
           <h3>Agregar Observación</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="cli-modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -100,7 +100,7 @@ const AddObservationModal = ({ onSave, onClose }) => {
               rows="4"
             />
           </div>
-          <button type="submit" className="modal-submit">Guardar</button>
+          <button type="submit" className="cli-btn-primary">Guardar</button>
         </form>
       </div>
     </div>
@@ -263,12 +263,11 @@ const Clientes = () => {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="page-header">
-        <div className="search-container">
-          <FaSearch className="search-icon" />
+      <div className="v-filters-bar">
+        <div className="v-search-pill">
+          <FaSearch className="v-search-icon" />
           <input
             type="text"
-            className="search-input"
             placeholder="Buscar por ID, nombre o cédula..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

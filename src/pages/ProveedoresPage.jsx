@@ -32,11 +32,11 @@ const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
+    <div className="prov-modal-overlay">
+      <div className="prov-modal-content">
+        <div className="prov-modal-header">
           <h3>{proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="prov-modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -51,7 +51,7 @@ const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
             <label>Contacto:</label>
             <input type="text" value={contacto} onChange={(e) => setContacto(e.target.value)} required />
           </div>
-          <button type="submit" className="modal-submit" disabled={isLoading}>
+          <button type="submit" className="prov-btn-primary" disabled={isLoading}>
             {isLoading ? 'Guardando...' : (proveedor ? 'Guardar Cambios' : 'Crear Proveedor')}
           </button>
         </form>
@@ -139,7 +139,7 @@ function ProveedoresPage() {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="page-header">
+      <div className="v-filters-bar" style={{ justifyContent: 'flex-end' }}>
         {usuario?.role === 'administrador' && (
           <button className="btn-secondary" onClick={exportProveedores}>
             <FaFileExport /> Exportar

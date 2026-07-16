@@ -122,7 +122,7 @@ function InventarioPage() {
     const [previewImg, setPreviewImg]     = useState({ open: false, url: '' });
     const [form, setForm] = useState({
         proveedorId: '', productoId: '', categoriaId: '', subcategoriaId: '',
-        variacion: '', ventaId: '', observacion: '', costo: '',
+        variacion: '', ventaId: '', observacion: '', costo: '', costoExtra: '',
         disponibilidad: 'exhibicion', cantidad: 1, grupoId: '', imagen: null
     });
 
@@ -134,6 +134,9 @@ function InventarioPage() {
     // ── Nuevo Grupo Modal ─────────────────────────────────────────────────────
     const [nuevoGrupoModal, setNuevoGrupoModal] = useState({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' });
     const [nuevoGrupoSaving, setNuevoGrupoSaving] = useState(false);
+
+    // ── Edit Item Modal ───────────────────────────────────────────────────────
+    const [itemEditModal, setItemEditModal] = useState({ open: false, item: null, form: null, saving: false });
 
     // ── Fetch ─────────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -176,7 +179,7 @@ function InventarioPage() {
             setShowModal(false);
             setForm({
                 proveedorId: '', productoId: '', categoriaId: '', subcategoriaId: '',
-                variacion: '', ventaId: '', observacion: '', costo: '',
+                variacion: '', ventaId: '', observacion: '', costo: '', costoExtra: '',
                 disponibilidad: 'exhibicion', cantidad: 1, grupoId: '', imagen: null
             });
         }, 300);
@@ -207,7 +210,7 @@ function InventarioPage() {
                     categoria: form.categoriaId ? parseInt(form.categoriaId) : null,
                     subcategoria: form.subcategoriaId ? parseInt(form.subcategoriaId) : null,
                     variacion: form.variacion,
-                    costo_especifico: form.costo || 0,
+                    costo_especifico: (parseFloat(form.costo) || 0) + (parseFloat(form.costoExtra) || 0),
                     observacion: form.observacion,
                     disponibilidad: form.disponibilidad,
                     venta: form.ventaId ? parseInt(form.ventaId) : null,
@@ -295,6 +298,55 @@ function InventarioPage() {
             alert('Error al crear el grupo.');
         } finally {
             setNuevoGrupoSaving(false);
+        }
+    };
+
+    const openItemEdit = (item) => {
+        setItemEditModal({
+            open: true,
+            item,
+            saving: false,
+            form: {
+                variacion: item.variacion || '',
+                costo: item.costo_especifico ? Math.floor(parseFloat(item.costo_especifico)) : '',
+                observacion: item.observacion || '',
+                disponibilidad: item.disponibilidad || 'exhibicion',
+                ventaId: item.venta || '',
+                grupoId: item.grupo || ''
+            }
+        });
+    };
+
+    const closeItemEdit = () => setItemEditModal({ open: false, item: null, form: null, saving: false });
+
+    const saveItemEdit = async (e) => {
+        e.preventDefault();
+        const { item, form } = itemEditModal;
+        setItemEditModal(prev => ({ ...prev, saving: true }));
+        try {
+            const payload = {
+                variacion: form.variacion,
+                costo_especifico: parseFloat(form.costo) || 0,
+                observacion: form.observacion,
+                disponibilidad: form.disponibilidad,
+                venta: form.ventaId ? parseInt(form.ventaId) : null,
+                grupo: form.grupoId ? parseInt(form.grupoId) : null
+            };
+            await API.patch(`/suministros/inventario/${item.dbId}/`, payload);
+            setInventario(prev => prev.map(i => i.id === item.dbId ? { ...i, ...payload } : i));
+            
+            if (item.grupo || payload.grupo) {
+                try {
+                    const gruRes = await API.get('/suministros/grupos/');
+                    setGrupos(gruRes.data.results || gruRes.data || []);
+                } catch (e) { console.error('Error reloading groups', e); }
+            }
+            
+            closeItemEdit();
+        } catch (err) {
+            console.error('Error updating item:', err);
+            alert('Error al actualizar el ítem.');
+            setItemEditModal(prev => ({ ...prev, saving: false }));
         }
     };
 
@@ -526,12 +578,18 @@ function InventarioPage() {
                 )}
                 {viewMode !== 'products_only' && (
                     <td style={{ textAlign: 'center' }}>
-                        {inv.imagen && (
-                            <button className="btn-view-img" title="Ver imagen"
-                                onClick={() => setPreviewImg({ open: true, url: inv.imagen })}>
-                                <FaImage />
+                        <div className="inv-group-actions" style={{ justifyContent: 'center' }}>
+                            <button className="inv-group-edit-btn" title="Editar ítem"
+                                onClick={e => { e.stopPropagation(); openItemEdit(inv); }}>
+                                <FaEdit />
                             </button>
-                        )}
+                            {inv.imagen && (
+                                <button className="btn-view-img" title="Ver imagen"
+                                    onClick={(e) => { e.stopPropagation(); setPreviewImg({ open: true, url: inv.imagen }) }}>
+                                    <FaImage />
+                                </button>
+                            )}
+                        </div>
                     </td>
                 )}
             </tr>
@@ -604,7 +662,11 @@ function InventarioPage() {
                         <span className="inv-group-count-pill" style={{ marginLeft: 0 }}>{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
                     </td>
                     <td className="empty-val">—</td>
-                    {showCostoCol && <td className="empty-val">—</td>}
+                    {showCostoCol && (
+                        <td className="inv-costo-col" style={{ fontWeight: 700, color: '#1e293b' }}>
+                            {formatCOP(parseFloat(grupoObj.costo_total) || 0)}
+                        </td>
+                    )}
                     <td style={{ textAlign: 'center' }}>
                         <div className="inv-group-actions">
                             <button className="inv-group-edit-btn" title="Editar grupo"
@@ -867,10 +929,17 @@ function InventarioPage() {
                                             <input type="text" className="ifg-input" value={form.variacion} onChange={e => handleField('variacion', e.target.value)} placeholder="Ej: Color, tamaño..." />
                                         </div>
                                         <div className="ifg-group">
-                                            <label className="ifg-label">Costo</label>
+                                            <label className="ifg-label">Costo Base</label>
                                             <div className="ifg-input-prefix">
                                                 <span>$</span>
                                                 <input type="text" className="ifg-input-raw" value={form.costo} onChange={e => handleField('costo', e.target.value)} placeholder="0.00" />
+                                            </div>
+                                        </div>
+                                        <div className="ifg-group">
+                                            <label className="ifg-label">Costo Adicional <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                            <div className="ifg-input-prefix">
+                                                <span>$</span>
+                                                <input type="text" className="ifg-input-raw" value={form.costoExtra} onChange={e => handleField('costoExtra', e.target.value)} placeholder="0.00" />
                                             </div>
                                         </div>
                                         <div className="ifg-group">
@@ -1151,6 +1220,85 @@ function InventarioPage() {
                     </div>
                 </div>
             )}
+
+            {/* ── MODAL: EDITAR ÍTEM INDIVIDUAL ────────────────────────────── */}
+            {itemEditModal.open && itemEditModal.item && (
+                <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
+                    onClick={e => { if (e.target === e.currentTarget) closeItemEdit(); }}>
+                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                        <div className="inv-modal-header">
+                            <div className="inv-modal-header-left">
+                                <FaEdit className="inv-modal-icon" />
+                                <h3>Editar Ítem: {itemEditModal.item.id_referencia}</h3>
+                            </div>
+                            <button className="inv-modal-close" onClick={closeItemEdit}>&times;</button>
+                        </div>
+                        <form className="inv-form" onSubmit={saveItemEdit}>
+                            <div className="inv-grupo-edit-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="inv-grupo-field">
+                                    <label className="ifg-label">Variación</label>
+                                    <input type="text" className="ifg-input"
+                                        value={itemEditModal.form.variacion}
+                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, variacion: e.target.value } }))}
+                                        placeholder="Ej: Color, tamaño..." />
+                                </div>
+                                <div className="inv-grupo-field">
+                                    <label className="ifg-label">Costo</label>
+                                    <div className="ifg-input-prefix" style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #cbd5e1', borderRadius: '6px', background: 'white' }}>
+                                        <span style={{ padding: '0 0.5rem', color: '#64748b' }}>$</span>
+                                        <input type="text" className="ifg-input-raw" style={{ flex: 1, border: 'none', padding: '0.4rem', outline: 'none' }}
+                                            value={itemEditModal.form.costo}
+                                            onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, costo: e.target.value } }))}
+                                            placeholder="0.00" />
+                                    </div>
+                                </div>
+                                <div className="inv-grupo-field">
+                                    <label className="ifg-label">Disponibilidad</label>
+                                    <select className="ifg-input"
+                                        value={itemEditModal.form.disponibilidad}
+                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, disponibilidad: e.target.value } }))}>
+                                        {DISPONIBILIDAD_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="inv-grupo-field">
+                                    <label className="ifg-label">Venta Asignada</label>
+                                    <select className="ifg-input"
+                                        value={itemEditModal.form.ventaId}
+                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, ventaId: e.target.value } }))}>
+                                        <option value="">Ninguna</option>
+                                        {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
+                                    </select>
+                                </div>
+                                <div className="inv-grupo-field" style={{ gridColumn: 'span 2' }}>
+                                    <label className="ifg-label">Grupo</label>
+                                    <select className="ifg-input"
+                                        value={itemEditModal.form.grupoId}
+                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, grupoId: e.target.value } }))}>
+                                        <option value="">Ninguno (individual)</option>
+                                        {grupos.filter(g => g.activo !== false).map(g => (
+                                            <option key={g.id} value={g.id}>G{String(g.id).padStart(3, '0')} — {g.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="inv-grupo-field" style={{ gridColumn: 'span 2' }}>
+                                    <label className="ifg-label">Observación</label>
+                                    <textarea className="ifg-input ifg-textarea" style={{ minHeight: '60px' }}
+                                        value={itemEditModal.form.observacion}
+                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, observacion: e.target.value } }))}
+                                        placeholder="Notas adicionales..." />
+                                </div>
+                            </div>
+                            <div className="inv-modal-footer">
+                                <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={closeItemEdit}>Cancelar</button>
+                                <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={itemEditModal.saving}>
+                                    <FaSave /> {itemEditModal.saving ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

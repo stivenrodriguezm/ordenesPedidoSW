@@ -77,12 +77,12 @@ const CategoriasModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content" style={{ maxWidth: 480 }}>
+    <div className="ref-modal-overlay" style={{ zIndex: 1100 }}>
+      <div className="ref-modal-content" style={{ maxWidth: 480 }}>
         <InlineNotif {...notif} />
-        <div className="modal-header">
+        <div className="ref-modal-header">
           <h3><FaTags style={{ marginRight: 8, color: '#475569' }} />Gestionar Categorías</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="ref-modal-close" onClick={onClose}>×</button>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); if (nombre.trim()) createMutation.mutate({ nombre: nombre.trim() }); }}
@@ -95,7 +95,7 @@ const CategoriasModal = ({ isOpen, onClose }) => {
             className="mgmt-input"
             required
           />
-          <button type="submit" className="btn-primary" disabled={createMutation.isLoading} style={{ whiteSpace: 'nowrap' }}>
+          <button type="submit" className="ref-btn-primary" disabled={createMutation.isLoading} style={{ whiteSpace: 'nowrap' }}>
             <FaPlus /> Agregar
           </button>
         </form>
@@ -124,8 +124,8 @@ const CategoriasModal = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={onClose}>Cerrar</button>
+        <div className="ref-modal-actions">
+          <button className="ref-btn-secondary" onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>
@@ -232,7 +232,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1100 }}>
+    <div className="ref-modal-overlay" style={{ zIndex: 1100 }}>
       <div className="subcat-modal">
 
         {/* ── Header ── */}
@@ -312,7 +312,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                 {editingSubcat && (
                   <button
                     type="button"
-                    className="btn-secondary"
+                    className="ref-btn-secondary"
                     onClick={() => setEditingSubcat(null)}
                     style={{ padding: '0 1rem', height: '36px', borderRadius: '8px' }}
                   >
@@ -397,7 +397,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
 
         {/* ── Footer ── */}
         <div className="subcat-modal__footer">
-          <button className="btn-secondary" onClick={handleClose}>Cerrar</button>
+          <button className="ref-btn-secondary" onClick={handleClose}>Cerrar</button>
         </div>
       </div>
     </div>
@@ -464,11 +464,11 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
   );
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: 520 }}>
-        <div className="modal-header">
+    <div className="ref-modal-overlay">
+      <div className="ref-modal-content" style={{ maxWidth: 520 }}>
+        <div className="ref-modal-header">
           <h3>{referencia ? 'Editar Referencia' : 'Nueva Referencia'}</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="ref-modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -540,9 +540,9 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
             )}
           </div>
 
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
+          <div className="ref-modal-actions">
+            <button type="button" className="ref-btn-secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="ref-btn-primary" disabled={isLoading}>
               {isLoading ? 'Guardando...' : (referencia ? 'Guardar Cambios' : 'Crear Referencia')}
             </button>
           </div>

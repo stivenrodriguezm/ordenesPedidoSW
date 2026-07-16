@@ -50,6 +50,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         const salesByDate = {};
         const salesByStatus = { pendiente: 0, entregado: 0, anulado: 0 };
         const salesByVendedorMap = {};
+        const salesBySede = {};
 
         // Initialize vendor map
         vendedores.forEach(v => {
@@ -86,6 +87,10 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 // Fallback for other statuses
                 salesByStatus['pendiente']++;
             }
+
+            // Chart Data: Sede
+            const sedeName = venta.sede || 'Sin Sede';
+            salesBySede[sedeName] = (salesBySede[sedeName] || 0) + valorFull;
 
             // Chart Data: Top Sellers
             // Primary seller
@@ -157,6 +162,20 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             ]
         };
 
+        // 4. Bar Chart (Sedes)
+        const sortedSedes = Object.keys(salesBySede).map(s => ({ name: s, total: salesBySede[s] })).sort((a, b) => b.total - a.total);
+        const barChartSedesData = {
+            labels: sortedSedes.map(s => s.name),
+            datasets: [
+                {
+                    label: 'Ventas por Sede',
+                    data: sortedSedes.map(s => s.total),
+                    backgroundColor: '#14b8a6', // Teal
+                    borderRadius: 4,
+                }
+            ]
+        };
+
         return {
             kpis: {
                 salesToday,
@@ -168,7 +187,8 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             chartData: {
                 line: lineChartData,
                 doughnut: doughnutChartData,
-                bar: barChartData
+                bar: barChartData,
+                barSedes: barChartSedesData
             },
             salesByVendedor: sortedVendors
         };
@@ -282,14 +302,24 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 </div>
 
                 {(usuario.role === 'administrador' || usuario.role === 'auxiliar') && (
-                    <div className="chart-card">
-                        <div className="chart-header">
-                            <h4>Top Vendedores</h4>
+                    <>
+                        <div className="chart-card">
+                            <div className="chart-header">
+                                <h4>Top Vendedores</h4>
+                            </div>
+                            <div className="chart-wrapper">
+                                <Bar data={chartData.bar} options={commonOptions} />
+                            </div>
                         </div>
-                        <div className="chart-wrapper">
-                            <Bar data={chartData.bar} options={commonOptions} />
+                        <div className="chart-card">
+                            <div className="chart-header">
+                                <h4>Ventas por Sede</h4>
+                            </div>
+                            <div className="chart-wrapper">
+                                <Bar data={chartData.barSedes} options={commonOptions} />
+                            </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
         </div>

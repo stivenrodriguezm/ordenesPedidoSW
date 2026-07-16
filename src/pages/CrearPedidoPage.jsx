@@ -1,27 +1,33 @@
 import { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
 import { AppContext } from "../AppContext";
 import "./CrearPedidoPage.css";
 import html2canvas from "html2canvas";
 import logoFinal from "../assets/logoFinal.png";
-import { FaPlus, FaTrashAlt } from "react-icons/fa";
+import { FaPlus, FaTrashAlt, FaFileSignature, FaClipboardList, FaBoxOpen, FaStickyNote } from "react-icons/fa";
+import AppNotification from "../components/AppNotification";
+import "../components/AppNotification.css";
 
 function CrearPedidoPage() {
   const { proveedores, usuario: user, isLoading: contextLoading } = useContext(AppContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialVentaId = location.state?.ventaId || "";
   const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
+
+  const [notification, setNotification] = useState({ message: '', type: '' });
+
+  const showError = (msg) => setNotification({ message: msg, type: 'error' });
 
   const [proveedorId, setProveedorId] = useState("");
   const { data: referencias = [], isLoading: referenciasLoading } = useQuery({
     queryKey: ["referencias", proveedorId],
     queryFn: async () => {
-      console.log("Fetching references for proveedorId:", proveedorId);
       const response = await API.get(`referencias/?proveedor=${proveedorId}`);
-      console.log("Full references API response data:", response.data); // Log the full data object
-      return response.data; // Return the full data object for now
+      return response.data;
     },
     enabled: !!proveedorId,
     staleTime: 5 * 60 * 1000,
@@ -44,10 +50,11 @@ function CrearPedidoPage() {
     fecha: "",
     nota: "",
     productos: [{ cantidad: 1, referencia: "", descripcion: "" }],
-    ordenCompra: "",
+    ordenCompra: initialVentaId,
   });
   const [numeroOP, setNumeroOP] = useState(null);
   const [llevaTela, setLlevaTela] = useState(false);
+  const [esExhibicion, setEsExhibicion] = useState(false);
 
   const createOrderMutation = useMutation({
     mutationFn: (newOrder) =>
@@ -57,10 +64,9 @@ function CrearPedidoPage() {
       queryClient.invalidateQueries({ queryKey: ['ordenes'] });
     },
     onError: (error) => {
-      console.error("Error creando orden - respuesta del servidor:", error.response?.data);
       const data = error.response?.data;
       if (!data) {
-        alert("Error de conexión. El servidor no respondió.");
+        showError('Error de conexión. El servidor no respondió.');
         return;
       }
       // DRF puede retornar: {"field": ["msg"]}, {"detail": "msg"}, {"error": "msg"}
@@ -68,8 +74,10 @@ function CrearPedidoPage() {
         data.detail ||
         data.error ||
         data.detalles ||
-        (typeof data === 'object' ? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n') : String(data));
-      alert(`Error al crear el pedido:\n${msg}`);
+        (typeof data === 'object'
+          ? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')
+          : String(data));
+      showError(`Error al crear el pedido: ${msg}`);
     },
   });
 
@@ -127,16 +135,16 @@ function CrearPedidoPage() {
 
     // Validación explícita para cubrir casos donde HTML5 validation no aplica
     if (!pedido.proveedor) {
-      alert("Por favor seleccione un proveedor.");
+      showError('Por favor seleccione un proveedor.');
       return;
     }
     if (!pedido.fecha) {
-      alert("Por favor ingrese la fecha esperada de llegada.");
+      showError('Por favor ingrese la fecha esperada de llegada.');
       return;
     }
     const productoInvalido = pedido.productos.find(p => !p.referencia);
     if (productoInvalido) {
-      alert("Por favor seleccione una referencia para cada producto.");
+      showError('Por favor seleccione una referencia para cada producto.');
       return;
     }
 
@@ -151,6 +159,7 @@ function CrearPedidoPage() {
       })),
       tela: llevaTela ? "Por pedir" : "Sin tela",
       venta: pedido.ordenCompra ? parseInt(pedido.ordenCompra) : null,
+      es_exhibicion: esExhibicion,
     });
   };
 
@@ -194,14 +203,25 @@ function CrearPedidoPage() {
   }
 
   return (
-    <div className="page-container crear-pedido-container recuadro_contenedor">
-      <div className="form-title-header">
-        <h1>Crear Nuevo Pedido</h1>
+    <div className="page-container crear-pedido-container">
+      <AppNotification
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ message: '', type: '' })}
+      />
+      <div className="form-title-header premium">
+        <div className="title-wrapper">
+          <FaFileSignature className="title-icon" />
+          <div className="title-text-group">
+            <h1>Crear Nuevo Pedido</h1>
+            <p className="title-subtitle">Completa los datos para generar la orden de forma rápida y segura.</p>
+          </div>
+        </div>
         <div className="header-actions">
           <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
             Cancelar
           </button>
-          <button type="submit" form="main-form" className="btn-primary" disabled={createOrderMutation.isLoading}>
+          <button type="submit" form="main-form" className="btn-primary-glow" disabled={createOrderMutation.isLoading}>
             {createOrderMutation.isLoading ? "Creando..." : "Crear Pedido"}
           </button>
         </div>
@@ -211,7 +231,7 @@ function CrearPedidoPage() {
         {/* --- COLUMNA IZQUIERDA: CONFIGURACIÓN --- */}
         <div className="form-left-column">
           <div className="form-section-container">
-            <h3 className="form-section-title">Información Principal</h3>
+            <div className="form-section-title"><FaClipboardList /> <h3>Información Principal</h3></div>
             <div className="form-group">
               <label htmlFor="proveedor">Proveedor:</label>
               <select id="proveedor" name="proveedor" value={pedido.proveedor} onChange={handleProveedorChange} required>
@@ -238,21 +258,25 @@ function CrearPedidoPage() {
               <input id="llevaTela" type="checkbox" checked={llevaTela} onChange={(e) => setLlevaTela(e.target.checked)} />
               <label htmlFor="llevaTela">¿Se debe pedir tela?</label>
             </div>
+            <div className="form-group checkbox-group">
+              <input id="esExhibicion" type="checkbox" checked={esExhibicion} onChange={(e) => setEsExhibicion(e.target.checked)} />
+              <label htmlFor="esExhibicion">¿Es para exhibición?</label>
+            </div>
           </div>
         </div>
 
         {/* --- COLUMNA DERECHA: DETALLES --- */}
         <div className="form-right-column">
           <div className="form-section-container">
-            <div className="form-section-header">
-              <h3 className="form-section-title">Productos</h3>
-              <button type="button" className="btn-secondary" onClick={handleAddProduct}>
-                <FaPlus /> Agregar
+            <div className="form-section-header premium-products-header">
+              <div className="form-section-title"><FaBoxOpen /> <h3>Productos</h3></div>
+              <button type="button" className="btn-ghost-primary" onClick={handleAddProduct}>
+                <FaPlus /> Agregar Producto
               </button>
             </div>
             <div className="productos-list">
               {pedido.productos.map((producto, index) => (
-                <div key={index} className="producto-item">
+                <div key={index} className="producto-item premium-card">
                   <input type="number" value={producto.cantidad} onChange={(e) => handleChange(e, index, "cantidad")} required placeholder="Cant." className="input-cantidad" min="1" />
                   <select value={producto.referencia} onChange={(e) => handleChange(e, index, "referencia")} required className="select-referencia" disabled={referenciasLoading || !proveedorId}>
                     <option value="">{referenciasLoading ? "Cargando..." : "Referencia"}</option>
@@ -269,7 +293,7 @@ function CrearPedidoPage() {
             </div>
           </div>
           <div className="form-section-container">
-            <h3 className="form-section-title">Observaciones</h3>
+            <div className="form-section-title"><FaStickyNote /> <h3>Observaciones</h3></div>
             <textarea id="nota" name="nota" value={pedido.nota} onChange={handleChange} placeholder="Añadir observaciones generales sobre el pedido..." rows="5" />
           </div>
         </div>

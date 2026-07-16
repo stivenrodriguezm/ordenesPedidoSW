@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useContext, useMemo, useCallback } from 'react';
-import { ORDENES_MOCK } from '../data/suministrosMock';
 import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import API from '../services/api';
@@ -25,19 +24,8 @@ const METODOS_PAGO = [
     { value: 'otro', label: 'Otro' },
 ];
 
-const TRANSPORTADORES = [
-    { value: 'Camilo', label: 'Camilo' },
-    { value: 'Pedro', label: 'Pedro' },
-    { value: 'Cliente recoge', label: 'Cliente recoge' },
-    { value: 'Otro', label: 'Otro' },
-];
-
-const VENDEDORES = [
-    { value: 'Stiven', label: 'Stiven' },
-    { value: 'Laura', label: 'Laura' },
-    { value: 'María', label: 'María' },
-    { value: 'Jorge', label: 'Jorge' },
-];
+// Transportadores y Vendedores se cargan dinámicamente desde la API
+// en el estado `transportadores` y `vendedores` del componente.
 
 function generateId(list) {
     let id;
@@ -185,26 +173,32 @@ function RemisionesPage() {
     const [transFilter, setTransFilter] = useState('');
     const [vendedorFilter, setVendedorFilter] = useState('');
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, dateFrom, dateTo, estadoFilter, transFilter, vendedorFilter]);
+
+    const [inventarioLoaded, setInventarioLoaded] = useState(false);
+    const [inventarioLoading, setInventarioLoading] = useState(false);
+
     useEffect(() => {
         const fetchAll = async () => {
             setIsLoading(true);
             try {
-                // Safety wrapper for optional requests to avoid crashing the whole page if one fails (e.g. for carriers)
                 const safeGet = (url) => API.get(url).catch(err => {
                     console.warn(`Request failed for ${url}:`, err);
                     return { data: { results: [], data: [] } };
                 });
 
-                const [remRes, invRes, prodRes, catRes, subRes, ordRes, vendRes, transpRes, grupoRes] = await Promise.all([
-                    API.get('/suministros/remisiones/'), // Remisiones is required
-                    safeGet('/suministros/inventario/'),
-                    safeGet('/referencias/'),
-                    safeGet('/suministros/categorias/'),
-                    safeGet('/suministros/subcategorias/'),
+                // Only load what's needed for the table view — inventario is lazy-loaded when modal opens
+                const [remRes, ordRes, vendRes, transpRes] = await Promise.all([
+                    API.get('/suministros/remisiones/'),
                     safeGet('/get-pendientes-ids/'),
                     safeGet('/vendedores/'),
                     safeGet('/transportadores/'),
-                    safeGet('/suministros/grupos/')
                 ]);
                 
                 const rawRemisiones = remRes.data.results || remRes.data;
@@ -224,32 +218,11 @@ function RemisionesPage() {
                     inventarioIds: r.inventario_items || [],
                     inventarioDetalle: r.inventario_items_detalle || []
                 }));
-                
-                const rawInv = invRes.data?.results || invRes.data || [];
-                const formattedInv = Array.isArray(rawInv) ? rawInv.map(inv => ({
-                    ...inv,
-                    id: inv.id_referencia,
-                    productoId: inv.referencia,
-                    subcategoriaId: inv.subcategoria,
-                })) : [];
-
-                const rawProd = prodRes.data?.results || prodRes.data || [];
-                const formattedProd = Array.isArray(rawProd) ? rawProd.map(p => ({
-                    ...p,
-                    categoriaId: p.categoria,
-                    subcategoriaId: p.subcategoria,
-                    proveedorId: p.proveedor
-                })) : [];
 
                 setRemisiones(formattedRem);
-                setInventario(formattedInv);
-                setProductos(formattedProd);
-                setCategorias(catRes.data.results || catRes.data || []);
-                setSubcategorias(subRes.data.results || subRes.data || []);
                 setOrdenesPendientes(Array.isArray(ordRes.data) ? ordRes.data : []);
                 setVendedores(Array.isArray(vendRes.data) ? vendRes.data : []);
                 setTransportadores(Array.isArray(transpRes.data) ? transpRes.data : []);
-                setGrupos(grupoRes.data.results || grupoRes.data || []);
             } catch (error) {
                 console.error("Error fetching remisiones:", error);
             } finally {
@@ -258,6 +231,47 @@ function RemisionesPage() {
         };
         fetchAll();
     }, []);
+
+    // Lazy load inventario only when creating a new remision
+    const loadInventarioData = async () => {
+        if (inventarioLoaded) return;
+        setInventarioLoading(true);
+        try {
+            const safeGet = (url) => API.get(url).catch(err => {
+                console.warn(`Request failed for ${url}:`, err);
+                return { data: { results: [], data: [] } };
+            });
+            const [invRes, prodRes, catRes, subRes, grupoRes] = await Promise.all([
+                safeGet('/suministros/inventario/'),
+                safeGet('/referencias/'),
+                safeGet('/suministros/categorias/'),
+                safeGet('/suministros/subcategorias/'),
+                safeGet('/suministros/grupos/'),
+            ]);
+            const rawInv = invRes.data?.results || invRes.data || [];
+            setInventario(Array.isArray(rawInv) ? rawInv.map(inv => ({
+                ...inv,
+                id: inv.id_referencia,
+                productoId: inv.referencia,
+                subcategoriaId: inv.subcategoria,
+            })) : []);
+            const rawProd = prodRes.data?.results || prodRes.data || [];
+            setProductos(Array.isArray(rawProd) ? rawProd.map(p => ({
+                ...p,
+                categoriaId: p.categoria,
+                subcategoriaId: p.subcategoria,
+                proveedorId: p.proveedor
+            })) : []);
+            setCategorias(catRes.data.results || catRes.data || []);
+            setSubcategorias(subRes.data.results || subRes.data || []);
+            setGrupos(grupoRes.data.results || grupoRes.data || []);
+            setInventarioLoaded(true);
+        } catch (err) {
+            console.error('Error loading inventario:', err);
+        } finally {
+            setInventarioLoading(false);
+        }
+    };
 
     const nextScope = () => {
         if (calendarViewType === 'day') setFocusedDate(prev => addDays(prev, 1));
@@ -353,6 +367,8 @@ function RemisionesPage() {
         setColSubcatOpen(false);
         setShowModal(true);
         requestAnimationFrame(() => requestAnimationFrame(() => setModalVisible(true)));
+        // Lazy load inventario only the first time the modal opens
+        loadInventarioData();
     };
 
     const closeModal = () => {
@@ -454,9 +470,19 @@ function RemisionesPage() {
         try {
             const createRes = await API.post('/suministros/remisiones/', payload);
             const newRemision = createRes.data;
+            const newId = newRemision?.id;
 
-            // Recargar lista
-            const remRes = await API.get('/suministros/remisiones/');
+            // Run all fetching operations in parallel to optimize loading time
+            const [remRes, invRes, detailRes] = await Promise.all([
+                API.get('/suministros/remisiones/'),
+                API.get('/suministros/inventario/'),
+                newId ? API.get(`/suministros/remisiones/${newId}/`).catch(err => {
+                    console.warn('No se pudo obtener detalle completo de la remisión:', err);
+                    return null;
+                }) : Promise.resolve(null)
+            ]);
+
+            // Process Remisiones
             const rawRemisiones = remRes.data.results || remRes.data;
             const formattedRem = rawRemisiones.map(r => ({
                 ...r,
@@ -476,8 +502,7 @@ function RemisionesPage() {
             }));
             setRemisiones(formattedRem);
 
-            // Recargar inventario
-            const invRes = await API.get('/suministros/inventario/');
+            // Process Inventario
             const rawInv = invRes.data.results || invRes.data;
             setInventario(rawInv.map(inv => ({
                 ...inv,
@@ -486,21 +511,9 @@ function RemisionesPage() {
                 subcategoriaId: inv.subcategoria,
             })));
 
-            // Buscar la remi sión recién creada y obtener detalle completo (con inventario_items_detalle)
-            const newId = newRemision?.id || [...formattedRem].sort((a, b) => b.id - a.id)[0]?.id;
-            let createdRemFull = newRemision;
-            if (newId) {
-                try {
-                    const detailRes = await API.get(`/suministros/remisiones/${newId}/`);
-                    createdRemFull = detailRes.data;
-                } catch (detailErr) {
-                    console.warn('No se pudo obtener detalle completo de la remisión:', detailErr);
-                    // Fallback: usar el objeto de la lista refrescada
-                    createdRemFull = formattedRem.find(r => r.id === newId) || newRemision;
-                }
-            }
+            // Prepare Remission Details for PDF
+            let createdRemFull = detailRes ? detailRes.data : (formattedRem.find(r => r.id === newId) || newRemision);
 
-            // Items para el PDF — prioridad: detalle enriquecido del backend
             const pdfItems =
                 createdRemFull?.inventario_items_detalle?.length
                     ? createdRemFull.inventario_items_detalle
@@ -508,15 +521,13 @@ function RemisionesPage() {
                         ? createdRemFull.inventarioDetalle
                         : (createdRemFull?.inventario_items || createdRemFull?.inventarioIds || []).map(id => ({ id_referencia: id }));
 
-            // Generar y descargar PDF (async — espera a que cargue Audiowide)
-            try {
-                await generateRemisionPDF(createdRemFull, pdfItems);
-            } catch (pdfErr) {
-                console.warn('PDF generation error (non-blocking):', pdfErr);
-            }
+            // Generar y descargar PDF asynchronously (non-blocking)
+            generateRemisionPDF(createdRemFull, pdfItems).catch(pdfErr => {
+                console.warn('PDF generation error:', pdfErr);
+            });
 
             closeModal();
-            showToast('¡Remisión creada exitosamente! El PDF se descargó automáticamente.', 'success');
+            showToast('¡Remisión creada exitosamente! El PDF se descargará en un momento.', 'success');
 
         } catch (error) {
             console.error('Error creating remision:', error);
@@ -544,74 +555,87 @@ function RemisionesPage() {
     }).filter(Boolean);
 
     // Filtered main table
-    const filteredRemisiones = remisiones.filter(r => {
-        if (searchTerm) {
-            const q = searchTerm.toLowerCase();
-            if (!String(r.id).includes(q) && !(r.ordenAsociadaId && String(r.ordenAsociadaId).includes(q))) return false;
-        }
-        if (dateFrom && r.fechaCreacion < dateFrom) return false;
-        if (dateTo && r.fechaCreacion.split('T')[0] > dateTo) return false;
-        if (estadoFilter && r.estado !== estadoFilter) return false;
-        if (transFilter && !(r.transportador_display || '').toLowerCase().includes(transFilter.toLowerCase())) return false;
-        if (vendedorFilter && r.vendedor !== vendedorFilter) return false;
-        return true;
-    });
+    const filteredRemisiones = useMemo(() => {
+        return remisiones.filter(r => {
+            if (searchTerm) {
+                const q = searchTerm.toLowerCase();
+                if (!String(r.id).includes(q) && !(r.ordenAsociadaId && String(r.ordenAsociadaId).includes(q))) return false;
+            }
+            if (dateFrom && r.fechaCreacion < dateFrom) return false;
+            if (dateTo && r.fechaCreacion.split('T')[0] > dateTo) return false;
+            if (estadoFilter && r.estado !== estadoFilter) return false;
+            if (transFilter && !(r.transportador_display || '').toLowerCase().includes(transFilter.toLowerCase())) return false;
+            if (vendedorFilter && r.vendedor !== vendedorFilter) return false;
+            return true;
+        });
+    }, [remisiones, searchTerm, dateFrom, dateTo, estadoFilter, transFilter, vendedorFilter]);
 
     const hasFilters = searchTerm || dateFrom || dateTo || estadoFilter || transFilter || vendedorFilter;
+    
+    const paginatedRemisiones = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredRemisiones.slice(start, start + itemsPerPage);
+    }, [filteredRemisiones, currentPage]);
+    const totalPages = Math.ceil(filteredRemisiones.length / itemsPerPage);
+
     const clearFilters = () => { setSearchTerm(''); setDateFrom(''); setDateTo(''); setEstadoFilter(''); setTransFilter(''); setVendedorFilter(''); };
     const uniqueTransportadores = [...new Set(remisiones.map(r => r.transportador).filter(Boolean))];
     const uniqueVendedores = [...new Set(remisiones.map(r => r.vendedor).filter(Boolean))];
 
     // Inventory search filter — searches by id, referencia (product name), venta
-    let filteredInventario = INVENTARIO.filter(inv => {
-        if (inv.disponibilidad === 'por_despachar') return false;
-        
-        if (!form.ordenId) return false;
+    let filteredInventario = useMemo(() => {
+        const filtered = inventario.filter(inv => {
+            if (inv.disponibilidad === 'por_despachar') return false;
+            
+            if (!form.ordenId) return false;
 
-        if (form.ordenId === 'sin_orden') {
-            if (inv.venta) return false;
-        } else {
-            if (String(inv.venta) === String(form.ordenId)) {
-                // allowed
-            } else if (!inv.venta && (inv.disponibilidad === 'exhibicion' || inv.disponibilidad === 'consignacion')) {
-                // allowed
+            if (form.ordenId === 'sin_orden') {
+                if (inv.venta) return false;
             } else {
-                return false;
+                if (String(inv.venta) === String(form.ordenId)) {
+                    // allowed
+                } else if (!inv.venta && (inv.disponibilidad === 'exhibicion' || inv.disponibilidad === 'consignacion')) {
+                    // allowed
+                } else {
+                    return false;
+                }
             }
-        }
 
-        if (colCatFilter) {
-            const prod = getProducto(inv.productoId);
-            if (!prod || String(prod.categoriaId) !== colCatFilter) return false;
-        }
-        if (colSubcatFilter && String(inv.subcategoriaId) !== colSubcatFilter) return false;
-        if (colProvFilter) {
-            const prod = getProducto(inv.productoId);
-            if (!prod || String(prod.proveedorId) !== colProvFilter) return false;
-        }
-        if (!invSearch) return true;
-        const q = invSearch.toLowerCase();
-        const prod = getProducto(inv.productoId);
-        return (
-            String(inv.id).toLowerCase().includes(q) ||
-            prod?.nombre?.toLowerCase().includes(q) ||
-            String(inv.venta || '').toLowerCase().includes(q)
-        );
-    });
+            if (colCatFilter) {
+                const prod = productos.find(p => p.id === inv.productoId);
+                if (!prod || String(prod.categoria) !== colCatFilter) return false; // assuming getProducto logic was needed
+            }
+            if (colSubcatFilter && String(inv.subcategoriaId) !== colSubcatFilter) return false;
+            if (colProvFilter) {
+                const prod = productos.find(p => p.id === inv.productoId);
+                if (!prod || String(prod.proveedorId) !== colProvFilter) return false;
+            }
+            if (!invSearch) return true;
+            const q = invSearch.toLowerCase();
+            const prod = productos.find(p => p.id === inv.productoId);
+            return (
+                String(inv.id).toLowerCase().includes(q) ||
+                prod?.nombre?.toLowerCase().includes(q) ||
+                String(inv.venta || '').toLowerCase().includes(q)
+            );
+        });
 
-    filteredInventario.sort((a, b) => {
-        if (form.ordenId && form.ordenId !== 'sin_orden') {
-            const aMatches = String(a.venta) === String(form.ordenId);
-            const bMatches = String(b.venta) === String(form.ordenId);
-            if (aMatches && !bMatches) return -1;
-            if (!aMatches && bMatches) return 1;
-        }
-        return 0;
-    });
+        filtered.sort((a, b) => {
+            if (form.ordenId && form.ordenId !== 'sin_orden') {
+                const aMatches = String(a.venta) === String(form.ordenId);
+                const bMatches = String(b.venta) === String(form.ordenId);
+                if (aMatches && !bMatches) return -1;
+                if (!aMatches && bMatches) return 1;
+            }
+            return 0;
+        });
+
+        return filtered;
+    }, [inventario, form.ordenId, colCatFilter, colSubcatFilter, colProvFilter, invSearch, productos]);
 
     const colSubcatOptions = useMemo(() => colCatFilter
-        ? SUBCATEGORIAS.filter(s => String(s.categoriaId) === colCatFilter)
-        : SUBCATEGORIAS, [colCatFilter, SUBCATEGORIAS]);
+        ? subcategorias.filter(s => String(s.categoria) === colCatFilter) // using state 'subcategorias'
+        : subcategorias, [colCatFilter, subcategorias]);
 
     return (
         <div className="page-container remisiones-page-container">
@@ -628,75 +652,74 @@ function RemisionesPage() {
                 </button>
             </div>
 
-            {/* ===== HEADER: fused filters + button ===== */}
-            <div className="page-header">
-                <div className="header-actions-wrapper">
-                    <div className="filtros-inline">
-                        <div className="filter-item">
-                            <div className="rem-filter-search-wrap">
-                                <FaSearch className="rem-filter-icon" />
-                                <input
-                                    type="text"
-                                    placeholder="ID Remisión u Orden..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="filter-inline-input"
-                                />
-                            </div>
-                        </div>
-                        <div className="filter-item filter-fecha-item">
-                            <label className="filter-fecha-label">Desde</label>
-                            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-                        </div>
-                        <div className="filter-item filter-fecha-item">
-                            <label className="filter-fecha-label">Hasta</label>
-                            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-                        </div>
-                        <div className="filter-item">
-                            <select value={estadoFilter} onChange={e => setEstadoFilter(e.target.value)}>
-                                <option value="">Estado: Todos</option>
-                                {Object.entries(ESTADO_LABELS).map(([val, label]) => (
-                                    <option key={val} value={val}>{label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="filter-item">
-                            <select value={transFilter} onChange={e => setTransFilter(e.target.value)}>
-                                <option value="">Transportador: Todos</option>
-                                {uniqueTransportadores.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        </div>
-                        <div className="filter-item">
-                            <select value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}>
-                                <option value="">Vendedor: Todos</option>
-                                {uniqueVendedores.map(v => <option key={v} value={v}>{v}</option>)}
-                            </select>
-                        </div>
-                        {hasFilters && (
-                            <button className="clear-filters-btn" onClick={clearFilters} title="Limpiar filtros">
-                                <FaTimes />
-                            </button>
-                        )}
+            {/* ===== HEADER: premium glass style ===== */}
+            <div className="v-glass-header">
+                <div className="v-filters-bar">
+                    <div className="v-search-pill">
+                        <FaSearch />
+                        <input
+                            type="text"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
                     </div>
+                    <div className="v-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0 0.8rem', height: '34px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Desde</span>
+                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
+                    </div>
+                    <div className="v-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0 0.8rem', height: '34px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Hasta</span>
+                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
+                    </div>
+                    <div className="v-select-pill">
+                        <select value={estadoFilter} onChange={e => setEstadoFilter(e.target.value)}>
+                            <option value="">Estado: Todos</option>
+                            {Object.entries(ESTADO_LABELS).map(([val, label]) => (
+                                <option key={val} value={val}>{label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="v-select-pill">
+                        <select value={transFilter} onChange={e => setTransFilter(e.target.value)}>
+                            <option value="">Transportador: Todos</option>
+                            {uniqueTransportadores.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </div>
+                    <div className="v-select-pill">
+                        <select value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}>
+                            <option value="">Vendedor: Todos</option>
+                            {uniqueVendedores.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                    </div>
+                    {hasFilters && (
+                        <button className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+                            <FaTimes />
+                        </button>
+                    )}
+                    
+                    <div style={{ flexGrow: 1 }}></div>
 
-                    <div className="view-mode-toggle">
+                    <div className="view-mode-toggle" style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '2px', borderRadius: '8px' }}>
                         <button 
-                            className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                            className={`v-btn-ghost ${viewMode === 'table' ? 'active' : ''}`}
                             onClick={() => setViewMode('table')}
                             title="Vista de Tabla"
+                            style={{ background: viewMode === 'table' ? 'white' : 'transparent', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
                         >
                             <FaList />
                         </button>
                         <button 
-                            className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+                            className={`v-btn-ghost ${viewMode === 'calendar' ? 'active' : ''}`}
                             onClick={() => setViewMode('calendar')}
                             title="Vista de Calendario"
+                            style={{ background: viewMode === 'calendar' ? 'white' : 'transparent', boxShadow: viewMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
                         >
                             <FaCalendarAlt />
                         </button>
                     </div>
                     {!isTransportador && (
-                        <button className="btn-primary" onClick={openModal}>
+                        <button className="v-btn-primary-glow" onClick={openModal}>
                             <FaPlus /> Nueva Remisión
                         </button>
                     )}
@@ -736,7 +759,7 @@ function RemisionesPage() {
                                 <tr><td colSpan="12"><div className="loading-container"><div className="loader"></div></div></td></tr>
                             ) : filteredRemisiones.length === 0 ? (
                                 <tr><td colSpan="12" className="rem-empty-row">No hay remisiones para estos filtros.</td></tr>
-                            ) : filteredRemisiones.map(rem => {
+                            ) : paginatedRemisiones.map(rem => {
                                 const metodoPagoLabel = METODOS_PAGO.find(m => m.value === rem.metodoPago)?.label;
                                 return (
                                     <React.Fragment key={rem.id}>
@@ -748,7 +771,7 @@ function RemisionesPage() {
                                                 {rem.horaDesde && rem.horaHasta ? (
                                                     <span className="hora-rango-badge">
                                                         <FaClock style={{ fontSize: '0.65rem', opacity: 0.6 }} />
-                                                        {rem.horaDesde} – {rem.horaHasta}
+                                                        {rem.horaDesde.slice(0, 5)} – {rem.horaHasta.slice(0, 5)}
                                                     </span>
                                                 ) : <span className="empty-val">—</span>}
                                             </td>
@@ -792,7 +815,7 @@ function RemisionesPage() {
 
                                         {expandedId === rem.id && (
                                             <tr className="expanded-row">
-                                                <td colSpan="12">
+                                                <td colSpan="13">
                                                     <div className="rem-expanded-wrapper">
                                                         {/* Left panel: client info */}
                                                         <div className="rem-det-panel">
@@ -844,13 +867,13 @@ function RemisionesPage() {
                                                                 <table className="rem-det-table">
                                                                     <thead>
                                                                         <tr>
-                                                                            <th className="rem-det-th">Id</th>
+                                                                            <th className="rem-det-th" style={{ width: '60px' }}>Id</th>
                                                                             <th className="rem-det-th">Producto</th>
                                                                             <th className="rem-det-th">Proveedor</th>
                                                                             <th className="rem-det-th">Categoría</th>
                                                                             <th className="rem-det-th">Subcategoría</th>
-                                                                            <th className="rem-det-th">Variación</th>
-                                                                            <th className="rem-det-th">Observación</th>
+                                                                            <th className="rem-det-th" style={{ width: '25%' }}>Variación</th>
+                                                                            <th className="rem-det-th" style={{ width: '20%' }}>Observación</th>
                                                                             <th className="rem-det-th" style={{ width: '40px' }}></th>
                                                                         </tr>
                                                                     </thead>
@@ -922,6 +945,33 @@ function RemisionesPage() {
                             })}
                         </tbody>
                     </table>
+                    {/* Pagination Controls */}
+                    {filteredRemisiones.length > 0 && (
+                        <div className="rem-pagination-controls">
+                            <span className="rem-pagination-info">
+                                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredRemisiones.length)} de {filteredRemisiones.length} remisiones
+                            </span>
+                            <div className="rem-pagination-buttons">
+                                <button 
+                                    className="btn-secondary rem-page-btn" 
+                                    disabled={currentPage === 1} 
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                >
+                                    <FaChevronLeft /> Anterior
+                                </button>
+                                <span className="rem-pagination-page">
+                                    Página {currentPage} de {totalPages || 1}
+                                </span>
+                                <button 
+                                    className="btn-secondary rem-page-btn" 
+                                    disabled={currentPage === totalPages || totalPages === 0} 
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                >
+                                    Siguiente <FaChevronRight />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
                 ) : (
                     <CalendarView 
@@ -1337,10 +1387,10 @@ function RemisionesPage() {
                             </div>{/* end rem-form-body */}
 
                             <div className="rem-modal-footer">
-                                <button type="button" className="btn-secondary" onClick={closeModal} disabled={isSubmitting}>Cancelar</button>
+                                <button type="button" className="rem-btn-secondary" onClick={closeModal} disabled={isSubmitting}>Cancelar</button>
                                 <button
                                     type="submit"
-                                    className={`btn-primary${isSubmitting ? ' btn-loading' : ''}`}
+                                    className={`rem-btn-primary${isSubmitting ? ' btn-loading' : ''}`}
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting

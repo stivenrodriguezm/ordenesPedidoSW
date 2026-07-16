@@ -40,12 +40,12 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     background-color: #ffffff;
-    padding: 1rem 1.75rem;
+    padding: 0.75rem 1.25rem;
     border-radius: 14px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
-    gap: 1.5rem;
+    gap: 0.75rem;
     flex-wrap: wrap;
 }
 
@@ -170,11 +170,12 @@
 .desktop-view {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .rem-tabla-ppal {
     width: 100%;
+    min-width: 900px;
     border-collapse: collapse;
     text-align: left;
     table-layout: fixed;
@@ -184,16 +185,16 @@
 .rem-tabla-ppal th:nth-child(1)  { width: 4%; }   /* ID */
 .rem-tabla-ppal th:nth-child(2)  { width: 8%; }   /* F. Creación */
 .rem-tabla-ppal th:nth-child(3)  { width: 8%; }   /* F. Entrega */
-.rem-tabla-ppal th:nth-child(4)  { width: 9%; }   /* Rango Hora */
+.rem-tabla-ppal th:nth-child(4)  { width: 11%; min-width: 100px; }  /* Rango Hora */
 .rem-tabla-ppal th:nth-child(5)  { width: 5%; }   /* O.C. */
 .rem-tabla-ppal th:nth-child(6)  { width: 8%; }   /* Saldo */
-.rem-tabla-ppal th:nth-child(7)  { width: 9%; }   /* Método Pago */
-.rem-tabla-ppal th:nth-child(8)  { width: 10%; }  /* Transportador */
-.rem-tabla-ppal th:nth-child(9)  { width: 8%; }   /* Vendedor */
-.rem-tabla-ppal th:nth-child(10) { width: 8%; }   /* Costo Envío */
-.rem-tabla-ppal th:nth-child(11) { width: 9%; }   /* Estado */
-.rem-tabla-ppal th:nth-child(12) { width: 10%; }  /* Observación */
-.rem-tabla-ppal th:nth-child(13) { width: 4%; text-align: center; } /* Acciones */
+.rem-tabla-ppal th:nth-child(7)  { width: 8%; }   /* Método Pago */
+.rem-tabla-ppal th:nth-child(8)  { width: 9%; }   /* Transportador */
+.rem-tabla-ppal th:nth-child(9)  { width: 7%; }   /* Vendedor */
+.rem-tabla-ppal th:nth-child(10) { width: 7%; }   /* Costo Envío */
+.rem-tabla-ppal th:nth-child(11) { width: 8%; }   /* Estado */
+.rem-tabla-ppal th:nth-child(12) { width: 8%; }   /* Observación */
+.rem-tabla-ppal th:nth-child(13) { width: 5%; min-width: 60px; text-align: center; } /* Acciones — always visible */
 
 /* Bulletproof text truncation for table cells that normally ignore overflow:hidden */
 .rem-th-truncate {
@@ -380,7 +381,7 @@
 }
 
 /* --- Detalle panels --- */
-.detalle-titulo {
+.rem-det-titulo {
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -389,7 +390,7 @@
     margin: 0 0 1rem 0;
 }
 
-.detalle-panel {
+.rem-det-panel {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -397,67 +398,79 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.detalle-grid {
+.rem-det-grid {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.detalle-item {
+.rem-det-item {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 0.25rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px dashed #e2e8f0;
 }
 
-.detalle-item:last-child {
+.rem-det-item:last-child {
     border-bottom: none;
     padding-bottom: 0;
 }
 
-.detalle-item-full {
+.rem-det-item-full {
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.detalle-obs-cliente {
+.rem-det-obs-cliente {
     font-style: italic;
     color: #64748b;
     font-weight: 400;
     text-align: left;
 }
 
-.detalle-label {
+.rem-det-label {
     color: #64748b;
     font-size: 0.85rem;
     font-weight: 500;
 }
 
-.detalle-valor {
+.rem-det-valor {
     color: #1e293b;
     font-size: 0.85rem;
     font-weight: 600;
-    text-align: right;
+    text-align: left;
 }
 
-.detalle-table {
+.rem-det-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.detalle-table th {
+.rem-det-table th, .rem-det-th {
     text-align: left;
     padding: 0.75rem 0.85rem;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: #64748b;
     border-bottom: 1px solid #e2e8f0;
     background: #f8fafc;
+    white-space: normal;
 }
 
-.detalle-table td {
+.rem-det-table td, .rem-det-td {
     padding: 0.85rem 0.85rem;
     font-size: 0.85rem;
     border-bottom: 1px solid #f1f5f9;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.rem-det-table td:first-child, .rem-det-th:first-child {
+    padding-right: 4px;
+}
+
+.rem-det-table .remision-id-num {
+    font-size: 0.75rem;
 }
 
 .producto-nombre-destacado {
@@ -1236,10 +1249,12 @@
     border-top: 1px solid #e2e8f0;
     background: #f8fafc;
     flex-shrink: 0;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
 
 /* ===== SHARED BUTTONS ===== */
-.btn-primary {
+.rem-btn-primary {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -1255,12 +1270,12 @@
     box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25);
 }
 
-.btn-primary:hover {
+.rem-btn-primary:hover {
     filter: brightness(1.08);
     transform: translateY(-1px);
 }
 
-.btn-secondary {
+.rem-btn-secondary {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -1275,7 +1290,7 @@
     transition: all 0.2s;
 }
 
-.btn-secondary:hover {
+.rem-btn-secondary:hover {
     background: #e2e8f0;
     color: #1e293b;
 }
@@ -1302,11 +1317,8 @@
         padding: 0.5rem;
     }
 
-    .btn-primary,
-    .btn-secondary {
-        width: 100%;
-        justify-content: center;
-    }
+    /* Removed width: 100% here as it breaks the modal footer row layout between 640px and 1024px. 
+       Full width buttons for small screens are better handled at 640px where flex-direction is column. */
 
     .rem-fields-grid {
         grid-template-columns: 1fr 1fr;
@@ -1332,6 +1344,18 @@
 
     .rem-form-body {
         padding: 1rem;
+    }
+
+    .rem-modal-footer {
+        padding: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .rem-btn-primary,
+    .rem-btn-secondary {
+        width: 100%;
+        justify-content: center;
     }
 
     .filter-bar {
@@ -1383,16 +1407,19 @@
 .hora-rango-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    font-size: 0.8rem;
+    gap: 0.25rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: #475569;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 0.15rem 0.5rem;
+    padding: 0.1rem 0.35rem;
     white-space: nowrap;
     font-family: 'JetBrains Mono', monospace;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ===== VENDEDOR — plain text, no badge ===== */
@@ -1402,6 +1429,100 @@
     color: #334155;
     font-family: inherit;
 }
+
+/* ==========================================================================
+   REMISIONES-SCOPED: v-glass-header filter bar overrides
+   Scoped to .remisiones-page-container to avoid conflicts with other modules
+   ========================================================================== */
+
+/* Header wrapper: allow shrinking so it never overflows and crops the button */
+.remisiones-page-container .v-glass-header {
+    overflow: visible;
+}
+
+.remisiones-page-container .v-filters-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.remisiones-page-container .v-filters-bar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Pills can shrink */
+.remisiones-page-container .v-select-pill {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* Constrain selects: use max-width so they can shrink proportionally */
+.remisiones-page-container .v-select-pill select {
+    max-width: 150px;
+    min-width: 0;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* Date pills: limit width */
+.remisiones-page-container .v-select-pill input[type="date"] {
+    max-width: 130px;
+    min-width: 0;
+}
+
+/* Search input: allow shrinking */
+.remisiones-page-container .v-search-pill {
+    flex-shrink: 1;
+    min-width: 80px;
+}
+
+.remisiones-page-container .v-search-pill input {
+    min-width: 0;
+    width: 100%;
+}
+
+/* The "+ Nueva Remisión" button: NEVER shrink or hide */
+.remisiones-page-container .v-btn-primary-glow {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* View mode toggle: NEVER shrink */
+.remisiones-page-container .view-mode-toggle {
+    flex-shrink: 0;
+}
+
+/* Extra compact on smaller screens — only affects remisiones */
+@media (max-width: 1440px) {
+    .remisiones-page-container .v-select-pill select {
+        max-width: 120px;
+        font-size: 0.78rem;
+        padding: 0 0.55rem;
+    }
+
+    .remisiones-page-container .v-select-pill input[type="date"] {
+        max-width: 110px;
+        font-size: 0.78rem;
+    }
+
+    .remisiones-page-container .v-search-pill input {
+        font-size: 0.78rem;
+    }
+
+    /* Hora badge: even smaller on compact screens */
+    .hora-rango-badge {
+        font-size: 0.66rem;
+        padding: 0.08rem 0.25rem;
+        gap: 0.15rem;
+    }
+}
+
+
 
 /* ===== OBS CELL + TOOLTIP (fix 6) ===== */
 .obs-cell-col {
@@ -1548,10 +1669,10 @@
     border-collapse: collapse;
 }
 
-.rem-det-th {
+.rem-det-table th, .rem-det-th {
     text-align: left;
     padding: 0.55rem 0.75rem;
-    font-size: 0.68rem;
+    font-size: 0.6rem !important;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1559,19 +1680,32 @@
     border-bottom: 1.5px solid #e2e8f0;
     background: #f8fafc;
     white-space: nowrap;
+    vertical-align: top;
 }
 
 .rem-det-tr:hover .rem-det-td {
     background: #f8faff;
 }
 
-.rem-det-td {
+.rem-det-table td:first-child, .rem-det-table th:first-child {
+    padding-right: 1.5rem !important;
+    white-space: nowrap !important;
+}
+
+.rem-det-table td .remision-id-num {
+    font-size: 0.65rem !important;
+}
+
+.rem-det-table td, .rem-det-td {
     padding: 0.6rem 0.75rem;
     font-size: 0.82rem;
     color: #334155;
     border-bottom: 1px solid #f1f5f9;
     background: white;
     transition: background 0.15s;
+    vertical-align: top;
+    white-space: normal !important;
+    word-break: break-word;
 }
 
 .rem-det-td-prod .rem-det-prod-name {
@@ -1638,6 +1772,7 @@
     }
 }
 
+
 /* Responsive squishing for laptops and monitors to strictly avoid horizontal scroll */
 @media (max-width: 1767px) {
     .rem-tabla-ppal {
@@ -1646,79 +1781,67 @@
 
     .rem-tabla-ppal th,
     .rem-tabla-ppal td {
-        font-size: 0.7rem !important;
-        padding-left: calc(0.15rem + 0.25vw) !important;
-        padding-right: calc(0.15rem + 0.25vw) !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        max-width: 1px !important;
+        font-size: 0.72rem;
+        padding-left: calc(0.2rem + 0.2vw);
+        padding-right: calc(0.2rem + 0.2vw);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* Do NOT set max-width: 1px here — it breaks columns */
     }
 
     .rem-tabla-ppal th {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
-        letter-spacing: 0.06em;
+        padding-top: 0.65rem;
+        padding-bottom: 0.65rem;
+        letter-spacing: 0.04em;
     }
 
     .rem-tabla-ppal td {
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
     }
 
-    /* Percentage-based widths — total must equal 100% */
+    /* Column widths — total = 100% */
     .rem-tabla-ppal th:nth-child(1),
-    .rem-tabla-ppal td:nth-child(1) { width: 4%; }    /* Expand toggle */
+    .rem-tabla-ppal td:nth-child(1) { width: 4%; }    /* ID */
 
-    /* ID */
     .rem-tabla-ppal th:nth-child(2),
-    .rem-tabla-ppal td:nth-child(2) { width: 5%; }
+    .rem-tabla-ppal td:nth-child(2) { width: 8%; }    /* F. Creación */
 
-    /* Fecha Creacion */
     .rem-tabla-ppal th:nth-child(3),
-    .rem-tabla-ppal td:nth-child(3) { width: 8%; }
+    .rem-tabla-ppal td:nth-child(3) { width: 8%; }    /* F. Entrega */
 
-    /* Fecha Entrega */
+    /* Rango Hora — ancho suficiente para "08:00 – 18:00" */
     .rem-tabla-ppal th:nth-child(4),
-    .rem-tabla-ppal td:nth-child(4) { width: 8%; }
+    .rem-tabla-ppal td:nth-child(4) { width: 11%; min-width: 100px; }
 
-    /* Rango Hora — ampliado para mostrar completo "08:00 – 18:00" */
     .rem-tabla-ppal th:nth-child(5),
-    .rem-tabla-ppal td:nth-child(5) { width: 13%; min-width: 110px; }
+    .rem-tabla-ppal td:nth-child(5) { width: 5%; }    /* O.C. */
 
-    /* O.C. */
     .rem-tabla-ppal th:nth-child(6),
-    .rem-tabla-ppal td:nth-child(6) { width: 7%; }
+    .rem-tabla-ppal td:nth-child(6) { width: 8%; }    /* Saldo */
 
-    /* Saldo */
     .rem-tabla-ppal th:nth-child(7),
-    .rem-tabla-ppal td:nth-child(7) { width: 9%; }
+    .rem-tabla-ppal td:nth-child(7) { width: 8%; }    /* Método Pago */
 
-    /* Metodo Pago */
     .rem-tabla-ppal th:nth-child(8),
-    .rem-tabla-ppal td:nth-child(8) { width: 9%; }
+    .rem-tabla-ppal td:nth-child(8) { width: 9%; }    /* Transportador */
 
-    /* Transportador */
     .rem-tabla-ppal th:nth-child(9),
-    .rem-tabla-ppal td:nth-child(9) { width: 9%; }
+    .rem-tabla-ppal td:nth-child(9) { width: 8%; }    /* Vendedor */
 
-    /* Vendedor */
     .rem-tabla-ppal th:nth-child(10),
-    .rem-tabla-ppal td:nth-child(10) { width: 9%; }
+    .rem-tabla-ppal td:nth-child(10) { width: 7%; }   /* Costo Envío */
 
-    /* Costo Envio */
     .rem-tabla-ppal th:nth-child(11),
-    .rem-tabla-ppal td:nth-child(11) { width: 8%; }
+    .rem-tabla-ppal td:nth-child(11) { width: 8%; }   /* Estado */
 
-    /* Estado */
     .rem-tabla-ppal th:nth-child(12),
-    .rem-tabla-ppal td:nth-child(12) { width: 8%; }
+    .rem-tabla-ppal td:nth-child(12) { width: 8%; }   /* Observación */
 
-    /* Observacion */
+    /* Acciones — siempre visible con mínimo garantizado */
     .rem-tabla-ppal th:nth-child(13),
-    .rem-tabla-ppal td:nth-child(13) { width: 4%; }
-
-    /* Expand */
+    .rem-tabla-ppal td:nth-child(13) { width: 5%; min-width: 62px; text-align: center; }
 
     .rem-estado-badge {
         padding: 0.15rem 0.35rem;
@@ -1759,26 +1882,52 @@
 
     .page-header {
         min-width: 0;
-        padding: 0.75rem 1rem;
+        padding: 0.6rem 1rem;
+        gap: 0.5rem;
     }
 
     .header-actions-wrapper {
         min-width: 0;
+        gap: 0.5rem;
+    }
+
+    .filtros-inline {
+        padding: 0.2rem 0.4rem;
+        gap: 0.15rem;
+    }
+
+    .filter-item select,
+    .filter-inline-input,
+    .filter-fecha-item input[type="date"] {
+        font-size: 0.78rem;
+    }
+
+    .filter-inline-input {
+        min-width: 120px;
     }
 }
 
-/* Extreme table font miniaturization strictly for 15" laptops and below */
+/* Extra compact for 13" screens (1280–1440px) */
 @media (max-width: 1440px) {
-
-    .remisiones-page-container .rem-tabla-ppal th {
-        font-size: 0.65rem !important;
-        padding: 0.8rem 0.25rem !important;
+    .rem-tabla-ppal {
+        min-width: 820px;
     }
 
-    .remisiones-page-container .rem-tabla-ppal td {
-        font-size: 0.6rem !important;
-        padding-left: 0.25rem !important;
-        padding-right: 0.25rem !important;
+    .rem-tabla-ppal th,
+    .rem-tabla-ppal td {
+        font-size: 0.68rem;
+        padding-left: 0.3rem;
+        padding-right: 0.3rem;
+    }
+
+    .rem-tabla-ppal th {
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .rem-tabla-ppal td {
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
     }
 }
 
@@ -2900,4 +3049,54 @@
     max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   PAGINATION CONTROLS
+   ========================================================================== */
+.rem-pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+}
+
+.rem-pagination-info {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.rem-pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.rem-pagination-page {
+    font-size: 0.85rem;
+    color: #334155;
+    font-weight: 600;
+}
+
+.rem-page-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    transition: all 0.2s;
+}
+
+.rem-page-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.rem-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8fafc;
 }

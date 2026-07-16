@@ -2,12 +2,12 @@
    Variables & Theme
    ========================================================================== */
 :root {
-    --vendor-primary: #4f46e5;
-    --vendor-primary-light: #818cf8;
-    --vendor-primary-dark: #4338ca;
+    --vendor-primary: #1657b8;       /* Lottus Blue — alineado con --color-primary */
+    --vendor-primary-light: #4d8fd6;
+    --vendor-primary-dark: #104ca7;
     --vendor-success: #10b981;
     --vendor-warning: #f59e0b;
-    --vendor-info: #3b82f6;
+    --vendor-info: #1657b8;
     --vendor-danger: #ef4444;
 
     --vendor-bg: #f8fafc;
@@ -86,7 +86,7 @@
     width: 80px;
     height: 80px;
     margin: 0 auto 1.5rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #1657b8 0%, #104ca7 100%);
     border: 3px solid rgba(255, 255, 255, 0.95);
     border-radius: 50%;
     display: flex;

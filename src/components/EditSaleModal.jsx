@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import './EditSaleModal.css';
 import Modal from './Modal';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppContext } from '../AppContext';
@@ -7,6 +8,7 @@ import API from '../services/api';
 const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchReportSales, fetchClientes }) => {
   const { usuario } = useContext(AppContext);
   const queryClient = useQueryClient();
+  const [showSharedVendors, setShowSharedVendors] = useState(false);
   const [formData, setFormData] = useState({
     id: '',
     cliente_id: '',
@@ -24,7 +26,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     if (saleData) {
       setFormData({
         id: saleData.id,
-        cliente_id: saleData.cliente.id,
+        cliente_id: saleData.cliente?.id || '',
         fecha_venta: saleData.fecha_venta,
         fecha_entrega: saleData.fecha_entrega || '', // Add fecha_entrega
         vendedor_id: saleData.vendedor || '',
@@ -42,13 +44,13 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   const isAuxiliar = usuario?.role?.toLowerCase() === 'auxiliar';
 
   // Rule 1: Disable 'Estado' select if the sale is already 'entregada' for an auxiliar user.
-  const isEstadoDisabled = isAuxiliar && formData.estado.trim().toLowerCase() === 'entregado';
+  const isEstadoDisabled = isAuxiliar && (formData.estado || '').trim().toLowerCase() === 'entregado';
 
   // Rule 2: Disable 'Estado Pedidos' checkbox if it's already true for an auxiliar user.
   const isEstadoPedidosDisabled = isAuxiliar && formData.estado_pedidos;
 
   // Rule 3: Auxiliar users should not see the 'anulada' option.
-  const availableEstados = isAuxiliar ? estados.filter(e => e !== 'anulado') : estados;
+  const availableEstados = isAuxiliar ? (estados || []).filter(e => e !== 'anulado') : estados;
   console.log('isAuxiliar:', isAuxiliar);
   console.log('estados:', estados);
   console.log('availableEstados:', availableEstados);
@@ -108,7 +110,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
   return (
     <Modal show={show} onClose={onClose} title="Editar Venta">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="edit-sale-form">
         <div className="form-group">
           <label>ID Venta:</label>
           <input type="text" name="id" value={formData.id} onChange={handleChange} disabled />
@@ -117,6 +119,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <label>ID Cliente:</label>
           <input type="text" name="cliente_id" value={formData.cliente_id} onChange={handleChange} disabled />
         </div>
+
         <div className="form-group">
           <label>Fecha de Venta:</label>
           <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isAuxiliar} />
@@ -125,48 +128,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <label>Fecha de Entrega:</label>
           <input type="date" name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isAuxiliar} />
         </div>
-        <div className="form-group">
-          <label>Vendedor Principal:</label>
-          <select name="vendedor_id" value={formData.vendedor_id} onChange={(e) => {
-                  handleChange(e);
-                  setFormData(prev => ({
-                    ...prev, 
-                    vendedores_compartidos: prev.vendedores_compartidos.filter(id => id.toString() !== e.target.value.toString())
-                  }));
-                }} required disabled={isAuxiliar}>
-            <option value="">Seleccionar vendedor</option>
-            {vendedores.map(vendedor => (
-              <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
-            ))}
-          </select>
-        </div>
-        {formData.vendedor_id && !isAuxiliar && (
-          <div className="form-group">
-            <label>Vendedores Compartidos:</label>
-            <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '10px', background: 'var(--ventas-bg-medium)', borderRadius: '8px'}}>
-              {vendedores.filter(v => v.id.toString() !== formData.vendedor_id.toString()).map(v => (
-                <label key={v.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer'}}>
-                  <input 
-                    type="checkbox" 
-                    value={v.id} 
-                    checked={formData.vendedores_compartidos.includes(v.id) || formData.vendedores_compartidos.includes(v.id.toString())}
-                    onChange={(e) => {
-                      if(e.target.checked) {
-                        setFormData(prev => ({...prev, vendedores_compartidos: [...prev.vendedores_compartidos, v.id]}));
-                      } else {
-                        setFormData(prev => ({...prev, vendedores_compartidos: prev.vendedores_compartidos.filter(id => id.toString() !== v.id.toString())}));
-                      }
-                    }}
-                  /> {v.first_name}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="form-group checkbox-group">
-          <label>Traslado:</label>
-          <input type="checkbox" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isAuxiliar} />
-        </div>
+
         <div className="form-group">
           <label>Sede:</label>
           <select name="sede" value={formData.sede} onChange={handleChange} disabled={isAuxiliar}>
@@ -175,11 +137,69 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           </select>
         </div>
         <div className="form-group">
+          <label>Vendedor Principal:</label>
+          <select name="vendedor_id" value={formData.vendedor_id} onChange={(e) => {
+                  handleChange(e);
+                  setFormData(prev => ({
+                    ...prev, 
+                    vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== e.target.value?.toString())
+                  }));
+                }} required disabled={isAuxiliar}>
+            <option value="">Seleccionar vendedor</option>
+            {(vendedores || []).map(vendedor => (
+              <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
+            ))}
+          </select>
+        </div>
+
+        {formData.vendedor_id && !isAuxiliar && (
+          <div className="form-group full-width">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+              <input 
+                type="checkbox" 
+                checked={showSharedVendors || ((formData.vendedores_compartidos || []).length > 0)} 
+                onChange={(e) => setShowSharedVendors(e.target.checked)} 
+              /> 
+              Venta Compartida (Opcional)
+            </label>
+            {(showSharedVendors || ((formData.vendedores_compartidos || []).length > 0)) && (
+              <div className="shared-vendors-box">
+                {(vendedores || []).filter(v => v.id?.toString() !== formData.vendedor_id?.toString()).map(v => (
+                  <label key={v.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.85rem', marginBottom: 0}}>
+                    <input 
+                      type="checkbox" 
+                      value={v.id} 
+                      checked={(formData.vendedores_compartidos || []).includes(v.id) || (formData.vendedores_compartidos || []).includes(v.id?.toString())}
+                      onChange={(e) => {
+                        if(e.target.checked) {
+                          setFormData(prev => ({...prev, vendedores_compartidos: [...(prev.vendedores_compartidos || []), v.id]}));
+                        } else {
+                          setFormData(prev => ({...prev, vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== v.id?.toString())}));
+                        }
+                      }}
+                    /> {v.first_name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="form-group checkbox-inline">
+          <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isAuxiliar} />
+          <label htmlFor="traslado">¿Incluye Traslado?</label>
+        </div>
+        <div className="form-group checkbox-inline">
+          <input type="checkbox" id="estado_pedidos" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isEstadoPedidosDisabled} />
+          <label htmlFor="estado_pedidos">¿Estado de Pedidos?</label>
+        </div>
+
+        <div className="form-group">
           <label>Valor Total:</label>
           <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required disabled={isAuxiliar} />
         </div>
         <div className="form-group">
-          <label>Estado:</label>
+          <label>Estado de Venta:</label>
           <select
             name="estado"
             value={formData.estado}
@@ -187,16 +207,17 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
             required
             disabled={isEstadoDisabled}
           >
-            {availableEstados.map(estado => (
+            {(availableEstados || []).map(estado => (
               <option key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1).replace(/_/g, ' ')}</option>
             ))}
           </select>
         </div>
-        <div className="form-group checkbox-group">
-          <label>Estado Pedidos:</label>
-          <input type="checkbox" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isEstadoPedidosDisabled} />
+
+        <div className="edit-sale-modal-actions">
+          <button type="submit" className="v-btn-primary-glow" style={{ minWidth: '160px', height: '44px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            Guardar Cambios
+          </button>
         </div>
-        <button type="submit" className="modal-submit">Guardar Cambios</button>
       </form>
     </Modal>
   );
