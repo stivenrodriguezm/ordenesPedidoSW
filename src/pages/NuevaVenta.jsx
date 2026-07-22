@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaShoppingCart, FaUser, FaFileInvoiceDollar } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
 import './NuevaVenta.css';
@@ -84,7 +85,6 @@ const NuevaVenta = () => {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    setShowDropdown(true);
 
     // Limpiar selección previa si el usuario modifica el texto
     if (clienteId) {
@@ -95,24 +95,41 @@ const NuevaVenta = () => {
     }
 
     clearTimeout(debounceRef.current);
-    if (!value.trim() || value.length < 2) {
+
+    if (!value.trim() || value.trim().length < 2) {
       setSearchResults([]);
       setShowDropdown(false);
+      setIsSearching(false);
       return;
     }
+
+    setIsSearching(true);
+    setShowDropdown(true);
+
     debounceRef.current = setTimeout(async () => {
-      setIsSearching(true);
       try {
-        const res = await API.get(`/clientes/?search=${encodeURIComponent(value)}&limit=8`);
-        const results = res.data?.results || res.data || [];
-        setSearchResults(results);
+        const queryTerm = value.trim();
+        const res = await API.get(`/clientes/?query=${encodeURIComponent(queryTerm)}&search=${encodeURIComponent(queryTerm)}&limit=15`);
+        const rawResults = res.data?.results || res.data || [];
+        
+        // Strict filter to guarantee matching records
+        const term = queryTerm.toLowerCase();
+        const filtered = Array.isArray(rawResults) ? rawResults.filter((c) => {
+          const matchName = c.nombre && c.nombre.toLowerCase().includes(term);
+          const matchCedula = c.cedula && String(c.cedula).toLowerCase().includes(term);
+          const matchId = c.id && String(c.id).toLowerCase().includes(term);
+          return matchName || matchCedula || matchId;
+        }) : [];
+
+        setSearchResults(filtered);
         setShowDropdown(true);
-      } catch {
+      } catch (error) {
+        console.error('Error al buscar clientes:', error);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 350);
+    }, 300);
   };
 
   // Seleccionar cliente del dropdown
@@ -256,10 +273,35 @@ const NuevaVenta = () => {
         </div>
       )}
 
+      {/* --- HEADER PRINCIPAL PREMIUM --- */}
+      <div className="nv-title-header premium-v2">
+        <div className="title-wrapper">
+          <div className="title-icon-badge">
+            <FaShoppingCart className="title-icon" />
+          </div>
+          <div className="title-text-group">
+            <h1>Nueva Venta</h1>
+            <p className="title-subtitle">Registra la información del cliente y los datos de la transacción en el sistema.</p>
+          </div>
+        </div>
+        <div className="header-actions">
+          <button type="button" className="nv-cancel-button" onClick={handleCancel} disabled={isLoading}>
+            Cancelar
+          </button>
+          <button type="button" className="nv-submit-button" onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? "Creando..." : "Crear Venta"}
+          </button>
+        </div>
+      </div>
+
       <div className="nv-form-sections">
-      {/* ── Sección de búsqueda de cliente ── */}
+        {/* ── Sección de búsqueda de cliente ── */}
         <div className="cliente-section nv-card">
-          <div className="nv-cliente-search-header">
+          <div className="nv-card-header">
+            <div className="nv-card-title">
+              <div className="section-icon-badge badge-blue"><FaUser /></div>
+              <h3>Información del Cliente</h3>
+            </div>
             <div className="nv-cliente-tabs">
               <button
                 type="button"
@@ -309,25 +351,36 @@ const NuevaVenta = () => {
             </div>
 
             {/* Dropdown de resultados */}
-            {showDropdown && searchResults.length > 0 && (
-              <ul className="nv-search-dropdown">
-                {searchResults.map(cliente => (
-                  <li
-                    key={cliente.id}
-                    className="nv-search-item"
-                    onMouseDown={() => handleSelectCliente(cliente)}
-                  >
-                    <div className="nv-search-item-name">{cliente.nombre}</div>
-                    <div className="nv-search-item-meta">
-                      {cliente.cedula && <span>Céd: {cliente.cedula}</span>}
-                      {cliente.ciudad && <span>{cliente.ciudad}</span>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {showDropdown && !isSearching && searchTerm.length >= 2 && searchResults.length === 0 && (
-              <div className="nv-search-empty">Sin resultados.</div>
+            {showDropdown && (
+              <div className="nv-search-dropdown">
+                {isSearching ? (
+                  <div className="nv-search-loading">
+                    <div className="nv-search-spinner-inline" />
+                    <span>Buscando cliente...</span>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <ul className="nv-search-list">
+                    {searchResults.map((cliente) => (
+                      <li
+                        key={cliente.id}
+                        className="nv-search-item"
+                        onMouseDown={() => handleSelectCliente(cliente)}
+                      >
+                        <div className="nv-search-item-name">{cliente.nombre}</div>
+                        <div className="nv-search-item-meta">
+                          {cliente.cedula && <span>Céd: {cliente.cedula}</span>}
+                          {cliente.ciudad && <span>{cliente.ciudad}</span>}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : searchTerm.trim().length >= 2 ? (
+                  <div className="nv-search-empty">
+                    <span className="nv-search-empty-icon">🔍</span>
+                    <span>Sin resultados para "{searchTerm}"</span>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
           )}
@@ -432,8 +485,13 @@ const NuevaVenta = () => {
 
         {/* Sección de Datos de la Venta y Observación */}
         <div className="venta-section nv-card">
+          <div className="nv-card-header">
+            <div className="nv-card-title">
+              <div className="section-icon-badge badge-indigo"><FaFileInvoiceDollar /></div>
+              <h3>Datos de la Venta</h3>
+            </div>
+          </div>
           <div className="venta-form">
-            <h3>Datos de la Venta</h3>
             <div className="nv-cliente-data-columns">
               <div className="column">
                 <div className="nv-form-group">
@@ -567,16 +625,7 @@ const NuevaVenta = () => {
           </div>
         </div>
       </div>
-
-      <div className="nv-form-actions">
-        <button className="nv-cancel-button" onClick={handleCancel} disabled={isLoading}>
-          Cancelar
-        </button>
-        <button className="nv-submit-button" onClick={handleSubmit} disabled={isLoading}>
-          Crear Venta
-        </button>
-      </div>
-    </div >
+    </div>
   );
 };
 

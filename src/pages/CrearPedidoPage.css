@@ -82,20 +82,26 @@
 }
 
 .btn-submit-action {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #274385;
   border: none;
   color: #ffffff;
   padding: 0.45rem 1.15rem;
   border-radius: 8px;
-  font-size: 0.825rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
-  transition: all 0.15s ease;
+  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 }
 
 .btn-submit-action:hover:not(:disabled) {
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  background: #1a2d59;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px #192b54;
 }
 
 .btn-submit-action:disabled {

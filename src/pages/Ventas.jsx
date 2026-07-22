@@ -391,8 +391,10 @@ const Ventas = () => {
     const handleExpandNestedOrder = async (orderId) => {
         if (expandedNestedOrderId === orderId) {
             setExpandedNestedOrderId(null);
+            setNestedOrderDetails(null);
         } else {
             setExpandedNestedOrderId(orderId);
+            setNestedOrderDetails(null);
             setLoadingNestedDetails(true);
             try {
                 const response = await API.get(`/pedidos/${orderId}/detalles/`);
@@ -1007,7 +1009,10 @@ const Ventas = () => {
                                                                                 {expandedNestedOrderId === pedido.id && (
                                                                                     <div className="order-card-v2-body">
                                                                                         {loadingNestedDetails ? (
-                                                                                            <div className="loading-container-small"><div className="loader-small"></div></div>
+                                                                                            <div className="loading-container-small">
+                                                                                                <div className="loader-small"></div>
+                                                                                                <span>Cargando productos...</span>
+                                                                                            </div>
                                                                                         ) : nestedOrderDetails ? (
                                                                                             <div className="nested-products-grid">
                                                                                                 {Array.isArray(nestedOrderDetails) && nestedOrderDetails.length > 0 ? (
