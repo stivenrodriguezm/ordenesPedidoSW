@@ -524,12 +524,12 @@ const ComprobantesEgreso = () => {
         </div>
       </div>
 
-      <div className="pagination-bar">
-        <button className="pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
+      <div className="ce-pagination-bar">
+        <button className="ce-pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
           <FaChevronLeft />
         </button>
-        <span className="pagination-info">Página {currentPage} de {totalPages}</span>
-        <button className="pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
+        <span className="ce-pagination-info">Página {currentPage} de {totalPages}</span>
+        <button className="ce-pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
           <FaChevronRight />
         </button>
       </div>

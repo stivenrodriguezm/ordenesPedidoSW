@@ -500,12 +500,12 @@ const RecibosCaja = () => {
         </div>
       </div>
 
-      <div className="pagination-bar">
-        <button className="pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
+      <div className="rc-pagination-bar">
+        <button className="rc-pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
           <FaChevronLeft />
         </button>
-        <span className="pagination-info">Página {currentPage} de {totalPages}</span>
-        <button className="pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
+        <span className="rc-pagination-info">Página {currentPage} de {totalPages}</span>
+        <button className="rc-pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
           <FaChevronRight />
         </button>
       </div>

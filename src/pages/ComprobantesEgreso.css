@@ -652,9 +652,9 @@
 }
 
 /* ==========================================================================
-   Pagination
+   Pagination (Scoped to ComprobantesEgreso)
    ========================================================================== */
-.pagination-bar {
+.ce-pagination-bar {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -663,7 +663,7 @@
   padding: 1rem;
 }
 
-.pagination-btn {
+.ce-pagination-btn {
   background: var(--surface);
   border: 1px solid var(--slate-200);
   color: var(--slate-600);
@@ -679,21 +679,21 @@
   font-size: 0.9rem;
 }
 
-.pagination-btn:hover:not(:disabled) {
-  background: var(--emerald-50);
-  color: var(--emerald-600);
-  border-color: var(--emerald-500);
+.ce-pagination-btn:hover:not(:disabled) {
+  background: #f0f9ff;
+  color: #0284c7;
+  border-color: #0284c7;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.pagination-btn:disabled {
+.ce-pagination-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--slate-50);
 }
 
-.pagination-info {
+.ce-pagination-info {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--slate-600);

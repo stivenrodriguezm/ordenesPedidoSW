@@ -29,11 +29,7 @@ const emptyRef = () => ({
     ventaId: '', 
     imagen: null, 
     visible: false,
-    lleva_tela: false,
-    tela_referencia: '',
-    tela_color: '',
-    tela_costo_metro: '',
-    tela_cantidad_metros: ''
+    telas_cueros: [],  // [{ tipo, referencia, color, unidad_medida, costo_unidad, cantidad }]
 });
 
 const emptyForm = () => ({
@@ -235,10 +231,31 @@ function FacturasProveedorPage() {
         setForm(prev => ({ ...prev, valor: raw, valorDisplay: raw ? formatCOP(parseInt(raw)) : '' }));
     };
 
-    const handleTelaChange = (index, field, value) => {
+    // ─── Telas y Cueros handlers ────────────────────────────────────────────
+    const addTelaCueroToRow = (rowIndex) => {
         setForm(prev => {
             const prods = [...prev.productos];
-            prods[index] = { ...prods[index], [field]: value };
+            const tc = prods[rowIndex].telas_cueros || [];
+            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: [...tc, { tipo: 'tela', referencia: '', color: '', costo_unidad: '', cantidad: '' }] };
+            return { ...prev, productos: prods };
+        });
+    };
+
+    const updateTelaCueroInRow = (rowIndex, tcIndex, field, value) => {
+        setForm(prev => {
+            const prods = [...prev.productos];
+            const tc = [...(prods[rowIndex].telas_cueros || [])];
+            tc[tcIndex] = { ...tc[tcIndex], [field]: value };
+            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: tc };
+            return { ...prev, productos: prods };
+        });
+    };
+
+    const removeTelaCueroFromRow = (rowIndex, tcIndex) => {
+        setForm(prev => {
+            const prods = [...prev.productos];
+            const tc = (prods[rowIndex].telas_cueros || []).filter((_, i) => i !== tcIndex);
+            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: tc };
             return { ...prev, productos: prods };
         });
     };
@@ -457,11 +474,14 @@ function FacturasProveedorPage() {
                 estado_fisico: p.estado_fisico,
                 zona: p.zonaId ? parseInt(p.zonaId) : null,
                 venta_id: p.ventaId,
-                lleva_tela: p.lleva_tela || false,
-                tela_referencia: p.tela_referencia || '',
-                tela_color: p.tela_color || '',
-                tela_costo_metro: p.lleva_tela ? parseCOP(p.tela_costo_metro) : 0,
-                tela_cantidad_metros: p.lleva_tela ? (parseFloat(p.tela_cantidad_metros) || 0) : 0,
+                telas_cueros: (p.telas_cueros || []).map(tc => ({
+                    tipo: tc.tipo || 'tela',
+                    referencia: (tc.referencia || '').trim(),
+                    color: (tc.color || '').trim(),
+                    unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
+                    costo_unidad: parseCOP(tc.costo_unidad),
+                    cantidad: parseFloat(tc.cantidad) || 0
+                }))
             }))
         };
         
@@ -618,11 +638,27 @@ function FacturasProveedorPage() {
                 venta: p.venta_id || p.venta || null,
                 grupo: p.grupo_id || p.grupo || null,
                 cantidad: 1,
-                lleva_tela: p.lleva_tela || false,
-                tela_referencia: p.tela_referencia || '',
-                tela_color: p.tela_color || '',
-                tela_costo_metro: p.tela_costo_metro ? Math.floor(parseFloat(p.tela_costo_metro)) : '',
-                tela_cantidad_metros: p.tela_cantidad_metros || '',
+                telas_cueros: Array.isArray(p.telas_cueros) && p.telas_cueros.length > 0
+                    ? p.telas_cueros.map(tc => ({
+                        id: tc.id || Date.now() + Math.random(),
+                        tipo: tc.tipo || 'tela',
+                        referencia: tc.referencia || '',
+                        color: tc.color || '',
+                        unidad_medida: tc.unidad_medida || (tc.tipo === 'cuero' ? 'decimetro' : 'metro'),
+                        costo_unidad: tc.costo_unidad || '',
+                        cantidad: tc.cantidad || ''
+                    }))
+                    : (p.lleva_tela || p.tela_referencia || p.tela_color
+                        ? [{
+                            id: Date.now(),
+                            tipo: 'tela',
+                            referencia: p.tela_referencia || '',
+                            color: p.tela_color || '',
+                            unidad_medida: 'metro',
+                            costo_unidad: p.tela_costo_metro || '',
+                            cantidad: p.tela_cantidad_metros || ''
+                        }]
+                        : [])
             }));
 
             setEditModal({
@@ -662,11 +698,14 @@ function FacturasProveedorPage() {
                     estado_fisico: p.estado_fisico || 'buen_estado',
                     zona: p.zona ? parseInt(p.zona) : null,
                     venta_id: p.venta ? parseInt(p.venta) : null,
-                    lleva_tela: p.lleva_tela || false,
-                    tela_referencia: p.tela_referencia || '',
-                    tela_color: p.tela_color || '',
-                    tela_costo_metro: p.lleva_tela ? (parseFloat(p.tela_costo_metro) || 0) : 0,
-                    tela_cantidad_metros: p.lleva_tela ? (parseFloat(p.tela_cantidad_metros) || 0) : 0,
+                    telas_cueros: (p.telas_cueros || []).map(tc => ({
+                        tipo: tc.tipo || 'tela',
+                        referencia: (tc.referencia || '').trim(),
+                        color: (tc.color || '').trim(),
+                        unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
+                        costo_unidad: parseFloat(tc.costo_unidad) || 0,
+                        cantidad: parseFloat(tc.cantidad) || 0
+                    }))
                 }))
             };
 
@@ -852,6 +891,17 @@ function FacturasProveedorPage() {
                                                                                 const catNombre = p.categoria_nombre || null;
                                                                                 const subNombre = p.subcategoria_nombre || null;
                                                                                 const grupoNombre = p.grupo_nombre || null;
+
+                                                                                const tcList = Array.isArray(p.telas_cueros) && p.telas_cueros.length > 0
+                                                                                    ? p.telas_cueros
+                                                                                    : (p.lleva_tela || p.tela_referencia || p.tela_color
+                                                                                        ? [{ tipo: 'tela', referencia: p.tela_referencia || 'Sí', color: p.tela_color || '', unidad_medida: 'metro', costo_unidad: p.tela_costo_metro || 0, cantidad: p.tela_cantidad_metros || 0 }]
+                                                                                        : []);
+
+                                                                                const baseCosto = parseFloat(p.costo) || 0;
+                                                                                const totalTCCosto = tcList.reduce((sum, tc) => sum + ((parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0)), 0);
+                                                                                const hasTC = tcList.length > 0;
+
                                                                                 return (
                                                                                     <div key={keyIndex} className="invoice-item-card compact-card">
                                                                                         <div className="compact-col compact-col-main">
@@ -870,11 +920,24 @@ function FacturasProveedorPage() {
                                                                                             <div className="item-desc truncate-text" title={p.variacion || '—'}>
                                                                                                 <span className="desc-label">Var:</span> <span className="desc-val">{p.variacion || '—'}</span>
                                                                                             </div>
-                                                                                            {(p.lleva_tela || p.tela_referencia || p.tela_color) && (
-                                                                                                <div className="item-desc truncate-text" title={`Tela: ${p.tela_referencia || 'Sí'} | Color: ${p.tela_color || '—'}`}>
-                                                                                                    <span className="desc-label" style={{ color: '#0284c7' }}>Tela:</span> <span className="desc-val" style={{ color: '#0369a1', fontWeight: 600 }}>{p.tela_referencia || 'Sí'} {p.tela_color ? `(${p.tela_color})` : ''}</span>
+
+                                                                                            {hasTC && (
+                                                                                                <div className="item-tc-section" style={{ marginTop: '0.25rem' }}>
+                                                                                                    {tcList.map((tc, idx) => {
+                                                                                                        const isCuero = tc.tipo === 'cuero';
+                                                                                                        const unitLabel = isCuero ? 'dm' : 'm';
+                                                                                                        const tcTotal = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
+                                                                                                        return (
+                                                                                                            <div key={idx} style={{ fontSize: '0.75rem', background: isCuero ? '#fff7ed' : '#f0f9ff', color: isCuero ? '#c2410c' : '#0369a1', border: `1px solid ${isCuero ? '#ffedd5' : '#e0f2fe'}`, padding: '0.2rem 0.5rem', borderRadius: '6px', marginBottom: '0.2rem' }}>
+                                                                                                                <strong>[{isCuero ? 'Cuero' : 'Tela'}]</strong> {tc.referencia || 'Sin Ref'} {tc.color ? `(${tc.color})` : ''} 
+                                                                                                                {tc.costo_unidad > 0 && ` — ${formatCOP(tc.costo_unidad)}/${unitLabel} × ${tc.cantidad}${unitLabel}`}
+                                                                                                                {tcTotal > 0 && <span style={{ fontWeight: 700, marginLeft: '0.4rem' }}>= {formatCOP(tcTotal)}</span>}
+                                                                                                            </div>
+                                                                                                        );
+                                                                                                    })}
                                                                                                 </div>
                                                                                             )}
+
                                                                                             <div className="item-desc truncate-text" title={p.observacion || '—'}>
                                                                                                 <span className="desc-label">Obs:</span> <span className="desc-val">{p.observacion || '—'}</span>
                                                                                             </div>
@@ -889,8 +952,17 @@ function FacturasProveedorPage() {
                                                                                             <span className="item-venta-link">{p.ventaId ? `Venta #${p.ventaId}` : 'Sin asignar'}</span>
                                                                                         </div>
 
-                                                                                        <div className="compact-col compact-col-price">
-                                                                                            <span className="item-costo">{formatCOP(p.costo)}</span>
+                                                                                        <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
+                                                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                                                                <span className="item-costo" style={{ fontSize: '0.95rem', fontWeight: 800 }}>{formatCOP(baseCosto)}</span>
+                                                                                                <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Costo Proveedor</span>
+                                                                                            </div>
+                                                                                            {hasTC && totalTCCosto > 0 && (
+                                                                                                <div style={{ fontSize: '0.72rem', background: '#f8fafc', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
+                                                                                                    <span style={{ color: '#475569' }}>Total c/Telas/Cueros: </span>
+                                                                                                    <strong style={{ color: '#0f172a' }}>{formatCOP(baseCosto + totalTCCosto)}</strong>
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
 
                                                                                         {p.imagen && (
@@ -1588,56 +1660,100 @@ function FacturasProveedorPage() {
                                                 )}
                                             </div>
 
-                                            {/* Fila 3: Tela */}
-                                            <div className="fct-ref-row3" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, cursor: 'pointer', margin: 0, color: '#64748b', fontSize: '0.8rem' }}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={row.lleva_tela} 
-                                                        onChange={e => handleTelaChange(index, 'lleva_tela', e.target.checked)}
-                                                        style={{ width: '0.9rem', height: '0.9rem', accentColor: 'var(--color-primary)' }}
-                                                    />
-                                                    ¿Lleva tela?
-                                                </label>
-                                                
-                                                {row.lleva_tela && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Ref. Tela" 
-                                                            value={row.tela_referencia || ''} 
-                                                            onChange={e => handleTelaChange(index, 'tela_referencia', e.target.value)}
-                                                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                        />
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Color" 
-                                                            value={row.tela_color || ''} 
-                                                            onChange={e => handleTelaChange(index, 'tela_color', e.target.value)}
-                                                            style={{ width: '80px', padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                        />
-                                                        <div style={{ position: 'relative', width: '90px' }}>
-                                                            <span style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.8rem' }}>$</span>
-                                                            <input 
-                                                                type="text" 
-                                                                placeholder="Costo/m"
-                                                                value={row.tela_costo_metro ? formatCOP(parseInt(row.tela_costo_metro)) : ''} 
-                                                                onChange={e => {
-                                                                    const raw = e.target.value.replace(/[^0-9]/g, '');
-                                                                    handleTelaChange(index, 'tela_costo_metro', raw);
-                                                                }}
-                                                                style={{ width: '100%', padding: '0.4rem 0.4rem 0.4rem 1.2rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                            />
-                                                        </div>
-                                                        <input 
-                                                            type="number" 
-                                                            step="0.1"
-                                                            min="0"
-                                                            placeholder="Metros" 
-                                                            value={row.tela_cantidad_metros || ''} 
-                                                            onChange={e => handleTelaChange(index, 'tela_cantidad_metros', e.target.value)}
-                                                            style={{ width: '70px', padding: '0.4rem', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                        />
+                                            {/* Sub-sección Dinámica: Telas y Cueros */}
+                                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                        🧵 Telas y Cueros (Costos Adicionales)
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addTelaCueroToRow(index)}
+                                                        style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                    >
+                                                        <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
+                                                    </button>
+                                                </div>
+
+                                                {(!row.telas_cueros || row.telas_cueros.length === 0) ? (
+                                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin telas o cueros asignados a este producto.</div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                                        {row.telas_cueros.map((tc, tcIdx) => {
+                                                            const isCuero = tc.tipo === 'cuero';
+                                                            const unitLabel = isCuero ? 'dm' : 'm';
+                                                            const tcSubtotal = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
+                                                            return (
+                                                                <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', padding: '0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                                                    <select
+                                                                        value={tc.tipo || 'tela'}
+                                                                        onChange={e => updateTelaCueroInRow(index, tcIdx, 'tipo', e.target.value)}
+                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff' }}
+                                                                    >
+                                                                        <option value="tela">Tela (m)</option>
+                                                                        <option value="cuero">Cuero (dm)</option>
+                                                                    </select>
+
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder={isCuero ? "Ref. Cuero" : "Ref. Tela"}
+                                                                        value={tc.referencia || ''}
+                                                                        onChange={e => updateTelaCueroInRow(index, tcIdx, 'referencia', e.target.value)}
+                                                                        style={{ flex: 1, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                    />
+
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Color"
+                                                                        value={tc.color || ''}
+                                                                        onChange={e => updateTelaCueroInRow(index, tcIdx, 'color', e.target.value)}
+                                                                        style={{ width: '80px', padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                    />
+
+                                                                    <div style={{ position: 'relative', width: '95px' }}>
+                                                                        <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.7rem' }}>$</span>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder={isCuero ? "$/dm" : "$/m"}
+                                                                            value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
+                                                                            onChange={e => {
+                                                                                const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                                                updateTelaCueroInRow(index, tcIdx, 'costo_unidad', raw);
+                                                                            }}
+                                                                            style={{ width: '100%', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                        />
+                                                                    </div>
+
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.1"
+                                                                            min="0"
+                                                                            placeholder={isCuero ? "Decímetros" : "Metros"}
+                                                                            value={tc.cantidad || ''}
+                                                                            onChange={e => updateTelaCueroInRow(index, tcIdx, 'cantidad', e.target.value)}
+                                                                            style={{ width: '70px', padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                        />
+                                                                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                                    </div>
+
+                                                                    {tcSubtotal > 0 && (
+                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', padding: '0 0.3rem' }}>
+                                                                            = {formatCOP(tcSubtotal)}
+                                                                        </span>
+                                                                    )}
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeTelaCueroFromRow(index, tcIdx)}
+                                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem' }}
+                                                                        title="Quitar esta tela/cuero"
+                                                                    >
+                                                                        <FaTrashAlt />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>

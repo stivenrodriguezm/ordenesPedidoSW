@@ -101,11 +101,7 @@ const emptyRef = () => ({
     ventaId: '', 
     imagen: null, 
     visible: true,
-    lleva_tela: false,
-    tela_referencia: '',
-    tela_color: '',
-    tela_costo_metro: '',
-    tela_cantidad_metros: ''
+    telas_cueros: [],  // [{ tipo, referencia, color, costo_unidad, cantidad }]
 });
 
 const emptyForm = () => ({
@@ -399,11 +395,14 @@ function InventarioPage() {
                         venta: item.ventaId ? parseInt(item.ventaId) : null,
                         grupo: finalGrupoId,
                         proveedor: form.proveedorId ? parseInt(form.proveedorId) : null,
-                        lleva_tela: item.lleva_tela || false,
-                        tela_referencia: item.tela_referencia || null,
-                        tela_color: item.tela_color || null,
-                        tela_costo_metro: parseFloat(item.tela_costo_metro) || 0,
-                        tela_cantidad_metros: parseFloat(item.tela_cantidad_metros) || 0,
+                        telas_cueros: (item.telas_cueros || []).map(tc => ({
+                            tipo: tc.tipo || 'tela',
+                            referencia: (tc.referencia || '').trim(),
+                            color: (tc.color || '').trim(),
+                            unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
+                            costo_unidad: parseFloat(tc.costo_unidad) || 0,
+                            cantidad: parseFloat(tc.cantidad) || 0,
+                        })),
                     }));
                 }
             }
@@ -532,6 +531,22 @@ function InventarioPage() {
     };
 
     const openItemEdit = (item) => {
+        // Normalize telas_cueros: prefer array, fallback to legacy single-fabric fields
+        let telasInit = [];
+        if (Array.isArray(item.telas_cueros) && item.telas_cueros.length > 0) {
+            telasInit = item.telas_cueros.map(tc => ({
+                id: tc.id,
+                tipo: tc.tipo || 'tela',
+                referencia: tc.referencia || '',
+                color: tc.color || '',
+                unidad_medida: tc.unidad_medida || (tc.tipo === 'cuero' ? 'decimetro' : 'metro'),
+                costo_unidad: tc.costo_unidad || '',
+                cantidad: tc.cantidad || '',
+            }));
+        } else if (item.lleva_tela || item.tela_referencia) {
+            telasInit = [{ tipo: 'tela', referencia: item.tela_referencia || '', color: item.tela_color || '', unidad_medida: 'metro', costo_unidad: item.tela_costo_metro || '', cantidad: item.tela_cantidad_metros || '' }];
+        }
+
         setItemEditModal({
             open: true,
             item,
@@ -551,11 +566,7 @@ function InventarioPage() {
                 fecha_ingreso: item.fecha_ingreso || '',
                 factura_manual: item.factura_manual || '',
                 imagen: item.imagen || '',
-                lleva_tela: item.lleva_tela || false,
-                tela_referencia: item.tela_referencia || '',
-                tela_color: item.tela_color || '',
-                tela_costo_metro: item.tela_costo_metro ? Math.floor(parseFloat(item.tela_costo_metro)) : '',
-                tela_cantidad_metros: item.tela_cantidad_metros || ''
+                telas_cueros: telasInit,
             }
         });
         // Load existing costos adicionales for this item
@@ -638,11 +649,14 @@ function InventarioPage() {
                 fecha_ingreso: form.fecha_ingreso || null,
                 factura_manual: form.factura_manual || '',
                 imagen: form.imagen || '',
-                lleva_tela: form.lleva_tela || false,
-                tela_referencia: form.tela_referencia || '',
-                tela_color: form.tela_color || '',
-                tela_costo_metro: parseFloat(form.tela_costo_metro) || 0,
-                tela_cantidad_metros: parseFloat(form.tela_cantidad_metros) || 0
+                telas_cueros: (form.telas_cueros || []).map(tc => ({
+                    tipo: tc.tipo || 'tela',
+                    referencia: (tc.referencia || '').trim(),
+                    color: (tc.color || '').trim(),
+                    unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
+                    costo_unidad: parseFloat(tc.costo_unidad) || 0,
+                    cantidad: parseFloat(tc.cantidad) || 0,
+                })),
             };
 
             if (payload.grupo) {
@@ -749,8 +763,21 @@ function InventarioPage() {
 
     // ── Enriched items ────────────────────────────────────────────────────────
     const items = inventario.map(inv => {
-        const rawTela = inv.tela_referencia || (inv.lleva_tela ? 'Sí' : '');
-        const rawColor = inv.tela_color || '';
+        const tcArr = Array.isArray(inv.telas_cueros) ? inv.telas_cueros : [];
+        let rawTela, rawColor;
+        if (tcArr.length === 0) {
+            rawTela = inv.tela_referencia || (inv.lleva_tela ? 'Sí' : '');
+            rawColor = inv.tela_color || '';
+        } else if (tcArr.length === 1) {
+            const tc = tcArr[0];
+            const unit = tc.unidad_medida === 'decimetro' ? 'dm' : 'm';
+            const cantStr = tc.cantidad ? ` (${tc.cantidad}${unit})` : '';
+            rawTela = `${tc.referencia || (tc.tipo === 'cuero' ? 'Cuero' : 'Tela')}${cantStr}`;
+            rawColor = tc.color || '';
+        } else {
+            rawTela = 'Mixto';
+            rawColor = 'Mixto';
+        }
         return {
             ...inv,
             dbId: inv.id_referencia,
@@ -1615,59 +1642,66 @@ function InventarioPage() {
                                                         <input className="ifg-input" type="text" value={row.observacion} onChange={e => handleRefRow(index, 'observacion', e.target.value)} placeholder="Notas internas..." style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
                                                     </div>
 
-                                                    {/* ROW 4: Tela */}
-                                                    <div style={{ gridColumn: 'span 12', display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
-                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, cursor: 'pointer', margin: 0, color: '#64748b', fontSize: '0.75rem' }}>
-                                                            <input 
-                                                                type="checkbox" 
-                                                                checked={row.lleva_tela} 
-                                                                onChange={e => handleTelaChange(index, 'lleva_tela', e.target.checked)}
-                                                                style={{ width: '0.9rem', height: '0.9rem', accentColor: 'var(--color-primary)' }}
-                                                            />
-                                                            ¿Lleva tela?
-                                                        </label>
-                                                        
-                                                        {row.lleva_tela && (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                                                                <input 
-                                                                    type="text" 
-                                                                    className="ifg-input"
-                                                                    placeholder="Ref. Tela" 
-                                                                    value={row.tela_referencia || ''} 
-                                                                    onChange={e => handleTelaChange(index, 'tela_referencia', e.target.value)}
-                                                                    style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                                />
-                                                                <input 
-                                                                    type="text" 
-                                                                    className="ifg-input"
-                                                                    placeholder="Color" 
-                                                                    value={row.tela_color || ''} 
-                                                                    onChange={e => handleTelaChange(index, 'tela_color', e.target.value)}
-                                                                    style={{ width: '80px', padding: '0.35rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                                />
-                                                                <div style={{ position: 'relative', width: '90px' }}>
-                                                                    <span style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.75rem' }}>$</span>
-                                                                    <input 
-                                                                        type="text" 
-                                                                        className="ifg-input-raw"
-                                                                        placeholder="Costo/m"
-                                                                        value={row.tela_costo_metro ? formatCOP(parseInt(row.tela_costo_metro)) : ''} 
-                                                                        onChange={e => {
-                                                                            const raw = e.target.value.replace(/[^0-9]/g, '');
-                                                                            handleTelaChange(index, 'tela_costo_metro', raw);
-                                                                        }}
-                                                                        style={{ width: '100%', padding: '0.35rem 0.5rem 0.35rem 1.2rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                                    />
-                                                                </div>
-                                                                <input 
-                                                                    type="number" 
-                                                                    step="0.1"
-                                                                    min="0"
-                                                                    placeholder="Metros" 
-                                                                    value={row.tela_cantidad_metros || ''} 
-                                                                    onChange={e => handleTelaChange(index, 'tela_cantidad_metros', e.target.value)}
-                                                                    style={{ width: '70px', padding: '0.35rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                                />
+                                                    {/* ROW 4: Telas y Cueros (Costos Adicionales) */}
+                                                    <div style={{ gridColumn: 'span 12', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.65rem', marginTop: '0.3rem' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>🧵 Telas y Cueros (Costos Adicionales)</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setForm(prev => {
+                                                                    const prods = [...prev.productos];
+                                                                    const tcs = prods[index].telas_cueros || [];
+                                                                    prods[index] = { ...prods[index], telas_cueros: [...tcs, { tipo: 'tela', referencia: '', color: '', costo_unidad: '', cantidad: '' }] };
+                                                                    return { ...prev, productos: prods };
+                                                                })}
+                                                                style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                                            >
+                                                                <FaPlus style={{ fontSize: '0.6rem' }} /> Agregar
+                                                            </button>
+                                                        </div>
+                                                        {(!row.telas_cueros || row.telas_cueros.length === 0) ? (
+                                                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin telas o cueros asignados.</div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                                                {row.telas_cueros.map((tc, tcIdx) => {
+                                                                    const isCuero = tc.tipo === 'cuero';
+                                                                    const unitLabel = isCuero ? 'dm' : 'm';
+                                                                    const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
+                                                                    return (
+                                                                        <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#fff', padding: '0.3rem', borderRadius: '5px', border: '1px solid #cbd5e1' }}>
+                                                                            <select value={tc.tipo || 'tela'}
+                                                                                onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
+                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff' }}>
+                                                                                <option value="tela">Tela (m)</option>
+                                                                                <option value="cuero">Cuero (dm)</option>
+                                                                            </select>
+                                                                            <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
+                                                                                onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
+                                                                                style={{ flex: 1, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                            <input type="text" placeholder="Color" value={tc.color || ''}
+                                                                                onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
+                                                                                style={{ width: '70px', padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                            <div style={{ position: 'relative', width: '88px' }}>
+                                                                                <span style={{ position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
+                                                                                <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
+                                                                                    onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; }); }}
+                                                                                    style={{ width: '100%', padding: '0.25rem 0.25rem 0.25rem 0.9rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                            </div>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+                                                                                <input type="number" step="0.1" min="0" placeholder={isCuero ? 'dm' : 'm'} value={tc.cantidad || ''}
+                                                                                    onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], cantidad: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
+                                                                                    style={{ width: '58px', padding: '0.25rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                                            </div>
+                                                                            {tcSub > 0 && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>= {formatCOP(tcSub)}</span>}
+                                                                            <button type="button"
+                                                                                onClick={() => setForm(prev => { const prods = [...prev.productos]; prods[index] = { ...prods[index], telas_cueros: (prods[index].telas_cueros || []).filter((_, i) => i !== tcIdx) }; return { ...prev, productos: prods }; })}
+                                                                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.15rem', fontSize: '0.75rem' }} title="Quitar">
+                                                                                <FaTimes />
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
                                                     </div>
@@ -2037,70 +2071,9 @@ function InventarioPage() {
                                     <div className="ifg-group" style={{ gridColumn: 'span 6' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Observación</label>
                                         <input type="text" className="ifg-input" value={itemEditModal.form.observacion} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, observacion: e.target.value } }))} placeholder="Notas adicionales..." style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
-                                    </div>
+                                    </div>{/* end ROW 4 observacion */}
+                                </div>{/* end ifg-grid */}
 
-                                    {/* ROW 5: Tela */}
-                                    <div style={{ gridColumn: 'span 12', display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, cursor: 'pointer', margin: 0, color: '#64748b', fontSize: '0.75rem' }}>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={itemEditModal.form.lleva_tela} 
-                                                onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, lleva_tela: e.target.checked } }))}
-                                                style={{ width: '0.9rem', height: '0.9rem', accentColor: 'var(--color-primary)' }}
-                                            />
-                                            ¿Lleva tela?
-                                        </label>
-                                        
-                                        {itemEditModal.form.lleva_tela && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-                                                <div className="fct-field" style={{ flex: 1, margin: 0 }}>
-                                                    <input 
-                                                        type="text" 
-                                                        className="ifg-input"
-                                                        placeholder="Ref. Tela" 
-                                                        value={itemEditModal.form.tela_referencia || ''} 
-                                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, tela_referencia: e.target.value } }))}
-                                                    />
-                                                </div>
-                                                <div className="fct-field" style={{ flex: 1, margin: 0 }}>
-                                                    <input 
-                                                        type="text" 
-                                                        className="ifg-input"
-                                                        placeholder="Color" 
-                                                        value={itemEditModal.form.tela_color || ''} 
-                                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, tela_color: e.target.value } }))}
-                                                    />
-                                                </div>
-                                                <div className="fct-field" style={{ flex: 1, margin: 0 }}>
-                                                    <div className="ifg-input-prefix">
-                                                        <span style={{ padding: '0 0.5rem', fontSize: '0.75rem' }}>$</span>
-                                                        <input 
-                                                            type="text" 
-                                                            className="ifg-input-raw"
-                                                            placeholder="Costo/m"
-                                                            value={itemEditModal.form.tela_costo_metro ? formatCOP(parseInt(itemEditModal.form.tela_costo_metro)) : ''} 
-                                                            onChange={e => {
-                                                                const raw = e.target.value.replace(/[^0-9]/g, '');
-                                                                setItemEditModal(prev => ({ ...prev, form: { ...prev.form, tela_costo_metro: raw } }));
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="fct-field" style={{ width: '80px', margin: 0 }}>
-                                                    <input 
-                                                        type="number" 
-                                                        step="0.1"
-                                                        min="0"
-                                                        className="ifg-input"
-                                                        placeholder="Metros" 
-                                                        value={itemEditModal.form.tela_cantidad_metros || ''} 
-                                                        onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, tela_cantidad_metros: e.target.value } }))}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
                                 {itemEditModal.form.grupoId && (
                                     <div style={{ marginTop: '0.8rem', padding: '0.6rem', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
                                         <small style={{ color: '#d97706', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
@@ -2110,10 +2083,74 @@ function InventarioPage() {
                                     </div>
                                 )}
 
-                                {/* ── COSTOS ADICIONALES ───────────── */}
+                                {/* ── TELAS Y CUEROS ─────────────────────────────────── */}
+                                <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0369a1' }}>
+                                            🧵 Telas y Cueros (Costos Adicionales)
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, telas_cueros: [...(prev.form.telas_cueros || []), { tipo: 'tela', referencia: '', color: '', unidad_medida: 'metro', costo_unidad: '', cantidad: '' }] } }))}
+                                            style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                        >
+                                            <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
+                                        </button>
+                                    </div>
+
+                                    {(!itemEditModal.form.telas_cueros || itemEditModal.form.telas_cueros.length === 0) ? (
+                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: '0.5rem' }}>Sin telas o cueros registrados.</div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                                            {itemEditModal.form.telas_cueros.map((tc, tcIdx) => {
+                                                const isCuero = tc.tipo === 'cuero';
+                                                const unitLabel = isCuero ? 'dm' : 'm';
+                                                const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
+                                                return (
+                                                    <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f8fafc', padding: '0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                                        <select
+                                                            value={tc.tipo || 'tela'}
+                                                            onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                            style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff' }}
+                                                        >
+                                                            <option value="tela">Tela (m)</option>
+                                                            <option value="cuero">Cuero (dm)</option>
+                                                        </select>
+                                                        <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
+                                                            onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                            style={{ flex: 1, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                        <input type="text" placeholder="Color" value={tc.color || ''}
+                                                            onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                            style={{ width: '75px', padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                        <div style={{ position: 'relative', width: '90px' }}>
+                                                            <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
+                                                            <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
+                                                                onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; }); }}
+                                                                style={{ width: '100%', padding: '0.28rem 0.28rem 0.28rem 1rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                                                            <input type="number" step="0.1" min="0" placeholder={isCuero ? 'dm' : 'm'} value={tc.cantidad || ''}
+                                                                onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], cantidad: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                                style={{ width: '60px', padding: '0.28rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                        </div>
+                                                        {tcSub > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>= {formatCOP(tcSub)}</span>}
+                                                        <button type="button" onClick={() => setItemEditModal(prev => { const tcs = prev.form.telas_cueros.filter((_, i) => i !== tcIdx); return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem', fontSize: '0.78rem' }} title="Quitar">
+                                                            <FaTimes />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ── COSTOS ADICIONALES (Mano de Obra, Herrajes, etc.) ── */}
+
                                 <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Costos Adicionales (Tela, Mano de Obra, etc.)</span>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Otros Costos Adicionales (Mano de Obra, Herrajes, etc.)</span>
                                         {costosList.length > 0 && (
                                             <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600' }}>
                                                 Total adicional: {formatCOP(costosList.reduce((s, c) => s + parseFloat(c.valor), 0))}

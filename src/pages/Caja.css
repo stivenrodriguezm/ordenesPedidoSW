@@ -2,10 +2,10 @@
    Extreme Redesign: Financial Dashboard Theme (Caja)
    ========================================================================== */
 :root {
-  --emerald-50: #ecfdf5;
-  --emerald-100: #d1fae5;
-  --emerald-500: #10b981;
-  --emerald-600: #059669;
+  --emerald-50: #f0f9ff;
+  --emerald-100: #e0f2fe;
+  --emerald-500: #0284c7;
+  --emerald-600: #0369a1;
 
   /* Replaced Red with Dark Blue */
   --rose-50: #eff6ff;
@@ -568,14 +568,23 @@
 .btn-primary.full-width {
   width: 100%;
   justify-content: center;
-  margin-top: 1rem;
-  padding: 1rem;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1.25rem;
   font-size: 1rem;
-  background: var(--emerald-600);
-  color: white;
+  font-weight: 700;
+  background: #0f172a;
+  color: #ffffff;
   border: none;
   border-radius: 12px;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-primary.full-width:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.35);
 }
 
 /* ==========================================================================
@@ -674,9 +683,9 @@
 }
 
 /* ==========================================================================
-   Pagination
+   Pagination (Scoped to Caja)
    ========================================================================== */
-.pagination-bar {
+.caja-pagination-bar {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -685,7 +694,7 @@
   padding: 1rem;
 }
 
-.pagination-btn {
+.caja-pagination-btn {
   background: var(--surface);
   border: 1px solid var(--slate-200);
   color: var(--slate-600);
@@ -701,21 +710,21 @@
   font-size: 0.9rem;
 }
 
-.pagination-btn:hover:not(:disabled) {
-  background: var(--emerald-50);
-  color: var(--emerald-600);
-  border-color: var(--emerald-500);
+.caja-pagination-btn:hover:not(:disabled) {
+  background: #f0f9ff;
+  color: #0284c7;
+  border-color: #0284c7;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.pagination-btn:disabled {
+.caja-pagination-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--slate-50);
 }
 
-.pagination-info {
+.caja-pagination-info {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--slate-600);
