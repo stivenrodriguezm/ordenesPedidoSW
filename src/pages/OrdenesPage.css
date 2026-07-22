@@ -133,6 +133,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  table-layout: fixed;
 }
 
 .premium-table th {
@@ -142,13 +143,13 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 0.75rem;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
 
 .premium-table td {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 0.75rem;
   color: #334155;
   font-size: 0.875rem;
   border-bottom: 1px solid #f1f5f9;
@@ -174,7 +175,7 @@
 /* --- Column Specifics --- */
 .th-op,
 .td-op {
-  width: 5%;
+  width: 4%;
   font-weight: 700;
   color: #0f172a;
 }
@@ -192,17 +193,17 @@
 
 .th-venta,
 .td-venta {
-  width: 8%;
+  width: 7%;
 }
 
 .th-fecha-pedido,
 .td-fecha-pedido {
-  width: 9%;
+  width: 10%;
 }
 
 .th-fecha-llegada,
 .td-fecha-llegada {
-  width: 9%;
+  width: 10%;
 }
 
 .th-tela,
@@ -217,19 +218,24 @@
 
 .th-observacion,
 .td-observacion {
-  width: 15%;
-  max-width: 200px;
+  width: 12%;
+}
+
+.th-exh,
+.td-exh {
+  width: 4%;
+  text-align: center;
 }
 
 .th-costo,
 .td-costo {
-  width: 8%;
+  width: 9%;
   text-align: right;
 }
 
 .th-accion,
 .td-accion {
-  width: 5%;
+  width: 3%;
   text-align: center;
 }
 
@@ -718,17 +724,15 @@
 
   .premium-table th,
   .premium-table td {
-    padding: 0.35rem 0.3rem;
-    /* Very tight padding */
-    font-size: 0.75rem;
-    /* Small font */
+    padding: 0.5rem 0.35rem;
+    font-size: 0.78rem;
   }
 
   .premium-table th {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
   }
 
-  /* Tighter Column Control */
+  /* Tighter Column Control using same percentages to guarantee exact fit */
   .th-op,
   .td-op {
     width: 4%;
@@ -736,12 +740,12 @@
 
   .th-proveedor,
   .td-proveedor {
-    width: 14%;
+    width: 15%;
   }
 
   .th-vendedor,
   .td-vendedor {
-    width: 9%;
+    width: 10%;
   }
 
   .th-venta,
@@ -751,38 +755,42 @@
 
   .th-fecha-pedido,
   .td-fecha-pedido {
-    width: 8%;
+    width: 10%;
   }
 
   .th-fecha-llegada,
   .td-fecha-llegada {
-    width: 8%;
+    width: 10%;
   }
 
   .th-tela,
   .td-tela {
-    width: 7%;
+    width: 8%;
   }
 
   .th-estado,
   .td-estado {
-    width: 7%;
+    width: 8%;
   }
 
   .th-observacion,
   .td-observacion {
     width: 12%;
-    max-width: 120px;
+  }
+
+  .th-exh,
+  .td-exh {
+    width: 4%;
   }
 
   .th-costo,
   .td-costo {
-    width: 7%;
+    width: 9%;
   }
 
   .th-accion,
   .td-accion {
-    width: 4%;
+    width: 3%;
   }
 
   .status-badge {
@@ -1004,6 +1012,7 @@
 }
 
 
+/* ==========================================================================
    Vista Previa para Imagen (Sin Cambios Visuales)
    ========================================================================== */
 #pedido-preview {
@@ -1036,7 +1045,6 @@
 
 /* --- Exhibicion Column --- */
 .th-exh, .td-exh {
-  width: 52px;
   text-align: center;
 }
 .exh-badge {
@@ -1057,6 +1065,112 @@
 
 /* Override for Edit Order Modal */
 .edit-order-modal {
-  max-width: 420px !important;
-  width: 100% !important;
+  max-width: 440px !important;
+  width: 90% !important;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.edit-order-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.edit-order-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.edit-order-modal .modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.edit-order-modal .modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.edit-order-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.edit-order-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.edit-order-modal .form-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.edit-order-modal .form-group input,
+.edit-order-modal .form-group select {
+  width: 100%;
+  height: 42px;
+  padding: 0 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #0f172a;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.edit-order-modal .form-group input:hover,
+.edit-order-modal .form-group select:hover {
+  border-color: #94a3b8;
+}
+
+.edit-order-modal .form-group input:focus,
+.edit-order-modal .form-group select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.edit-order-modal .modal-submit {
+  margin-top: 0.5rem;
+  height: 44px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.edit-order-modal .modal-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.edit-order-modal .modal-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

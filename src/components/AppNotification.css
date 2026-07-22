@@ -1,36 +1,67 @@
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px 20px;
-  border-radius: 5px;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  z-index: 1050;
-  min-width: 300px;
+/* ==========================================================================
+   GLOBAL APP TOAST NOTIFICATION (app-toast)
+   ========================================================================== */
+.app-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 12px;
+    z-index: 9999;
+    transform: translateY(150%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-left: 4px solid transparent;
+    max-width: 400px;
 }
 
-.notification.success {
-  background-color: #28a745;
+.app-toast--visible {
+    transform: translateY(0);
+    opacity: 1;
 }
 
-.notification.error {
-  background-color: #dc3545;
+.app-toast--success {
+    border-left-color: #10b981;
+}
+.app-toast--success .app-toast-icon {
+    color: #10b981;
+    font-size: 1.25rem;
 }
 
-.notification-message {
-  flex-grow: 1;
+.app-toast--error {
+    border-left-color: #ef4444;
+}
+.app-toast--error .app-toast-icon {
+    color: #ef4444;
+    font-size: 1.25rem;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 20px;
-  margin-left: 15px;
-  cursor: pointer;
-  line-height: 1;
+.app-toast-msg {
+    color: #334155;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.app-toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+.app-toast-close:hover {
+    background: #f1f5f9;
+    color: #475569;
 }

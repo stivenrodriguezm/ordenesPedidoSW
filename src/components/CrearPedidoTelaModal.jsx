@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import API from '../services/api';
+import { AppContext } from '../AppContext';
 import { FaTrashAlt, FaPlus, FaBuilding, FaMapMarkerAlt, FaBoxes } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import logoFinal from '../assets/logoFinal.png';
 import './CrearPedidoTelaModal.css';
 
 const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociadaId = '' }) => {
+    const { usuario } = useContext(AppContext);
     const [ordenes, setOrdenes] = useState([]);
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
     const [direcciones, setDirecciones] = useState([]);
@@ -43,7 +45,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
 
     const fetchOrdenes = async () => {
         try {
-            const response = await API.get('listar-pedidos/?estado=en_proceso');
+            const response = await API.get('listar-pedidos/?estado=en_proceso&tela=Por pedir');
             const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
             setOrdenes(data);
         } catch (error) {
@@ -183,10 +185,6 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 detalles: [{ tela: '', cantidad: '' }]
             });
             setIsOtraDireccion(false);
-            
-            if (onSuccess) onSuccess(response.data);
-            
-            alert('Pedido de tela creado exitosamente');
         } catch (error) {
             console.error("Error creating pedido tela:", error);
             alert('Error al crear pedido de tela');
@@ -212,15 +210,20 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     link.click();
 
                     setCreatedPedidoId(null);
+                    alert('Pedido de tela creado exitosamente');
+                    if (onSuccess) onSuccess();
                     onClose();
                 } catch (error) {
                     console.error('Error generating PDF:', error);
+                    alert('Pedido de tela creado exitosamente, pero hubo un error al descargar la imagen.');
+                    setCreatedPedidoId(null);
+                    if (onSuccess) onSuccess();
                     onClose();
                 }
             };
             generatePDF();
         }
-    }, [createdPedidoId, onClose]);
+    }, [createdPedidoId, onClose, onSuccess]);
 
     const getOrdenId = (idStr) => {
         if (!idStr) return '';
@@ -417,7 +420,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 </div>
             )}
 
-            {/* Hidden Div for PDF Generation */}
+            {/* Hidden Div for PDF/Image Generation */}
             <div
                 id="pedido-tela-preview"
                 ref={previewRef}
@@ -428,53 +431,80 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     width: '800px',
                     backgroundColor: '#ffffff',
                     padding: '40px',
-                    fontFamily: 'Arial, sans-serif',
+                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     color: '#000000',
                     display: 'none',
                 }}
             >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '20px', marginBottom: '30px' }}>
-                    <img src={logoFinal} alt="Lottus" style={{ width: '250px' }} />
+                {/* Header Section */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div style={{ 
+                        backgroundColor: '#000000', 
+                        color: '#ffffff', 
+                        padding: '12px 24px', 
+                        fontWeight: 'bold', 
+                        fontSize: '36px', 
+                        letterSpacing: '5px',
+                        display: 'inline-block',
+                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                    }}>
+                        LOTTUS
+                    </div>
                     <div style={{ textAlign: 'right' }}>
-                        <h1 style={{ margin: '0', fontSize: '24px', color: '#0f172a' }}>PEDIDO DE TELAS</h1>
-                        <p style={{ margin: '5px 0 0', fontSize: '14px', color: '#64748b' }}>Fecha: {new Date().toLocaleDateString('es-CO')}</p>
+                        <h1 style={{ margin: '0', fontSize: '24px', fontWeight: 'normal', color: '#1e293b' }}>Pedido de Telas</h1>
+                        <h2 style={{ margin: '5px 0 0', fontSize: '20px', fontWeight: 'bold', color: '#dc2626' }}>No. {createdPedidoId}</h2>
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '40px', marginBottom: '40px' }}>
-                    <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px', marginBottom: '15px' }}>Información del Proveedor</h3>
-                        <p><strong>Proveedor:</strong> {pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || '' : ''}</p>
-                        {pdfData?.orden_asociada_id && (
-                            <p><strong>Orden Asociada:</strong> #{getOrdenId(pdfData.orden_asociada_id)}</p>
-                        )}
+                {/* Thick Black Divider Line */}
+                <hr style={{ border: 'none', borderTop: '3px solid #000000', margin: '0 0 25px 0' }} />
+
+                {/* Metadata Section */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', fontSize: '15px', color: '#1e293b', lineHeight: '1.8' }}>
+                    <div>
+                        <div><strong>Proveedor:</strong> {pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || '' : ''}</div>
+                        <div><strong>Usuario:</strong> {usuario ? `${usuario.first_name} ${usuario.last_name}` : ''}</div>
+                        <div><strong>Orden Asociada:</strong> {pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px', marginBottom: '15px' }}>Lugar de Entrega</h3>
-                        <p>{pdfData?.direccion_entrega || 'No especificada'}</p>
+                    <div style={{ textAlign: 'right' }}>
+                        <div><strong>Fecha:</strong> {(() => {
+                            const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                            const d = new Date();
+                            return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+                        })()}</div>
                     </div>
                 </div>
 
-                <h3 style={{ fontSize: '16px', color: '#0f172a', marginBottom: '15px' }}>Detalles del Pedido</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
+                {/* Details Section */}
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Telas:</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
                     <thead>
-                        <tr>
-                            <th style={{ backgroundColor: '#f8fafc', padding: '12px', textAlign: 'left', borderBottom: '2px solid #cbd5e1', fontSize: '14px' }}>Tela / Referencia / Descripción</th>
-                            <th style={{ backgroundColor: '#f8fafc', padding: '12px', textAlign: 'center', borderBottom: '2px solid #cbd5e1', fontSize: '14px', width: '150px' }}>Cantidad Solicitada</th>
+                        <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b' }}>Descripción</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b', width: '250px' }}>Cantidad</th>
                         </tr>
                     </thead>
                     <tbody>
                         {pdfData?.detalles.map((detalle, index) => (
-                            <tr key={index}>
-                                <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', fontSize: '14px' }}>{detalle.tela}</td>
-                                <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', fontSize: '14px', textAlign: 'center', fontWeight: 'bold' }}>{detalle.cantidad}</td>
+                            <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.tela}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.cantidad}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
 
-                <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
-                    <p>Lottus Group - Sistema de Gestión de Pedidos</p>
+                {/* Delivery Address Section */}
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Dirección de Entrega:</h3>
+                <div style={{ 
+                    backgroundColor: '#f8fafc', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '6px', 
+                    padding: '12px 16px', 
+                    fontSize: '15px', 
+                    color: '#334155' 
+                }}>
+                    {pdfData?.direccion_entrega || 'No especificada'}
                 </div>
             </div>
         </>

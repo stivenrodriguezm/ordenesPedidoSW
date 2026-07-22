@@ -38,11 +38,11 @@
 .stats-bar {
   display: flex;
   align-items: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
   background: var(--surface);
-  padding: 1rem 1.5rem;
-  border-radius: 16px;
+  padding: 0.65rem 1.1rem;
+  border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--slate-100);
   width: fit-content;
@@ -55,15 +55,15 @@
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   background: var(--rose-50);
   color: var(--rose-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 0.95rem;
 }
 
 .stat-icon.secondary {
@@ -85,8 +85,8 @@
 }
 
 .stat-value {
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-size: 1.0rem;
+  font-weight: 700;
   color: var(--slate-900);
 }
 
@@ -247,9 +247,9 @@
 
 .modern-table th {
   background: var(--slate-50);
-  padding: 1.25rem 1.5rem;
+  padding: 0.6rem 1rem;
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--slate-600);
@@ -258,10 +258,10 @@
 }
 
 .modern-table td {
-  padding: 1.25rem 1.5rem;
+  padding: 0.55rem 1rem;
   border-bottom: 1px solid var(--slate-100);
   color: var(--slate-600);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   vertical-align: middle;
 }
 
@@ -730,4 +730,313 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ==========================================================================
+   NEW CE Modal — Compact Redesign
+   ========================================================================== */
+
+.modal-content.premium-modal {
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/* Header */
+.ce-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: white;
+}
+
+.ce-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ce-modal-icon-wrap {
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.ce-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+}
+
+.ce-modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.75);
+}
+
+.ce-modal-header .modal-close {
+  color: white;
+  opacity: 0.8;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-top: -2px;
+}
+
+.ce-modal-header .modal-close:hover {
+  opacity: 1;
+}
+
+/* Form */
+.ce-premium-form {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-height: calc(90vh - 90px);
+  overflow-y: auto;
+}
+
+.ce-form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.ce-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.ce-form-group.ce-full {
+  flex: none;
+  width: 100%;
+}
+
+.ce-form-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--slate-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ce-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--slate-200);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--slate-800);
+  background: var(--slate-50);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.ce-input:focus {
+  outline: none;
+  border-color: var(--rose-500);
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.12);
+  background: white;
+}
+
+.ce-input-icon {
+  position: relative;
+}
+
+.ce-currency {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--slate-400);
+  font-weight: 600;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+.ce-input-pl {
+  padding-left: 1.75rem;
+}
+
+.ce-hint {
+  font-weight: 400;
+  text-transform: none;
+  color: var(--slate-400);
+  letter-spacing: 0;
+}
+
+/* Toggle Row */
+.ce-toggle-row {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--slate-100);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.ce-toggle-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--slate-600);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ce-toggle-btn.active {
+  background: white;
+  color: var(--rose-600);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* Facturas List */
+.ce-facturas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1.5px solid var(--slate-200);
+  border-radius: 10px;
+  padding: 0.5rem;
+  background: white;
+}
+
+.ce-facturas-empty {
+  font-size: 0.82rem;
+  color: var(--slate-400);
+  font-style: italic;
+  padding: 0.75rem;
+  text-align: center;
+  border: 1.5px dashed var(--slate-200);
+  border-radius: 10px;
+  background: var(--slate-50);
+}
+
+.ce-factura-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  background: var(--slate-50);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.ce-factura-item:hover {
+  background: var(--rose-50);
+  border-color: var(--rose-100);
+}
+
+.ce-factura-item.selected {
+  background: var(--rose-50);
+  border-color: var(--rose-500);
+}
+
+.ce-factura-item input[type="checkbox"] {
+  accent-color: var(--rose-500);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.ce-factura-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.ce-factura-id {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--slate-800);
+}
+
+.ce-factura-valor {
+  font-size: 0.75rem;
+  color: var(--slate-500);
+  font-family: 'Courier New', monospace;
+}
+
+.ce-factura-estado {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.ce-factura-estado.pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ce-factura-estado.atrasada {
+  background: #ffe4e6;
+  color: var(--rose-900);
+}
+
+.ce-concepto-preview {
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--slate-100);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--slate-600);
+}
+
+.ce-concepto-preview strong {
+  color: var(--slate-800);
+}
+
+/* Submit button */
+.ce-submit-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+  margin-top: 0.25rem;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.3);
+}
+
+.ce-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4);
+}
+
+.ce-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
 }

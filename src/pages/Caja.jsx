@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import './Caja.css';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
@@ -60,20 +60,24 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
           <div className="form-group">
             <label>Tipo de Movimiento</label>
             <div className="type-selector">
-              <button
-                type="button"
-                className={`type-btn income ${formState.tipo === 'ingreso' ? 'active' : ''}`}
-                onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
-              >
-                <FaArrowUp /> Ingreso
-              </button>
-              <button
-                type="button"
-                className={`type-btn expense ${formState.tipo === 'egreso' ? 'active' : ''}`}
-                onClick={() => setFormState(prev => ({ ...prev, tipo: 'egreso' }))}
-              >
-                <FaArrowDown /> Egreso
-              </button>
+              {hasPermission('CREAR_INGRESO_CAJA') && (
+                <button 
+                  type="button"
+                  className={`type-btn income ${formState.tipo === 'ingreso' ? 'active' : ''}`}
+                  onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
+                >
+                  <FaArrowUp /> Ingreso
+                </button>
+              )}
+              {hasPermission('CREAR_EGRESO_CAJA') && (
+                <button 
+                  type="button"
+                  className={`type-btn expense ${formState.tipo === 'egreso' ? 'active' : ''}`}
+                  onClick={() => setFormState(prev => ({ ...prev, tipo: 'egreso' }))}
+                >
+                  <FaArrowDown /> Egreso
+                </button>
+              )}
             </div>
             <input type="hidden" name="tipo" value={formState.tipo} />
           </div>
@@ -119,6 +123,7 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
 
 const Caja = () => {
   const { usuario } = useContext(AppContext);
+  const hasPermission = usePermissions();
   const location = useLocation();
   const [cajaData, setCajaData] = useState([]);
   const [stats, setStats] = useState({ ingresos_hoy: 0, egresos_hoy: 0, saldo_actual: 0 });
@@ -275,46 +280,51 @@ const Caja = () => {
         </div>
       </div>
 
-      <div className="glass-header">
-        <div className="header-top-row">
-          <h1 className="page-title">Movimientos de Caja</h1>
-          <div className="header-actions">
-            {usuario?.role === 'administrador' && (
-              <button className="btn-ghost" onClick={exportData} title="Exportar">
-                <FaFileExport />
-              </button>
-            )}
-            <button className="btn-secondary-glow" onClick={() => setIsCierreModalOpen(true)}>
-              <FaLock />
-              <span className="long-text">Cierre Caja</span>
-              <span className="short-text">Cierre</span>
-            </button>
-            <button className="btn-primary-glow" onClick={() => setIsCreateModalOpen(true)}>
-              <FaPlus />
-              <span className="long-text">Nuevo Movimiento</span>
-              <span className="short-text">Nuevo</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="filters-bar">
-          <div className="search-pill">
-            <FaSearch />
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="search-pill o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem' }} />
             <input
               type="text"
               name="query"
               placeholder="Buscar..."
               value={filters.query}
               onChange={handleFilterChange}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '120px' }}
             />
           </div>
-          <div className="date-range-pill">
-            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
-            <span>a</span>
-            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Desde</label>
+            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
+          </div>
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Hasta</label>
+            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
           </div>
           {(filters.query || filters.fecha_inicio) && (
-            <button className="btn-reset" onClick={clearFilters}><FaUndo /></button>
+            <button className="o-btn-ghost" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
+          )}
+        </div>
+
+        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {usuario?.role === 'administrador' && (
+            <button className="o-btn-ghost" onClick={exportData} title="Exportar">
+              <FaFileExport />
+            </button>
+          )}
+          <button className="o-btn-secondary-glow" onClick={() => setIsCierreModalOpen(true)}>
+            <FaLock />
+            <span className="long-text">Cierre Caja</span>
+            <span className="short-text">Cierre</span>
+          </button>
+          {(hasPermission('CREAR_INGRESO_CAJA') || hasPermission('CREAR_EGRESO_CAJA')) && (
+            <button className="o-btn-primary-glow" onClick={() => setIsCreateModalOpen(true)}>
+              <FaPlus />
+              <span className="long-text">Nuevo Movimiento</span>
+              <span className="short-text">Nuevo</span>
+            </button>
           )}
         </div>
       </div>
@@ -338,7 +348,13 @@ const Caja = () => {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="skeleton-row">
-                    <td colSpan="7"><div className="skeleton-bar"></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
+                    <td><div className="skeleton skeleton-badge"></div></td>
+                    <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }}></div></td>
+                    <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '100px', marginLeft: 'auto' }}></div></td>
                   </tr>
                 ))
               ) : cajaData.length > 0 ? (

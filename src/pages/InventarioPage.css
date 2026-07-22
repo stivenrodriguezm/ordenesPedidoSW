@@ -18,7 +18,7 @@
     width: 36px;
     height: 36px;
     border: 3px solid #e2e8f0;
-    border-top-color: #3b82f6;
+    border-top-color: #274385;
     border-radius: 50%;
     animation: spin 0.75s linear infinite;
 }
@@ -147,9 +147,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.6rem;
+    padding: 0 0.85rem;
+    height: 34px;
+    gap: 0.5rem;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     cursor: pointer;
     background: transparent;
     color: #475569;
@@ -169,18 +171,15 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.6rem 1.25rem;
+    padding: 0.5rem 1rem;
     border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.875rem;
-    cursor: pointer;
-    border: none;
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    background: #274385;
     color: white;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25);
-    white-space: nowrap;
-    flex-shrink: 0;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
@@ -200,7 +199,7 @@
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+    padding: 0.8rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -218,7 +217,7 @@
 }
 
 .inv-sum-value {
-    font-size: 1.6rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: #0f172a;
     line-height: 1;
@@ -265,35 +264,38 @@
 
 .inventario-table {
     width: 100%;
+    min-width: 100%;
     border-collapse: collapse;
     text-align: left;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
 .inventario-table th {
     background-color: #f8fafc;
     color: #64748b;
     font-weight: 700;
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-    padding: 0.6rem 0.35rem;
+    letter-spacing: 0.01em;
+    padding: 0.4rem 0.2rem;
     border-bottom: 1px solid #e2e8f0;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
+    word-break: break-word;
 }
 
 
 .inventario-table td {
-    padding: 0.4rem 0.35rem;
+    padding: 0.3rem 0.2rem;
     color: #334155;
-    font-size: 0.72rem;
+    font-size: 0.65rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
+    word-break: break-word;
 }
 
 .inventario-table tbody tr {
@@ -311,13 +313,13 @@
 /* --- ID badge --- */
 .inv-id-badge {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 0.72rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #475569;
     background: #f1f5f9;
     border: 1px solid #e2e8f0;
     border-radius: 5px;
-    padding: 0.1rem 0.35rem;
+    padding: 0.05rem 0.2rem;
 }
 
 /* --- Product name cell --- */
@@ -368,9 +370,9 @@
 .disp-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.15rem 0.5rem;
+    padding: 0.1rem 0.35rem;
     border-radius: 9999px;
-    font-size: 0.68rem;
+    font-size: 0.6rem;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -406,9 +408,27 @@
 }
 
 .disp-por_despachar {
-    background: #fff7ed;
-    color: #ea580c;
-    border: 1px solid #ffedd5;
+    background: #e0e7ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+}
+
+.disp-por_reparar {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.disp-despachado {
+    background: #ccfbf1;
+    color: #0f766e;
+    border: 1px solid #99f6e4;
+}
+
+.disp-entregado {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
 }
 
 /* --- Boolean yes/no badges --- */
@@ -563,11 +583,12 @@
     width: 95%;
     max-width: 850px;
     height: auto;
+    max-height: 90vh;
     border-radius: 12px;
     box-shadow: 0 32px 80px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    overflow: visible;
+    overflow: hidden;
     transform: translateY(-40px);
     opacity: 0;
     transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.25s ease;
@@ -584,13 +605,10 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.75rem;
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #1e3a8a 0%, #1a2d59 100%);
     color: white;
     border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px 12px 0 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
     flex-shrink: 0;
 }
 
@@ -703,8 +721,8 @@
 }
 
 .ifg-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #274385;
+    box-shadow: 0 0 0 3px rgba(39, 67, 133, 0.1);
 }
 
 .ifg-textarea {
@@ -747,7 +765,7 @@
 
 .ifg-toggle-btn--active {
     background: white;
-    color: #2563eb;
+    color: #1a2d59;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -763,8 +781,8 @@
 }
 
 .ifg-input-prefix:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #274385;
+    box-shadow: 0 0 0 3px rgba(39, 67, 133, 0.1);
 }
 
 .ifg-input-prefix span {
@@ -803,7 +821,7 @@
 }
 
 .img-upload-zone:hover {
-    border-color: #3b82f6;
+    border-color: #274385;
     background: #eff6ff;
 }
 
@@ -890,7 +908,7 @@
 /* --- New: Table Image View --- */
 .btn-view-img {
     background: #eff6ff;
-    color: #3b82f6;
+    color: #274385;
     border: none;
     width: 30px;
     height: 30px;
@@ -903,7 +921,7 @@
 }
 
 .btn-view-img:hover {
-    background: #3b82f6;
+    background: #274385;
     color: white;
     transform: scale(1.1);
 }
@@ -963,7 +981,7 @@
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 1rem;
-    z-index: 50;
+    z-index: 150;
 }
 
 .v-btn-primary-glow {
@@ -1013,9 +1031,9 @@
 .v-filters-bar {
     display: flex;
     gap: 0.5rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    overflow-x: auto;
+    overflow: visible;
 }
 
 .v-search-pill {
@@ -1121,7 +1139,7 @@
 .inv-group-header-row {
     cursor: pointer;
     background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
-    border-left: 3px solid #3b82f6;
+    border-left: 3px solid #274385;
     transition: background 0.2s;
 }
 
@@ -1147,9 +1165,9 @@
 }
 
 .inv-group-count-badge {
-    background: #3b82f6 !important;
+    background: #274385 !important;
     color: white !important;
-    border-color: #2563eb !important;
+    border-color: #1a2d59 !important;
     font-weight: 800 !important;
     min-width: 26px;
     text-align: center;
@@ -1174,7 +1192,7 @@
 .inv-group-toggle {
     background: transparent;
     border: 1px solid #93c5fd;
-    color: #3b82f6;
+    color: #274385;
     width: 26px;
     height: 26px;
     border-radius: 6px;
@@ -1187,15 +1205,15 @@
 }
 
 .inv-group-toggle:hover {
-    background: #3b82f6;
+    background: #274385;
     color: white;
-    border-color: #3b82f6;
+    border-color: #274385;
 }
 
 .inv-group-toggle.active {
-    background: #3b82f6;
+    background: #274385;
     color: white;
-    border-color: #2563eb;
+    border-color: #1a2d59;
 }
 
 /* ==========================================================================
@@ -1204,13 +1222,13 @@
 
 .inv-group-id-badge {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 0.78rem;
+    font-size: 0.65rem;
     font-weight: 800;
     color: #1e3a8a;
     background: #dbeafe;
     border: 1px solid #93c5fd;
     border-radius: 5px;
-    padding: 0.15rem 0.45rem;
+    padding: 0.05rem 0.2rem;
     letter-spacing: 0.02em;
     display: inline-block;
 }
@@ -1241,7 +1259,7 @@
 
 .inv-group-count-pill {
     font-size: 0.68rem;
-    background: #3b82f6;
+    background: #274385;
     color: white;
     padding: 0.1rem 0.4rem;
     border-radius: 9999px;
@@ -1259,7 +1277,7 @@
 .inv-group-edit-btn {
     background: #eff6ff;
     border: 1px solid #bfdbfe;
-    color: #2563eb;
+    color: #1a2d59;
     width: 26px;
     height: 26px;
     border-radius: 6px;
@@ -1272,7 +1290,7 @@
 }
 
 .inv-group-edit-btn:hover {
-    background: #2563eb;
+    background: #1a2d59;
     color: white;
     border-color: #1d4ed8;
     transform: scale(1.08);
@@ -1405,7 +1423,7 @@
 
 .inv-grupo-item-add-btn {
     background: #eff6ff;
-    color: #2563eb;
+    color: #1a2d59;
     border: 1px solid #bfdbfe;
     border-radius: 4px;
     width: 22px;
@@ -1419,9 +1437,9 @@
 }
 
 .inv-grupo-item-add-btn:hover {
-    background: #2563eb;
+    background: #1a2d59;
     color: white;
-    border-color: #2563eb;
+    border-color: #1a2d59;
 }
 
 /* ==========================================================================
@@ -1484,14 +1502,14 @@
 
 .inv-view-btn.active {
     background: white;
-    color: #2563eb;
+    color: #1a2d59;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* ── v-btn-ghost active (cost toggle) ───────────────────────────────────── */
 .v-btn-ghost--active {
     background: #eff6ff !important;
-    color: #2563eb !important;
+    color: #1a2d59 !important;
     border-color: #bfdbfe !important;
 }
 
@@ -1508,7 +1526,7 @@
 }
 
 .sort-icon--idle   { color: #cbd5e1; }
-.sort-icon--active { color: #2563eb; }
+.sort-icon--active { color: #1a2d59; }
 
 /* ── Inline group badge (products_only) ─────────────────────────────────── */
 .inv-inline-group-badge {
@@ -1541,7 +1559,7 @@
 }
 
 .inv-inline-disp-select {
-    border: 1.5px solid #3b82f6;
+    border: 1.5px solid #274385;
     border-radius: 6px;
     font-size: 0.72rem;
     padding: 0.15rem 0.35rem;
@@ -1572,11 +1590,11 @@
 .inv-filters-dropdown {
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
-    width: 320px;
+    left: 0;
+    width: 500px;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
     z-index: 1000;
     padding: 1.25rem;
@@ -1592,9 +1610,9 @@
 }
 
 .inv-filters-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.25rem;
 }
 
 .inv-filter-group {
@@ -1624,8 +1642,8 @@
 
 .inv-filter-group select:focus,
 .inv-filter-group input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #274385;
+    box-shadow: 0 0 0 3px rgba(39, 67, 133, 0.1);
 }
 
 .inv-filters-actions {
@@ -1657,56 +1675,59 @@
 }
 
 .v-btn-ghost.active {
-    background: #e0f2fe;
-    color: #0284c7;
-    border-color: #bae6fd;
+    background: #274385;
+    color: #ffffff;
+    border-color: #1a2d59;
 }
 
 /* =====================================================================
    COLUMN WIDTHS — base (Vista Combinada, sin costo)
-   12 columnas: ID Prov Fac Ven Disp Fecha Ref Cat Subcat Var Obs Acc
+   15 columnas: ID Prov Fac Ven Disp Fecha Ref Cat Subcat Var Est Sede Zona Obs Acc
    ===================================================================== */
-.inventario-table th.col-id     { width: 6%;   min-width: 62px; }
-.inventario-table th.col-prov   { width: 8%;   min-width: 82px; }
-.inventario-table th.col-fac    { width: 4%;   min-width: 50px; }
-.inventario-table th.col-ven    { width: 5%;   min-width: 50px; }
-.inventario-table th.col-disp   { width: 8%;   min-width: 85px; }
-.inventario-table th.col-fec    { width: 8%;   min-width: 82px; }
-.inventario-table th.col-ref    { width: 16%;  min-width: 100px; }
-.inventario-table th.col-grp    { width: 10%;  min-width: 90px; }
-.inventario-table th.col-cat    { width: 6%;   min-width: 65px; }
-.inventario-table th.col-subcat { width: 6%;   min-width: 65px; }
-.inventario-table th.col-var    { width: 14%;  min-width: 100px; }
-.inventario-table th.col-obs    { width: 19%;  min-width: 110px; }
-.inventario-table th.col-costo  { width: 8%;   min-width: 86px; }
-.inventario-table th.col-acc    { width: 76px; min-width: 76px; max-width: 76px; }
+.inventario-table th.col-id     { min-width: 45px; }
+.inventario-table th.col-prov   { min-width: 60px; }
+.inventario-table th.col-fac    { min-width: 55px; }
+.inventario-table th.col-ven    { min-width: 50px; }
+.inventario-table th.col-disp   { min-width: 80px; }
+.inventario-table th.col-fec    { min-width: 60px; }
+.inventario-table th.col-ref    { min-width: 70px; }
+.inventario-table th.col-grp    { min-width: 50px; }
+.inventario-table th.col-cat    { min-width: 60px; }
+.inventario-table th.col-subcat { min-width: 80px; } 
+.inventario-table th.col-var    { min-width: 65px; }
+.inventario-table th.col-est    { min-width: 50px; }
+.inventario-table th.col-sede   { min-width: 45px; }
+.inventario-table th.col-zona   { min-width: 45px; }
+.inventario-table th.col-obs    { min-width: 75px; }
+.inventario-table th.col-costo  { min-width: 50px; }
+.inventario-table th.col-acc    { width: 1%; white-space: nowrap; }
 
 /* ── Vista Combinada CON costo ── */
-.inv-table-with-cost th.col-ref   { width: 14%; min-width: 90px; }
-.inv-table-with-cost th.col-obs   { width: 13%; min-width: 90px; }
-.inv-table-with-cost th.col-costo { width: 8%;  min-width: 86px; }
+.inv-table-with-cost th.col-ref   { min-width: 65px; }
+.inv-table-with-cost th.col-obs   { min-width: 70px; }
+.inv-table-with-cost th.col-costo { min-width: 50px; }
 
 /* ── Solo Grupos SIN costo ── */
-.inv-table-groups-only th.col-ref { width: 14%; min-width: 90px; }
-.inv-table-groups-only th.col-obs { width: 21%; min-width: 140px; }
+.inv-table-groups-only th.col-ref { min-width: 80px; }
+.inv-table-groups-only th.col-obs { min-width: 80px; }
 
 /* ── Solo Grupos CON costo ── */
-.inv-table-groups-only.inv-table-with-cost th.col-ref   { width: 12%; min-width: 80px; }
-.inv-table-groups-only.inv-table-with-cost th.col-obs   { width: 15%; min-width: 100px; }
-.inv-table-groups-only.inv-table-with-cost th.col-costo { width: 8%;  min-width: 86px; }
+.inv-table-groups-only.inv-table-with-cost th.col-ref   { min-width: 75px; }
+.inv-table-groups-only.inv-table-with-cost th.col-obs   { min-width: 75px; }
+.inv-table-groups-only.inv-table-with-cost th.col-costo { min-width: 60px; }
 
 /* ── Todos los Productos SIN costo ── */
-.inv-table-products-only th.col-ref    { width: 12%; min-width: 90px; }
-.inv-table-products-only th.col-grp    { width: 10%; min-width: 90px; }
-.inv-table-products-only th.col-var    { width: 12%; min-width: 90px; }
-.inv-table-products-only th.col-obs    { width: 15%; min-width: 100px; }
+.inv-table-products-only th.col-ref    { min-width: 70px; }
+.inv-table-products-only th.col-grp    { min-width: 50px; }
+.inv-table-products-only th.col-var    { min-width: 70px; }
+.inv-table-products-only th.col-obs    { min-width: 70px; }
 
 /* ── Todos los Productos CON costo ── */
-.inv-table-products-only.inv-table-with-cost th.col-ref   { width: 10%; min-width: 80px; }
-.inv-table-products-only.inv-table-with-cost th.col-grp   { width: 9%;  min-width: 80px; }
-.inv-table-products-only.inv-table-with-cost th.col-var   { width: 11%; min-width: 85px; }
-.inv-table-products-only.inv-table-with-cost th.col-obs   { width: 11%; min-width: 85px; }
-.inv-table-products-only.inv-table-with-cost th.col-costo { width: 8%;  min-width: 86px; }
+.inv-table-products-only.inv-table-with-cost th.col-ref   { min-width: 65px; }
+.inv-table-products-only.inv-table-with-cost th.col-grp   { min-width: 50px; }
+.inv-table-products-only.inv-table-with-cost th.col-var   { min-width: 65px; }
+.inv-table-products-only.inv-table-with-cost th.col-obs   { min-width: 65px; }
+.inv-table-products-only.inv-table-with-cost th.col-costo { min-width: 50px; }
 
 /* Badge "Por Despachar" más compacto en la vista plana */
 .inv-table-products-only .disp-por_despachar {
@@ -1722,3 +1743,71 @@
     letter-spacing: -0.01em;
 }
 
+
+/* ==========================================================================
+   TOAST NOTIFICATION (inv-toast)
+   ========================================================================== */
+.inv-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 12px;
+    z-index: 9999;
+    transform: translateY(150%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-left: 4px solid transparent;
+    max-width: 400px;
+}
+
+.inv-toast--visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.inv-toast--success {
+    border-left-color: #10b981;
+}
+.inv-toast--success .inv-toast-icon {
+    color: #10b981;
+    font-size: 1.25rem;
+}
+
+.inv-toast--error {
+    border-left-color: #ef4444;
+}
+.inv-toast--error .inv-toast-icon {
+    color: #ef4444;
+    font-size: 1.25rem;
+}
+
+.inv-toast-msg {
+    color: #334155;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.inv-toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+.inv-toast-close:hover {
+    background: #f1f5f9;
+    color: #475569;
+}

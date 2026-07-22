@@ -19,6 +19,7 @@ function Header({ onMenuClick, isCollapsed }) {
     if (path === "/perfil") return "Mi Perfil";
     if (path === "/gestion-usuarios") return "Gestión de Usuarios";
     if (path === "/nuevaVenta") return "Nueva Venta";
+    if (path === "/nuevaRemision") return "Nueva remisión";
     // Handle nested suministros routes
     const nestedTitles = {
       '/suministros/remisiones': 'Remisiones',

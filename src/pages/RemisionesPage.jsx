@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useContext, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import API from '../services/api';
 import { formatCOP } from '../utils/formatCOP';
 import { generateRemisionPDF } from '../utils/generateRemisionPDF';
 import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaSpinner } from 'react-icons/fa';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import './RemisionesPage.css';
 
 const ESTADO_LABELS = {
@@ -65,6 +66,7 @@ const emptyForm = () => ({
     transportadorUsuario: '', // ForeignKey ID
     transportador: '',        // String fallback
     vendedor: '',
+    sharedSellersInfo: '',
     inventarioIds: [],
 });
 
@@ -109,6 +111,8 @@ function ImagePreviewModal({ isOpen, onClose, imageUrl }) {
 
 function RemisionesPage() {
     const { proveedores, usuario } = useContext(AppContext);
+    const hasPermission = usePermissions();
+    const navigate = useNavigate();
     const role              = usuario?.role;
     const isTransportador   = role === 'transportador';
     const isAuxiliar        = role === 'auxiliar';
@@ -137,6 +141,7 @@ function RemisionesPage() {
     const [modalVisible, setModalVisible] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [invSearch, setInvSearch] = useState('');
+    const [qrInput, setQrInput] = useState('');
     const [invMode, setInvMode] = useState('items'); // 'items' | 'grupos'
     const [colCatFilter, setColCatFilter] = useState('');
     const [colSubcatFilter, setColSubcatFilter] = useState('');
@@ -352,7 +357,7 @@ function RemisionesPage() {
             closeEditModal();
         } catch (err) {
             console.error('Error updating remision:', err);
-            alert('Error al actualizar la remisión.');
+            showToast('Error al actualizar la remisión.', 'error');
         } finally {
             setEditSaving(false);
         }
@@ -637,6 +642,32 @@ function RemisionesPage() {
         ? subcategorias.filter(s => String(s.categoria) === colCatFilter) // using state 'subcategorias'
         : subcategorias, [colCatFilter, subcategorias]);
 
+    const handleQRScan = async (e) => {
+        e.preventDefault();
+        if (!qrInput.trim()) return;
+        try {
+            const res = await API.get(`/suministros/inventario/por-qr/?qr=${qrInput.trim()}`);
+            const item = res.data;
+            if (item && item.id) {
+                setForm(prev => {
+                    if (!prev.inventarioIds.includes(item.id)) {
+                        return { ...prev, inventarioIds: [...prev.inventarioIds, item.id] };
+                    }
+                    return prev;
+                });
+                setInventario(prev => {
+                    if (!prev.find(i => i.id === item.id)) {
+                        return [...prev, item];
+                    }
+                    return prev;
+                });
+                setQrInput('');
+            }
+        } catch (err) {
+            showToast('Ítem no encontrado por QR', 'error');
+        }
+    };
+
     return (
         <div className="page-container remisiones-page-container">
 
@@ -693,34 +724,33 @@ function RemisionesPage() {
                         </select>
                     </div>
                     {hasFilters && (
-                        <button className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+                        <button className="v-btn-ghost" onClick={clearFilters} title="Limpiar filtros" style={{ color: '#ef4444' }}>
                             <FaTimes />
                         </button>
                     )}
                     
                     <div style={{ flexGrow: 1 }}></div>
 
-                    <div className="view-mode-toggle" style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '2px', borderRadius: '8px' }}>
+                    <div className="view-mode-toggle">
                         <button 
-                            className={`v-btn-ghost ${viewMode === 'table' ? 'active' : ''}`}
+                            className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
                             onClick={() => setViewMode('table')}
                             title="Vista de Tabla"
-                            style={{ background: viewMode === 'table' ? 'white' : 'transparent', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
                         >
                             <FaList />
                         </button>
                         <button 
-                            className={`v-btn-ghost ${viewMode === 'calendar' ? 'active' : ''}`}
+                            className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
                             onClick={() => setViewMode('calendar')}
                             title="Vista de Calendario"
-                            style={{ background: viewMode === 'calendar' ? 'white' : 'transparent', boxShadow: viewMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
                         >
                             <FaCalendarAlt />
                         </button>
                     </div>
-                    {!isTransportador && (
-                        <button className="v-btn-primary-glow" onClick={openModal}>
-                            <FaPlus /> Nueva Remisión
+                    {hasPermission('CREAR_REMISION') && (
+                        <button className="v-btn-primary-glow" onClick={() => navigate('/nuevaRemision')}>
+                            <FaPlus />
+                            <span>Nueva Remisión</span>
                         </button>
                     )}
                 </div>
@@ -756,14 +786,30 @@ function RemisionesPage() {
                         </thead>
                         <tbody>
                             {isLoading ? (
-                                <tr><td colSpan="12"><div className="loading-container"><div className="loader"></div></div></td></tr>
+                                Array.from({ length: 5 }).map((_, index) => (
+                                    <tr key={index} className="skeleton-row">
+                                        <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                        <td><div className="skeleton skeleton-badge"></div></td>
+                                        <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                                        <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-text" style={{ width: '20px', margin: '0 auto' }}></div></td>
+                                    </tr>
+                                ))
                             ) : filteredRemisiones.length === 0 ? (
-                                <tr><td colSpan="12" className="rem-empty-row">No hay remisiones para estos filtros.</td></tr>
+                                <tr><td colSpan="13" className="rem-empty-row">No hay remisiones para estos filtros.</td></tr>
                             ) : paginatedRemisiones.map(rem => {
                                 const metodoPagoLabel = METODOS_PAGO.find(m => m.value === rem.metodoPago)?.label;
                                 return (
                                     <React.Fragment key={rem.id}>
-                                        <tr className={expandedId === rem.id ? 'expanded-row-highlight' : ''}>
+                                        <tr className={expandedId === rem.id ? 'expanded-row-highlight' : ''} onClick={() => toggleExpand(rem.id)} style={{ cursor: 'pointer' }}>
                                             <td><span className="remision-id-num">{rem.id}</span></td>
                                             <td>{formatDate(rem.fechaCreacion)}</td>
                                             <td>{rem.fechaEntrega ? formatDate(rem.fechaEntrega) : <span className="empty-val">—</span>}</td>
@@ -802,12 +848,12 @@ function RemisionesPage() {
                                                     <button
                                                         className="action-btn"
                                                         title="Actualizar remisión"
-                                                        onClick={() => openEditModal(rem)}
+                                                        onClick={(e) => { e.stopPropagation(); openEditModal(rem); }}
                                                     >
                                                         <FaEdit />
                                                     </button>
                                                 )}
-                                                <button className="action-btn" onClick={() => toggleExpand(rem.id)}>
+                                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(rem.id); }}>
                                                     {expandedId === rem.id ? <FaChevronUp /> : <FaChevronDown />}
                                                 </button>
                                             </td>
@@ -988,421 +1034,6 @@ function RemisionesPage() {
                     />
                 )}
             </div>
-
-            {/* ===== MODAL NUEVA REMISIÓN ===== */}
-            {showModal && (
-                <div
-                    className={`rem-overlay${modalVisible ? ' rem-overlay-visible' : ''}`}
-                    onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
-                >
-                    <div className={`rem-modal${modalVisible ? ' rem-modal-visible' : ''}`}>
-
-                        <div className="rem-modal-header">
-                            <div className="rem-modal-header-left">
-                                <span className="rem-modal-icon">📦</span>
-                                <h3>Nueva Remisión</h3>
-                            </div>
-                            <button className="modal-close" onClick={closeModal}>×</button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="rem-form">
-                            {/* ── SCROLLABLE BODY ── */}
-                            <div className="rem-form-body">
-
-                                {/* Información General */}
-                                <div className="rem-section">
-                                    <div className="rem-section-title">Información General</div>
-                                    <div className="rfg-grid">
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Fecha de Entrega</label>
-                                            <input required type="date" className="rfg-input" value={form.fechaEntrega}
-                                                onChange={e => handleField('fechaEntrega', e.target.value)} />
-                                        </div>
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Hora Desde</label>
-                                            <input type="time" className="rfg-input" value={form.horaDesde} min="08:00" max="18:00"
-                                                onChange={e => handleField('horaDesde', e.target.value)} />
-                                        </div>
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Hora Hasta</label>
-                                            <input type="time" className="rfg-input" value={form.horaHasta} min="08:00" max="18:00"
-                                                onChange={e => handleField('horaHasta', e.target.value)} />
-                                        </div>
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Dirección de Entrega</label>
-                                            <input type="text" className="rfg-input" placeholder="Calle 123 #45-67"
-                                                value={form.direccionEntrega} onChange={e => handleField('direccionEntrega', e.target.value)} />
-                                        </div>
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Ciudad</label>
-                                            <input type="text" className="rfg-input" placeholder="Bogotá"
-                                                value={form.ciudad} onChange={e => handleField('ciudad', e.target.value)} />
-                                        </div>
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Barrio</label>
-                                            <input type="text" className="rfg-input" placeholder="Ej: Ciudad Salitre"
-                                                value={form.barrio} onChange={e => handleField('barrio', e.target.value)} />
-                                        </div>
-
-                                        <div className="rfg-row g-3">
-                                            <div className="rfg-col-4">
-                                                <div className="rfg-group">
-                                                    <label className="rfg-label">O.C. Asociada</label>
-                                                    <select className="rfg-input" value={form.ordenId} onChange={e => handleField('ordenId', e.target.value)}>
-                                                        <option value="">Seleccione una orden...</option>
-                                                        <option value="sin_orden">Sin orden asociada</option>
-                                                        {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Saldo — compact widget */}
-                                        <div className="rfg-group rfg-saldo-group">
-                                            <label className="rfg-label">Saldo</label>
-                                            <div className="rfg-saldo-row">
-                                                <button
-                                                    type="button"
-                                                    className={`rfg-saldo-toggle${form.sinSaldo ? ' rfg-saldo-toggle--active' : ''}`}
-                                                    onClick={handleSinSaldoToggle}
-                                                    title={form.sinSaldo ? 'Tiene saldo' : 'Sin saldo'}
-                                                >
-                                                    {form.sinSaldo ? '✗ Sin saldo' : '$ Con saldo'}
-                                                </button>
-                                                {!form.sinSaldo && (
-                                                    <div className="rfg-saldo-input-wrap">
-                                                        <span className="rfg-saldo-prefix">$</span>
-                                                        <input
-                                                            type="text"
-                                                            className="rfg-saldo-input"
-                                                            placeholder="0"
-                                                            value={form.saldoDisplay}
-                                                            onChange={handleSaldoChange}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Método de Pago</label>
-                                            <select className={`rfg-input${form.sinSaldo ? ' rfg-input--disabled' : ''}`}
-                                                value={form.metodoPago} onChange={e => handleField('metodoPago', e.target.value)}
-                                                disabled={form.sinSaldo}>
-                                                <option value="">Seleccione...</option>
-                                                {METODOS_PAGO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                                            </select>
-                                        </div>
-
-                                        {(() => {
-                                            const isOtro = form.transportadorUsuario === '__otro__';
-                                            return (
-                                                <div className={`rfg-group${isOtro ? ' rfg-span-2' : ''}`}>
-                                                    <label className="rfg-label">Transportador</label>
-                                                    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
-                                                        <select
-                                                            className="rfg-input"
-                                                            style={{ flex: isOtro ? '0 0 160px' : '1' }}
-                                                            value={form.transportadorUsuario}
-                                                            onChange={e => handleField('transportadorUsuario', e.target.value)}
-                                                        >
-                                                            <option value="">Seleccione...</option>
-                                                            {transportadores.map(t => (
-                                                                <option key={t.id} value={t.id}>
-                                                                    {t.first_name || t.username}
-                                                                </option>
-                                                            ))}
-                                                            <option value="__otro__">Otro (externo)</option>
-                                                        </select>
-                                                        {isOtro && (
-                                                            <input
-                                                                type="text"
-                                                                className="rfg-input"
-                                                                placeholder="Nombre del transportador..."
-                                                                value={form.transportador}
-                                                                onChange={e => handleField('transportador', e.target.value)}
-                                                                style={{ flex: '1', minWidth: 0 }}
-                                                                autoFocus
-                                                            />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-
-                                        <div className="rfg-group">
-                                            <label className="rfg-label">Vendedor</label>
-                                            <select className="rfg-input" value={form.vendedor} onChange={e => handleField('vendedor', e.target.value)}>
-                                                <option value="">Seleccione...</option>
-                                                {vendedores.map(v => <option key={v.id} value={v.id}>{v.first_name}</option>)}
-                                            </select>
-                                        </div>
-
-                                        <div className="rfg-group rfg-full">
-                                            <label className="rfg-label">Observación</label>
-                                            <textarea className="rfg-input rfg-textarea" rows="2" placeholder="Notas sobre la remisión..."
-                                                value={form.observacion} onChange={e => handleField('observacion', e.target.value)} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Ítems de Inventario */}
-                                <div className="rem-section rem-section-inv">
-                                    <div className="rem-inventario-header">
-                                        <div className="rem-section-title">Productos a Entregar</div>
-                                        <div className="rem-inv-mode-tabs">
-                                            <button
-                                                type="button"
-                                                className={`rem-inv-tab${invMode === 'items' ? ' active' : ''}`}
-                                                onClick={() => setInvMode('items')}
-                                            >Por Ítem</button>
-                                            <button
-                                                type="button"
-                                                className={`rem-inv-tab${invMode === 'grupos' ? ' active' : ''}`}
-                                                onClick={() => setInvMode('grupos')}
-                                            >Por Grupo</button>
-                                        </div>
-                                        {invMode === 'items' && (
-                                        <div className="rem-search-wrapper">
-                                            <FaSearch className="rem-search-icon" />
-                                            <input
-                                                type="text"
-                                                placeholder="Buscar producto..."
-                                                value={invSearch}
-                                                onChange={e => setInvSearch(e.target.value)}
-                                                className="rem-search-input"
-                                            />
-                                        </div>
-                                        )}
-                                    </div>
-
-                                    {/* Selected items chips — max 3 rows then scroll */}
-                                    {selectedItems.length > 0 && (
-                                        <div className="rem-selected-list-wrap">
-                                            {selectedItems.map(item => (
-                                                <div key={item.invId} className="rem-selected-row">
-                                                    <div className="rem-selected-row-info">
-                                                        <span className="rem-selected-id">#{item.invId}</span>
-                                                        <span className="rem-selected-prod">{item.nombre}</span>
-                                                        {item.cat && <span className="cat-badge" style={{ '--cat-color': '#3b82f6', fontSize: '0.65rem' }}>{item.cat}</span>}
-                                                        {item.variacion && <span className="rem-selected-text" style={{ fontStyle: 'italic' }}>{item.variacion}</span>}
-                                                    </div>
-                                                    <button type="button" className="rem-chip-remove" onClick={() => toggleInventarioItem(item.invId)} title="Quitar">
-                                                        <FaTimes />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                {form.ordenId ? (
-                                    <>
-                                        {/* ═══ POR GRUPO panel ═══ */}
-                                        {invMode === 'grupos' && (
-                                            <div className="rem-grupos-panel">
-                                                {grupos.filter(g => g.activo).length === 0 ? (
-                                                    <div className="rem-grupos-empty">No hay grupos activos. Créalos en <strong>Suministros › Grupos</strong>.</div>
-                                                ) : grupos.filter(g => g.activo).map(grupo => {
-                                                    const grupoItemIds = inventario
-                                                        .filter(inv => inv.grupo_id === grupo.id && !['por_despachar', 'cliente'].includes(inv.disponibilidad))
-                                                        .map(inv => inv.id);
-                                                    const totalItems = inventario.filter(inv => inv.grupo_id === grupo.id).length;
-                                                    const allSelected = grupoItemIds.length > 0 && grupoItemIds.every(id => form.inventarioIds.includes(id));
-                                                    const someSelected = grupoItemIds.some(id => form.inventarioIds.includes(id));
-                                                    const isPartial = totalItems > 0 && grupoItemIds.length < totalItems;
-
-                                                    return (
-                                                        <div
-                                                            key={grupo.id}
-                                                            className={`rem-grupo-card${allSelected ? ' rem-grupo-card--selected' : someSelected ? ' rem-grupo-card--partial' : ''}`}
-                                                            onClick={() => selectGrupo(grupo)}
-                                                        >
-                                                            <div className="rem-grupo-card-check">
-                                                                <div className={`rem-grupo-checkbox${allSelected ? ' checked' : someSelected ? ' partial' : ''}`}>
-                                                                    {allSelected ? '✓' : someSelected ? '—' : ''}
-                                                                </div>
-                                                            </div>
-                                                            <div className="rem-grupo-card-body">
-                                                                <div className="rem-grupo-card-name">{grupo.nombre}</div>
-                                                                {grupo.descripcion && <div className="rem-grupo-card-desc">{grupo.descripcion}</div>}
-                                                                <div className="rem-grupo-card-comps">
-                                                                    {grupo.componentes.map((c, i) => (
-                                                                        <span key={i} className="comp-chip">{c.cantidad}× {c.referencia_nombre || `Ref #${c.referencia}`}</span>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                            <div className="rem-grupo-card-stock">
-                                                                <span className={`inv-count-badge ${grupoItemIds.length > 0 ? 'inv-count--ok' : 'inv-count--empty'}`}>
-                                                                    {grupoItemIds.length} disp.
-                                                                </span>
-                                                                {isPartial && (
-                                                                    <span className="rem-grupo-partial-warn" title="No hay inventario completo para este grupo">⚠ Parcial</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-
-                                        {/* ═══ POR ÍTEM table ═══ */}
-                                        {invMode === 'items' && (
-                                        <div className="rem-inv-table-wrapper">
-                                            <table className="rem-inv-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ width: 32 }}></th>
-                                                        <th style={{ width: 75 }}>ID</th>
-                                                        <th style={{ width: '14%' }}>Referencia</th>
-                                                        <th className="rem-inv-th-filter" style={{ width: '13%' }}>
-                                                        <div className={`rem-inv-col-select-wrap${colCatFilter ? ' active-filter' : ''}`}>
-                                                            <span className="rem-inv-col-label">
-                                                                {colCatFilter
-                                                                    ? CATEGORIAS.find(c => String(c.id) === colCatFilter)?.nombre || 'Categoría'
-                                                                    : 'Categoría'}
-                                                            </span>
-                                                            <FaChevronDown className="rem-inv-col-chevron" />
-                                                            <select
-                                                                className="rem-inv-col-select"
-                                                                value={colCatFilter}
-                                                                onChange={e => {
-                                                                    setColCatFilter(e.target.value);
-                                                                    setColSubcatFilter('');
-                                                                }}
-                                                                onClick={e => e.stopPropagation()}
-                                                            >
-                                                                <option value="">Todas</option>
-                                                                {CATEGORIAS.map(c => (
-                                                                    <option key={c.id} value={String(c.id)}>{c.nombre}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    </th>
-                                                    <th className="rem-inv-th-filter" style={{ width: '13%' }}>
-                                                        <div className={`rem-inv-col-select-wrap${colSubcatFilter ? ' active-filter' : ''}`}>
-                                                            <span className="rem-inv-col-label">
-                                                                {colSubcatFilter
-                                                                    ? colSubcatOptions.find(s => String(s.id) === colSubcatFilter)?.nombre || 'Subcategoría'
-                                                                    : 'Subcategoría'}
-                                                            </span>
-                                                            <FaChevronDown className="rem-inv-col-chevron" />
-                                                            <select
-                                                                className="rem-inv-col-select"
-                                                                value={colSubcatFilter}
-                                                                onChange={e => setColSubcatFilter(e.target.value)}
-                                                                onClick={e => e.stopPropagation()}
-                                                            >
-                                                                <option value="">Todas</option>
-                                                                {colSubcatOptions.map(s => (
-                                                                    <option key={s.id} value={String(s.id)}>{s.nombre}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    </th>
-                                                    <th className="rem-inv-th-filter" style={{ width: '15%' }}>
-                                                        <div className={`rem-inv-col-select-wrap${colProvFilter ? ' active-filter' : ''}`}>
-                                                            <span className="rem-inv-col-label">
-                                                                {colProvFilter
-                                                                    ? proveedores?.find(p => String(p.id) === colProvFilter)?.nombre_empresa || 'Proveedor'
-                                                                    : 'Proveedor'}
-                                                            </span>
-                                                            <FaChevronDown className="rem-inv-col-chevron" />
-                                                            <select
-                                                                className="rem-inv-col-select"
-                                                                value={colProvFilter}
-                                                                onChange={e => setColProvFilter(e.target.value)}
-                                                                onClick={e => e.stopPropagation()}
-                                                            >
-                                                                <option value="">Todos</option>
-                                                                {(proveedores || []).map(p => (
-                                                                    <option key={p.id} value={String(p.id)}>{p.nombre_empresa}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    </th>
-                                                    <th style={{ width: '10%' }}>Variación</th>
-                                                    <th style={{ width: '8%' }}>Venta</th>
-                                                    <th style={{ width: '12%' }}>Observación</th>
-                                                    <th style={{ width: 42, textAlign: 'center' }}></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredInventario.map(inv => {
-                                                    const prod = getProducto(inv.productoId);
-                                                    const catId = inv.categoria || prod?.categoriaId;
-                                                    const cat = getCategoria(catId);
-                                                    const subcat = getSubcategoria(inv.subcategoriaId);
-                                                    const color = catId ? getCatColor(catId) : '#94a3b8';
-                                                    const provNombre = proveedores?.find(p => p.id == (prod?.proveedorId || prod?.proveedor))?.nombre_empresa || '—';
-                                                    const checked = form.inventarioIds.includes(inv.id);
-                                                    return (
-                                                        <tr key={inv.id}
-                                                            className={`rem-inv-row${checked ? ' rem-inv-row-selected' : ''}`}
-                                                            onClick={() => toggleInventarioItem(inv.id)}>
-                                                            <td>
-                                                                <input type="checkbox" checked={checked}
-                                                                    onChange={() => toggleInventarioItem(inv.id)}
-                                                                    onClick={e => e.stopPropagation()}
-                                                                    className="inv-checkbox" />
-                                                            </td>
-                                                            <td><span className="inv-id-badge">{inv.id_referencia || inv.id}</span></td>
-                                                            <td className="inv-nombre">{prod?.nombre || '—'}</td>
-                                                            <td title={cat?.nombre || ''}>
-                                                                {cat && <span className="cat-badge" style={{ '--cat-color': color }}>{cat.nombre}</span>}
-                                                            </td>
-                                                            <td title={subcat?.nombre || ''}>{subcat?.nombre || '—'}</td>
-                                                            <td className="inv-nombre">{provNombre}</td>
-                                                            <td className="obs-cell-col">
-                                                                <ObsCell text={inv.variacion} />
-                                                            </td>
-                                                            <td>{inv.venta || '—'}</td>
-                                                            <td className="obs-cell-col">
-                                                                <ObsCell text={inv.observacion} />
-                                                            </td>
-                                                            <td style={{ textAlign: 'center' }}>
-                                                                {inv.imagen
-                                                                    ? <button type="button" className="btn-view-img" onClick={e => { e.stopPropagation(); setPreviewImg({ open: true, url: inv.imagen }); }} title="Ver imagen"><FaImage /></button>
-                                                                    : <span className="empty-val">—</span>}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                     </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
-                                        Por favor seleccione una O.C. Asociada o "Sin orden asociada" para visualizar el inventario.
-                                    </div>
-                                )}
-                                </div>
-                            </div>{/* end rem-form-body */}
-
-                            <div className="rem-modal-footer">
-                                <button type="button" className="rem-btn-secondary" onClick={closeModal} disabled={isSubmitting}>Cancelar</button>
-                                <button
-                                    type="submit"
-                                    className={`rem-btn-primary${isSubmitting ? ' btn-loading' : ''}`}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting
-                                        ? <><FaSpinner className="spin-icon" /> Creando...</>
-                                        : <><FaPlus /> Crear Remisión</>
-                                    }
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* ===== MODAL ACTUALIZAR REMI SIÓN ===== */}
             {editModal.open && (() => {

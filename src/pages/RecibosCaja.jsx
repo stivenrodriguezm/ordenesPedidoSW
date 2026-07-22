@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import './RecibosCaja.css';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
@@ -34,85 +34,135 @@ const PaymentIcon = ({ method }) => {
   return <div className="payment-icon-wrapper other"><FaMobileAlt /></div>;
 };
 
+const PAYMENT_METHODS = [
+  { label: 'Efectivo', color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
+  { label: 'Davivienda', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' },
+  { label: 'Bancolombia', color: '#f59e0b', bg: '#fffbeb', border: '#fcd34d' },
+  { label: 'Bold', color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
+  { label: 'Datafono Lottus', color: '#0284c7', bg: '#f0f9ff', border: '#7dd3fc' },
+  { label: 'Otro', color: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
+];
+
 const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading }) => {
-  const [newRC, setNewRC] = useState({ id: '', fecha: '', venta: '', metodo_pago: '', valor: '', nota: '' });
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
 
   useEffect(() => {
     if (isOpen) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const formattedToday = `${year}-${month}-${day}`;
-      setNewRC(prev => ({ ...prev, fecha: formattedToday }));
+      setNewRC({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
     }
   }, [isOpen]);
 
   const handleChange = (e) => setNewRC({ ...newRC, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); onSave(newRC); };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!newRC.metodo_pago) return;
+    onSave(newRC);
+  };
 
   if (!isOpen) return null;
 
+  const selectedMethod = PAYMENT_METHODS.find(m => m.label === newRC.metodo_pago);
+
   return (
-    <Modal show={isOpen} onClose={onClose} title="Nuevo Recibo de Caja">
-      <form onSubmit={handleSubmit} className="premium-form">
-        <div className="form-grid">
-          <div className="form-group">
-            <label>RC ID</label>
-            <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ej: 12345" />
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content rc-modal-box" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="rc-modal-header-bar">
+          <div className="rc-modal-title-wrap">
+            <div className="rc-modal-icon-wrap">
+              <FaWallet />
+            </div>
+            <div>
+              <h3>Nuevo Recibo de Caja</h3>
+              <p className="rc-modal-subtitle">Registra un pago recibido de cliente</p>
+            </div>
           </div>
-          <div className="form-group">
-            <label>Fecha</label>
-            <input type="date" name="fecha" value={newRC.fecha} onChange={handleChange} required />
+          <button type="button" className="rc-close-btn" onClick={onClose}>×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="rc-premium-form">
+          {/* Row: ID + Fecha */}
+          <div className="rc-form-row">
+            <div className="rc-form-group">
+              <label>No. Recibo</label>
+              <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="RC-001" className="rc-input" />
+            </div>
+            <div className="rc-form-group">
+              <label>Fecha</label>
+              <input type="date" name="fecha" value={newRC.fecha} onChange={handleChange} required className="rc-input" />
+            </div>
           </div>
-        </div>
 
-        <div className="form-group">
-          <label>Venta Asociada</label>
-          <select name="venta" value={newRC.venta} onChange={handleChange} required>
-            <option value="">Seleccionar Venta...</option>
-            {ventas.map((venta) => (<option key={venta.id_venta} value={venta.id_venta}>Venta #{venta.id_venta}</option>))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Método de Pago</label>
-          <div className="payment-methods-grid">
-            {mediosPago.map((medio) => (
-              <button
-                key={medio}
-                type="button"
-                className={`payment-method-btn ${newRC.metodo_pago === medio ? 'active' : ''}`}
-                onClick={() => setNewRC({ ...newRC, metodo_pago: medio })}
-              >
-                {medio}
-              </button>
-            ))}
+          {/* Venta */}
+          <div className="rc-form-group rc-full">
+            <label>Venta Asociada</label>
+            <select name="venta" value={newRC.venta} onChange={handleChange} required className="rc-input">
+              <option value="">Seleccionar Venta...</option>
+              {ventas.map((venta) => (
+                <option key={venta.id_venta} value={venta.id_venta}>Venta #{venta.id_venta}</option>
+              ))}
+            </select>
           </div>
-          {/* Hidden select for required validation if needed, or handle manually */}
-          <input type="hidden" name="metodo_pago" value={newRC.metodo_pago} required />
-        </div>
 
-        <div className="form-group">
-          <label>Valor Recibido</label>
-          <div className="input-with-icon">
-            <FaMoneyBillWave />
-            <input type="number" name="valor" value={newRC.valor} onChange={handleChange} required min="0" step="any" placeholder="0.00" />
+          {/* Método de Pago */}
+          <div className="rc-form-group rc-full">
+            <label>Método de Pago</label>
+            <div className="rc-payment-grid">
+              {PAYMENT_METHODS.map((method) => (
+                <button
+                  key={method.label}
+                  type="button"
+                  className={`rc-payment-btn ${newRC.metodo_pago === method.label ? 'active' : ''}`}
+                  style={newRC.metodo_pago === method.label ? {
+                    background: method.bg,
+                    borderColor: method.border,
+                    color: method.color,
+                  } : {}}
+                  onClick={() => setNewRC({ ...newRC, metodo_pago: method.label })}
+                >
+                  {method.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="form-group">
-          <label>Nota (Opcional)</label>
-          <textarea name="nota" value={newRC.nota} onChange={handleChange} placeholder="Detalles adicionales..." rows="2" />
-        </div>
+          {/* Valor */}
+          <div className="rc-form-group rc-full">
+            <label>Valor Recibido</label>
+            <div className="rc-input-icon">
+              <FaMoneyBillWave className="rc-input-icon-svg" />
+              <input
+                type="number"
+                name="valor"
+                value={newRC.valor}
+                onChange={handleChange}
+                required
+                min="0"
+                step="any"
+                placeholder="0"
+                className="rc-input rc-input-pl"
+              />
+            </div>
+          </div>
 
-        <button type="submit" className="btn-primary full-width" disabled={isLoading}>
-          {isLoading ? 'Procesando...' : 'Crear Recibo'}
-        </button>
-      </form>
-    </Modal>
+          {/* Nota */}
+          <div className="rc-form-group rc-full">
+            <label>Nota <span className="rc-hint">(opcional)</span></label>
+            <textarea name="nota" value={newRC.nota} onChange={handleChange} placeholder="Detalles adicionales..." rows="2" className="rc-input" />
+          </div>
+
+          <button type="submit" className="rc-submit-btn" disabled={isLoading || !newRC.metodo_pago}>
+            {isLoading ? 'Procesando...' : 'Crear Recibo'}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 };
+
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }) => {
   if (!isOpen) return null;
@@ -133,6 +183,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }
 
 const RecibosCaja = () => {
   const { usuario } = useContext(AppContext);
+  const hasPermission = usePermissions();
   const location = useLocation();
   const [recibosData, setRecibosData] = useState([]);
   const [filters, setFilters] = useState({
@@ -307,47 +358,44 @@ const RecibosCaja = () => {
         </div>
       </div>
 
-      <div className="glass-header">
-        <div className="header-top-row">
-          <h1 className="page-title">Gestión de Caja</h1>
-          <div className="header-actions">
-            {usuario?.role === 'administrador' && (
-              <button className="btn-ghost" onClick={exportData} title="Exportar Excel">
-                <FaFileExport />
-              </button>
-            )}
-            <button className="btn-primary-glow" onClick={() => setIsCreatingRC(true)}>
-              <FaPlus />
-              <span className="long-text">Nuevo Ingreso</span>
-              <span className="short-text">Nuevo</span>
-            </button>
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem' }} />
+            <input type="text" name="query" placeholder="Buscar RC o Venta..." value={filters.query} onChange={handleFilterChange}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '120px' }} />
           </div>
-        </div>
-
-        <div className="filters-bar">
-          <div className="search-pill">
-            <FaSearch />
-            <input
-              type="text"
-              name="query"
-              placeholder="Buscar RC o Venta..."
-              value={filters.query}
-              onChange={handleFilterChange}
-            />
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Desde</label>
+            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
           </div>
-          <div className="date-range-pill">
-            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange} />
-            <span>a</span>
-            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange} />
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Hasta</label>
+            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
           </div>
-          <div className="select-pill">
+          <div className="o-select-pill">
             <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
-              <option value="">Todos los medios</option>
+              <option value="">Medio: Todos</option>
               {mediosPago.map((medio) => (<option key={medio} value={medio}>{medio}</option>))}
             </select>
           </div>
           {(filters.query || filters.fecha_inicio || filters.medio_pago) && (
-            <button className="btn-reset" onClick={clearFilters}><FaUndo /></button>
+            <button className="o-btn-ghost" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
+          )}
+        </div>
+
+        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {usuario?.role === 'administrador' && (
+            <button className="o-btn-ghost" onClick={exportData} title="Exportar Excel"><FaFileExport /></button>
+          )}
+          {hasPermission('CREAR_RECIBO') && (
+            <button className="o-btn-primary-glow" onClick={() => setIsCreatingRC(true)}>
+              <FaPlus />
+              <span className="long-text">Nuevo Ingreso</span>
+              <span className="short-text">Nuevo</span>
+            </button>
           )}
         </div>
       </div>
@@ -372,7 +420,14 @@ const RecibosCaja = () => {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="skeleton-row">
-                    <td colSpan="8"><div className="skeleton-bar"></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
+                    <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                    <td><div className="skeleton skeleton-badge"></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '24px' }}></div></td>
                   </tr>
                 ))
               ) : recibosData.length > 0 ? (
@@ -395,7 +450,7 @@ const RecibosCaja = () => {
                       </span>
                     </td>
                     <td className="actions-cell">
-                      {item.estado === 'Pendiente' && usuario?.role === 'administrador' && (
+                      {item.estado === 'Pendiente' && hasPermission('APROBAR_RECIBO') && (
                         <button
                           className="action-btn confirm"
                           onClick={() => { setSelectedRecibo(item); setShowConfirmModal(true); }}

@@ -160,6 +160,7 @@
 
 .premium-table {
     width: 100%;
+    min-width: 100%;
     border-collapse: collapse;
 }
 
@@ -167,18 +168,17 @@
     background: #f8fafc;
     color: #64748b;
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 1rem 1.25rem;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 0.75rem;
     border-bottom: 1px solid #e2e8f0;
-    white-space: nowrap;
 }
 
 .premium-table td {
-    padding: 0.9rem 1.25rem;
+    padding: 0.6rem 0.75rem;
     color: #334155;
-    font-size: 0.875rem;
+    font-size: 0.82rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
 }
@@ -1657,7 +1657,7 @@
 /* Fila 2: Costo | Disponibilidad | Obs | Imagen | Trash */
 .fct-ref-row2 {
     display: grid;
-    grid-template-columns: 140px 160px 1fr 200px auto;
+    grid-template-columns: 140px 140px 1fr 200px 150px;
     gap: 0.65rem;
     align-items: end;
     padding-top: 0.5rem;
@@ -1666,7 +1666,15 @@
 
 /* When "Venta" is selected, add venta column */
 .fct-ref-row2.fct-ref-row2-venta {
-    grid-template-columns: 140px 160px 140px 1fr 200px auto;
+    grid-template-columns: 140px 140px 1fr 200px 150px 150px;
+}
+
+.fct-ref-row3 {
+    display: grid;
+    grid-template-columns: 200px 1fr 160px auto;
+    gap: 0.65rem;
+    align-items: end;
+    padding-top: 0.5rem;
 }
 
 .fct-field-costo { max-width: 150px; }

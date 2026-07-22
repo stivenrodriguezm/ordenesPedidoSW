@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import API from '../services/api';
+import AppNotification from '../components/AppNotification';
 import './EditarVenta.css';
 
 const EditarVenta = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // Get the venta ID from the URL
+
+  const [notification, setNotification] = useState({ message: '', type: '' });
+  const showNotification = (message, type = 'success') => {
+      setNotification({ message, type });
+  };
 
   // Estados para el cliente
   const [clienteData, setClienteData] = useState({
@@ -136,7 +142,7 @@ const EditarVenta = () => {
         );
       }
 
-      alert('Venta actualizada exitosamente.');
+      showNotification('Venta actualizada exitosamente.', 'success');
       navigate('/ventas');
     } catch (error) {
       if (error.response && error.response.data) {
@@ -324,6 +330,8 @@ const EditarVenta = () => {
           Actualizar Venta
         </button>
       </div>
+      {/* Componente Global de Notificaciones Elegante */}
+      <AppNotification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
     </div>
   );
 };

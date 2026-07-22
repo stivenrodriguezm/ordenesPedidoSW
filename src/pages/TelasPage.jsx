@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import API from '../services/api';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import './TelasPage.css';
-import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
+import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
 import logoFinal from '../assets/logoFinal.png';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
+import AppNotification from '../components/AppNotification';
 
 const TelasPage = () => {
     const { usuario } = useContext(AppContext);
+    const hasPermission = usePermissions();
     const [pedidos, setPedidos] = useState([]);
     const [ordenes, setOrdenes] = useState([]);
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
@@ -22,6 +26,7 @@ const TelasPage = () => {
     const [createdPedidoId, setCreatedPedidoId] = useState(null);
     const [pdfData, setPdfData] = useState(null);
     const [editEstadoModal, setEditEstadoModal] = useState({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
+    const [notification, setNotification] = useState({ message: '', type: '' });
     const previewRef = useRef(null);
 
     // Direcciones de Entrega state
@@ -84,7 +89,7 @@ const TelasPage = () => {
             setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
         } catch (error) {
             console.error('Error actualizando estado:', error);
-            alert(error.response?.data?.error || 'Error al actualizar el estado.');
+            showNotification(error.response?.data?.error || 'Error al actualizar el estado.', 'error');
         }
     };
 
@@ -118,17 +123,22 @@ const TelasPage = () => {
                         scale: 2,
                         useCORS: true,
                     });
-                    previewRef.current.style.display = 'none';
-
+                    
                     const image = canvas.toDataURL('image/png');
                     const link = document.createElement('a');
                     link.href = image;
                     link.download = `pedido_telas_${createdPedidoId}.png`;
                     link.click();
 
-                    setCreatedPedidoId(null);
+                    setNotification({ message: 'Pedido de tela creado y descargado exitosamente.', type: 'success' });
                 } catch (error) {
                     console.error('Error generating PDF:', error);
+                    setNotification({ message: 'Pedido de tela creado, pero hubo un error al descargar la imagen.', type: 'error' });
+                } finally {
+                    if (previewRef.current) {
+                        previewRef.current.style.display = 'none';
+                    }
+                    setCreatedPedidoId(null);
                 }
             };
             generatePDF();
@@ -157,7 +167,7 @@ const TelasPage = () => {
             // - vendedor: sees only their own orders
             // - admin/auxiliar: sees all orders
             // estado=en_proceso filters to 'en_proceso' and 'pendiente' states
-            const response = await API.get('listar-pedidos/?estado=en_proceso');
+            const response = await API.get('listar-pedidos/?estado=en_proceso&tela=Por pedir');
             const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
             setOrdenes(data);
         } catch (error) {
@@ -181,10 +191,10 @@ const TelasPage = () => {
             setShowProveedorModal(false);
             setNewProveedor({ nombre_empresa: '', nombre_encargado: '', contacto: '' });
             // Refresh proveedores from context
-            alert('Proveedor creado exitosamente');
+            showNotification('Proveedor creado exitosamente', 'success');
         } catch (error) {
             console.error("Error creating proveedor:", error);
-            alert('Error al crear proveedor');
+            showNotification('Error al crear proveedor', 'error');
         }
     };
 
@@ -194,10 +204,10 @@ const TelasPage = () => {
             await API.post('direcciones-entrega/', newDireccion);
             setNewDireccion({ nombre: '', detalles: '' });
             fetchDirecciones();
-            alert('Dirección agregada exitosamente');
+            showNotification('Dirección agregada exitosamente', 'success');
         } catch (error) {
             console.error("Error creating direccion:", error);
-            alert('Error al guardar dirección');
+            showNotification('Error al guardar dirección', 'error');
         }
     };
 
@@ -213,7 +223,7 @@ const TelasPage = () => {
             }
         } catch (error) {
             console.error("Error deleting direccion:", error);
-            alert('Error al eliminar la dirección');
+            showNotification('Error al eliminar la dirección', 'error');
         }
     };
 
@@ -254,7 +264,7 @@ const TelasPage = () => {
         let dirFila = newPedido.direccion_entrega;
         if (isOtraDireccion) {
             if (!newPedido.direccion_entrega_custom.trim()) {
-                alert("Por favor escriba la dirección de entrega.");
+                showNotification("Por favor escriba la dirección de entrega.", 'error');
                 return;
             }
             dirFila = newPedido.direccion_entrega_custom;
@@ -294,10 +304,9 @@ const TelasPage = () => {
             });
             setIsOtraDireccion(false);
             fetchData();
-            alert('Pedido de tela creado exitosamente');
         } catch (error) {
             console.error("Error creating pedido tela:", error);
-            alert('Error al crear pedido de tela');
+            setNotification({ message: 'Error al crear pedido de tela', type: 'error' });
         }
     };
 
@@ -315,46 +324,75 @@ const TelasPage = () => {
         return orden ? orden.id : '';
     };
 
+    const exportPedidos = () => {
+        const dataToExport = pedidos.map(p => ({
+            'ID': p.id,
+            'Usuario': p.usuario_nombre,
+            'Proveedor': p.proveedor_nombre,
+            'Fecha': p.fecha_creacion,
+            'Estado': p.estado,
+            'Orden Asociada': p.orden_id ? `#${p.orden_id}` : '-',
+            'Dirección Entrega': p.direccion_entrega,
+        }));
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Pedidos Telas');
+        XLSX.writeFile(wb, 'PedidosTelas.xlsx');
+    };
+
     return (
         <div className="page-container">
-            <div className="page-header">
-                <div className="filters-group">
-                    <select name="proveedor" value={filters.proveedor} onChange={handleFilterChange}>
-                        <option value="">Todos los Proveedores</option>
-                        {proveedoresTelas.map(p => (
-                            <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
-                        ))}
-                    </select>
-                    <select name="estado" value={filters.estado} onChange={handleFilterChange}>
-                        <option value="">Todos los Estados</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En fabrica">En fabrica</option>
-                        <option value="En Lottus">En Lottus</option>
-                    </select>
+            <AppNotification 
+                message={notification.message}
+                type={notification.type}
+                onClose={() => setNotification({ message: '', type: '' })}
+            />
+            <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+                <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+                    <div className="o-select-pill">
+                        <select name="proveedor" value={filters.proveedor} onChange={handleFilterChange}>
+                            <option value="">Proveedor: Todos</option>
+                            {proveedoresTelas.map(p => (
+                                <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="o-select-pill">
+                        <select name="estado" value={filters.estado} onChange={handleFilterChange}>
+                            <option value="">Estado: Todos</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En fabrica">En fábrica</option>
+                            <option value="En Lottus">En Lottus</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div className="actions-group">
-                    {(usuario?.role?.toLowerCase() === 'administrador' || usuario?.role?.toLowerCase() === 'auxiliar') && (
-                        <button className="btn-secondary" onClick={() => setShowDireccionModal(true)}>
+                <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {hasPermission('DESCARGAR_PEDIDO_TELA') && (
+                        <button className="o-btn-ghost" onClick={exportPedidos} title="Exportar Excel">
+                            <FaFileExport /> Exportar
+                        </button>
+                    )}
+                    {hasPermission('ADMINISTRAR_DIRECCIONES_TELA') && (
+                        <button className="o-btn-ghost" onClick={() => setShowDireccionModal(true)} title="Gestionar Direcciones">
                             <FaCog /> Direcciones
                         </button>
                     )}
-                    {usuario?.role?.toLowerCase() !== 'vendedor' && (
-                        <button className="btn-secondary" onClick={() => setShowProveedorModal(true)}>
-                            <FaPlus /> Nuevo Proveedor
+                    {hasPermission('ADMINISTRAR_PROVEEDORES_TELA') && (
+                        <button className="o-btn-ghost" onClick={() => setShowProveedorModal(true)} title="Nuevo Proveedor">
+                            <FaPlus /> Proveedor
                         </button>
                     )}
-                    <button className="btn-primary" onClick={() => setShowPedidoModal(true)}>
-                        <FaPlus /> Nuevo Pedido
-                    </button>
+                    {hasPermission('CREAR_PEDIDO_TELA') && (
+                        <button className="o-btn-primary-glow" onClick={() => setShowPedidoModal(true)}>
+                            <FaPlus /> <span className="long-text">Nuevo Pedido</span><span className="short-text">Nuevo</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {loading ? (
-                <div className="loading-container"><div className="loader"></div></div>
-            ) : (
-                <div className="ordenes-container">
-                    <div className="desktop-view">
+            <div className="ordenes-container">
+                <div className="desktop-view">
                         <table className="premium-table">
                             <thead>
                                 <tr>
@@ -369,7 +407,23 @@ const TelasPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {pedidos.map(pedido => (
+                                {loading ? (
+                                    Array.from({ length: 5 }).map((_, index) => (
+                                        <tr key={index} className="skeleton-row">
+                                            <td><div className="skeleton skeleton-text" style={{ width: '30px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                                        </tr>
+                                    ))
+                                ) : pedidos.length === 0 ? (
+                                    <tr><td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
+                                ) : (
+                                    pedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
                                         <tr className={`table-row-clickable ${expandedPedidoId === pedido.id ? 'expanded-row-highlight' : ''}`} onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
                                             <td className="font-mono">{pedido.id}</td>
@@ -402,21 +456,24 @@ const TelasPage = () => {
                                                                     <span className="tela-meta-sep">·</span>
                                                                 </div>
                                                                 <div className="tela-expanded-actions">
-                                                                    <span className={`status-badge ${pedido.estado.toLowerCase().replace(' ', '-')}`}>
-                                                                        {pedido.estado}
-                                                                    </span>
-                                                                    {canAccessPedidoTela(pedido) && (
-                                                                        <button
-                                                                            className="btn-edit-estado"
+                                                                    {hasPermission('EDITAR_ESTADO_TELA_ORDEN') ? (
+                                                                        <span
+                                                                            className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}
                                                                             onClick={() => setEditEstadoModal({
                                                                                 open: true,
                                                                                 pedidoId: pedido.id,
                                                                                 currentEstado: pedido.estado,
                                                                                 newEstado: pedido.estado
                                                                             })}
+                                                                            title="Clic para editar estado"
+                                                                            style={{ cursor: 'pointer' }}
                                                                         >
-                                                                            ✏️ Editar Estado
-                                                                        </button>
+                                                                            {pedido.estado} ✏️
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
+                                                                            {pedido.estado}
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -447,12 +504,12 @@ const TelasPage = () => {
                                             </tr>
                                         )}
                                     </React.Fragment>
-                                ))}
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            )}
 
             {/* Modal Editar Estado de Pedido Tela */}
             {editEstadoModal.open && (
@@ -653,49 +710,87 @@ const TelasPage = () => {
                 </div>
             )}
 
-            {/* Hidden Preview for PDF Generation */}
-            <div ref={previewRef} id="telas-preview" style={{ display: 'none', width: '700px', backgroundColor: '#ffffff', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-                <div className="preview-container">
-                    <div className="preview-header">
-                        <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
-                        <div className="numPedido">
-                            <h2>Pedido de Telas</h2>
-                            <p className="numeroOP">No. {createdPedidoId || '...'}</p>
-                        </div>
+            {/* Hidden Preview for PDF/Image Generation */}
+            <div
+                id="telas-preview"
+                ref={previewRef}
+                style={{
+                    position: 'absolute',
+                    top: '-9999px',
+                    left: '-9999px',
+                    width: '800px',
+                    backgroundColor: '#ffffff',
+                    padding: '40px',
+                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#000000',
+                    display: 'none',
+                }}
+            >
+                {/* Header Section */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div style={{ 
+                        backgroundColor: '#000000', 
+                        color: '#ffffff', 
+                        padding: '12px 24px', 
+                        fontWeight: 'bold', 
+                        fontSize: '36px', 
+                        letterSpacing: '5px',
+                        display: 'inline-block',
+                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                    }}>
+                        LOTTUS
                     </div>
-                    <div className="preview-info">
-                        <div className="info-column">
-                            <p><strong>Proveedor:</strong> {pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || '' : ''}</p>
-                            <p><strong>Usuario:</strong> {usuario ? `${usuario.first_name} ${usuario.last_name}` : ''}</p>
-                            {pdfData?.orden_asociada_id && (
-                                <p><strong>Orden Asociada:</strong> #{getOrdenId(pdfData.orden_asociada_id)}</p>
-                            )}
-                        </div>
-                        <div className="info-column">
-                            <p><strong>Fecha:</strong> {getFormattedDate()}</p>
-                        </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <h1 style={{ margin: '0', fontSize: '24px', fontWeight: 'normal', color: '#1e293b' }}>Pedido de Telas</h1>
+                        <h2 style={{ margin: '5px 0 0', fontSize: '20px', fontWeight: 'bold', color: '#dc2626' }}>No. {createdPedidoId}</h2>
                     </div>
-                    <h3 className="preview-productos-title">Telas:</h3>
-                    <table className="preview-productos-table">
-                        <thead>
-                            <tr>
-                                <th>Descripción</th>
-                                <th>Cantidad</th>
+                </div>
+
+                {/* Thick Black Divider Line */}
+                <hr style={{ border: 'none', borderTop: '3px solid #000000', margin: '0 0 25px 0' }} />
+
+                {/* Metadata Section */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', fontSize: '15px', color: '#1e293b', lineHeight: '1.8' }}>
+                    <div>
+                        <div><strong>Proveedor:</strong> {pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || '' : ''}</div>
+                        <div><strong>Usuario:</strong> {usuario ? `${usuario.first_name} ${usuario.last_name}` : ''}</div>
+                        <div><strong>Orden Asociada:</strong> {pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div><strong>Fecha:</strong> {getFormattedDate()}</div>
+                    </div>
+                </div>
+
+                {/* Details Section */}
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Telas:</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
+                    <thead>
+                        <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b' }}>Descripción</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b', width: '250px' }}>Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {pdfData?.detalles.map((detalle, index) => (
+                            <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.tela}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.cantidad}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {pdfData?.detalles.map((detalle, index) => (
-                                <tr key={index}>
-                                    <td>{detalle.tela}</td>
-                                    <td>{detalle.cantidad}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div className="preview-nota">
-                        <h3>Dirección de Entrega:</h3>
-                        <p>{pdfData?.direccion_entrega || 'No especificada'}</p>
-                    </div>
+                        ))}
+                    </tbody>
+                </table>
+
+                {/* Delivery Address Section */}
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Dirección de Entrega:</h3>
+                <div style={{ 
+                    backgroundColor: '#f8fafc', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '6px', 
+                    padding: '12px 16px', 
+                    fontSize: '15px', 
+                    color: '#334155' 
+                }}>
+                    {pdfData?.direccion_entrega || 'No especificada'}
                 </div>
             </div>
         </div>

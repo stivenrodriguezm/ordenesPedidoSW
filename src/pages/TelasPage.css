@@ -250,7 +250,7 @@
 }
 
 .details-view-wrapper {
-    padding: 1.5rem 2rem;
+    padding: 0;
 }
 
 /* Centrado del panel expandido en /telas */
@@ -258,6 +258,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    padding: 1.25rem 1.5rem;
 }
 
 /* Redesigned expanded content */
@@ -267,6 +268,9 @@
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     overflow: hidden;
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto;
 }
 
 .tela-expanded-header {

@@ -4,7 +4,7 @@ import { AppContext } from "../AppContext";
 import AppNotification from '../components/AppNotification';
 import API from "../services/api";
 import "./ProveedoresPage.css";
-import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport } from "react-icons/fa";
+import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaSearch } from "react-icons/fa";
 import * as XLSX from 'xlsx';
 
 const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
@@ -66,11 +66,20 @@ function ProveedoresPage() {
   const [editingProveedor, setEditingProveedor] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre_empresa', direction: 'ascending' });
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [searchTerm, setSearchTerm] = useState('');
   const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
 
   const sortedProveedores = useMemo(() => {
     let sortableItems = [...(proveedores || [])];
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      sortableItems = sortableItems.filter(p =>
+        (p.nombre_empresa || '').toLowerCase().includes(q) ||
+        (p.nombre_encargado || '').toLowerCase().includes(q) ||
+        (p.contacto || '').toLowerCase().includes(q)
+      );
+    }
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const valA = a[sortConfig.key]?.toLowerCase() || '';
@@ -81,7 +90,7 @@ function ProveedoresPage() {
       });
     }
     return sortableItems;
-  }, [proveedores, sortConfig]);
+  }, [proveedores, sortConfig, searchTerm]);
 
   const requestSort = (key) => {
     let direction = 'ascending';
@@ -98,8 +107,8 @@ function ProveedoresPage() {
 
   const mutation = useMutation({
     mutationFn: (proveedorData) => proveedorData.id
-      ? API.put(`proveedores/${proveedorData.id}/`, proveedorData, { headers: { Authorization: `Bearer ${token}` } })
-      : API.post('proveedores/', proveedorData, { headers: { Authorization: `Bearer ${token}` } }),
+      ? API.put(`/proveedores/${proveedorData.id}/`, proveedorData, { headers: { Authorization: `Bearer ${token}` } })
+      : API.post('/proveedores/', proveedorData, { headers: { Authorization: `Bearer ${token}` } }),
     onSuccess: async (_, variables) => {
       fetchProveedores(); // Llama a la función para recargar los proveedores
       queryClient.invalidateQueries({ queryKey: ['proveedores'] });
@@ -139,15 +148,29 @@ function ProveedoresPage() {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="v-filters-bar" style={{ justifyContent: 'flex-end' }}>
-        {usuario?.role === 'administrador' && (
-          <button className="btn-secondary" onClick={exportProveedores}>
-            <FaFileExport /> Exportar
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem', flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Buscar proveedor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '160px' }}
+            />
+          </div>
+        </div>
+        <div style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {usuario?.role === 'administrador' && (
+            <button className="o-btn-ghost" onClick={exportProveedores} title="Exportar">
+              <FaFileExport />
+            </button>
+          )}
+          <button className="o-btn-primary-glow" onClick={() => handleOpenModal()}>
+            <FaPlus /> <span>Nuevo Proveedor</span>
           </button>
-        )}
-        <button className="btn-primary" onClick={() => handleOpenModal()}>
-          <FaPlus /> Nuevo Proveedor
-        </button>
+        </div>
       </div>
 
       <div className="proveedores-container">
@@ -170,7 +193,14 @@ function ProveedoresPage() {
             </thead>
             <tbody>
               {isLoadingProveedores ? (
-                <tr><td colSpan="4"><div className="loading-container"><div className="loader"></div></div></td></tr>
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="skeleton-row">
+                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                  </tr>
+                ))
               ) : sortedProveedores.length > 0 ? (
                 sortedProveedores.map((proveedor) => (
                   <tr key={proveedor.id}>

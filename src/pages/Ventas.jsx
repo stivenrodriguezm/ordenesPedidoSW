@@ -2,13 +2,13 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen } from "react-icons/fa";
+import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen, FaBoxOpen } from "react-icons/fa";
 import Modal from '../components/Modal';
 import AppNotification from '../components/AppNotification';
 import EditSaleModal from '../components/EditSaleModal';
 import RemisionModal from '../components/RemisionModal';
 import SalesSummaryReport from '../components/SalesSummaryReport';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import './Ventas.css';
 import './VentasImprovements.css';
 import './VentasModalForms.css';
@@ -19,6 +19,7 @@ import useDebounce from '../hooks/useDebounce';
 
 const Ventas = () => {
     const { fetchClientes, usuario } = useContext(AppContext);
+    const hasPermission = usePermissions();
     const navigate = useNavigate();
     const [ventas, setVentas] = useState([]);
     const [reportSales, setReportSales] = useState([]);
@@ -176,7 +177,9 @@ const Ventas = () => {
                     params.month = month;
                     params.year = year;
                 }
-                if (usuario?.role.toLowerCase() === 'vendedor') {
+                const perms = usuario?.permissions || [];
+                const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
+                if (!canSeeAll) {
                     params.vendedor = usuario.id;
                 } else {
                     params.vendedor = selectedVendedor;
@@ -206,7 +209,7 @@ const Ventas = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado, setNotification, usuario]);
+    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado, selectedSede, setNotification, usuario]);
 
     const fetchReportSales = useCallback(async () => {
         try {
@@ -216,7 +219,9 @@ const Ventas = () => {
                 params.month = month;
                 params.year = year;
             }
-            if (usuario?.role.toLowerCase() === 'vendedor') {
+            const perms = usuario?.permissions || [];
+            const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
+            if (!canSeeAll) {
                 params.vendedor = usuario.id;
             }
             // Note: This might still fail if the dataset is huge, but it won't crash the main list
@@ -655,7 +660,7 @@ const Ventas = () => {
                             <FaFileExport />
                         </button>
                     )}
-                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                    {hasPermission('CREAR_VENTA') && (
                         <button className="v-btn-primary-glow" onClick={() => navigate('/nuevaVenta')}>
                             <FaPlus />
                             <span className="long-text">Nueva Venta</span>
@@ -678,9 +683,13 @@ const Ventas = () => {
                                 <th className="th-sede">Sede</th>
                                 <th className="th-traslado">Trasl.</th>
                                 <th className="th-cliente">Cliente</th>
-                                <th className="th-valor">Abono</th>
-                                <th className="th-valor">Saldo</th>
-                                <th className="th-valor">Total</th>
+                                {hasPermission('VER_PRECIOS_VENTA') && (
+                                    <>
+                                        <th className="th-valor">Abono</th>
+                                        <th className="th-valor">Saldo</th>
+                                        <th className="th-valor">Total</th>
+                                    </>
+                                )}
                                 <th className="th-pedidos">Pedidos</th>
                                 <th className="th-estado">Estado</th>
                                 <th className="th-accion"></th>
@@ -698,9 +707,13 @@ const Ventas = () => {
                                         <td className="td-sede"><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
                                         <td className="td-traslado"><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
                                         <td className="td-cliente"><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
-                                        <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
-                                        <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
-                                        <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                        {hasPermission('VER_PRECIOS_VENTA') && (
+                                            <>
+                                                <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                                <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                                                <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                            </>
+                                        )}
                                         <td className="td-pedidos"><div className="skeleton skeleton-badge"></div></td>
                                         <td className="td-estado"><div className="skeleton skeleton-badge"></div></td>
                                         <td className="td-accion"><div className="skeleton skeleton-text" style={{ width: '20px' }}></div></td>
@@ -708,12 +721,9 @@ const Ventas = () => {
                                 ))
                             ) : ventas.length === 0 ? (
                                 <tr>
-                                    <td colSpan="13" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                                    <td colSpan={hasPermission('VER_PRECIOS_VENTA') ? "13" : "10"} style={{ textAlign: 'center', padding: '4rem 2rem' }}>
                                         <div className="empty-state-content">
-                                            <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', marginBottom: '1rem' }}>No se encontraron ventas.</p>
-                                            <button className="btn-primary" onClick={() => navigate('/nuevaVenta')}>
-                                                Crear Nueva Venta
-                                            </button>
+                                            <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', margin: 0 }}>No hay ventas para este periodo.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -737,11 +747,15 @@ const Ventas = () => {
                                             <td className="td-cliente" title={venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}>
                                                 {venta.cliente_nombre || (venta.cliente ? venta.cliente.nombre : 'Cliente Eliminado')}
                                             </td>
-                                            <td className="td-valor">{formatCurrency(venta.abono)}</td>
-                                            <td className="td-valor">{formatCurrency(venta.saldo)}</td>
-                                            <td className="td-valor td-valor-total">
-                                                {formatCurrency(venta.valor_total)}
-                                            </td>
+                                            {hasPermission('VER_PRECIOS_VENTA') && (
+                                                <>
+                                                    <td className="td-valor">{formatCurrency(venta.abono)}</td>
+                                                    <td className="td-valor">{formatCurrency(venta.saldo)}</td>
+                                                    <td className="td-valor td-valor-total">
+                                                        {formatCurrency(venta.valor_total)}
+                                                    </td>
+                                                </>
+                                            )}
                                             <td className="td-pedidos">
                                                 <span className={`status-badge ${venta.estado_pedidos ? 'pedido-realizado' : 'pedido-pendiente'}`}>
                                                     {venta.estado_pedidos ? 'Pedido' : 'Pendiente'}
@@ -941,7 +955,7 @@ const Ventas = () => {
                                                                         <button className="v-btn-primary-glow" onClick={() => navigate('/ordenes/nuevo', { state: { ventaId: venta.id } })}>
                                                                             <FaPlus /> Agregar Pedido
                                                                         </button>
-                                                                        {usuario?.role === 'administrador' && (
+                                                                        {(hasPermission('EDITAR_VENTA') || hasPermission('EDITAR_ESTADO_VENTA') || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA')) && (
                                                                             <button className="v-btn-primary-glow" onClick={() => {
                                                                                 setEditSaleData(ventaDetails);
                                                                                 setShowEditSaleModal(true);
@@ -953,106 +967,68 @@ const Ventas = () => {
                                                                 </div>
 
                                                                 {ventaDetails.ordenes_pedido && ventaDetails.ordenes_pedido.length > 0 ? (
-                                                                    <div className="orders-table-wrapper">
-                                                                        <table className="orders-table-enhanced">
-                                                                            <thead>
-                                                                                <tr>
-                                                                                    <th className="th-order-id">ID</th>
-                                                                                    <th className="th-order-proveedor">Proveedor</th>
-                                                                                    <th className="th-order-date">F. Pedido</th>
-                                                                                    <th className="th-order-date">F. Esperada</th>
-                                                                                    <th className="th-order-tela">Tela</th>
+                                                                    <div className="orders-cards-container">
+                                                                        {ventaDetails.ordenes_pedido.map((pedido) => (
+                                                                            <div key={pedido.id} className={`order-card-v2 ${expandedNestedOrderId === pedido.id ? 'expanded' : ''}`}>
+                                                                                <div className="order-card-v2-header" onClick={() => handleExpandNestedOrder(pedido.id)}>
+                                                                                    <div className="oc-v2-section oc-v2-id">
+                                                                                        <span className="oc-v2-label">Orden</span>
+                                                                                        <span className="oc-v2-value highlight">#{pedido.id}</span>
+                                                                                    </div>
+                                                                                    <div className="oc-v2-section oc-v2-prov">
+                                                                                        <span className="oc-v2-label">Proveedor</span>
+                                                                                        <span className="oc-v2-value">{pedido.proveedor_nombre || '—'}</span>
+                                                                                    </div>
+                                                                                    <div className="oc-v2-section oc-v2-dates">
+                                                                                        <span className="oc-v2-label">Fechas (Pedido - Esperada)</span>
+                                                                                        <span className="oc-v2-value mono">{formatShortDate(pedido.fecha_pedido)} a {formatShortDate(pedido.fecha_esperada)}</span>
+                                                                                    </div>
+                                                                                    <div className="oc-v2-section oc-v2-tela">
+                                                                                        <span className="oc-v2-label">Tela</span>
+                                                                                        <span className="oc-v2-value italic">{pedido.tela || 'Sin tela'}</span>
+                                                                                    </div>
                                                                                     {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
-                                                                                        <th className="th-order-costo">Costo</th>
+                                                                                        <div className="oc-v2-section oc-v2-cost">
+                                                                                            <span className="oc-v2-label">Costo</span>
+                                                                                            <span className="oc-v2-value success">{formatCurrency(pedido.costo)}</span>
+                                                                                        </div>
                                                                                     )}
-                                                                                    <th className="th-order-estado">Estado</th>
-                                                                                    <th className="th-order-accion"></th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                {ventaDetails.ordenes_pedido.map((pedido) => (
-                                                                                    <React.Fragment key={pedido.id}>
-                                                                                        <tr className={`order-row-enhanced ${expandedNestedOrderId === pedido.id ? 'expanded' : ''}`}>
-                                                                                            <td className="td-order-id">
-                                                                                                <span className="order-id-badge">#{pedido.id}</span>
-                                                                                            </td>
-                                                                                            <td className="td-order-proveedor">
-                                                                                                <span className="proveedor-name">{pedido.proveedor_nombre || '—'}</span>
-                                                                                            </td>
-                                                                                            <td className="td-order-date">
-                                                                                                <span className="date-text">{formatShortDate(pedido.fecha_pedido)}</span>
-                                                                                            </td>
-                                                                                            <td className="td-order-date">
-                                                                                                <span className="date-text">{formatShortDate(pedido.fecha_esperada)}</span>
-                                                                                            </td>
-                                                                                            <td className="td-order-tela">
-                                                                                                <span className="tela-info">{pedido.tela || '—'}</span>
-                                                                                            </td>
-                                                                                            {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
-                                                                                                <td className="td-order-costo">
-                                                                                                    <span className="costo-amount">{formatCurrency(pedido.costo)}</span>
-                                                                                                </td>
-                                                                                            )}
-                                                                                            <td className="td-order-estado">
-                                                                                                <span className={`order-status-badge ${pedido.estado ? pedido.estado.toLowerCase().replace(/[_ ]/g, '-') : ''}`}>
-                                                                                                    {capitalizeEstado(pedido.estado)}
-                                                                                                </span>
-                                                                                            </td>
-                                                                                            <td className="td-order-accion">
-                                                                                                <button
-                                                                                                    className={`btn-expand-order ${expandedNestedOrderId === pedido.id ? 'active' : ''}`}
-                                                                                                    onClick={() => handleExpandNestedOrder(pedido.id)}
-                                                                                                    title="Ver Productos"
-                                                                                                >
-                                                                                                    <FaChevronDown />
-                                                                                                </button>
-                                                                                            </td>
-                                                                                        </tr>
-                                                                                        {expandedNestedOrderId === pedido.id && (
-                                                                                            <tr className="nested-expanded-row">
-                                                                                                <td colSpan={usuario?.role === 'vendedor' ? '6' : '7'}>
-                                                                                                    <div className="nested-order-details-wrapper">
-                                                                                                        {loadingNestedDetails ? (
-                                                                                                            <div className="loading-container-small"><div className="loader-small"></div></div>
-                                                                                                        ) : nestedOrderDetails ? (
-                                                                                                            <div className="nested-order-content">
-                                                                                                                <h5>Productos en Orden #{pedido.id}</h5>
-                                                                                                                <table className="products-table-enhanced">
-                                                                                                                    <thead>
-                                                                                                                        <tr>
-                                                                                                                            <th>Referencia</th>
-                                                                                                                            <th>Cantidad</th>
-                                                                                                                            <th>Especificaciones</th>
-                                                                                                                        </tr>
-                                                                                                                    </thead>
-                                                                                                                    <tbody>
-                                                                                                                        {Array.isArray(nestedOrderDetails) && nestedOrderDetails.length > 0 ? (
-                                                                                                                            nestedOrderDetails.map((detalle, idx) => (
-                                                                                                                                <tr key={idx}>
-                                                                                                                                    <td><strong>{detalle.referencia}</strong></td>
-                                                                                                                                    <td>{detalle.cantidad}</td>
-                                                                                                                                    <td>{detalle.especificaciones || '—'}</td>
-                                                                                                                                </tr>
-                                                                                                                            ))
-                                                                                                                        ) : (
-                                                                                                                            <tr>
-                                                                                                                                <td colSpan="3" style={{ textAlign: 'center', color: '#6b7280' }}>
-                                                                                                                                    No hay detalles disponibles para esta orden.
-                                                                                                                                </td>
-                                                                                                                            </tr>
-                                                                                                                        )}
-                                                                                                                    </tbody>
-                                                                                                                </table>
+                                                                                    <div className="oc-v2-section oc-v2-status">
+                                                                                        <span className="oc-v2-label">Estado</span>
+                                                                                        <span className={`status-pill ${pedido.estado ? pedido.estado.toLowerCase().replace(/[_ ]/g, '-') : ''}`}>
+                                                                                            {capitalizeEstado(pedido.estado)}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="oc-v2-section oc-v2-action">
+                                                                                        <button className="expand-btn-v2"><FaChevronDown /></button>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {expandedNestedOrderId === pedido.id && (
+                                                                                    <div className="order-card-v2-body">
+                                                                                        {loadingNestedDetails ? (
+                                                                                            <div className="loading-container-small"><div className="loader-small"></div></div>
+                                                                                        ) : nestedOrderDetails ? (
+                                                                                            <div className="nested-products-grid">
+                                                                                                {Array.isArray(nestedOrderDetails) && nestedOrderDetails.length > 0 ? (
+                                                                                                    nestedOrderDetails.map((detalle, idx) => (
+                                                                                                        <div className="product-item-v2" key={idx}>
+                                                                                                            <div className="pi-qty">{detalle.cantidad}x</div>
+                                                                                                            <div className="pi-details">
+                                                                                                                <span className="pi-ref">{detalle.referencia}</span>
+                                                                                                                {detalle.especificaciones && <span className="pi-spec">{detalle.especificaciones}</span>}
                                                                                                             </div>
-                                                                                                        ) : <div className="error-message">Error al cargar detalles del pedido.</div>}
-                                                                                                    </div>
-                                                                                                </td>
-                                                                                            </tr>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                ))}
-                                                                            </tbody>
-                                                                        </table>
+                                                                                                        </div>
+                                                                                                    ))
+                                                                                                ) : (
+                                                                                                    <p className="text-muted m-0" style={{ fontSize: '0.85rem' }}>No hay productos en esta orden.</p>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        ) : <div className="error-message">Error al cargar productos.</div>}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
                                                                 ) : (
                                                                     <div className="empty-state-small">
@@ -1088,7 +1064,7 @@ const Ventas = () => {
                             </div>
                         ))
                     ) : ventas.length === 0 ? (
-                        <div className="empty-state">No se encontraron ventas.</div>
+                        <div className="empty-state">No hay ventas para este periodo.</div>
                     ) : (
                         ventas.map((venta) => (
                             <div className={`mobile-sale-item ${expandedVentaId === venta.id ? 'expanded' : ''}`} key={venta.id}>
@@ -1105,7 +1081,9 @@ const Ventas = () => {
                                     </div>
                                     <div className="summary-row-bottom">
                                         <span className="summary-date">{formatShortDate(venta.fecha_venta)}</span>
-                                        <span className="summary-total">{formatCurrency(venta.valor_total)}</span>
+                                        {hasPermission('VER_PRECIOS_VENTA') && (
+                                            <span className="summary-total">{formatCurrency(venta.valor_total)}</span>
+                                        )}
                                     </div>
                                     <div className="summary-expand-icon">
                                         <FaChevronDown />
@@ -1158,37 +1136,43 @@ const Ventas = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="mobile-detail-section">
-                                                    <h4>Estado Financiero</h4>
-                                                    <div className="financial-summary">
-                                                        <div className="fin-item">
-                                                            <span className="label">Abonado</span>
-                                                            <span className="value text-success">{formatCurrency(venta.abono)}</span>
-                                                        </div>
-                                                        <div className="fin-item">
-                                                            <span className="label">Saldo</span>
-                                                            <span className="value text-danger">{formatCurrency(venta.saldo)}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mobile-detail-section">
-                                                    <h4>Pagos ({ventaDetails.recibos?.length || 0})</h4>
-                                                    <div className="mobile-payments-list">
-                                                        {ventaDetails.recibos && ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r => (
-                                                            <div key={r.id} className="mobile-payment-compact">
-                                                                <div className="mp-left">
-                                                                    <span className="mp-rc">RC-{r.id}</span>
-                                                                    <span className="mp-date">{formatShortDate(r.fecha)}</span>
+                                                {hasPermission('VER_PRECIOS_VENTA') && (
+                                                    <>
+                                                        <div className="mobile-detail-section">
+                                                            <h4>Estado Financiero</h4>
+                                                            <div className="financial-summary">
+                                                                <div className="fin-item">
+                                                                    <span className="label">Abonado</span>
+                                                                    <span className="value text-success">{formatCurrency(venta.abono)}</span>
                                                                 </div>
-                                                                <div className="mp-right">
-                                                                    <span className="mp-amount">{formatCurrency(r.valor)}</span>
-                                                                    <span className={`mp-status-dot ${r.estado === 'Confirmado' ? 'bg-success' : 'bg-warning'}`}></span>
+                                                                <div className="fin-item">
+                                                                    <span className="label">Saldo</span>
+                                                                    <span className="value text-danger">{formatCurrency(venta.saldo)}</span>
                                                                 </div>
                                                             </div>
-                                                        )) : <p className="text-muted text-sm">Sin pagos registrados.</p>}
-                                                    </div>
-                                                </div>
+                                                        </div>
+
+                                                        <div className="mobile-detail-section">
+                                                            <h4>Pagos ({ventaDetails.recibos?.length || 0})</h4>
+                                                            <div className="mobile-payments-list">
+                                                                {ventaDetails.recibos && ventaDetails.recibos.length > 0 ? ventaDetails.recibos.map(r => (
+                                                                    <div key={r.id} className="mobile-payment-compact">
+                                                                        <div className="mp-left">
+                                                                            <span className="mp-rc">RC-{r.id}</span>
+                                                                            <span className="mp-method">{r.metodo_pago}</span>
+                                                                        </div>
+                                                                        <div className="mp-right">
+                                                                            <span className="mp-amount text-success">{formatCurrency(r.valor)}</span>
+                                                                            <span className={`mp-status ${r.estado === 'Confirmado' ? 'confirmed' : 'pending'}`}>{r.estado}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )) : (
+                                                                    <p className="empty-subtext">No hay pagos registrados.</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
 
                                                 <div className="mobile-detail-section">
                                                     <h4>Órdenes de Pedido</h4>
@@ -1209,7 +1193,7 @@ const Ventas = () => {
                                                 </div>
 
                                                 <div className="mobile-actions-grid">
-                                                    {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                                                    {(hasPermission('EDITAR_VENTA') || hasPermission('EDITAR_ESTADO_VENTA') || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA')) && (
                                                         <button className="btn-action-mobile primary" onClick={() => {
                                                             setEditSaleData(ventaDetails);
                                                             setShowEditSaleModal(true);
@@ -1217,10 +1201,20 @@ const Ventas = () => {
                                                             <FaEdit /> Editar
                                                         </button>
                                                     )}
-                                                    <button className="btn-action-mobile" onClick={() => setShowObservacionClienteModal(true)}>
+                                                    <button className="btn-action-mobile" onClick={() => {
+                                                        setIsEditingObs(false);
+                                                        setSelectedObsId(null);
+                                                        setObservacionClienteText('');
+                                                        setShowObservacionClienteModal(true);
+                                                    }}>
                                                         <FaPlus /> Obs. Cliente
                                                     </button>
-                                                    <button className="btn-action-mobile" onClick={() => setShowObservacionVentaModal(true)}>
+                                                    <button className="btn-action-mobile" onClick={() => {
+                                                        setIsEditingObs(false);
+                                                        setSelectedObsId(null);
+                                                        setObservacionVentaText('');
+                                                        setShowObservacionVentaModal(true);
+                                                    }}>
                                                         <FaPlus /> Obs. Venta
                                                     </button>
                                                     <button className="btn-action-mobile" onClick={() => setShowRemisionModal(true)}>

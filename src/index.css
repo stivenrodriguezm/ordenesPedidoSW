@@ -122,7 +122,6 @@ main {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  overflow-x: hidden;
 }
 
 /* Estilo unificado para los encabezados de página */
@@ -325,10 +324,11 @@ main {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 1rem;
-    z-index: 50;
+    z-index: 150;
 }
 
-.v-btn-primary-glow {
+.v-btn-primary-glow,
+.btn-general {
     background: #274385;
     color: white;
     border: none;
@@ -346,7 +346,8 @@ main {
     flex-shrink: 0;
 }
 
-.v-btn-primary-glow:hover {
+.v-btn-primary-glow:hover,
+.btn-general:hover {
     background: #1a2d59;
     transform: translateY(-2px);
     box-shadow: 0 5px 20px #192b54;
@@ -375,9 +376,9 @@ main {
 .v-filters-bar {
     display: flex;
     gap: 0.5rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    overflow-x: auto;
+    overflow: visible;
 }
 
 .v-search-pill {
@@ -474,4 +475,149 @@ main {
 .fct-clear-pill:hover {
     background: #ef4444;
     color: white;
+}
+/* ==========================================================================
+   Shared Premium Glass Header & Filter Styles (global)
+   ========================================================================== */
+.o-glass-header {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 1rem;
+  z-index: 50;
+}
+
+.o-btn-primary-glow {
+  background: #274385;
+  color: white;
+  border: none;
+  padding: 0 0.85rem;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.o-btn-primary-glow:hover {
+  background: #1a2d59;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px #192b54;
+}
+
+.o-btn-secondary-glow {
+  background: white;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0 0.85rem;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.o-btn-secondary-glow:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.o-btn-ghost {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 0 0.6rem;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.o-btn-ghost:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.o-filters-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.o-select-pill {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.o-select-pill select {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 0 0.8rem;
+  height: 100%;
+  font-size: 0.82rem;
+  color: #475569;
+  cursor: pointer;
+  appearance: auto;
+  outline: none;
+  transition: all 0.2s;
+}
+.o-select-pill select:hover { background: #f8fafc; border-color: #cbd5e1; }
+.o-select-pill select:focus { outline: none !important; border-color: #cbd5e1 !important; box-shadow: none !important; }
+
+/* ==========================================================================
+   Global Skeleton Loader Styles
+   ========================================================================== */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-text {
+  height: 1em;
+  width: 80%;
+}
+
+.skeleton-badge {
+  height: 1.5em;
+  width: 60px;
+  border-radius: 9999px;
+}
+
+.skeleton-row td {
+  padding: 1rem 1.5rem;
 }

@@ -35,11 +35,11 @@
 .stats-bar {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.25rem;
   background: var(--surface);
-  padding: 1rem 1.5rem;
-  border-radius: 16px;
-  margin-bottom: 1.5rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--slate-100);
 }
@@ -51,15 +51,15 @@
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   background: var(--emerald-50);
   color: var(--emerald-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 0.95rem;
 }
 
 .stat-icon.warning {
@@ -81,10 +81,10 @@
 }
 
 .stat-value {
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--slate-900);
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 .stat-divider {
@@ -302,9 +302,9 @@
 
 .modern-table th {
   background: var(--slate-50);
-  padding: 1.25rem 1.5rem;
+  padding: 0.6rem 1rem;
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--slate-600);
@@ -313,10 +313,10 @@
 }
 
 .modern-table td {
-  padding: 1.25rem 1.5rem;
+  padding: 0.55rem 1rem;
   border-bottom: 1px solid var(--slate-100);
   color: var(--slate-600);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   vertical-align: middle;
 }
 
@@ -752,4 +752,213 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ==========================================================================
+   NEW RC Modal — Compact Redesign
+   ========================================================================== */
+
+/* Custom header injected inside Modal component */
+.rc-modal-box {
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  max-width: 480px;
+}
+
+.rc-modal-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--slate-100);
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.rc-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--emerald-900);
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 0;
+  margin-top: -2px;
+}
+
+.rc-close-btn:hover {
+  opacity: 1;
+}
+
+.rc-modal-header {
+  padding: 1.25rem 1.5rem 0;
+  margin-bottom: 0.5rem;
+}
+
+.rc-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rc-modal-icon-wrap {
+  width: 38px;
+  height: 38px;
+  background: var(--emerald-50);
+  color: var(--emerald-600);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.rc-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.rc-modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--slate-600);
+}
+
+/* Form */
+.rc-premium-form {
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.rc-form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.rc-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.rc-form-group.rc-full {
+  flex: none;
+  width: 100%;
+}
+
+.rc-form-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--slate-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-hint {
+  font-weight: 400;
+  text-transform: none;
+  color: #94a3b8;
+  letter-spacing: 0;
+}
+
+.rc-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--slate-200);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--slate-800);
+  background: var(--slate-50);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.rc-input:focus {
+  outline: none;
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 3px var(--emerald-100);
+  background: white;
+}
+
+.rc-input-icon {
+  position: relative;
+}
+
+.rc-input-icon-svg {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.rc-input-pl {
+  padding-left: 2.25rem;
+}
+
+/* Payment Pills */
+.rc-payment-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rc-payment-btn {
+  padding: 0.4rem 0.85rem;
+  border: 1.5px solid var(--slate-200);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--slate-50);
+  color: var(--slate-600);
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+
+.rc-payment-btn:hover {
+  border-color: var(--emerald-400);
+  color: var(--emerald-700);
+  background: var(--emerald-50);
+}
+
+.rc-payment-btn.active {
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Submit */
+.rc-submit-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+  margin-top: 0.25rem;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+}
+
+.rc-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+}
+
+.rc-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }

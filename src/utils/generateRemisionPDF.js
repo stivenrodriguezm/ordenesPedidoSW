@@ -251,7 +251,6 @@ function drawInfoGrid(doc, remision, startY) {
     return y + 4;
 }
 
-// ─── TABLA DE PRODUCTOS ───────────────────────────────────────────────────────
 function drawProductsTable(doc, items, startY) {
     let y = startY;
 
@@ -278,18 +277,32 @@ function drawProductsTable(doc, items, startY) {
     const scaledCols = cols.map(c => ({ ...c, w: c.w * scale }));
     const ROW_H = 7;
 
-    // Header
-    fillRect(doc, MARGIN_X, y, CONTENT_W, ROW_H, C.black);
-    let cx = MARGIN_X + 2;
-    scaledCols.forEach(col => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6);
-        doc.setTextColor(...C.white);
-        doc.text(col.label.toUpperCase(), cx, y + 4.8);
-        cx += col.w;
-    });
-    y += ROW_H;
-    const tableStartY = y;
+    let tableStartY = y;
+
+    const drawHeaderRow = () => {
+        fillRect(doc, MARGIN_X, y, CONTENT_W, ROW_H, C.black);
+        let cx = MARGIN_X + 2;
+        scaledCols.forEach(col => {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6);
+            doc.setTextColor(...C.white);
+            doc.text(col.label.toUpperCase(), cx, y + 4.8);
+            cx += col.w;
+        });
+        y += ROW_H;
+    };
+
+    const checkPageBreak = (neededHeight) => {
+        if (y + neededHeight > PAGE_H - MARGIN_Y - 20) {
+            strokeRect(doc, MARGIN_X, tableStartY, CONTENT_W, y - tableStartY, C.veryLight, 0.3);
+            doc.addPage();
+            y = MARGIN_Y;
+            tableStartY = y;
+            drawHeaderRow();
+        }
+    };
+
+    drawHeaderRow();
 
     if (!items || items.length === 0) {
         fillRect(doc, MARGIN_X, y, CONTENT_W, 9, C.ultraLight);
@@ -299,12 +312,44 @@ function drawProductsTable(doc, items, startY) {
         doc.text('Sin ítems registrados.', MARGIN_X + 3, y + 5.5);
         y += 11;
     } else {
-        items.forEach((item, idx) => {
-            const bg = idx % 2 === 0 ? C.white : C.ultraLight;
+        const individualItems = [];
+        const groupedItemsMap = {};
+
+        items.forEach(item => {
+            if (item.grupo_id) {
+                if (!groupedItemsMap[item.grupo_id]) {
+                    groupedItemsMap[item.grupo_id] = {
+                        id: item.grupo_id,
+                        nombre: item.grupo_nombre || 'Grupo Sin Nombre',
+                        observacion: item.grupo_observacion || '',
+                        items: []
+                    };
+                }
+                groupedItemsMap[item.grupo_id].items.push(item);
+            } else {
+                individualItems.push(item);
+            }
+        });
+
+        const sortBySubcategoria = (a, b) => {
+            const subA = (a.subcategoria_nombre || a.subcat || '').toLowerCase();
+            const subB = (b.subcategoria_nombre || b.subcat || '').toLowerCase();
+            return subA.localeCompare(subB);
+        };
+
+        individualItems.sort(sortBySubcategoria);
+        const groupsArray = Object.values(groupedItemsMap).sort((a, b) => a.nombre.toLowerCase().localeCompare(b.nombre.toLowerCase()));
+        groupsArray.forEach(g => g.items.sort(sortBySubcategoria));
+
+        let itemIdx = 1;
+
+        const renderItemRow = (item, isGroupItem = false) => {
+            checkPageBreak(ROW_H);
+            const bg = (itemIdx % 2 === 0) ? C.white : C.ultraLight;
             fillRect(doc, MARGIN_X, y, CONTENT_W, ROW_H, bg);
 
             const values = [
-                String(idx + 1),
+                String(itemIdx),
                 String(item.id_referencia || item.invId || item.id || '—'),
                 item.producto_nombre || item.nombre || '—',
                 String(item.cantidad || item.quantity || '1'),
@@ -319,15 +364,54 @@ function drawProductsTable(doc, items, startY) {
                 doc.setFont('helvetica', vi === 2 ? 'bold' : 'normal');
                 doc.setFontSize(6.5);
                 doc.setTextColor(...C.darkGray);
-                const maxW = scaledCols[vi].w - 3;
+                
+                let textX = vx;
+                if (isGroupItem && vi === 2) textX += 4; // Sangría para componentes de grupo
+                
+                const maxW = scaledCols[vi].w - (isGroupItem && vi === 2 ? 6 : 3);
                 const display = doc.splitTextToSize(String(val), maxW)[0] || '—';
-                doc.text(display, vx, y + 4.8);
+                
+                if (isGroupItem && vi === 2) {
+                    doc.setTextColor(...C.midGray);
+                    doc.text('↳', vx, y + 4.8);
+                    doc.setTextColor(...C.darkGray);
+                }
+
+                doc.text(display, textX, y + 4.8);
                 vx += scaledCols[vi].w;
             });
 
             hLine(doc, MARGIN_X, y + ROW_H, CONTENT_W, C.veryLight, 0.15);
             y += ROW_H;
+            itemIdx++;
+        };
+
+        // Render groups
+        groupsArray.forEach(group => {
+            checkPageBreak(ROW_H + 2);
+            fillRect(doc, MARGIN_X, y, CONTENT_W, ROW_H, [230, 230, 230]); // Gris más oscuro para cabecera de grupo
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.setTextColor(...C.black);
+            doc.text(`GRUPO: ${group.nombre.toUpperCase()}`, MARGIN_X + 2, y + 4.8);
+            
+            if (group.observacion) {
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(6.5);
+                doc.setTextColor(...C.midGray);
+                const obsLines = doc.splitTextToSize(`Obs: ${group.observacion}`, CONTENT_W - 80);
+                doc.text(obsLines[0], MARGIN_X + 80, y + 4.8);
+            }
+            
+            hLine(doc, MARGIN_X, y + ROW_H, CONTENT_W, C.lightGray, 0.3);
+            y += ROW_H;
+
+            group.items.forEach(item => renderItemRow(item, true));
         });
+
+        // Render individual items
+        individualItems.forEach(item => renderItemRow(item, false));
     }
 
     strokeRect(doc, MARGIN_X, tableStartY, CONTENT_W, y - tableStartY, C.veryLight, 0.3);

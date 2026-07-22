@@ -713,18 +713,19 @@ function ReferenciasPage() {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-        <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
-          <div className="v-search-pill">
-            <FaSearch />
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem', flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Buscar referencia..."
               value={filterSearch}
               onChange={e => setFilterSearch(e.target.value)}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '160px' }}
             />
           </div>
-          <div className="v-select-pill">
+          <div className="o-select-pill">
             <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)}>
               <option value="">Categoría: Todas</option>
               {categorias.map(c => (
@@ -732,7 +733,7 @@ function ReferenciasPage() {
               ))}
             </select>
           </div>
-          <div className="v-select-pill">
+          <div className="o-select-pill">
             <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
               <option value="">Proveedor: Todos</option>
               {proveedores.map(p => (
@@ -741,7 +742,7 @@ function ReferenciasPage() {
             </select>
           </div>
           {hasFilters && (
-            <button className="inv-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+            <button className="o-btn-ghost" onClick={clearFilters} title="Limpiar filtros">
               <FaTimes />
             </button>
           )}
@@ -749,8 +750,8 @@ function ReferenciasPage() {
 
         <div className="header-actions" style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {/* Categorías */}
-          <button className="v-btn-ghost" onClick={() => setIsCategoriasModalOpen(true)} title="Gestionar categorías">
-            <FaTags /> Categorías
+          <button className="o-btn-ghost" onClick={() => setIsCategoriasModalOpen(true)} title="Gestionar categorías">
+            <FaTags />
           </button>
 
           {/* Subcategorías */}
@@ -794,7 +795,15 @@ function ReferenciasPage() {
             </thead>
             <tbody>
               {isLoading || contextLoading || isLoadingProveedores ? (
-                <tr><td colSpan="5"><div className="loading-container"><div className="loader" /></div></td></tr>
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="skeleton-row">
+                    <td><div className="skeleton skeleton-text" style={{ width: '180px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                  </tr>
+                ))
               ) : isError ? (
                 <tr><td colSpan="5" className="error-cell">Error al cargar datos.</td></tr>
               ) : sortedReferencias.length > 0 ? (

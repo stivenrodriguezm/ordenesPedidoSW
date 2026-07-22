@@ -21,9 +21,9 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
     {
       title: "Finanzas",
       items: [
-        { to: "/caja", icon: <FaCashRegister />, label: "Caja", feature: "VER_CAJA" },
-        { to: "/recibos-caja", icon: <FaReceipt />, label: "Recibos de Caja", feature: "VER_CAJA" },
-        { to: "/comprobantes-egreso", icon: <FaFileInvoice />, label: "Egresos", feature: "VER_CAJA" },
+        { to: "/caja", icon: <FaCashRegister />, label: "Caja", feature: "ACCESO_CAJA" },
+        { to: "/recibos-caja", icon: <FaReceipt />, label: "Recibos de Caja", feature: "ACCESO_RECIBOS" },
+        { to: "/comprobantes-egreso", icon: <FaFileInvoice />, label: "Egresos", feature: "ACCESO_EGRESOS" },
       ]
     },
     {

@@ -26,6 +26,7 @@ const NuevaVenta = () => {
     cedula: '',
     correo: '',
     direccion: '',
+    barrio: '',
     ciudad: 'Bogotá',
     telefono1: '',
     telefono2: ''
@@ -90,7 +91,7 @@ const NuevaVenta = () => {
       setClienteId(null);
       setIsClienteNuevo(true);
       setClienteTitle('Cliente Nuevo');
-      setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
+      setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', barrio: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
     }
 
     clearTimeout(debounceRef.current);
@@ -125,6 +126,7 @@ const NuevaVenta = () => {
       cedula: cliente.cedula || '',
       correo: cliente.correo || '',
       direccion: cliente.direccion || '',
+      barrio: cliente.barrio || '',
       ciudad: cliente.ciudad || 'Bogotá',
       telefono1: cliente.telefono1 || '',
       telefono2: cliente.telefono2 || '',
@@ -141,7 +143,7 @@ const NuevaVenta = () => {
     setSearchTerm('');
     setSearchResults([]);
     setShowDropdown(false);
-    setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
+    setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', barrio: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
   };
 
   // Nuevo cliente: limpiar todo y habilitar edición
@@ -150,7 +152,7 @@ const NuevaVenta = () => {
     setSearchTerm('');
     setSearchResults([]);
     setShowDropdown(false);
-    setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
+    setClienteData({ nombre: '', cedula: '', correo: '', direccion: '', barrio: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' });
     setIsClienteNuevo(true);
     setClienteTitle('Cliente Nuevo');
   };
@@ -181,6 +183,7 @@ const NuevaVenta = () => {
         cedula: clienteData.cedula,
         correo: clienteData.correo,
         direccion: clienteData.direccion || null,
+        barrio: clienteData.barrio || null,
         ciudad: clienteData.ciudad || null,
         telefono1: clienteData.telefono1 || null,
         telefono2: clienteData.telefono2 || null
@@ -375,16 +378,25 @@ const NuevaVenta = () => {
                   />
                 </div>
                 <div className="nv-form-group">
-                  <label>Teléfono 1:</label>
+                  <label className="label-direccion">Dirección:</label>
                   <input
                     type="text"
-                    name="telefono1"
-                    value={clienteData.telefono1}
+                    name="direccion"
+                    value={clienteData.direccion}
                     onChange={handleClienteChange}
                   />
                 </div>
               </div>
               <div className="column">
+                <div className="nv-form-group">
+                  <label>Barrio:</label>
+                  <input
+                    type="text"
+                    name="barrio"
+                    value={clienteData.barrio}
+                    onChange={handleClienteChange}
+                  />
+                </div>
                 <div className="nv-form-group">
                   <label>Ciudad:</label>
                   <input
@@ -395,11 +407,11 @@ const NuevaVenta = () => {
                   />
                 </div>
                 <div className="nv-form-group">
-                  <label className="label-direccion">Dirección:</label>
+                  <label>Teléfono 1:</label>
                   <input
                     type="text"
-                    name="direccion"
-                    value={clienteData.direccion}
+                    name="telefono1"
+                    value={clienteData.telefono1}
                     onChange={handleClienteChange}
                   />
                 </div>

@@ -24,10 +24,12 @@ const TelasPage = lazy(() => import("./pages/TelasPage"));
 
 const FacturasProveedorPage = lazy(() => import("./pages/FacturasProveedorPage"));
 const RemisionesPage = lazy(() => import("./pages/RemisionesPage"));
+const NuevaRemisionPage = lazy(() => import("./pages/NuevaRemisionPage"));
 const InventarioPage = lazy(() => import("./pages/InventarioPage"));
 const BasesDatosPage = lazy(() => import("./pages/BasesDatosPage"));
 import { AppContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
+import Loader from "./components/Loader";
 
 const MainLayout = ({ children }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false); // Mobile toggle
@@ -79,7 +81,7 @@ function App() {
   return (
     <Router>
       {isLoggingIn && <LottusLoader />}
-      <Suspense fallback={<LottusLoader />}>
+      <Suspense fallback={<Loader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
@@ -87,29 +89,29 @@ function App() {
           element={
             <PrivateRoute>
               <MainLayout>
-                <Suspense fallback={<LottusLoader />}>
+                <Suspense fallback={<Loader />}>
       <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/ordenes" element={<PrivateRoute feature="VER_ORDENES"><OrdenesPage /></PrivateRoute>} />
-                  <Route path="/telas" element={<PrivateRoute feature="VER_TELAS"><TelasPage /></PrivateRoute>} />
-                  <Route path="/referencias" element={<PrivateRoute feature="VER_REFERENCIAS"><ReferenciasPage /></PrivateRoute>} />
-                  <Route path="/proveedores" element={<PrivateRoute feature="VER_PROVEEDORES"><ProveedoresPage /></PrivateRoute>} />
+                  <Route path="/telas" element={<PrivateRoute feature="VER_PEDIDOS_TELAS"><TelasPage /></PrivateRoute>} />
+                  <Route path="/referencias" element={<PrivateRoute feature="ADMINISTRAR_REFERENCIAS"><ReferenciasPage /></PrivateRoute>} />
+                  <Route path="/proveedores" element={<PrivateRoute feature="ADMINISTRAR_PROVEEDORES"><ProveedoresPage /></PrivateRoute>} />
                   <Route path="/ordenes/nuevo" element={<PrivateRoute feature="CREAR_ORDEN"><CrearPedidoPage /></PrivateRoute>} />
                   <Route path="/perfil" element={<PrivateRoute><PerfilPage /></PrivateRoute>} />
-                  <Route path="/gestion-usuarios" element={<PrivateRoute feature="GESTION_USUARIOS"><UsuariosPage /></PrivateRoute>} />
-                  <Route path="/bases-de-datos" element={<PrivateRoute><BasesDatosPage /></PrivateRoute>} />
+                  <Route path="/gestion-usuarios" element={<PrivateRoute feature="VER_USUARIOS"><UsuariosPage /></PrivateRoute>} />
+                  <Route path="/bases-de-datos" element={<PrivateRoute feature="BASES_DATOS"><BasesDatosPage /></PrivateRoute>} />
                   <Route path="/clientes" element={<PrivateRoute feature="VER_CLIENTES"><Clientes /></PrivateRoute>} />
-                  <Route path="/proveedores" element={<PrivateRoute feature="VER_PROVEEDORES"><ProveedoresPage /></PrivateRoute>} />
-                  <Route path="/referencias" element={<PrivateRoute feature="VER_REFERENCIAS"><ReferenciasPage /></PrivateRoute>} />
+
                   <Route path="/ventas" element={<PrivateRoute feature="VER_VENTAS"><Ventas /></PrivateRoute>} />
                   <Route path="/nuevaVenta" element={<PrivateRoute feature="CREAR_VENTA"><NuevaVenta /></PrivateRoute>} />
                   <Route path="/EditarVenta/:id/" element={<PrivateRoute feature="EDITAR_VENTA"><EditarVenta /></PrivateRoute>} />
-                  <Route path="/caja" element={<PrivateRoute feature="VER_CAJA"><Caja /></PrivateRoute>} />
-                  <Route path="/recibos-caja" element={<PrivateRoute feature="VER_CAJA"><RecibosCaja /></PrivateRoute>} />
-                  <Route path="/comprobantes-egreso" element={<PrivateRoute feature="VER_CAJA"><ComprobantesEgreso /></PrivateRoute>} />
+                  <Route path="/caja" element={<PrivateRoute feature="ACCESO_CAJA"><Caja /></PrivateRoute>} />
+                  <Route path="/recibos-caja" element={<PrivateRoute feature="ACCESO_RECIBOS"><RecibosCaja /></PrivateRoute>} />
+                  <Route path="/comprobantes-egreso" element={<PrivateRoute feature="ACCESO_EGRESOS"><ComprobantesEgreso /></PrivateRoute>} />
 
                   <Route path="/suministros/facturas" element={<PrivateRoute feature="VER_FACTURAS"><FacturasProveedorPage /></PrivateRoute>} />
                   <Route path="/suministros/remisiones" element={<PrivateRoute feature="VER_REMISIONES"><RemisionesPage /></PrivateRoute>} />
+                  <Route path="/nuevaRemision" element={<PrivateRoute feature="CREAR_REMISION"><NuevaRemisionPage /></PrivateRoute>} />
                   <Route path="/suministros/inventario" element={<PrivateRoute feature="VER_INVENTARIO"><InventarioPage /></PrivateRoute>} />
                 </Routes>
       </Suspense>

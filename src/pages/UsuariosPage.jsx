@@ -5,7 +5,7 @@ import {
   FaPlus, FaEdit, FaUserShield, FaUserPlus, FaUserCog, FaUsers, 
   FaChevronLeft, FaChevronRight, FaTimes, FaSpinner, FaCheckCircle, FaExclamationCircle
 } from 'react-icons/fa';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import Loader from '../components/Loader';
 import './UsuariosPage.css';
 
@@ -84,21 +84,21 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
             </div>
           )}
           
-          <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(formData); }}>
+          <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(formData); }} autoComplete="off">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
                 <label>Nombres</label>
-                <input type="text" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} required />
+                <input type="text" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} required autoComplete="off" />
               </div>
               <div className="form-group">
                 <label>Apellidos</label>
-                <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} required />
+                <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} required autoComplete="off" />
               </div>
             </div>
             
             <div className="form-group">
               <label>Nombre de Usuario (Login)</label>
-              <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required />
+              <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required autoComplete="new-username" />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -116,7 +116,7 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
                   Contraseña 
                   {isEditing && <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--color-text-placeholder)' }}>Dejar vacío para no cambiar</span>}
                 </label>
-                <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!isEditing} placeholder={isEditing ? "••••••••" : "Introduce contraseña"} />
+                <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!isEditing} placeholder={isEditing ? "••••••••" : "Introduce contraseña"} autoComplete="new-password" />
               </div>
             </div>
 
@@ -148,16 +148,100 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
 // ==========================================
 const FEATURES_CATALOG = [
   { module: "Vista Principal", features: [{ code: "VER_INICIO", label: "Ver Inicio / Dashboard" }] },
-  { module: "Ventas", features: [{ code: "VER_VENTAS", label: "Acceso a tabla de Ventas" }, { code: "CREAR_VENTA", label: "Registrar Nueva Venta" }, { code: "EDITAR_VENTA", label: "Editar Venta Existente" }] },
-  { module: "Pedidos", features: [{ code: "VER_ORDENES", label: "Acceso a tabla de Pedidos" }, { code: "CREAR_ORDEN", label: "Crear Pedido" }] },
-  { module: "Almacen y BD", features: [{ code: "VER_TELAS", label: "Ver Telas" }, { code: "VER_REFERENCIAS", label: "Ver Referencias" }, { code: "VER_PROVEEDORES", label: "Ver Proveedores" }, { code: "VER_CLIENTES", label: "Ver Clientes" }] },
-  { module: "Suministros", features: [{ code: "VER_FACTURAS", label: "Ver Facturas de Proveedor" }, { code: "VER_REMISIONES", label: "Ver Remisiones" }, { code: "VER_INVENTARIO", label: "Ver Inventarios" }] },
-  { module: "Finanzas", features: [{ code: "VER_CAJA", label: "Acceso a Caja, Egresos y Recibos" }] },
+  { module: "Ventas", features: [
+      { code: "VER_TODAS_VENTAS", label: "Ver ventas de todos los usuarios" },
+      { code: "VER_PROPIAS_VENTAS", label: "Ver solo ventas del vendedor" },
+      { code: "CREAR_VENTA", label: "Habilitar creación de ventas" },
+      { code: "EDITAR_VENTA", label: "Habilitar edición de ventas (monto, cliente, etc.)" },
+      { code: "EDITAR_ESTADO_VENTA", label: "Editar estado de venta (Pendiente, Entregado, Anulada)" },
+      { code: "EDITAR_ESTADO_PEDIDOS_VENTA", label: "Editar estado de pedidos" },
+      { code: "VER_PRECIOS_VENTA", label: "Ver montos y precios de la venta" }
+    ] 
+  },
+  { module: "Inventario", features: [
+      { code: "VER_INVENTARIO", label: "Acceso a Inventario" },
+      { code: "CREAR_ENTRADA_MANUAL", label: "Habilitar creación manual de ítems" },
+      { code: "EDITAR_ITEM_INVENTARIO", label: "Habilitar edición de ítems" },
+      { code: "EDITAR_ESTADO_ITEM", label: "Cambiar estado físico y disponibilidad" },
+      { code: "VER_COSTOS_INVENTARIO", label: "Ver costos y totales del ítem" },
+      { code: "CREAR_GRUPO_INVENTARIO", label: "Administrar grupos de inventario" }
+    ] 
+  },
+  { module: "Facturas Proveedor", features: [
+      { code: "VER_FACTURAS", label: "Acceso a Facturas" },
+      { code: "CREAR_FACTURA", label: "Habilitar creación de facturas" },
+      { code: "EDITAR_FACTURA", label: "Habilitar edición de facturas" }
+    ]
+  },
+  { module: "Pedidos", features: [
+      { code: "VER_ORDENES", label: "Acceso a tabla de Pedidos" },
+      { code: "VER_TODAS_ORDENES", label: "Acceso a todos los pedidos" },
+      { code: "VER_PROPIAS_ORDENES", label: "Acceso a pedidos de su usuario" },
+      { code: "CREAR_ORDEN", label: "Crear Pedidos (General)" },
+      { code: "CREAR_PROPIAS_ORDENES", label: "Crear solo sus propios pedidos" },
+      { code: "CREAR_ORDENES_OTROS", label: "Crear pedidos a nombre de otro usuario" },
+      { code: "EDITAR_ESTADO_ORDEN", label: "Editar estado del pedido" },
+      { code: "EDITAR_ESTADO_TELA_ORDEN", label: "Editar estado de tela en pedido" },
+      { code: "VER_COSTOS_ORDEN", label: "Ver costo del proveedor en pedidos" }
+    ] 
+  },
+  { module: "Pedidos de Telas", features: [
+      { code: "VER_PEDIDOS_TELAS", label: "Acceso a Pedidos de Telas" },
+      { code: "VER_TODOS_PEDIDOS_TELAS", label: "Acceso a todos los pedidos de telas" },
+      { code: "VER_PROPIOS_PEDIDOS_TELAS", label: "Acceso a pedidos de telas propios" },
+      { code: "CREAR_PEDIDO_TELA", label: "Crear nuevo pedido de tela" },
+      { code: "EDITAR_ESTADO_TELA_ORDEN", label: "Editar estado de tela (En progreso, fábrica, etc.)" },
+      { code: "ELIMINAR_PEDIDO_TELA", label: "Eliminar/Anular pedido de tela" },
+      { code: "DESCARGAR_PEDIDO_TELA", label: "Habilitar descarga de PDF del pedido" },
+      { code: "ADMINISTRAR_PROVEEDORES_TELA", label: "Crear/Editar proveedores de tela" },
+      { code: "ADMINISTRAR_DIRECCIONES_TELA", label: "Crear/Editar direcciones de entrega de tela" }
+    ]
+  },
+  { module: "Remisiones", features: [
+      { code: "VER_REMISIONES", label: "Acceso a Remisiones" },
+      { code: "CREAR_REMISION", label: "Habilitar creación de remisiones" },
+      { code: "DESCARGAR_REMISION", label: "Habilitar descarga de PDF" }
+    ]
+  },
+  { module: "Finanzas", features: [
+      { code: "ACCESO_CAJA", label: "Acceso a Caja Principal" },
+      { code: "CREAR_INGRESO_CAJA", label: "Registrar ingresos manuales" },
+      { code: "CREAR_EGRESO_CAJA", label: "Registrar egresos manuales" },
+      { code: "ACCESO_RECIBOS", label: "Acceso a Recibos de Caja" },
+      { code: "CREAR_RECIBO", label: "Crear Recibo de Caja" },
+      { code: "APROBAR_RECIBO", label: "Confirmar Recibo de Caja" },
+      { code: "ACCESO_EGRESOS", label: "Acceso a Comprobantes de Egreso" },
+      { code: "CREAR_COMPROBANTE_EGRESO", label: "Crear Comprobante de Egreso" }
+    ] 
+  },
+  { module: "Bases de Datos", features: [
+      { code: "BASES_DATOS", label: "Acceso al módulo (Dashboard)" },
+      { code: "VER_CLIENTES", label: "Ver Clientes" },
+      { code: "CREAR_CLIENTE", label: "Crear Clientes" },
+      { code: "EDITAR_CLIENTE", label: "Editar Clientes" },
+      { code: "EXPORTAR_CLIENTES", label: "Exportar Clientes a Excel" },
+      { code: "VER_FINANZAS_CLIENTE", label: "Ver finanzas del cliente" },
+      { code: "ADMINISTRAR_PROVEEDORES", label: "Administrar Proveedores" },
+      { code: "ADMINISTRAR_REFERENCIAS", label: "Administrar Referencias" },
+      { code: "ADMINISTRAR_SEDES", label: "Administrar Sedes y Zonas" }
+    ]
+  },
+  { module: "Usuarios y Sistema", features: [
+      { code: "VER_USUARIOS", label: "Acceso a Usuarios" },
+      { code: "ADMINISTRAR_USUARIOS", label: "Crear y Editar Usuarios" },
+      { code: "EDITAR_PERMISOS_SISTEMA", label: "Editar Roles y Permisos" }
+    ]
+  },
+  { module: "Catálogos Adicionales", features: [
+      { code: "ADMINISTRAR_TELAS", label: "Administrar Telas" }
+    ]
+  }
 ];
 
 const RolePermissionsTab = ({ notify }) => {
   const queryClient = useQueryClient();
   const { reloadUser } = useContext(AppContext);
+  const hasPermission = usePermissions();
   const [selectedRp, setSelectedRp] = useState(null);
 
   const { data: rolePerms = [], isLoading } = useQuery({
@@ -237,14 +321,16 @@ const RolePermissionsTab = ({ notify }) => {
                 </h3>
                 <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Activa o desactiva módulos para controlar el acceso a la plataforma.</p>
               </div>
-              <button 
-                className="btn-primary" 
-                style={{ width: 'auto' }}
-                onClick={handleSave} 
-                disabled={mutation.isLoading}
-              >
-                {mutation.isLoading ? <FaSpinner className="loader" style={{ width: '1rem', height: '1rem', marginBottom: 0, borderWidth: '2px' }}/> : 'Guardar Reglas'}
-              </button>
+              {hasPermission('EDITAR_PERMISOS_SISTEMA') && (
+                <button 
+                  className="o-btn-primary-glow" 
+                  style={{ width: 'auto', padding: '0.5rem 1rem' }}
+                  onClick={handleSave} 
+                  disabled={mutation.isLoading}
+                >
+                  {mutation.isLoading ? <FaSpinner className="loader" style={{ width: '1rem', height: '1rem', marginBottom: 0, borderWidth: '2px' }}/> : 'Guardar Reglas'}
+                </button>
+              )}
             </div>
 
             <div className="permissions-grid">
@@ -258,13 +344,18 @@ const RolePermissionsTab = ({ notify }) => {
                         <div 
                           key={f.code} 
                           className={`feature-toggle ${isChecked ? 'active' : ''}`}
-                          onClick={() => handleToggle(f.code)}
+                          onClick={() => hasPermission('EDITAR_PERMISOS_SISTEMA') && handleToggle(f.code)}
                         >
                           <span className="feature-label">
                             {f.label}
                           </span>
                           <label className="switch" onClick={(e) => e.stopPropagation()}>
-                            <input type="checkbox" checked={isChecked} onChange={() => handleToggle(f.code)} />
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked} 
+                              onChange={() => handleToggle(f.code)} 
+                              disabled={!hasPermission('EDITAR_PERMISOS_SISTEMA')}
+                            />
                             <span className="slider"></span>
                           </label>
                         </div>
@@ -291,6 +382,7 @@ const UsuariosPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [notif, setNotif] = useState({ message: '', type: '' });
+  const hasPermission = usePermissions();
   
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -358,11 +450,13 @@ const UsuariosPage = () => {
       {/* TAB: CUENTAS */}
       {activeTab === 'cuentas' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-            <button className="btn-primary" style={{ width: 'auto' }} onClick={handleCreate}>
-              <FaPlus /> Crear Usuario
-            </button>
-          </div>
+          {hasPermission('ADMINISTRAR_USUARIOS') && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+              <button className="v-btn-primary-glow" onClick={handleCreate}>
+                <FaPlus /> Crear Usuario
+              </button>
+            </div>
+          )}
 
           {isLoading ? (
             <Loader />

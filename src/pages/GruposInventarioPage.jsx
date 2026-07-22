@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import API from '../services/api';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import { FaPlus, FaTimes, FaEdit, FaTrashAlt, FaBoxOpen, FaSearch, FaChevronDown, FaChevronUp, FaSave, FaLayerGroup } from 'react-icons/fa';
+import AppNotification from '../components/AppNotification';
 import './GruposInventarioPage.css';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -10,9 +11,15 @@ const emptyComponente = () => ({ referencia: '', categoriaId: '', subcategoriaId
 const emptyForm = () => ({ nombre: '', descripcion: '', activo: true, componentes: [emptyComponente()] });
 
 function GruposInventarioPage() {
-    const { proveedores } = useContext(AppContext);
+    const { usuario } = useContext(AppContext);
+    const hasPermission = usePermissions();
 
     const [grupos, setGrupos] = useState([]);
+    const [notification, setNotification] = useState({ message: '', type: '' });
+
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type });
+    };
     const [referencias, setReferencias] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [subcategorias, setSubcategorias] = useState([]);
@@ -131,7 +138,7 @@ function GruposInventarioPage() {
             closeModal();
         } catch (err) {
             console.error('Error saving grupo:', err);
-            alert('Error al guardar el grupo.');
+            showNotification('Error al guardar el grupo.', 'error');
         } finally {
             setSaving(false);
         }
@@ -143,7 +150,7 @@ function GruposInventarioPage() {
             await API.delete(`/suministros/grupos/${id}/`);
             setGrupos(prev => prev.filter(g => g.id !== id));
         } catch (err) {
-            alert('Error al eliminar el grupo.');
+            showNotification('Error al eliminar el grupo.', 'error');
         }
     };
 
@@ -171,9 +178,11 @@ function GruposInventarioPage() {
                             </div>
                         </div>
                     </div>
-                    <button className="btn-primary" onClick={openCreate}>
-                        <FaPlus /> Nuevo Grupo
-                    </button>
+                    {hasPermission('CREAR_ITEM_INVENTARIO') && (
+                        <button className="gip-btn-primary" onClick={openCreate}>
+                            <FaPlus /> Nuevo Grupo
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -186,7 +195,9 @@ function GruposInventarioPage() {
                         <div className="grupos-empty">
                             <FaLayerGroup className="grupos-empty-icon" />
                             <p>{searchTerm ? 'Sin resultados para esa búsqueda.' : 'No hay grupos creados todavía.'}</p>
-                            <button className="btn-primary" onClick={openCreate}><FaPlus /> Crear primer grupo</button>
+                            {hasPermission('CREAR_ITEM_INVENTARIO') && (
+                                <button className="btn-primary" onClick={openCreate}><FaPlus /> Crear primer grupo</button>
+                            )}
                         </div>
                     ) : (
                         <table className="premium-table grupos-table">
@@ -236,9 +247,13 @@ function GruposInventarioPage() {
                                                 </span>
                                             </td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <div className="grupos-actions">
-                                                    <button className="action-btn" title="Editar" onClick={() => openEdit(grupo)}><FaEdit /></button>
-                                                    <button className="action-btn action-btn--danger" title="Eliminar" onClick={() => handleDelete(grupo.id)}><FaTrashAlt /></button>
+                                                <div className="gip-card-actions">
+                                                    {hasPermission('EDITAR_ITEM_INVENTARIO') && (
+                                                        <>
+                                                            <button className="action-btn" title="Editar" onClick={() => openEdit(grupo)}><FaEdit /></button>
+                                                            <button className="action-btn action-btn--danger" title="Eliminar" onClick={() => handleDelete(grupo.id)}><FaTrashAlt /></button>
+                                                        </>
+                                                    )}
                                                     <button className="action-btn" title="Ver detalle" onClick={() => setExpandedId(expandedId === grupo.id ? null : grupo.id)}>
                                                         {expandedId === grupo.id ? <FaChevronUp /> : <FaChevronDown />}
                                                     </button>
@@ -417,6 +432,8 @@ function GruposInventarioPage() {
                     </div>
                 </div>
             )}
+            {/* Componente Global de Notificaciones Elegante */}
+            <AppNotification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
         </div>
     );
 }

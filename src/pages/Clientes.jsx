@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useCallback } from 'react';
 import './Clientes.css';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaEdit, FaPlus, FaFileExport, FaSearch } from 'react-icons/fa';
 import API from '../services/api';
@@ -70,13 +70,13 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
   );
 };
 
-const AddObservationModal = ({ onSave, onClose }) => {
+const AddObservationModal = ({ onSave, onClose, showToast }) => {
   const [observationText, setObservationText] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!observationText.trim()) {
-      alert('La observación no puede estar vacía.');
+      showToast('La observación no puede estar vacía.', 'error');
       return;
     }
     onSave(observationText);
@@ -108,7 +108,8 @@ const AddObservationModal = ({ onSave, onClose }) => {
 };
 
 const Clientes = () => {
-  const { usuario } = useContext(AppContext);
+  const { notify } = useContext(AppContext);
+  const hasPermission = usePermissions();
   const [clientesData, setClientesData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedClienteId, setExpandedClienteId] = useState(null);
@@ -123,18 +124,14 @@ const Clientes = () => {
 
   const pageSize = 30;
 
-  // Server-side fetching
   const fetchClientes = useCallback(async (page, search) => {
     setIsLoading(true);
     try {
       const params = {
         page: page,
         page_size: pageSize,
-        query: search // Changed from 'search' to 'query' to match other endpoints
+        query: search
       };
-      // If backend doesn't support generic 'search', we might need to adjust this
-      // But usually DRF SearchFilter uses 'search'
-
       const response = await API.get('/clientes/', { params });
       setClientesData(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
@@ -147,19 +144,17 @@ const Clientes = () => {
     }
   }, []);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setCurrentPage(1);
       fetchClientes(1, searchTerm);
-    }, 500); // 500ms debounce
+    }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm, fetchClientes]);
 
-  // Pagination change
   useEffect(() => {
     fetchClientes(currentPage, searchTerm);
-  }, [currentPage, fetchClientes]); // searchTerm is handled by debounce effect, but if page changes we need to refetch with current search
+  }, [currentPage, fetchClientes]);
 
   const handleExpandCliente = async (clienteId) => {
     if (expandedClienteId === clienteId) {
@@ -194,11 +189,10 @@ const Clientes = () => {
 
   const exportClientes = async () => {
     try {
-      // Export all matching current search
       const response = await API.get('/clientes/', {
         params: {
           search: searchTerm,
-          page_size: 9999 // Large page size for export
+          page_size: 9999
         }
       });
 
@@ -227,10 +221,7 @@ const Clientes = () => {
     try {
       const response = await API.put(`/clientes/${updatedCliente.id}/`, updatedCliente);
       setExpandedData(prevData => ({ ...prevData, ...response.data }));
-
-      // Update list data locally to reflect changes without refetching
       setClientesData(prev => prev.map(c => c.id === updatedCliente.id ? { ...c, ...response.data } : c));
-
       setNotification({ message: 'Cliente actualizado correctamente.', type: 'success' });
       setShowEditModal(false);
     } catch (error) {
@@ -263,26 +254,29 @@ const Clientes = () => {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="v-filters-bar">
-        <div className="v-search-pill">
-          <FaSearch className="v-search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar por ID, nombre o cédula..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
+          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem' }} />
+            <input
+              type="text"
+              placeholder="Buscar por ID, nombre o cédula..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '180px' }}
+            />
+          </div>
         </div>
-
-        {usuario?.role === 'administrador' && (
-          <button className="btn-secondary" onClick={exportClientes}>
-            <FaFileExport /> Exportar
-          </button>
-        )}
+        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {hasPermission('EXPORTAR_CLIENTES') && (
+            <button className="o-btn-ghost" onClick={exportClientes} title="Exportar">
+              <FaFileExport />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="clientes-container">
-        {/* Desktop View */}
         <div className="desktop-view">
           <table className="clientes-table">
             <thead>
@@ -300,11 +294,26 @@ const Clientes = () => {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan="9"><div className="loading-container"><div className="loader"></div></div></td></tr>
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="skeleton-row">
+                    <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '180px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                  </tr>
+                ))
               ) : clientesData.length > 0 ? (
                 clientesData.map((cliente) => (
                   <React.Fragment key={cliente.id}>
-                    <tr>
+                    <tr className={`table-row-clickable ${expandedClienteId === cliente.id ? 'expanded-row-highlight' : ''}`}
+                        onClick={() => handleExpandCliente(cliente.id)}
+                        style={{ cursor: 'pointer' }}
+                    >
                       <td className="td-id">{cliente.id}</td>
                       <td className="td-nombre">{cliente.nombre}</td>
                       <td className="td-cedula">{cliente.cedula}</td>
@@ -314,8 +323,8 @@ const Clientes = () => {
                       <td className="td-telefono">{cliente.telefono1}</td>
                       <td className="td-telefono td-telefono-2">{cliente.telefono2}</td>
                       <td className="td-accion">
-                        <button className="btn-icon" onClick={() => handleExpandCliente(cliente.id)}>
-                          <FaChevronDown style={{ transform: expandedClienteId === cliente.id ? 'rotate(180deg)' : 'none' }} />
+                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleExpandCliente(cliente.id); }}>
+                          <FaChevronDown style={{ transform: expandedClienteId === cliente.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                         </button>
                       </td>
                     </tr>
@@ -325,41 +334,52 @@ const Clientes = () => {
                           {loadingDetails ? (
                             <div className="loading-container"><div className="loader"></div></div>
                           ) : expandedData ? (
-                            <div className="details-view">
-                              <div className="details-view-section details-info">
-                                <h4>Detalles del Cliente</h4>
-                                <div className="info-grid">
-                                  <div className="info-item"><strong>Nombre:</strong> <span>{expandedData.nombre}</span></div>
-                                  <div className="info-item"><strong>Correo:</strong> <span>{expandedData.correo || 'N/A'}</span></div>
-                                  <div className="info-item"><strong>Dirección:</strong> <span>{expandedData.direccion}</span></div>
-                                  <div className="info-item"><strong>Teléfono 1:</strong> <span>{expandedData.telefono1}</span></div>
-                                  <div className="info-item"><strong>Teléfono 2:</strong> <span>{expandedData.telefono2 || 'N/A'}</span></div>
+                            <div className="cli-expanded-panel">
+                              <div className="cli-expanded-grid">
+                                <div className="cli-info-card">
+                                  <div className="cli-info-card-header">
+                                    <div className="cli-avatar">{expandedData.nombre?.charAt(0)?.toUpperCase()}</div>
+                                    <div>
+                                      <h3 className="cli-name">{expandedData.nombre}</h3>
+                                      <span className="cli-id-badge">ID #{expandedData.id}</span>
+                                    </div>
+                                  </div>
+                                  <div className="cli-info-rows">
+                                    <div className="cli-info-row"><span className="cli-info-label">Cédula</span><span className="cli-info-value">{expandedData.cedula}</span></div>
+                                    <div className="cli-info-row"><span className="cli-info-label">Correo</span><span className="cli-info-value">{expandedData.correo || '—'}</span></div>
+                                    <div className="cli-info-row"><span className="cli-info-label">Dirección</span><span className="cli-info-value">{expandedData.direccion || '—'}</span></div>
+                                    <div className="cli-info-row"><span className="cli-info-label">Ciudad</span><span className="cli-info-value">{expandedData.ciudad || '—'}</span></div>
+                                    <div className="cli-info-row"><span className="cli-info-label">Tel. 1</span><span className="cli-info-value">{expandedData.telefono1 || '—'}</span></div>
+                                    <div className="cli-info-row"><span className="cli-info-label">Tel. 2</span><span className="cli-info-value">{expandedData.telefono2 || '—'}</span></div>
+                                  </div>
+                                  <div className="cli-expanded-actions">
+                                    {hasPermission('EDITAR_CLIENTE') && (
+                                      <button className="o-btn-ghost" onClick={() => setShowEditModal(true)}><FaEdit /> Editar</button>
+                                    )}
+                                    <button className="o-btn-primary-glow" style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem' }} onClick={() => setShowObservationModal(true)}><FaPlus /> Observación</button>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="details-view-section details-ventas">
-                                <h4>Compras Recientes</h4>
-                                <ul className="ventas-list">
-                                  {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
-                                    <li key={venta.id} className="venta-item">
-                                      <span className="venta-id">#{venta.id}</span>
-                                      <span className={`venta-estado estado-${venta.estado.toLowerCase()}`}>{venta.estado}</span>
-                                    </li>
-                                  )) : <li className="empty-list">No hay compras registradas.</li>}
-                                </ul>
-                              </div>
-                              <div className="details-view-section details-observaciones">
-                                <h4>Observaciones</h4>
-                                <ul className="observaciones-list">
-                                  {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
-                                    <li key={obs.id} className="observacion-item">
-                                      <p>{obs.texto}</p>
-                                    </li>
-                                  )) : <li className="empty-list">No hay observaciones.</li>}
-                                </ul>
-                              </div>
-                              <div className="details-view-actions">
-                                <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit /> Editar Cliente</button>
-                                <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus /> Agregar Observación</button>
+                                <div className="cli-right-col">
+                                  <div className="cli-section">
+                                    <h4 className="cli-section-title">Compras Recientes</h4>
+                                    <div className="cli-ventas-list">
+                                      {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
+                                        <div key={venta.id} className="cli-venta-row">
+                                          <span className="cli-venta-id">Venta #{venta.id}</span>
+                                          <span className={`status-badge ${venta.estado?.toLowerCase() === 'entregada' ? 'status-finalizada' : venta.estado?.toLowerCase() === 'cancelada' ? 'status-anulada' : 'status-creada'}`}>{venta.estado}</span>
+                                        </div>
+                                      )) : <p className="cli-empty">Sin compras registradas.</p>}
+                                    </div>
+                                  </div>
+                                  <div className="cli-section">
+                                    <h4 className="cli-section-title">Observaciones</h4>
+                                    <div className="cli-obs-list">
+                                      {expandedData.observaciones_cliente && expandedData.observaciones_cliente.length > 0 ? expandedData.observaciones_cliente.map((obs) => (
+                                        <div key={obs.id} className="cli-obs-item">{obs.texto}</div>
+                                      )) : <p className="cli-empty">Sin observaciones.</p>}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ) : null}
@@ -375,7 +395,6 @@ const Clientes = () => {
           </table>
         </div>
 
-        {/* Mobile View: Cards */}
         <div className="mobile-view">
           {isLoading ? (
             <div className="loading-container"><div className="loader"></div></div>
@@ -434,7 +453,9 @@ const Clientes = () => {
                           </ul>
                         </div>
                         <div className="card-actions">
-                          <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit /> Editar Cliente</button>
+                          {hasPermission('EDITAR_CLIENTE') && (
+                            <button className="btn-secondary" onClick={() => setShowEditModal(true)}><FaEdit /> Editar Cliente</button>
+                          )}
                           <button className="btn-primary" onClick={() => setShowObservationModal(true)}><FaPlus /> Agregar Observación</button>
                         </div>
                       </div>
@@ -454,7 +475,7 @@ const Clientes = () => {
       )}
 
       {showObservationModal && (
-        <AddObservationModal onSave={handleAddObservation} onClose={() => setShowObservationModal(false)} />
+        <AddObservationModal onSave={handleAddObservation} onClose={() => setShowObservationModal(false)} showToast={showNotification} />
       )}
 
       <div className="pagination-container">

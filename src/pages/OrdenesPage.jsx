@@ -3,17 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
+import AppNotification from '../components/AppNotification';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
 import API from '../services/api';
 import logoFinal from '../assets/logoFinal.png';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
 const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading, userRole }) => {
+  const hasPermission = usePermissions();
   const [formState, setFormState] = useState({ costo: '', estado: '', tela: '' });
-  const isFullEdit = userRole === 'administrador' || userRole === 'auxiliar';
 
-  // Cambio 1: Vendedor no puede editar estado de tela si ya está "En fabrica"
+  const canEditEstado = hasPermission('EDITAR_ESTADO_ORDEN') || userRole === 'administrador' || userRole === 'auxiliar';
+  const canEditTela = hasPermission('EDITAR_ESTADO_TELA_ORDEN') || userRole === 'vendedor' || userRole === 'administrador' || userRole === 'auxiliar';
+  const canEditCosto = hasPermission('VER_COSTOS_ORDEN') && (userRole === 'administrador' || userRole === 'auxiliar');
+
   const telaLockedForVendedor = userRole === 'vendedor' && orden?.tela === 'En fabrica';
 
   useEffect(() => {
@@ -34,11 +38,11 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isFullEdit) {
-      onSave(orden.id, formState);
-    } else {
-      onSave(orden.id, { tela: formState.tela });
-    }
+    const payload = {};
+    if (canEditCosto) payload.costo = formState.costo;
+    if (canEditEstado) payload.estado = formState.estado;
+    if (canEditTela) payload.tela = formState.tela;
+    onSave(orden.id, payload);
   };
 
   if (!isOpen) return null;
@@ -51,38 +55,47 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
-          {isFullEdit && (
-            <>
-              <div className="form-group">
-                <label>Costo</label>
-                <input type="number" name="costo" value={formState.costo} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Estado del Pedido</label>
-                <select name="estado" value={formState.estado} onChange={handleChange}>
-                  {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-                </select>
-              </div>
-            </>
+          {canEditCosto && (
+            <div className="form-group">
+              <label>COSTO DEL PEDIDO</label>
+              <input
+                type="number"
+                name="costo"
+                value={formState.costo}
+                onChange={handleChange}
+                placeholder="0"
+                step="any"
+              />
+            </div>
           )}
-          <div className="form-group">
-            <label>Estado de Tela</label>
-            <select
-              name="tela"
-              value={formState.tela}
-              onChange={handleChange}
-              disabled={telaLockedForVendedor}
-              style={telaLockedForVendedor ? { backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', opacity: 0.7 } : {}}
-            >
-              {telas.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            {telaLockedForVendedor && (
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem', fontStyle: 'italic' }}>
-                🔒 No se puede modificar el estado de tela cuando ya está "En fabrica".
-              </p>
-            )}
-          </div>
-          <button type="submit" className="modal-submit" disabled={isLoading || telaLockedForVendedor}>
+          {canEditEstado && (
+            <div className="form-group">
+              <label>Estado del Pedido</label>
+              <select name="estado" value={formState.estado} onChange={handleChange}>
+                {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+              </select>
+            </div>
+          )}
+          {canEditTela && (
+            <div className="form-group">
+              <label>Estado de Tela</label>
+              <select
+                name="tela"
+                value={formState.tela}
+                onChange={handleChange}
+                disabled={telaLockedForVendedor}
+                style={telaLockedForVendedor ? { backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', opacity: 0.7 } : {}}
+              >
+                {telas.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              {telaLockedForVendedor && (
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                  🔒 No se puede modificar el estado de tela cuando ya está "En fabrica".
+                </p>
+              )}
+            </div>
+          )}
+          <button type="submit" className="modal-submit" disabled={isLoading || (canEditTela && !canEditEstado && telaLockedForVendedor)}>
             {isLoading ? 'Actualizando...' : 'Actualizar Pedido'}
           </button>
         </form>
@@ -95,6 +108,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
 // Componente principal con las correcciones
 const OrdenesPage = () => {
   const { proveedores, usuario: user, isLoadingProveedores } = useContext(AppContext);
+  const hasPermission = usePermissions();
   const navigate = useNavigate();
 
   const [filteredOrdenes, setFilteredOrdenes] = useState([]);
@@ -107,12 +121,18 @@ const OrdenesPage = () => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderTelas, setOrderTelas] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [currentOrder, setCurrentOrder] = useState(null);
+  const [mostrarBuscador, setMostrarBuscador] = useState(false);
+  const [notification, setNotification] = useState({ message: '', type: '' });
+
+  const showNotification = (message, type = 'success') => {
+      setNotification({ message, type });
+  };
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [isTelaModalOpen, setIsTelaModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [currentOrder, setCurrentOrder] = useState(null);
 
   // --- PASO 1: AÑADIR NUEVO ESTADO PARA LA ACTUALIZACIÓN ---
   const [isUpdating, setIsUpdating] = useState(false);
@@ -243,7 +263,7 @@ const OrdenesPage = () => {
     }
   };
 
-  const handleOpenEditModal = (orden) => {
+  const openEditModal = (orden) => {
     setCurrentOrder(orden);
     setIsEditModalOpen(true);
   };
@@ -270,9 +290,9 @@ const OrdenesPage = () => {
 
   // --- Helpers para editar estado de PedidoTela desde /ordenes ---
   const canEditTelaEstado = (currentEstado) => {
-    if (!user) return false;
-    const role = user.role?.toLowerCase();
-    if (role === 'administrador') return true;
+    if (!hasPermission('EDITAR_ESTADO_TELA_ORDEN')) return false;
+    // Si el usuario es super admin o ADMIN_MODERACION (quizás tenga un override especial), 
+    // pero según las reglas, nadie puede editar si está "En fabrica" a menos que queramos
     return currentEstado !== 'En fabrica';
   };
 
@@ -286,7 +306,7 @@ const OrdenesPage = () => {
       ));
       setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
     } catch (error) {
-      alert(error.response?.data?.error || 'Error al actualizar el estado.');
+      showNotification(error.response?.data?.error || 'Error al actualizar el estado.', 'error');
     }
   };
 
@@ -309,7 +329,7 @@ const OrdenesPage = () => {
         'Estado': getEstadoText(orden.estado, orden.fecha_esperada),
         'Observación': orden.observacion,
       };
-      if (user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') {
+      if (hasPermission('VER_COSTOS_ORDEN')) {
         data['Costo'] = formatCurrencyForExport(orden.costo);
       }
       return data;
@@ -362,7 +382,7 @@ const OrdenesPage = () => {
               {!isLoadingProveedores && Array.isArray(proveedores) && proveedores.map((prov) => (<option key={prov.id} value={prov.id}>{prov.nombre_empresa}</option>))}
             </select>
           </div>
-          {(user?.role === 'administrador' || user?.role === 'auxiliar') && (
+          {hasPermission('VER_TODAS_ORDENES') && (
             <div className="o-select-pill">
               <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
                 <option value="">Vendedor: Todos</option>
@@ -385,7 +405,7 @@ const OrdenesPage = () => {
         </div>
 
         <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {(user?.role === 'administrador' || user?.role === 'auxiliar') && (
+          {hasPermission('VER_COSTOS_ORDEN') && (
             <button className="o-btn-ghost" onClick={exportOrdenes} title="Exportar Excel">
               <FaFileExport />
             </button>
@@ -414,13 +434,28 @@ const OrdenesPage = () => {
                 <th className="th-estado">Estado</th>
                 <th className="th-observacion">Observación</th>
                 <th className="th-exh" title="¿Es para exhibición?">Exh.</th>
-                {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <th className="th-costo">Costo</th>}
+                {hasPermission('VER_COSTOS_ORDEN') && <th className="th-costo">Costo</th>}
                 <th className="th-accion"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={12}><div className="loading-container"><div className="loader"></div></div></td></tr>
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={`skeleton-${index}`} className="skeleton-row">
+                    <td className="td-op"><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
+                    <td className="td-proveedor"><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
+                    <td className="td-vendedor"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                    <td className="td-venta"><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
+                    <td className="td-fecha-pedido"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                    <td className="td-fecha-llegada"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                    <td className="td-tela"><div className="skeleton skeleton-badge"></div></td>
+                    <td className="td-estado"><div className="skeleton skeleton-badge"></div></td>
+                    <td className="td-observacion"><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
+                    <td className="td-exh"><div className="skeleton skeleton-text" style={{ width: '30px' }}></div></td>
+                    {hasPermission('VER_COSTOS_ORDEN') && <td className="td-costo"><div className="skeleton skeleton-text" style={{ width: '70px' }}></div></td>}
+                    <td className="td-accion"><div className="skeleton skeleton-text" style={{ width: '20px' }}></div></td>
+                  </tr>
+                ))
               ) : filteredOrdenes.length > 0 ? (
                 filteredOrdenes.map((orden) => (
                   <React.Fragment key={`orden-${orden.id}`}>
@@ -435,7 +470,7 @@ const OrdenesPage = () => {
                       <td className="td-estado"><span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>{getEstadoText(orden.estado, orden.fecha_esperada)}</span></td>
                       <td className="td-observacion"><div className="truncate-text" title={orden.observacion}>{orden.observacion}</div></td>
                       <td className="td-exh">{orden.es_exhibicion ? <span className="exh-badge exh-si">Sí</span> : <span className="exh-badge exh-no">No</span>}</td>
-                      {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && <td className="td-costo font-mono">${formatNumber(orden.costo)}</td>}
+                      {hasPermission('VER_COSTOS_ORDEN') && <td className="td-costo font-mono">${formatNumber(orden.costo)}</td>}
                       <td className="td-accion">
                         <button className="btn-icon action-btn" onClick={(e) => { e.stopPropagation(); handleExpandOrder(orden.id); }}>
                           <FaChevronDown style={{ transform: expandedOrderId === orden.id ? 'rotate(180deg)' : 'none' }} />
@@ -444,7 +479,7 @@ const OrdenesPage = () => {
                     </tr>
                     {expandedOrderId === orden.id && (
                       <tr className="expanded-row">
-                        <td colSpan={user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar' ? 12 : 11}>
+                        <td colSpan={hasPermission('VER_COSTOS_ORDEN') ? 12 : 11}>
                           {loadingDetails ? (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
                               <div className="loader"></div>
@@ -471,8 +506,7 @@ const OrdenesPage = () => {
                                         <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
                                         <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
                                       </div>
-                                      {/* Cambio 2: Solo admin puede editar si la orden está anulada */}
-                                      {orden.estado === 'anulado' && user?.role?.toLowerCase() !== 'administrador' ? (
+                                      {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
                                         <button
                                           className="btn-editar-pedido btn-editar-pedido--disabled"
                                           disabled
@@ -481,9 +515,11 @@ const OrdenesPage = () => {
                                           <FaEdit /> Editar
                                         </button>
                                       ) : (
-                                        <button className="btn-editar-pedido" onClick={() => handleOpenEditModal(orden)} title="Editar pedido">
-                                          <FaEdit /> Editar
-                                        </button>
+                                        (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
+                                            <button className="btn-editar-pedido" onClick={() => openEditModal(orden)} title="Editar pedido">
+                                              <FaEdit /> Editar
+                                            </button>
+                                        )
                                       )}
                                     </div>
                                     <h3 className="preview-productos-title">Productos:</h3>
@@ -582,7 +618,17 @@ const OrdenesPage = () => {
         {/* Mobile Card View */}
         <div className="mobile-view">
           {isLoading ? (
-            <div className="loading-container"><div className="loader"></div></div>
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={`skeleton-card-${index}`} className="mobile-card skeleton-item" style={{ padding: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div className="skeleton skeleton-text" style={{ width: '50px' }}></div>
+                  <div className="skeleton skeleton-badge" style={{ width: '80px' }}></div>
+                </div>
+                <div className="skeleton skeleton-text" style={{ width: '120px', height: '1.25rem', marginBottom: '0.5rem' }}></div>
+                <div className="skeleton skeleton-text" style={{ width: '100px', marginBottom: '0.5rem' }}></div>
+                <div className="skeleton skeleton-text" style={{ width: '80px' }}></div>
+              </div>
+            ))
           ) : filteredOrdenes.length > 0 ? (
             filteredOrdenes.map((orden) => (
               <div className="mobile-card" key={orden.id}>
@@ -631,8 +677,8 @@ const OrdenesPage = () => {
                                 <h4>Información</h4>
                                 <p><strong>Venta:</strong> {orden.venta || orden.orden_venta}</p>
                                 <p><strong>Observación:</strong> {orden.observacion || 'Ninguna'}</p>
-                                {(user?.role.toLowerCase() === 'administrador' || user?.role.toLowerCase() === 'auxiliar') && (
-                                  <p><strong>Costo:</strong> {formatNumber(orden.costo)}</p>
+                                {hasPermission('VER_COSTOS_ORDEN') && (
+                                    <p><strong>Costo:</strong> {formatNumber(orden.costo)}</p>
                                 )}
                               </div>
 
@@ -649,8 +695,7 @@ const OrdenesPage = () => {
                                 </ul>
                               </div>
 
-                              {/* Cambio 2 (mobile): Solo admin puede editar si la orden está anulada */}
-                              {orden.estado === 'anulado' && user?.role?.toLowerCase() !== 'administrador' ? (
+                              {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
                                 <button
                                   className="btn-editar-pedido btn-editar-pedido--disabled btn-full-width"
                                   disabled
@@ -659,9 +704,11 @@ const OrdenesPage = () => {
                                   <FaEdit /> Editar
                                 </button>
                               ) : (
-                                <button className="btn-editar-pedido btn-full-width" onClick={() => handleOpenEditModal(orden)}>
-                                  <FaEdit /> Editar
-                                </button>
+                                (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
+                                    <button className="btn-editar-pedido btn-full-width" onClick={() => openEditModal(orden)}>
+                                      <FaEdit /> Editar
+                                    </button>
+                                )
                               )}
                             </div>
                           ) : <div className="error-message">No se pudieron cargar los detalles.</div>}
@@ -742,6 +789,8 @@ const OrdenesPage = () => {
           }
         }}
       />
+      {/* Componente Global de Notificaciones Elegante */}
+      <AppNotification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
     </div>
   );
 };

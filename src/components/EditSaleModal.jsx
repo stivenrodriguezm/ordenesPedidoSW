@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import './EditSaleModal.css';
 import Modal from './Modal';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import API from '../services/api';
 
 const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchReportSales, fetchClientes }) => {
@@ -41,19 +41,19 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   }, [saleData]);
 
   // --- Permissions Logic ---
-  const isAuxiliar = usuario?.role?.toLowerCase() === 'auxiliar';
+  const hasPermission = usePermissions();
 
-  // Rule 1: Disable 'Estado' select if the sale is already 'entregada' for an auxiliar user.
-  const isEstadoDisabled = isAuxiliar && (formData.estado || '').trim().toLowerCase() === 'entregado';
+  const canEditEverything = hasPermission('EDITAR_VENTA') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+  const canEditEstadoVenta = canEditEverything || hasPermission('EDITAR_ESTADO_VENTA');
+  const canEditEstadoPedidos = canEditEverything || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA');
 
-  // Rule 2: Disable 'Estado Pedidos' checkbox if it's already true for an auxiliar user.
-  const isEstadoPedidosDisabled = isAuxiliar && formData.estado_pedidos;
+  const isFieldsDisabled = !canEditEverything;
+  const isEstadoDisabled = !canEditEstadoVenta || (usuario?.role?.toLowerCase() === 'auxiliar' && (formData.estado || '').trim().toLowerCase() === 'entregado');
+  const isEstadoPedidosDisabled = !canEditEstadoPedidos || (usuario?.role?.toLowerCase() === 'auxiliar' && formData.estado_pedidos);
 
-  // Rule 3: Auxiliar users should not see the 'anulada' option.
-  const availableEstados = isAuxiliar ? (estados || []).filter(e => e !== 'anulado') : estados;
-  console.log('isAuxiliar:', isAuxiliar);
-  console.log('estados:', estados);
-  console.log('availableEstados:', availableEstados);
+  const availableEstados = (usuario?.role?.toLowerCase() === 'auxiliar' || !canEditEverything)
+    ? (estados || []).filter(e => e !== 'anulado')
+    : estados;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -68,12 +68,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
     let ventaPayload = {};
 
-    if (isAuxiliar) {
-      ventaPayload = {
-        estado: formData.estado,
-        estado_pedidos: formData.estado_pedidos,
-      };
-    } else {
+    if (canEditEverything) {
       ventaPayload = {
         fecha_venta: formData.fecha_venta,
         fecha_entrega: formData.fecha_entrega || null, // Include fecha_entrega
@@ -85,6 +80,14 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         estado: formData.estado,
         estado_pedidos: formData.estado_pedidos,
       };
+    } else {
+      ventaPayload = {};
+      if (canEditEstadoVenta) {
+        ventaPayload.estado = formData.estado;
+      }
+      if (canEditEstadoPedidos) {
+        ventaPayload.estado_pedidos = formData.estado_pedidos;
+      }
     }
 
     const payload = {
@@ -122,16 +125,16 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
         <div className="form-group">
           <label>Fecha de Venta:</label>
-          <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isAuxiliar} />
+          <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isFieldsDisabled} />
         </div>
         <div className="form-group">
           <label>Fecha de Entrega:</label>
-          <input type="date" name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isAuxiliar} />
+          <input type="date" name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isFieldsDisabled} />
         </div>
 
         <div className="form-group">
           <label>Sede:</label>
-          <select name="sede" value={formData.sede} onChange={handleChange} disabled={isAuxiliar}>
+          <select name="sede" value={formData.sede} onChange={handleChange} disabled={isFieldsDisabled}>
             <option value="Lottus 1">Lottus 1</option>
             <option value="Lottus 2">Lottus 2</option>
           </select>
@@ -144,7 +147,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
                     ...prev, 
                     vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== e.target.value?.toString())
                   }));
-                }} required disabled={isAuxiliar}>
+                }} required disabled={isFieldsDisabled}>
             <option value="">Seleccionar vendedor</option>
             {(vendedores || []).map(vendedor => (
               <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
@@ -152,7 +155,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           </select>
         </div>
 
-        {formData.vendedor_id && !isAuxiliar && (
+        {formData.vendedor_id && !isFieldsDisabled && (
           <div className="form-group full-width">
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
               <input 
@@ -186,7 +189,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         )}
 
         <div className="form-group checkbox-inline">
-          <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isAuxiliar} />
+          <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isFieldsDisabled} />
           <label htmlFor="traslado">¿Incluye Traslado?</label>
         </div>
         <div className="form-group checkbox-inline">
@@ -196,7 +199,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
         <div className="form-group">
           <label>Valor Total:</label>
-          <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required disabled={isAuxiliar} />
+          <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required disabled={isFieldsDisabled} />
         </div>
         <div className="form-group">
           <label>Estado de Venta:</label>

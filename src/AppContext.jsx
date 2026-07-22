@@ -9,9 +9,27 @@ export const usePermissions = () => {
   
   const hasPermission = (feature) => {
     if (!usuario) return false;
+    if (usuario.role?.toLowerCase() === 'administrador') return true;
     if (permissions.includes('ALL')) return true;
-    if (feature === 'BASES_DATOS') {
-      return permissions.includes('VER_CLIENTES') || permissions.includes('VER_PROVEEDORES') || permissions.includes('VER_REFERENCIAS');
+
+    if (feature === 'ACCESO_CAJA') {
+      return permissions.includes('ACCESO_CAJA') || permissions.includes('VER_CAJA');
+    }
+    if (feature === 'ACCESO_RECIBOS') {
+      return permissions.includes('ACCESO_RECIBOS') || permissions.includes('VER_RECIBOS');
+    }
+    if (feature === 'ACCESO_EGRESOS') {
+      return permissions.includes('ACCESO_EGRESOS') || permissions.includes('VER_COMPROBANTES_EGRESO');
+    }
+
+    if (feature === 'VER_VENTAS') {
+      return permissions.includes('VER_TODAS_VENTAS') || permissions.includes('VER_PROPIAS_VENTAS');
+    }
+    if (feature === 'VER_TELAS') {
+      return permissions.includes('VER_PEDIDOS_TELAS');
+    }
+    if (feature === 'CREAR_ORDEN') {
+      return permissions.includes('CREAR_ORDEN') || permissions.includes('CREAR_PROPIAS_ORDENES') || permissions.includes('CREAR_ORDENES_OTROS');
     }
     return permissions.includes(feature);
   };
@@ -26,7 +44,7 @@ export function AppProvider({ children }) {
   const [isLoadingProveedores, setIsLoadingProveedores] = useState(true);
   const [clientes, setClientes] = useState([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(true);
-  // Counter to force re-verify when admin saves new permissions
+  // Used to re-run verifyUser on login
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   // Read token at render time — when it changes, useEffect re-runs
@@ -58,10 +76,20 @@ export function AppProvider({ children }) {
     verifyUser();
   }, [token, reloadTrigger]); // re-runs on login/logout OR when reloadTrigger increments
 
-  // Called after admin saves role permissions — forces fresh user data
-  const reloadUser = useCallback(() => {
-    setReloadTrigger(t => t + 1);
-  }, []);
+  // Called after admin saves role permissions — forces fresh user data silently
+  const reloadUser = useCallback(async () => {
+    if (!token) return;
+    try {
+      const userRes = await API.get("/user/");
+      setUsuario(userRes.data);
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        setUsuario(null);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      }
+    }
+  }, [token]);
 
   const fetchProveedores = useCallback(async () => {
     if (!token) {
@@ -70,7 +98,7 @@ export function AppProvider({ children }) {
     }
     setIsLoadingProveedores(true);
     try {
-      const response = await API.get('/proveedores/');
+      const response = await API.get('/proveedores/', { params: { page_size: 1000 } });
       setProveedores(response.data.results || []);
     } catch {
       // Silently ignore — vendedores without VER_PROVEEDORES get 403 here

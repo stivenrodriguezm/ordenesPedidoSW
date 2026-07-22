@@ -185,14 +185,16 @@ const AdminHomePage = () => {
         <div className="admin-home-container">
             {/* Hero Section */}
             <header className="admin-hero" style={{ background: getTimeBasedGradient() }}>
+                <div className="user-avatar-large">
+                    {usuario?.first_name?.charAt(0)?.toUpperCase() || 'A'}
+                </div>
                 <div className="hero-content">
-                    <div className="user-avatar-large">
-                        {usuario?.first_name?.charAt(0)?.toUpperCase() || 'A'}
+                    <div>
+                        <h1 className="admin-greeting">
+                            {greeting}, <span className="user-name">{usuario?.first_name || 'Admin'}</span>!
+                        </h1>
+                        <p className="admin-subtitle">Panel de Control &middot; Muebles Lottus</p>
                     </div>
-                    <h1 className="admin-greeting">
-                        {greeting}, <span className="user-name">{usuario?.first_name || 'Admin'}</span>!
-                    </h1>
-                    <p className="admin-subtitle">Panel de Control - Muebles Lottus</p>
                 </div>
             </header>
 
