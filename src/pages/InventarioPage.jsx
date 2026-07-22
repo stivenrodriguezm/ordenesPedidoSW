@@ -748,26 +748,32 @@ function InventarioPage() {
     };
 
     // ── Enriched items ────────────────────────────────────────────────────────
-    const items = inventario.map(inv => ({
-        ...inv,
-        dbId: inv.id_referencia,
-        id: inv.id_referencia,
-        grupoId: inv.grupo || null,
-        prod: {
-            id: inv.referencia,
-            nombre: inv.producto_nombre || (inv.referencia ? `Ref #${inv.referencia}` : ''),
-            categoriaId: inv.categoria_id || inv.categoria,
-            proveedorId: inv.proveedor_id,
-        },
-        cat:   { id: inv.categoria_id || inv.categoria, nombre: inv.categoria_nombre || '' },
-        subcat: { id: inv.subcategoria, nombre: inv.subcategoria_nombre || '' },
-        facturaManual: inv.factura_id_manual || inv.factura_manual || '—',
-        proveedorNombre: inv.proveedor_nombre || '—',
-        ventaId: inv.venta_numero || inv.venta || '—',
-        fechaIngreso: inv.fecha_ingreso || null,
-        productoId: inv.referencia,
-        subcategoriaId: inv.subcategoria,
-    }));
+    const items = inventario.map(inv => {
+        const rawTela = inv.tela_referencia || (inv.lleva_tela ? 'Sí' : '');
+        const rawColor = inv.tela_color || '';
+        return {
+            ...inv,
+            dbId: inv.id_referencia,
+            id: inv.id_referencia,
+            grupoId: inv.grupo || null,
+            prod: {
+                id: inv.referencia,
+                nombre: inv.producto_nombre || (inv.referencia ? `Ref #${inv.referencia}` : ''),
+                categoriaId: inv.categoria_id || inv.categoria,
+                proveedorId: inv.proveedor_id,
+            },
+            cat:   { id: inv.categoria_id || inv.categoria, nombre: inv.categoria_nombre || '' },
+            subcat: { id: inv.subcategoria, nombre: inv.subcategoria_nombre || '' },
+            facturaManual: inv.factura_id_manual || inv.factura_manual || '—',
+            proveedorNombre: inv.proveedor_nombre || '—',
+            ventaId: inv.venta_numero || inv.venta || '—',
+            fechaIngreso: inv.fecha_ingreso || null,
+            productoId: inv.referencia,
+            subcategoriaId: inv.subcategoria,
+            telaNombre: rawTela || '—',
+            telaColor: rawColor || '—',
+        };
+    });
 
     // ── Filter ────────────────────────────────────────────────────────────────
     const filtered = items.filter(item => {
@@ -842,6 +848,8 @@ function InventarioPage() {
                 case 'variacion': av = String(a.variacion || ''); bv = String(b.variacion || ''); break;
                 case 'observacion': av = String(a.observacion || ''); bv = String(b.observacion || ''); break;
                 case 'subcat': av = a.subcat?.nombre || ''; bv = b.subcat?.nombre || ''; break;
+                case 'telaNombre': av = a.telaNombre || ''; bv = b.telaNombre || ''; break;
+                case 'telaColor': av = a.telaColor || ''; bv = b.telaColor || ''; break;
                 default: av = String(a[sortConfig.key] || ''); bv = String(b[sortConfig.key] || '');
             }
             const cmp = av.localeCompare(bv, 'es');
@@ -989,6 +997,8 @@ function InventarioPage() {
                     )}
                 </td>
                 <td title={inv.subcat?.nombre || ''}>{inv.subcat?.nombre || <span className="empty-val">—</span>}</td>
+                <td title={inv.telaNombre || ''}><span className="inv-tela-cell">{inv.telaNombre}</span></td>
+                <td title={inv.telaColor || ''}><span className="inv-color-cell">{inv.telaColor}</span></td>
                 <td title={inv.variacion || ''}>{inv.variacion || <span className="empty-val">—</span>}</td>
                 <td title={inv.estado_fisico ? inv.estado_fisico.replace(/_/g, ' ') : ''} style={{textTransform: 'capitalize'}}>{inv.estado_fisico ? inv.estado_fisico.replace(/_/g, ' ') : <span className="empty-val">—</span>}</td>
                 <td title={inv.sede_nombre || ''}>{inv.sede_nombre || <span className="empty-val">—</span>}</td>
@@ -1030,7 +1040,7 @@ function InventarioPage() {
     };
 
     // ── Table body content ────────────────────────────────────────────────────
-    const colSpan = (hasPermission('VER_COSTOS_INVENTARIO') && showCostoCol) ? 16 : 15;
+    const colSpan = (hasPermission('VER_COSTOS_INVENTARIO') && showCostoCol) ? 18 : 17;
 
     const renderTableBody = () => {
         if (isLoading) {
@@ -1130,10 +1140,12 @@ function InventarioPage() {
                         )}
                     </td>
                     <td title={grupoObj.subcategoria_nombre || ''}>{grupoObj.subcategoria_nombre || <span className="empty-val">—</span>}</td>
+                    <td><span className="empty-val">—</span></td>
+                    <td><span className="empty-val">—</span></td>
                     <td>
                         <span className="inv-group-count-pill" style={{ marginLeft: 0 }}>{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
                     </td>
-                    <td title={grupoEstadoFisico} style={{textTransform: 'capitalize'}}>{grupoEstadoFisico.replace('_', ' ')}</td>
+                    <td title={grupoEstadoFisico} style={{textTransform: 'capitalize'}}>{grupoEstadoFisico.replace(/_/g, ' ')}</td>
                     <td title={gSede || ''}>{gSede || <span className="empty-val">—</span>}</td>
                     <td title={gZona || ''}>{gZona || <span className="empty-val">—</span>}</td>
                     <td className="inv-obs-col" title={grupoObj.observacion || ''}>{grupoObj.observacion || <span className="empty-val">—</span>}</td>
@@ -1401,6 +1413,8 @@ function InventarioPage() {
                                     {viewMode === 'products_only' && <th className="col-grp">Grupo</th>}
                                     {sortTh('cat', 'Categoría', 'col-cat')}
                                     {sortTh('subcat', 'Subcategoría', 'col-subcat')}
+                                    {sortTh('telaNombre', 'Tela', 'col-tela')}
+                                    {sortTh('telaColor', 'Color', 'col-color')}
                                     {sortTh('variacion', 'Variación', 'col-var')}
                                     {sortTh('estado_fisico', 'Estado', 'col-est')}
                                     {sortTh('sede_nombre', 'Sede', 'col-sede')}

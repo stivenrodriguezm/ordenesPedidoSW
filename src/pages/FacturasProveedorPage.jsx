@@ -150,18 +150,23 @@ function FacturasProveedorPage() {
                         setFacturas(prev => prev.map(f => {
                             const hf = heavyData.find(x => x.id === f.id);
                             if (hf && !f._detailsLoaded) {
-                                const prods = (hf.items_inventario || []).map(p => ({
+                                const rawItems = (hf.items_inventario && hf.items_inventario.length > 0)
+                                    ? hf.items_inventario
+                                    : (hf.detalles || hf.productos || []);
+                                const prods = rawItems.map(p => ({
                                     ...p,
-                                    id: p.id_referencia,
+                                    id: p.id_referencia || p.id,
                                     referenciaId: p.referencia,
+                                    referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
                                     categoriaId: p.categoria,
                                     subcategoriaId: p.subcategoria,
-                                    ventaId: p.venta_id,
-                                    costo: p.costo_especifico,
+                                    ventaId: p.venta_id || p.venta,
+                                    costo: p.costo_especifico !== undefined ? p.costo_especifico : p.costo,
+                                    grupo_nombre: p.grupo_nombre || (p.grupo ? p.grupo.nombre : null),
                                     grupo_categoria_nombre: p.grupo_categoria_nombre,
                                     grupo_subcategoria_nombre: p.grupo_subcategoria_nombre,
                                 }));
-                                return { ...f, productos: prods, _detailsLoaded: true };
+                                return { ...f, ...hf, productos: prods, _detailsLoaded: true };
                             }
                             return f;
                         }));
@@ -375,11 +380,10 @@ function FacturasProveedorPage() {
         productos: prev.productos.filter((_, i) => i !== index),
     }));
 
-    // Total = sum of (cost * quantity) per row
+    // Total = sum of (cost * quantity) per row (fabric cost is saved separately as extra product cost)
     const totalCostos = form.productos.reduce((acc, p) => {
         const prodCosto = parseInt(p.costo) || 0;
-        const telaCosto = p.lleva_tela ? (parseFloat(p.tela_costo_metro) || 0) * (parseFloat(p.tela_cantidad_metros) || 0) : 0;
-        return acc + ((prodCosto + telaCosto) * (parseInt(p.cantidad) || 1));
+        return acc + (prodCosto * (parseInt(p.cantidad) || 1));
     }, 0);
     const valorFactura = parseInt(form.valor) || 0;
     const canSubmit = valorFactura > 0 && totalCostos === valorFactura && form.proveedorId && form.idManual;
@@ -453,6 +457,11 @@ function FacturasProveedorPage() {
                 estado_fisico: p.estado_fisico,
                 zona: p.zonaId ? parseInt(p.zonaId) : null,
                 venta_id: p.ventaId,
+                lleva_tela: p.lleva_tela || false,
+                tela_referencia: p.tela_referencia || '',
+                tela_color: p.tela_color || '',
+                tela_costo_metro: p.lleva_tela ? parseCOP(p.tela_costo_metro) : 0,
+                tela_cantidad_metros: p.lleva_tela ? (parseFloat(p.tela_cantidad_metros) || 0) : 0,
             }))
         };
         
@@ -502,24 +511,29 @@ function FacturasProveedorPage() {
         setExpandedId(id);
 
         const factura = facturas.find(f => f.id === id);
-        if (factura && !factura._detailsLoaded) {
+        if (!factura || !factura._detailsLoaded || !factura.productos || factura.productos.length === 0) {
             setLoadingDetailsId(id);
             try {
                 const res = await API.get(`/suministros/facturas/${id}/`);
                 const fData = res.data;
-                const prods = (fData.items_inventario || []).map(p => ({
+                const rawItems = (fData.items_inventario && fData.items_inventario.length > 0) 
+                    ? fData.items_inventario 
+                    : (fData.detalles || fData.productos || []);
+                const prods = rawItems.map(p => ({
                     ...p,
-                    id: p.id_referencia,
+                    id: p.id_referencia || p.id,
                     referenciaId: p.referencia,
+                    referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
                     categoriaId: p.categoria,
                     subcategoriaId: p.subcategoria,
-                    ventaId: p.venta_id,
-                    costo: p.costo_especifico,
+                    ventaId: p.venta_id || p.venta,
+                    costo: p.costo_especifico !== undefined ? p.costo_especifico : p.costo,
+                    grupo_nombre: p.grupo_nombre || (p.grupo ? p.grupo.nombre : null),
                     grupo_categoria_nombre: p.grupo_categoria_nombre,
                     grupo_subcategoria_nombre: p.grupo_subcategoria_nombre,
                 }));
                 setFacturas(prev => prev.map(f => 
-                    f.id === id ? { ...f, productos: prods, _detailsLoaded: true } : f
+                    f.id === id ? { ...f, ...fData, productos: prods, _detailsLoaded: true } : f
                 ));
             } catch (err) {
                 console.error("Error cargando detalles", err);
@@ -579,21 +593,85 @@ function FacturasProveedorPage() {
         setFilterSearch('');
     };
 
+    // Abrir modal de edición de factura cargando referencias y telas
+    const openEditModal = async (f) => {
+        setLoadingDetailsId(f.id);
+        try {
+            const res = await API.get(`/suministros/facturas/${f.id}/`);
+            const fData = res.data;
+            const rawItems = (fData.items_inventario && fData.items_inventario.length > 0)
+                ? fData.items_inventario
+                : (fData.detalles || fData.productos || f.productos || []);
+            
+            const prods = rawItems.map(p => ({
+                id: p.id_referencia || p.id,
+                referenciaId: p.referencia,
+                referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
+                categoria: p.categoria,
+                subcategoria: p.subcategoria,
+                variacion: p.variacion || '',
+                costo: p.costo_especifico !== undefined ? p.costo_especifico : (p.costo || 0),
+                observacion: p.observacion || '',
+                disponibilidad: p.disponibilidad || 'exhibicion',
+                estado_fisico: p.estado_fisico || 'buen_estado',
+                zona: p.zona || null,
+                venta: p.venta_id || p.venta || null,
+                grupo: p.grupo_id || p.grupo || null,
+                cantidad: 1,
+                lleva_tela: p.lleva_tela || false,
+                tela_referencia: p.tela_referencia || '',
+                tela_color: p.tela_color || '',
+                tela_costo_metro: p.tela_costo_metro ? Math.floor(parseFloat(p.tela_costo_metro)) : '',
+                tela_cantidad_metros: p.tela_cantidad_metros || '',
+            }));
+
+            setEditModal({
+                id: f.id,
+                id_manual: f.id_manual || f.idManual || '',
+                estado: f.estado || 'pendiente',
+                observaciones: f.observaciones || '',
+                productos: prods,
+            });
+        } catch (err) {
+            console.error("Error al cargar datos para edición", err);
+            showToast("Error al abrir edición de factura", "error");
+        } finally {
+            setLoadingDetailsId(null);
+        }
+    };
+
     // Guardar desde el modal de edición
     const saveEditModal = async () => {
         if (!editModal) return;
         setIsSavingEdit(true);
         try {
-            await API.patch(`/suministros/facturas/${editModal.id}/`, {
+            const payload = {
+                id_manual: editModal.id_manual,
                 estado: editModal.estado,
-                observaciones: editModal.observaciones
-            });
-            setFacturas(prev => prev.map(f =>
-                f.id === editModal.id
-                    ? { ...f, observaciones: editModal.observaciones, estado: editModal.estado }
-                    : f
-            ));
-            showToast("Factura actualizada correctamente.", "success");
+                observaciones: editModal.observaciones,
+                productos: (editModal.productos || []).map(p => ({
+                    referencia: parseInt(p.referenciaId || p.referencia),
+                    categoria: p.categoria ? parseInt(p.categoria) : null,
+                    subcategoria: p.subcategoria ? parseInt(p.subcategoria) : null,
+                    variacion: p.variacion || '',
+                    costo: parseFloat(p.costo) || 0,
+                    cantidad: parseInt(p.cantidad) || 1,
+                    grupo_id: p.grupo ? parseInt(p.grupo) : null,
+                    observacion: p.observacion || '',
+                    disponibilidad: p.disponibilidad || 'exhibicion',
+                    estado_fisico: p.estado_fisico || 'buen_estado',
+                    zona: p.zona ? parseInt(p.zona) : null,
+                    venta_id: p.venta ? parseInt(p.venta) : null,
+                    lleva_tela: p.lleva_tela || false,
+                    tela_referencia: p.tela_referencia || '',
+                    tela_color: p.tela_color || '',
+                    tela_costo_metro: p.lleva_tela ? (parseFloat(p.tela_costo_metro) || 0) : 0,
+                    tela_cantidad_metros: p.lleva_tela ? (parseFloat(p.tela_cantidad_metros) || 0) : 0,
+                }))
+            };
+
+            await API.patch(`/suministros/facturas/${editModal.id}/`, payload);
+            showToast("Factura y parámetros de tela actualizados correctamente.", "success");
             setEditModal(null);
             fetchFacturas();
         } catch (err) {
@@ -744,7 +822,7 @@ function FacturasProveedorPage() {
                                                                     {hasPermission('EDITAR_FACTURA') && (
                                                                         <button
                                                                             className="btn-edit-obs"
-                                                                            onClick={() => setEditModal({ id: f.id, observaciones: f.observaciones || '', estado: f.estado || 'pendiente' })}
+                                                                            onClick={() => openEditModal(f)}
                                                                         >
                                                                             <FaEdit /> Editar
                                                                         </button>
@@ -792,6 +870,11 @@ function FacturasProveedorPage() {
                                                                                             <div className="item-desc truncate-text" title={p.variacion || '—'}>
                                                                                                 <span className="desc-label">Var:</span> <span className="desc-val">{p.variacion || '—'}</span>
                                                                                             </div>
+                                                                                            {(p.lleva_tela || p.tela_referencia || p.tela_color) && (
+                                                                                                <div className="item-desc truncate-text" title={`Tela: ${p.tela_referencia || 'Sí'} | Color: ${p.tela_color || '—'}`}>
+                                                                                                    <span className="desc-label" style={{ color: '#0284c7' }}>Tela:</span> <span className="desc-val" style={{ color: '#0369a1', fontWeight: 600 }}>{p.tela_referencia || 'Sí'} {p.tela_color ? `(${p.tela_color})` : ''}</span>
+                                                                                                </div>
+                                                                                            )}
                                                                                             <div className="item-desc truncate-text" title={p.observacion || '—'}>
                                                                                                 <span className="desc-label">Obs:</span> <span className="desc-val">{p.observacion || '—'}</span>
                                                                                             </div>
@@ -915,39 +998,204 @@ function FacturasProveedorPage() {
                 </div>
             </div>
 
-            {/* ===== MODAL EDITAR OBSERVACIÓN + ESTADO ===== */}
+            {/* ===== MODAL EDITAR FACTURA Y COSTOS DE TELA ===== */}
             {editModal && (
                 <div className="fact-modal-overlay edit-factura-overlay" onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
-                    <div className="edit-factura-modal">
+                    <div className="edit-factura-modal" style={{ maxWidth: '850px', width: '90%' }}>
                         <div className="edit-factura-header">
-                            <h3>Editar Factura</h3>
+                            <h3>Editar Factura #{editModal.id_manual || editModal.id}</h3>
                             <button className="fact-modal-close" onClick={() => setEditModal(null)}>×</button>
                         </div>
-                        <div className="edit-factura-body">
-                            <div className="edit-factura-field">
-                                <label>Estado</label>
-                                <div className="edit-estado-options">
-                                    {ESTADOS_FACTURA.map(e => (
-                                        <button
-                                            key={e.value}
-                                            type="button"
-                                            className={`estado-option-btn${editModal.estado === e.value ? ' selected' : ''} estado-color-${e.value}`}
-                                            onClick={() => setEditModal(prev => ({ ...prev, estado: e.value }))}
-                                        >
-                                            {e.label}
-                                        </button>
-                                    ))}
+                        <div className="edit-factura-body" style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div className="edit-factura-field">
+                                    <label>No. Factura Manual</label>
+                                    <input 
+                                        type="text" 
+                                        className="ifg-input"
+                                        value={editModal.id_manual || ''} 
+                                        onChange={e => setEditModal(prev => ({ ...prev, id_manual: e.target.value }))}
+                                        placeholder="Ej: FCT-999"
+                                    />
+                                </div>
+                                <div className="edit-factura-field">
+                                    <label>Estado</label>
+                                    <div className="edit-estado-options">
+                                        {ESTADOS_FACTURA.map(e => (
+                                            <button
+                                                key={e.value}
+                                                type="button"
+                                                className={`estado-option-btn${editModal.estado === e.value ? ' selected' : ''} estado-color-${e.value}`}
+                                                onClick={() => setEditModal(prev => ({ ...prev, estado: e.value }))}
+                                            >
+                                                {e.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="edit-factura-field">
-                                <label>Observación</label>
+
+                            <div className="edit-factura-field" style={{ marginBottom: '1.25rem' }}>
+                                <label>Observaciones Generales</label>
                                 <textarea
-                                    rows="3"
+                                    rows="2"
                                     placeholder="Escribe la observación de la factura..."
-                                    value={editModal.observaciones}
+                                    value={editModal.observaciones || ''}
                                     onChange={e => setEditModal(prev => ({ ...prev, observaciones: e.target.value }))}
-                                    autoFocus
                                 />
+                            </div>
+
+                            {/* SECCIÓN DE PRODUCTOS Y TELAS / COSTOS ADICIONALES */}
+                            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <FaBoxOpen style={{ color: '#0284c7' }} />
+                                    Referencias y Parámetros de Tela ({editModal.productos?.length || 0})
+                                </h4>
+
+                                {(editModal.productos || []).map((p, idx) => (
+                                    <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '0.75rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
+                                                #{p.id || `Ref ${idx+1}`} — {p.referencia_nombre}
+                                            </span>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                Costo base: {formatCOP(p.costo)}
+                                            </span>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569' }}>Variación</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="ifg-input"
+                                                    value={p.variacion || ''} 
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setEditModal(prev => {
+                                                            const prods = [...prev.productos];
+                                                            prods[idx] = { ...prods[idx], variacion: val };
+                                                            return { ...prev, productos: prods };
+                                                        });
+                                                    }}
+                                                    placeholder="Variación / Especificaciones"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569' }}>Observación del Ítem</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="ifg-input"
+                                                    value={p.observacion || ''} 
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setEditModal(prev => {
+                                                            const prods = [...prev.productos];
+                                                            prods[idx] = { ...prods[idx], observacion: val };
+                                                            return { ...prev, productos: prods };
+                                                        });
+                                                    }}
+                                                    placeholder="Nota opcional..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* SECCIÓN COSTO ADICIONAL / TELA */}
+                                        <div style={{ background: p.lleva_tela ? '#f0f9ff' : '#ffffff', border: `1px solid ${p.lleva_tela ? '#bae6fd' : '#cbd5e1'}`, borderRadius: '6px', padding: '0.5rem 0.75rem', marginTop: '0.5rem' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, cursor: 'pointer', margin: 0, color: p.lleva_tela ? '#0369a1' : '#475569', fontSize: '0.75rem' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={p.lleva_tela || false} 
+                                                    onChange={e => {
+                                                        const checked = e.target.checked;
+                                                        setEditModal(prev => {
+                                                            const prods = [...prev.productos];
+                                                            prods[idx] = { ...prods[idx], lleva_tela: checked };
+                                                            return { ...prev, productos: prods };
+                                                        });
+                                                    }}
+                                                    style={{ accentColor: '#0284c7' }}
+                                                />
+                                                ¿Lleva Tela / Costo Adicional de Tela?
+                                            </label>
+
+                                            {p.lleva_tela && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Referencia de Tela</label>
+                                                        <input 
+                                                            type="text" 
+                                                            className="ifg-input"
+                                                            placeholder="Ej: Jacquard, Lino..." 
+                                                            value={p.tela_referencia || ''} 
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                setEditModal(prev => {
+                                                                    const prods = [...prev.productos];
+                                                                    prods[idx] = { ...prods[idx], tela_referencia: val };
+                                                                    return { ...prev, productos: prods };
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Color de Tela</label>
+                                                        <input 
+                                                            type="text" 
+                                                            className="ifg-input"
+                                                            placeholder="Ej: Verde, Azul..." 
+                                                            value={p.tela_color || ''} 
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                setEditModal(prev => {
+                                                                    const prods = [...prev.productos];
+                                                                    prods[idx] = { ...prods[idx], tela_color: val };
+                                                                    return { ...prev, productos: prods };
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Costo/m</label>
+                                                        <input 
+                                                            type="text" 
+                                                            className="ifg-input"
+                                                            placeholder="$0" 
+                                                            value={p.tela_costo_metro ? formatCOP(parseInt(p.tela_costo_metro)) : ''} 
+                                                            onChange={e => {
+                                                                const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                                setEditModal(prev => {
+                                                                    const prods = [...prev.productos];
+                                                                    prods[idx] = { ...prods[idx], tela_costo_metro: raw };
+                                                                    return { ...prev, productos: prods };
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Metros</label>
+                                                        <input 
+                                                            type="number" 
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="ifg-input"
+                                                            placeholder="0" 
+                                                            value={p.tela_cantidad_metros || ''} 
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                setEditModal(prev => {
+                                                                    const prods = [...prev.productos];
+                                                                    prods[idx] = { ...prods[idx], tela_cantidad_metros: val };
+                                                                    return { ...prev, productos: prods };
+                                                                });
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                         <div className="edit-factura-footer">
@@ -1213,10 +1461,10 @@ function FacturasProveedorPage() {
                                                         value={row.cantidad}
                                                         onChange={e => handleRefRow(index, 'cantidad', Math.max(1, parseInt(e.target.value) || 1))}
                                                     />
-                                                    {((parseInt(row.costo) > 0 || (row.lleva_tela && parseInt(row.tela_costo_metro) > 0)) && parseInt(row.cantidad) > 1) && (
+                                                    {(parseInt(row.costo) > 0 && parseInt(row.cantidad) > 1) && (
                                                         <span className="fct-subtotal-hint">
                                                             = {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(
-                                                                ((parseInt(row.costo) || 0) + (row.lleva_tela ? (parseFloat(row.tela_costo_metro) || 0) * (parseFloat(row.tela_cantidad_metros) || 0) : 0)) * (parseInt(row.cantidad) || 1)
+                                                                (parseInt(row.costo) || 0) * (parseInt(row.cantidad) || 1)
                                                             )}
                                                         </span>
                                                     )}

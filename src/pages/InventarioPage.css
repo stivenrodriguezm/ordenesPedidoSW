@@ -1694,6 +1694,8 @@
 .inventario-table th.col-grp    { min-width: 50px; }
 .inventario-table th.col-cat    { min-width: 60px; }
 .inventario-table th.col-subcat { min-width: 80px; } 
+.inventario-table th.col-tela   { min-width: 65px; }
+.inventario-table th.col-color  { min-width: 60px; }
 .inventario-table th.col-var    { min-width: 65px; }
 .inventario-table th.col-est    { min-width: 50px; }
 .inventario-table th.col-sede   { min-width: 45px; }
