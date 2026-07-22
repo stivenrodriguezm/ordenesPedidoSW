@@ -1,5 +1,7 @@
-// Cambiar entre entorno local y producción
-// const API_BASE_URL = 'https://api.muebleslottus.com/api'; // Producción
-const API_BASE_URL = 'http://localhost:8000/api'; // Desarrollo local
+// Configuración dinámica de la URL base del API
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (import.meta.env.MODE === 'production' 
+    ? 'https://api.muebleslottus.com/api' 
+    : 'http://localhost:8000/api');
 
 export default API_BASE_URL;
