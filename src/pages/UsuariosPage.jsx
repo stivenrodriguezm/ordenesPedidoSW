@@ -252,6 +252,12 @@ const RolePermissionsTab = ({ notify }) => {
     }
   });
 
+  useEffect(() => {
+    if (rolePerms.length > 0 && !selectedRp) {
+      setSelectedRp(rolePerms[0]);
+    }
+  }, [rolePerms, selectedRp]);
+
   const mutation = useMutation({
     mutationFn: async (updatedRp) => {
       return await API.put(`/role-permissions/${updatedRp.id}/`, updatedRp);

@@ -304,7 +304,7 @@
 /* Specific Column Widths */
 .th-oc { width: 4.5%; min-width: 40px; text-align: center; }
 .td-oc { text-align: center; }
-.th-fecha { width: 10.5%; min-width: 95px; }
+.th-fecha, .td-fecha { width: 10.5%; min-width: 95px; text-align: center; }
 .th-vendedor { width: 9%; min-width: 80px; }
 .th-sede, .td-sede { width: 3.5%; min-width: 35px; text-align: center; }
 .th-traslado, .td-traslado { width: 3.5%; min-width: 35px; text-align: center; }
@@ -379,6 +379,7 @@
 .td-fecha {
   color: var(--ventas-text-medium);
   font-size: 0.85rem;
+  text-align: center;
 }
 
 /* Status Badges - Premium Look */

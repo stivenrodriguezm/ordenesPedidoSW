@@ -679,8 +679,8 @@ const Ventas = () => {
                         <thead>
                             <tr>
                                 <th className="th-oc">ID</th>
-                                <th className="th-fecha">F. Venta</th>
-                                <th className="th-fecha">F. Entrega</th>
+                                <th className="th-fecha" style={{ textAlign: 'center' }}>F. Venta</th>
+                                <th className="th-fecha" style={{ textAlign: 'center' }}>F. Entrega</th>
                                 <th className="th-vendedor">Vendedor</th>
                                 <th className="th-sede">Sede</th>
                                 <th className="th-traslado">Trasl.</th>
@@ -734,8 +734,8 @@ const Ventas = () => {
                                     <React.Fragment key={venta.id}>
                                         <tr onClick={() => handleExpandVenta(venta.id)} style={{ cursor: 'pointer' }}>
                                             <td className="td-oc">{venta.id}</td>
-                                            <td className="td-fecha">{formatShortDate(venta.fecha_venta)}</td>
-                                            <td className="td-fecha">{formatShortDate(venta.fecha_entrega)}</td>
+                                            <td className="td-fecha" style={{ textAlign: 'center' }}>{formatShortDate(venta.fecha_venta)}</td>
+                                            <td className="td-fecha" style={{ textAlign: 'center' }}>{formatShortDate(venta.fecha_entrega)}</td>
                                             <td className="td-vendedor">
                                                 {venta.vendedor_nombre || '—'}
                                                 {venta.vendedores_compartidos_nombres ? `, ${venta.vendedores_compartidos_nombres}` : ''}
