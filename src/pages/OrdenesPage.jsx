@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
 import './OrdenesPage.css';
+import './VentasImprovements.css';
 import { AppContext, usePermissions } from '../AppContext';
 import AppNotification from '../components/AppNotification';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
@@ -54,7 +55,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
           <h3>Actualizar Pedido O.P. #{orden.id}</h3>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="edit-order-form">
           {canEditCosto && (
             <div className="form-group">
               <label>COSTO DEL PEDIDO</label>
@@ -77,7 +78,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
             </div>
           )}
           {canEditTela && (
-            <div className="form-group">
+            <div className="form-group full-width">
               <label>Estado de Tela</label>
               <select
                 name="tela"
@@ -95,9 +96,18 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
               )}
             </div>
           )}
-          <button type="submit" className="modal-submit" disabled={isLoading || (canEditTela && !canEditEstado && telaLockedForVendedor)}>
-            {isLoading ? 'Actualizando...' : 'Actualizar Pedido'}
-          </button>
+          <div className="edit-order-modal-actions">
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isLoading || (canEditTela && !canEditEstado && telaLockedForVendedor)}
+            >
+              {isLoading ? 'Guardando...' : 'Actualizar Pedido'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -112,11 +122,28 @@ const OrdenesPage = () => {
   const navigate = useNavigate();
 
   const [filteredOrdenes, setFilteredOrdenes] = useState([]);
+  const [baseOrdenes, setBaseOrdenes] = useState([]); // Base para extraer vendedores activos
   const [vendedores, setVendedores] = useState([]);
-  const [selectedProveedor, setSelectedProveedor] = useState('');
-  const [selectedVendedor, setSelectedVendedor] = useState('');
-  const [selectedEstado, setSelectedEstado] = useState('en_proceso');
-  const [selectedExhibicion, setSelectedExhibicion] = useState('');
+
+  // Estados de Filtros Multi-Select
+  const [selectedProveedores, setSelectedProveedores] = useState([]);
+  const [isProveedoresOpen, setIsProveedoresOpen] = useState(false);
+  const proveedoresRef = useRef(null);
+  const [hasInitializedProveedores, setHasInitializedProveedores] = useState(false);
+
+  const [selectedVendedores, setSelectedVendedores] = useState([]);
+  const [isVendedoresOpen, setIsVendedoresOpen] = useState(false);
+  const vendedoresRef = useRef(null);
+  const [hasInitializedVendedores, setHasInitializedVendedores] = useState(false);
+
+  const [selectedEstados, setSelectedEstados] = useState(['en_proceso']);
+  const [isEstadosOpen, setIsEstadosOpen] = useState(false);
+  const estadosRef = useRef(null);
+
+  const [selectedExhibiciones, setSelectedExhibiciones] = useState(['true', 'false']);
+  const [isExhibicionesOpen, setIsExhibicionesOpen] = useState(false);
+  const exhibicionesRef = useRef(null);
+
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderTelas, setOrderTelas] = useState([]);
@@ -195,28 +222,78 @@ const OrdenesPage = () => {
     fetchVendedores();
   }, [token]);
 
+  // Lógica para baseOrdenes y vendedoresActivos
+  useEffect(() => {
+    if (!user) return;
+    const fetchBaseOrdenes = async () => {
+      try {
+        const params = { ordering: '-id' };
+        if (selectedEstados.length > 0) params.estado = selectedEstados.join(',');
+        else params.estado = 'ninguno_imposible';
+        
+        if (selectedProveedores.length > 0) params.id_proveedor = selectedProveedores.join(',');
+        else if (hasInitializedProveedores) params.id_proveedor = 'ninguno_imposible';
+
+        if (selectedExhibiciones.length === 1) params.es_exhibicion = selectedExhibiciones[0];
+        
+        const response = await API.get(`/listar-pedidos/`, { params });
+        let fetched = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
+        setBaseOrdenes(fetched);
+      } catch (error) {
+        console.error("Error base orders", error);
+        setBaseOrdenes([]);
+      }
+    };
+    fetchBaseOrdenes();
+  }, [selectedEstados, selectedProveedores, selectedExhibiciones, token, user, hasInitializedProveedores]);
+
+  const vendedoresActivos = React.useMemo(() => {
+    const sellersMap = new Map();
+    baseOrdenes.forEach(orden => {
+      if (orden.vendedor) {
+        sellersMap.set(orden.vendedor.toLowerCase(), true);
+      }
+    });
+    return vendedores.filter(v => v.first_name && sellersMap.has(v.first_name.toLowerCase()));
+  }, [baseOrdenes, vendedores]);
+
+  useEffect(() => {
+    if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
+      setSelectedVendedores(vendedoresActivos.map(v => v.id));
+      setHasInitializedVendedores(true);
+    }
+  }, [vendedoresActivos, hasInitializedVendedores]);
+
+  useEffect(() => {
+    if (proveedores.length > 0 && !hasInitializedProveedores) {
+      setSelectedProveedores(proveedores.map(p => p.id));
+      setHasInitializedProveedores(true);
+    }
+  }, [proveedores, hasInitializedProveedores]);
+
   useEffect(() => {
     if (!user) return;
 
     const fetchOrdenes = async () => {
       setIsLoading(true);
       try {
-        const params = {
-          id_proveedor: selectedProveedor,
-          id_vendedor: selectedVendedor,
-          estado: selectedEstado,
-          es_exhibicion: selectedExhibicion,
-          ordering: '-id',
-        };
+        const params = { ordering: '-id' };
 
-        Object.keys(params).forEach(key => !params[key] && delete params[key]);
+        if (selectedEstados.length > 0) params.estado = selectedEstados.join(',');
+        else params.estado = 'ninguno_imposible';
 
-        const response = await API.get(`/listar-pedidos/`, {
-          params
-        });
+        if (selectedProveedores.length > 0) params.id_proveedor = selectedProveedores.join(',');
+        else if (hasInitializedProveedores) params.id_proveedor = 'ninguno_imposible';
 
+        if (user?.role !== 'vendedor') {
+          if (selectedVendedores.length > 0) params.id_vendedor = selectedVendedores.join(',');
+          else if (hasInitializedVendedores) params.id_vendedor = '-1';
+        }
+
+        if (selectedExhibiciones.length === 1) params.es_exhibicion = selectedExhibiciones[0];
+
+        const response = await API.get(`/listar-pedidos/`, { params });
         let fetchedOrdenes = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
-
         setFilteredOrdenes(fetchedOrdenes);
 
       } catch (error) {
@@ -228,9 +305,47 @@ const OrdenesPage = () => {
     };
 
     fetchOrdenes();
-  }, [selectedProveedor, selectedVendedor, selectedEstado, selectedExhibicion, token, user]);
+  }, [selectedProveedores, selectedVendedores, selectedEstados, selectedExhibiciones, token, user, hasInitializedProveedores, hasInitializedVendedores]);
 
 
+
+  // Toggles and handlers
+  const toggleProveedor = (provId) => {
+    setSelectedProveedores(prev => prev.includes(provId) ? prev.filter(p => p !== provId) : [...prev, provId]);
+  };
+  const selectAllProveedores = () => {
+    setSelectedProveedores(prev => prev.length === proveedores.length ? [] : proveedores.map(p => p.id));
+  };
+  
+  const toggleVendedor = (vendId) => {
+    setSelectedVendedores(prev => prev.includes(vendId) ? prev.filter(v => v !== vendId) : [...prev, vendId]);
+  };
+  const selectAllVendedores = () => {
+    setSelectedVendedores(prev => prev.length === vendedoresActivos.length ? [] : vendedoresActivos.map(v => v.id));
+  };
+  
+  const toggleEstado = (estado) => {
+    setSelectedEstados(prev => prev.includes(estado) ? prev.filter(e => e !== estado) : [...prev, estado]);
+  };
+  const selectAllEstados = () => {
+    const validEstados = estados.filter(e => e.value !== '').map(e => e.value);
+    setSelectedEstados(prev => prev.length === validEstados.length ? [] : validEstados);
+  };
+
+  const toggleExhibicion = (val) => {
+    setSelectedExhibiciones(prev => prev.includes(val) ? prev.filter(e => e !== val) : [...prev, val]);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (proveedoresRef.current && !proveedoresRef.current.contains(event.target)) setIsProveedoresOpen(false);
+      if (vendedoresRef.current && !vendedoresRef.current.contains(event.target)) setIsVendedoresOpen(false);
+      if (estadosRef.current && !estadosRef.current.contains(event.target)) setIsEstadosOpen(false);
+      if (exhibicionesRef.current && !exhibicionesRef.current.contains(event.target)) setIsExhibicionesOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleExpandOrder = async (orderId) => {
     if (expandedOrderId === orderId) {
@@ -374,33 +489,93 @@ const OrdenesPage = () => {
   return (
     <div className="page-container">
       {/* ... (código JSX sin cambios hasta el modal) ... */}
-      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
-          <div className="o-select-pill">
-            <select value={selectedProveedor} onChange={(e) => { setSelectedProveedor(e.target.value); }} disabled={isLoadingProveedores}>
-              <option value="">{isLoadingProveedores ? "Cargando proveedores..." : "Proveedor: Todos"}</option>
-              {!isLoadingProveedores && Array.isArray(proveedores) && proveedores.map((prov) => (<option key={prov.id} value={prov.id}>{prov.nombre_empresa}</option>))}
-            </select>
+      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1, gap: '0.75rem', display: 'flex', alignItems: 'center' }}>
+          <div className="v-multi-select-container" ref={proveedoresRef}>
+            <button type="button" className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`} onClick={() => setIsProveedoresOpen(prev => !prev)}>
+              <span>{selectedProveedores.length === 0 ? 'Proveedor: Ninguno' : selectedProveedores.length === proveedores.length ? 'Proveedor: Todos' : `Proveedores (${selectedProveedores.length})`}</span>
+              <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+            </button>
+            {isProveedoresOpen && (
+              <div className="v-multi-select-popover">
+                <div className="v-popover-header">
+                  <span className="v-popover-title">Filtrar Proveedor</span>
+                  <button type="button" className="v-popover-action-btn" onClick={selectAllProveedores}>{selectedProveedores.length === proveedores.length ? 'Ninguno' : 'Todos'}</button>
+                </div>
+                {proveedores.map(p => (
+                  <label key={p.id} className="v-popover-item">
+                    <input type="checkbox" checked={selectedProveedores.includes(p.id)} onChange={() => toggleProveedor(p.id)} />
+                    <span>{p.nombre_empresa}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
+
           {hasPermission('VER_TODAS_ORDENES') && (
-            <div className="o-select-pill">
-              <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
-                <option value="">Vendedor: Todos</option>
-                {vendedores.map((vendedor) => (<option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>))}
-              </select>
+            <div className="v-multi-select-container" ref={vendedoresRef}>
+              <button type="button" className={`v-multi-select-btn ${selectedVendedores.length > 0 ? 'active-filter' : ''} ${isVendedoresOpen ? 'open' : ''}`} onClick={() => setIsVendedoresOpen(prev => !prev)}>
+                <span>{selectedVendedores.length === 0 ? 'Vendedor: Ninguno' : selectedVendedores.length === vendedoresActivos.length ? 'Vendedor: Todos' : `Vendedores (${selectedVendedores.length})`}</span>
+                <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+              </button>
+              {isVendedoresOpen && (
+                <div className="v-multi-select-popover">
+                  <div className="v-popover-header">
+                    <span className="v-popover-title">Filtrar Vendedor</span>
+                    <button type="button" className="v-popover-action-btn" onClick={selectAllVendedores}>{selectedVendedores.length === vendedoresActivos.length ? 'Ninguno' : 'Todos'}</button>
+                  </div>
+                  {vendedoresActivos.map(v => (
+                    <label key={v.id} className="v-popover-item">
+                      <input type="checkbox" checked={selectedVendedores.includes(v.id)} onChange={() => toggleVendedor(v.id)} />
+                      <span>{v.first_name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          <div className="o-select-pill">
-            <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
-              {estados.map((estado) => (<option key={estado.value} value={estado.value}>{estado.label === 'Todos' ? 'Estado: Todos' : estado.label}</option>))}
-            </select>
+
+          <div className="v-multi-select-container" ref={estadosRef}>
+            <button type="button" className={`v-multi-select-btn ${selectedEstados.length > 0 ? 'active-filter' : ''} ${isEstadosOpen ? 'open' : ''}`} onClick={() => setIsEstadosOpen(prev => !prev)}>
+              <span>{selectedEstados.length === 0 ? 'Estado: Ninguno' : selectedEstados.length === estados.length - 1 ? 'Estado: Todos' : selectedEstados.length === 1 ? `Estado: ${estados.find(e => e.value === selectedEstados[0])?.label || ''}` : `Estados (${selectedEstados.length})`}</span>
+              <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+            </button>
+            {isEstadosOpen && (
+              <div className="v-multi-select-popover">
+                <div className="v-popover-header">
+                  <span className="v-popover-title">Filtrar Estado</span>
+                  <button type="button" className="v-popover-action-btn" onClick={selectAllEstados}>{selectedEstados.length === estados.length - 1 ? 'Ninguno' : 'Todos'}</button>
+                </div>
+                {estados.filter(e => e.value !== '').map(e => (
+                  <label key={e.value} className="v-popover-item">
+                    <input type="checkbox" checked={selectedEstados.includes(e.value)} onChange={() => toggleEstado(e.value)} />
+                    <span>{e.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="o-select-pill">
-            <select value={selectedExhibicion} onChange={(e) => { setSelectedExhibicion(e.target.value); }}>
-              <option value="">Exhibición: Todos</option>
-              <option value="true">Sí (Exhibición)</option>
-              <option value="false">No (Exhibición)</option>
-            </select>
+
+          <div className="v-multi-select-container" ref={exhibicionesRef}>
+            <button type="button" className={`v-multi-select-btn ${selectedExhibiciones.length > 0 ? 'active-filter' : ''} ${isExhibicionesOpen ? 'open' : ''}`} onClick={() => setIsExhibicionesOpen(prev => !prev)}>
+              <span>{selectedExhibiciones.length === 0 ? 'Exhibición: Ninguno' : selectedExhibiciones.length === 2 ? 'Exhibición: Todas' : selectedExhibiciones.includes('true') ? 'Exhibición: Sí' : 'Exhibición: No'}</span>
+              <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+            </button>
+            {isExhibicionesOpen && (
+              <div className="v-multi-select-popover">
+                <div className="v-popover-header">
+                  <span className="v-popover-title">Filtrar Exhibición</span>
+                </div>
+                <label className="v-popover-item">
+                  <input type="checkbox" checked={selectedExhibiciones.includes('true')} onChange={() => toggleExhibicion('true')} />
+                  <span>Sí (Exhibición)</span>
+                </label>
+                <label className="v-popover-item">
+                  <input type="checkbox" checked={selectedExhibiciones.includes('false')} onChange={() => toggleExhibicion('false')} />
+                  <span>No (Exhibición)</span>
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
@@ -481,128 +656,166 @@ const OrdenesPage = () => {
                       <tr className="expanded-row">
                         <td colSpan={hasPermission('VER_COSTOS_ORDEN') ? 12 : 11}>
                           {loadingDetails ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
-                              <div className="loader"></div>
+                            <div className="orden-expanded-loader">
+                              <div className="orden-loader-spinner"></div>
+                              <p className="loader-text">Cargando detalles de la orden...</p>
                             </div>
-                          ) : errorMessage ? <div className="error-cell">{errorMessage}</div> : (
-                          <div className="details-view-wrapper">
-                                <>
-                                  {/* Columna izquierda: resumen de la orden */}
-                                  <div className="order-preview">
-                                    <div className="preview-header">
-                                      <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
-                                      <div className="numPedido">
-                                        <h2>Orden de Pedido</h2>
-                                        <p className="numeroOP">No. {orden.id}</p>
-                                      </div>
-                                    </div>
-                                    <div className="preview-info">
-                                      <div className="info-column">
-                                        <p><strong>Proveedor:</strong> {orden.proveedor_nombre}</p>
-                                        <p><strong>Vendedor:</strong> {orden.vendedor}</p>
-                                        <p><strong>Orden de compra:</strong> {orden.venta || orden.orden_venta}</p>
-                                      </div>
-                                      <div className="info-column">
-                                        <p><strong>Fecha pedido:</strong> {formatDate(orden.fecha_pedido)}</p>
-                                        <p><strong>Fecha entrega:</strong> {formatDate(orden.fecha_esperada)}</p>
-                                      </div>
-                                      {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
-                                        <button
-                                          className="btn-editar-pedido btn-editar-pedido--disabled"
-                                          disabled
-                                          title="Solo el administrador puede editar órdenes anuladas"
-                                        >
-                                          <FaEdit /> Editar
-                                        </button>
-                                      ) : (
-                                        (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
-                                            <button className="btn-editar-pedido" onClick={() => openEditModal(orden)} title="Editar pedido">
-                                              <FaEdit /> Editar
-                                            </button>
-                                        )
-                                      )}
-                                    </div>
-                                    <h3 className="preview-productos-title">Productos:</h3>
-                                    <table className="preview-productos-table">
-                                      <thead>
-                                        <tr>
-                                          <th>Cantidad</th>
-                                          <th>Referencia</th>
-                                          <th>Descripción</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {Array.isArray(orderDetails) && orderDetails.map((p, i) => (
-                                          <tr key={i}>
-                                            <td>{p.cantidad}</td>
-                                            <td>{p.referencia}</td>
-                                            <td className="desc-preview">{p.especificaciones}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                    <div className="preview-nota">
-                                      <h3>Observación:</h3>
-                                      <p>{orden.observacion || 'Sin observaciones'}</p>
-                                    </div>
-                                  </div>
-
-                                  {/* Columna derecha: listado de pedidos de tela */}
-                                  <div className="telas-preview">
-                                    <div className="telas-preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span className="telas-preview-icon">🧵</span>
-                                        <h4 style={{ margin: 0 }}>Pedidos de Tela</h4>
-                                      </div>
-                                      <button 
-                                        type="button" 
-                                        className="btn-ghost-primary" 
-                                        onClick={() => setIsTelaModalOpen(true)}
-                                        style={{ padding: '0.5rem', fontSize: '0.9rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                        title="Crear Nuevo Pedido de Tela"
-                                      >
-                                        <FaPlus />
+                          ) : errorMessage ? (
+                            <div className="error-message-container" style={{ padding: '2rem', textAlign: 'center' }}>
+                              <p className="error-text">{errorMessage}</p>
+                              <button className="btn-secondary" onClick={() => handleExpandOrder(orden.id)}>
+                                Reintentar Carga
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="orden-details-view">
+                              {/* Card 1: Información de la Orden */}
+                              <div className="orden-card orden-info-card">
+                                <div className="orden-card-header">
+                                  <h4>Información de la Orden</h4>
+                                  {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
+                                    <button
+                                      className="btn-editar-pedido btn-editar-pedido--disabled"
+                                      disabled
+                                      title="Solo el administrador puede editar órdenes anuladas"
+                                    >
+                                      <FaEdit /> Editar
+                                    </button>
+                                  ) : (
+                                    (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
+                                      <button className="btn-editar-pedido" onClick={() => openEditModal(orden)} title="Editar pedido">
+                                        <FaEdit /> Editar
                                       </button>
-                                    </div>
-                                    {orderTelas.length === 0 ? (
-                                      <p className="telas-empty">No hay pedidos de tela registrados para esta orden.</p>
-                                    ) : (
-                                      <div className="telas-list">
-                                        {orderTelas.map((pt) => (
-                                          <div className="tela-card" key={pt.id}>
-                                            <div className="tela-card-top">
-                                              <span className="tela-card-id">PT #{pt.id}</span>
-                                              <span
-                                                className={`status-badge tela-estado-badge ${pt.estado?.toLowerCase().replace(/ /g, '-')}`}
-                                                onClick={() => setTelaEstadoModal({ open: true, pedidoId: pt.id, currentEstado: pt.estado, newEstado: pt.estado })}
-                                                style={{ cursor: 'pointer' }}
-                                                title="Clic para editar estado"
-                                              >
-                                                {pt.estado} ✏️
-                                              </span>
-                                            </div>
-                                            <p className="tela-card-proveedor">{pt.proveedor}</p>
-                                            {pt.fecha_creacion && (
-                                              <p className="tela-card-fecha">{formatDate(pt.fecha_creacion)}</p>
-                                            )}
-                                            {pt.detalles && pt.detalles.length > 0 && (
-                                              <ul className="tela-detalles-list">
-                                                {pt.detalles.map((dt, i) => (
-                                                  <li key={i}>
-                                                    <span className="tela-nombre">{dt.tela}</span>
-                                                    <span className="tela-cantidad">×{dt.cantidad}</span>
-                                                  </li>
-                                                ))}
-                                              </ul>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
+                                    )
+                                  )}
+                                </div>
+                                <div className="orden-info-grid">
+                                  <div className="info-item">
+                                    <span className="label">O.P. N°:</span>
+                                    <span className="value font-mono">#{orden.id}</span>
                                   </div>
-                                </>
-                           </div>
-                           )}
+                                  <div className="info-item">
+                                    <span className="label">Proveedor:</span>
+                                    <span className="value">{orden.proveedor_nombre || '—'}</span>
+                                  </div>
+                                  <div className="info-item">
+                                    <span className="label">Vendedor:</span>
+                                    <span className="value">{orden.vendedor || '—'}</span>
+                                  </div>
+                                  <div className="info-item">
+                                    <span className="label">O.C. / Venta:</span>
+                                    <span className="value font-mono">{orden.venta || orden.orden_venta || '—'}</span>
+                                  </div>
+                                  <div className="info-item">
+                                    <span className="label">Fecha Pedido:</span>
+                                    <span className="value">{formatDate(orden.fecha_pedido)}</span>
+                                  </div>
+                                  <div className="info-item">
+                                    <span className="label">Fecha Entrega:</span>
+                                    <span className="value">{formatDate(orden.fecha_esperada)}</span>
+                                  </div>
+                                  {hasPermission('VER_COSTOS_ORDEN') && (
+                                    <div className="info-item">
+                                      <span className="label">Costo Total:</span>
+                                      <span className="value font-mono text-primary">{formatNumber(orden.costo)}</span>
+                                    </div>
+                                  )}
+                                  <div className="info-item full-width">
+                                    <span className="label">Observación:</span>
+                                    <span className="value obs-box">{orden.observacion || 'Sin observaciones'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Card 2: Productos Solicitados */}
+                              <div className="orden-card orden-productos-card">
+                                <h4>Productos Solicitados</h4>
+                                <div className="orden-table-wrapper">
+                                  <table className="orden-subtable">
+                                    <thead>
+                                      <tr>
+                                        <th style={{ width: '70px', textAlign: 'center' }}>Cant.</th>
+                                        <th style={{ width: '130px' }}>Referencia</th>
+                                        <th>Especificaciones / Descripción</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {Array.isArray(orderDetails) && orderDetails.length > 0 ? (
+                                        orderDetails.map((p, i) => (
+                                          <tr key={i}>
+                                            <td className="text-center">
+                                              <span className="product-qty-badge">x{p.cantidad}</span>
+                                            </td>
+                                            <td>
+                                              <span className="product-ref-pill">{p.referencia}</span>
+                                            </td>
+                                            <td className="desc-preview">{p.especificaciones || '—'}</td>
+                                          </tr>
+                                        ))
+                                      ) : (
+                                        <tr>
+                                          <td colSpan="3" className="text-muted text-center" style={{ padding: '1.5rem' }}>Sin productos registrados.</td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+
+                              {/* Card 3: Pedidos de Tela (PT) */}
+                              <div className="orden-card orden-telas-card">
+                                <div className="orden-card-header">
+                                  <div className="card-header-left">
+                                    <span className="icon">🧵</span>
+                                    <h4>Pedidos de Tela</h4>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="card-header-action"
+                                    onClick={() => setIsTelaModalOpen(true)}
+                                    title="Crear Nuevo Pedido de Tela"
+                                  >
+                                    <FaPlus />
+                                  </button>
+                                </div>
+                                {orderTelas.length === 0 ? (
+                                  <p className="text-muted text-center" style={{ padding: '1.5rem 0' }}>No hay pedidos de tela asociados.</p>
+                                ) : (
+                                  <div className="telas-list">
+                                    {orderTelas.map((pt) => (
+                                      <div className="tela-card" key={pt.id}>
+                                        <div className="tela-card-top">
+                                          <span className="tela-card-id">PT #{pt.id}</span>
+                                          <span
+                                            className={`status-badge tela-estado-badge ${pt.estado?.toLowerCase().replace(/ /g, '-')}`}
+                                            onClick={() => setTelaEstadoModal({ open: true, pedidoId: pt.id, currentEstado: pt.estado, newEstado: pt.estado })}
+                                            style={{ cursor: 'pointer' }}
+                                            title="Clic para editar estado"
+                                          >
+                                            {pt.estado} ✏️
+                                          </span>
+                                        </div>
+                                        <p className="tela-card-proveedor"><strong>Proveedor:</strong> {pt.proveedor}</p>
+                                        {pt.fecha_creacion && (
+                                          <p className="tela-card-fecha">{formatDate(pt.fecha_creacion)}</p>
+                                        )}
+                                        {pt.detalles && pt.detalles.length > 0 && (
+                                          <ul className="tela-detalles-list">
+                                            {pt.detalles.map((dt, i) => (
+                                              <li key={i}>
+                                                <span className="tela-nombre">{dt.tela}</span>
+                                                <span className="tela-cantidad font-mono">×{dt.cantidad}</span>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
@@ -663,56 +876,54 @@ const OrdenesPage = () => {
 
                 {expandedOrderId === orden.id && (
                   <div className="mobile-details-container">
-                    <div className="details-view-wrapper">
-                      {loadingDetails ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
-                              <div className="loader"></div>
-                            </div>
-                          ) :
-                        errorMessage ? <div className="error-message">{errorMessage}</div> :
-                          orderDetails ? (
-                            <div className="mobile-expanded-content">
-                              {/* Simplified Mobile Expanded Content */}
-                              <div className="mobile-section">
-                                <h4>Información</h4>
-                                <p><strong>Venta:</strong> {orden.venta || orden.orden_venta}</p>
-                                <p><strong>Observación:</strong> {orden.observacion || 'Ninguna'}</p>
-                                {hasPermission('VER_COSTOS_ORDEN') && (
-                                    <p><strong>Costo:</strong> {formatNumber(orden.costo)}</p>
-                                )}
-                              </div>
+                    {loadingDetails ? (
+                      <div className="orden-expanded-loader" style={{ padding: '2rem' }}>
+                        <div className="orden-loader-spinner"></div>
+                        <p className="loader-text">Cargando detalles...</p>
+                      </div>
+                    ) : errorMessage ? (
+                      <div className="error-message">{errorMessage}</div>
+                    ) : (
+                      <div className="mobile-expanded-content">
+                        <div className="orden-card">
+                          <h4>Información</h4>
+                          <p><strong>Venta:</strong> {orden.venta || orden.orden_venta || '—'}</p>
+                          <p><strong>Observación:</strong> {orden.observacion || 'Ninguna'}</p>
+                          {hasPermission('VER_COSTOS_ORDEN') && (
+                            <p><strong>Costo:</strong> <span className="font-mono text-primary">{formatNumber(orden.costo)}</span></p>
+                          )}
+                        </div>
 
-                              <div className="mobile-section">
-                                <h4>Productos</h4>
-                                <ul className="mobile-products-list">
-                                  {Array.isArray(orderDetails) && orderDetails.map((p, i) => (
-                                    <li key={i}>
-                                      <strong>{p.referencia}</strong> (x{p.cantidad})
-                                      <br />
-                                      <small>{p.especificaciones}</small>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
+                        <div className="orden-card">
+                          <h4>Productos Solicitados</h4>
+                          <ul className="mobile-products-list">
+                            {Array.isArray(orderDetails) && orderDetails.map((p, i) => (
+                              <li key={i}>
+                                <strong>{p.referencia}</strong> (x{p.cantidad})
+                                <br />
+                                <small>{p.especificaciones}</small>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
 
-                              {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
-                                <button
-                                  className="btn-editar-pedido btn-editar-pedido--disabled btn-full-width"
-                                  disabled
-                                  title="Solo el administrador puede editar órdenes anuladas"
-                                >
-                                  <FaEdit /> Editar
-                                </button>
-                              ) : (
-                                (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
-                                    <button className="btn-editar-pedido btn-full-width" onClick={() => openEditModal(orden)}>
-                                      <FaEdit /> Editar
-                                    </button>
-                                )
-                              )}
-                            </div>
-                          ) : <div className="error-message">No se pudieron cargar los detalles.</div>}
-                    </div>
+                        {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
+                          <button
+                            className="btn-editar-pedido btn-editar-pedido--disabled btn-full-width"
+                            disabled
+                            title="Solo el administrador puede editar órdenes anuladas"
+                          >
+                            <FaEdit /> Editar
+                          </button>
+                        ) : (
+                          (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
+                            <button className="btn-editar-pedido btn-full-width" onClick={() => openEditModal(orden)}>
+                              <FaEdit /> Editar Orden
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

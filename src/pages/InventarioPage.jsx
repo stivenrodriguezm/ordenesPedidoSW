@@ -1087,9 +1087,11 @@ function InventarioPage() {
                     <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '70px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '70px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
                     {hasPermission('VER_COSTOS_INVENTARIO') && showCostoCol && <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>}
-                    <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-text" style={{ width: '20px', margin: '0 auto' }}></div></td>
+                    {viewMode !== 'products_only' && <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-text" style={{ width: '20px', margin: '0 auto' }}></div></td>}
                 </tr>
             ));
         }
@@ -1644,8 +1646,13 @@ function InventarioPage() {
 
                                                     {/* ROW 4: Telas y Cueros (Costos Adicionales) */}
                                                     <div style={{ gridColumn: 'span 12', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.65rem', marginTop: '0.3rem' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>🧵 Telas y Cueros (Costos Adicionales)</span>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                🧵 Telas y Cueros (Costos Adicionales)
+                                                                <span style={{ fontSize: '0.65rem', fontWeight: 400, color: '#64748b', fontStyle: 'italic', marginLeft: '0.2rem' }}>
+                                                                    — Usar punto (.) para decimales, ej: 2.5
+                                                                </span>
+                                                            </span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setForm(prev => {
@@ -1671,17 +1678,17 @@ function InventarioPage() {
                                                                         <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#fff', padding: '0.3rem', borderRadius: '5px', border: '1px solid #cbd5e1' }}>
                                                                             <select value={tc.tipo || 'tela'}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff' }}>
+                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}>
                                                                                 <option value="tela">Tela (m)</option>
                                                                                 <option value="cuero">Cuero (dm)</option>
                                                                             </select>
                                                                             <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ flex: 1, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                                style={{ flex: 1, minWidth: 0, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
                                                                             <input type="text" placeholder="Color" value={tc.color || ''}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ width: '70px', padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                                            <div style={{ position: 'relative', width: '88px' }}>
+                                                                                style={{ flex: 1, minWidth: 0, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                            <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
                                                                                 <span style={{ position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
                                                                                 <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
                                                                                     onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; }); }}
@@ -2083,66 +2090,69 @@ function InventarioPage() {
                                     </div>
                                 )}
 
-                                {/* ── TELAS Y CUEROS ─────────────────────────────────── */}
-                                <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0369a1' }}>
-                                            🧵 Telas y Cueros (Costos Adicionales)
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, telas_cueros: [...(prev.form.telas_cueros || []), { tipo: 'tela', referencia: '', color: '', unidad_medida: 'metro', costo_unidad: '', cantidad: '' }] } }))}
-                                            style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                                        >
-                                            <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
-                                        </button>
-                                    </div>
-
-                                    {(!itemEditModal.form.telas_cueros || itemEditModal.form.telas_cueros.length === 0) ? (
-                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: '0.5rem' }}>Sin telas o cueros registrados.</div>
-                                    ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                                            {itemEditModal.form.telas_cueros.map((tc, tcIdx) => {
-                                                const isCuero = tc.tipo === 'cuero';
-                                                const unitLabel = isCuero ? 'dm' : 'm';
-                                                const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
-                                                return (
-                                                    <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f8fafc', padding: '0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                                        <select
-                                                            value={tc.tipo || 'tela'}
-                                                            onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                            style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff' }}
-                                                        >
-                                                            <option value="tela">Tela (m)</option>
-                                                            <option value="cuero">Cuero (dm)</option>
-                                                        </select>
-                                                        <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
-                                                            onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                            style={{ flex: 1, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                        <input type="text" placeholder="Color" value={tc.color || ''}
-                                                            onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                            style={{ width: '75px', padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                        <div style={{ position: 'relative', width: '90px' }}>
-                                                            <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
-                                                            <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
-                                                                onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; }); }}
-                                                                style={{ width: '100%', padding: '0.28rem 0.28rem 0.28rem 1rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                        </div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
-                                                            <input type="number" step="0.1" min="0" placeholder={isCuero ? 'dm' : 'm'} value={tc.cantidad || ''}
-                                                                onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], cantidad: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                                style={{ width: '60px', padding: '0.28rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
-                                                        </div>
-                                                        {tcSub > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>= {formatCOP(tcSub)}</span>}
-                                                        <button type="button" onClick={() => setItemEditModal(prev => { const tcs = prev.form.telas_cueros.filter((_, i) => i !== tcIdx); return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem', fontSize: '0.78rem' }} title="Quitar">
-                                                            <FaTimes />
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
+                                    {/* ── TELAS Y CUEROS ─────────────────────────────────── */}
+                                    <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                            <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                🧵 Telas y Cueros (Costos Adicionales)
+                                                <span style={{ fontSize: '0.65rem', fontWeight: '400', textTransform: 'none', color: '#64748b', fontStyle: 'italic' }}>
+                                                    — Usar punto (.) para decimales, ej: 2.5
+                                                </span>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, telas_cueros: [...(prev.form.telas_cueros || []), { tipo: 'tela', referencia: '', color: '', unidad_medida: 'metro', costo_unidad: '', cantidad: '' }] } }))}
+                                                style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                            >
+                                                <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
+                                            </button>
                                         </div>
+
+                                        {(!itemEditModal.form.telas_cueros || itemEditModal.form.telas_cueros.length === 0) ? (
+                                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: '0.5rem' }}>Sin telas o cueros registrados.</div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                                                {itemEditModal.form.telas_cueros.map((tc, tcIdx) => {
+                                                    const isCuero = tc.tipo === 'cuero';
+                                                    const unitLabel = isCuero ? 'dm' : 'm';
+                                                    const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
+                                                    return (
+                                                        <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f8fafc', padding: '0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                                            <select
+                                                                value={tc.tipo || 'tela'}
+                                                                onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                                style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}
+                                                            >
+                                                                <option value="tela">Tela (m)</option>
+                                                                <option value="cuero">Cuero (dm)</option>
+                                                            </select>
+                                                            <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
+                                                                onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                                style={{ flex: '1 1 0%', minWidth: 0, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                            <input type="text" placeholder="Color" value={tc.color || ''}
+                                                                onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                                style={{ flex: '1 1 0%', minWidth: 0, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                            <div style={{ position: 'relative', flex: '1 1 0%', minWidth: 0 }}>
+                                                                <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
+                                                                <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
+                                                                    onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; }); }}
+                                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.28rem 0.28rem 0.28rem 1rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', width: '68px', flexShrink: 0 }}>
+                                                                <input type="text" inputMode="decimal" placeholder={isCuero ? 'dm' : 'm'} title="Usar punto (.) para decimales, ej: 2.5" value={tc.cantidad || ''}
+                                                                    onChange={e => { const val = e.target.value.replace(',', '.'); setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], cantidad: val }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; }); }}
+                                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.28rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                            </div>
+                                                            {tcSub > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>= {formatCOP(tcSub)}</span>}
+                                                            <button type="button" onClick={() => setItemEditModal(prev => { const tcs = prev.form.telas_cueros.filter((_, i) => i !== tcIdx); return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
+                                                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem', fontSize: '0.78rem', flexShrink: 0 }} title="Quitar">
+                                                                <FaTimes />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                     )}
                                 </div>
 

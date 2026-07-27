@@ -168,12 +168,14 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }
   if (!isOpen) return null;
   return (
     <Modal show={isOpen} onClose={onClose} title={title}>
-      <div className="confirm-content">
+      <div className="rc-confirm-modal-body">
         {children}
       </div>
-      <div className="modal-actions">
-        <button className="btn-secondary" onClick={onClose} disabled={isLoading}>Cancelar</button>
-        <button className="btn-primary" onClick={onConfirm} disabled={isLoading}>
+      <div className="rc-confirm-modal-actions">
+        <button className="o-btn-secondary-glow" onClick={onClose} disabled={isLoading}>
+          Cancelar
+        </button>
+        <button className="o-btn-primary-glow" onClick={onConfirm} disabled={isLoading}>
           {isLoading ? 'Confirmando...' : 'Confirmar Ingreso'}
         </button>
       </div>
@@ -210,6 +212,16 @@ const RecibosCaja = () => {
     const total = recibosData.reduce((sum, item) => sum + parseFloat(item.valor || 0), 0);
     const pending = recibosData.filter(item => item.estado === 'Pendiente').length;
     return { total, pending };
+  }, [recibosData]);
+
+  // --- Sorting: Mostrar pendientes primero, luego mantener orden por fecha/id ---
+  const sortedRecibosData = useMemo(() => {
+    return [...recibosData].sort((a, b) => {
+      const aPending = a.estado === 'Pendiente' ? 0 : 1;
+      const bPending = b.estado === 'Pendiente' ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
+      return 0;
+    });
   }, [recibosData]);
 
   const formatCurrency = (value) => {
@@ -430,8 +442,8 @@ const RecibosCaja = () => {
                     <td><div className="skeleton skeleton-text" style={{ width: '24px' }}></div></td>
                   </tr>
                 ))
-              ) : recibosData.length > 0 ? (
-                recibosData.map((item) => (
+              ) : sortedRecibosData.length > 0 ? (
+                sortedRecibosData.map((item) => (
                   <tr key={item.id} className="table-row-hover">
                     <td className="font-bold">#{item.id}</td>
                     <td className="text-muted">{formatDate(item.fecha)}</td>
@@ -473,8 +485,8 @@ const RecibosCaja = () => {
         <div className="mobile-transaction-list">
           {isLoading ? (
             <div className="loading-spinner"></div>
-          ) : recibosData.length > 0 ? (
-            recibosData.map((item) => (
+          ) : sortedRecibosData.length > 0 ? (
+            sortedRecibosData.map((item) => (
               <div className="transaction-card" key={item.id}>
                 <div className="card-left">
                   <PaymentIcon method={item.metodo_pago} />
@@ -527,19 +539,34 @@ const RecibosCaja = () => {
           title="Confirmar Ingreso"
           isLoading={isSubmitting}
         >
-          <div className="confirm-details">
-            <div className="detail-row">
-              <span>Recibo:</span>
-              <strong>#{selectedRecibo.id}</strong>
+          <div className="rc-confirm-container">
+            <div className="rc-confirm-row">
+              <span className="rc-confirm-label">N° Recibo</span>
+              <span className="rc-confirm-val font-mono">#{selectedRecibo.id}</span>
             </div>
-            <div className="detail-row">
-              <span>Valor:</span>
-              <strong className="highlight-value">{formatCurrency(selectedRecibo.valor)}</strong>
+            <div className="rc-confirm-row">
+              <span className="rc-confirm-label">Valor del Ingreso</span>
+              <span className="rc-confirm-val amount">{formatCurrency(selectedRecibo.valor)}</span>
             </div>
-            <div className="detail-row">
-              <span>Método:</span>
-              <span>{selectedRecibo.metodo_pago}</span>
+            <div className="rc-confirm-row">
+              <span className="rc-confirm-label">Método de Pago</span>
+              <span className="rc-confirm-val method">
+                <PaymentIcon method={selectedRecibo.metodo_pago} />
+                {selectedRecibo.metodo_pago || 'N/A'}
+              </span>
             </div>
+            {selectedRecibo.venta && (
+              <div className="rc-confirm-row">
+                <span className="rc-confirm-label">Venta Asociada</span>
+                <span className="rc-confirm-val">Venta #{selectedRecibo.venta}</span>
+              </div>
+            )}
+            {selectedRecibo.fecha && (
+              <div className="rc-confirm-row">
+                <span className="rc-confirm-label">Fecha</span>
+                <span className="rc-confirm-val">{selectedRecibo.fecha}</span>
+              </div>
+            )}
           </div>
         </ConfirmModal>
       )}

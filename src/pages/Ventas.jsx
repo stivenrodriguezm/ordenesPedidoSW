@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import API from '../services/api';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen, FaBoxOpen } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen, FaBoxOpen, FaChartBar, FaChartLine } from "react-icons/fa";
 import Modal from '../components/Modal';
 import AppNotification from '../components/AppNotification';
 import EditSaleModal from '../components/EditSaleModal';
@@ -47,10 +47,51 @@ const Ventas = () => {
         return `${defaultMonth + 1}-${defaultYear}`;
     };
 
-    const [selectedMonthYear, setSelectedMonthYear] = useState(getDefaultMonthYear());
-    const [selectedVendedor, setSelectedVendedor] = useState('');
-    const [selectedEstado, setSelectedEstado] = useState('');
-    const [selectedSede, setSelectedSede] = useState('');
+    const [selectedDateFilter, setSelectedDateFilter] = useState({
+        mode: 'months',
+        periods: [getDefaultMonthYear()],
+        startDate: '',
+        endDate: ''
+    });
+    const [isDateOpen, setIsDateOpen] = useState(false);
+    const dateRef = useRef(null);
+    const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'entregado']);
+    const [isEstadosOpen, setIsEstadosOpen] = useState(false);
+    const estadosRef = useRef(null);
+    
+    const [selectedSedes, setSelectedSedes] = useState(['Lottus 1', 'Lottus 2']);
+    const [isSedesOpen, setIsSedesOpen] = useState(false);
+    const sedesRef = useRef(null);
+    const sedesOptions = ['Lottus 1', 'Lottus 2'];
+
+    const [selectedVendedores, setSelectedVendedores] = useState([]);
+    const [isVendedoresOpen, setIsVendedoresOpen] = useState(false);
+    const [hasInitializedVendedores, setHasInitializedVendedores] = useState(false);
+    const vendedoresRef = useRef(null);
+
+    const vendedoresActivos = React.useMemo(() => {
+        const sellersMap = new Map();
+        reportSales.forEach(venta => {
+            if (venta.vendedor) {
+                const vendId = typeof venta.vendedor === 'object' ? venta.vendedor.id : venta.vendedor;
+                if (vendId) sellersMap.set(vendId, true);
+            }
+            if (venta.vendedores_compartidos && venta.vendedores_compartidos.length > 0) {
+                venta.vendedores_compartidos.forEach(vc => {
+                    const vcId = typeof vc === 'object' ? vc.id : vc;
+                    if (vcId) sellersMap.set(vcId, true);
+                });
+            }
+        });
+        return vendedores.filter(v => sellersMap.has(v.id));
+    }, [reportSales, vendedores]);
+
+    useEffect(() => {
+        if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
+            setSelectedVendedores(vendedoresActivos.map(v => v.id));
+            setHasInitializedVendedores(true);
+        }
+    }, [vendedoresActivos, hasInitializedVendedores]);
 
 
 
@@ -172,21 +213,36 @@ const Ventas = () => {
             if (debouncedSearchTerm) {
                 params.search = debouncedSearchTerm;
             } else {
-                if (selectedMonthYear !== 'all') {
-                    const [month, year] = selectedMonthYear.split('-');
-                    params.month = month;
-                    params.year = year;
+                if (selectedDateFilter.mode === 'months') {
+                    if (!selectedDateFilter.periods.includes('all') && selectedDateFilter.periods.length > 0) {
+                        params.periods = selectedDateFilter.periods.join(',');
+                    }
+                } else if (selectedDateFilter.mode === 'range') {
+                    if (selectedDateFilter.startDate && selectedDateFilter.endDate) {
+                        params.start_date = selectedDateFilter.startDate;
+                        params.end_date = selectedDateFilter.endDate;
+                    }
                 }
                 const perms = usuario?.permissions || [];
                 const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
                 if (!canSeeAll) {
                     params.vendedor = usuario.id;
                 } else {
-                    params.vendedor = selectedVendedor;
+                    if (selectedVendedores.length > 0) {
+                        params.vendedor = selectedVendedores.join(',');
+                    } else if (hasInitializedVendedores) {
+                        params.vendedor = '-1';
+                    }
                 }
-                params.estado = selectedEstado;
-                if (selectedSede) {
-                    params.sede = selectedSede;
+                if (selectedEstados.length > 0) {
+                    params.estado = selectedEstados.join(',');
+                } else {
+                    params.estado = 'ninguno_imposible';
+                }
+                if (selectedSedes.length > 0) {
+                    params.sede = selectedSedes.join(',');
+                } else {
+                    params.sede = 'ninguna_imposible';
                 }
             }
             const response = await API.get(`/ventas/`, { params });
@@ -206,18 +262,25 @@ const Ventas = () => {
             console.error('Error cargando ventas:', error);
             setNotification({ message: 'Error al cargar las ventas.', type: 'error' });
             setVentas([]);
+            setTotalCount(0);
+            setTotalPages(1);
         } finally {
             setIsLoading(false);
         }
-    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado, selectedSede, setNotification, usuario]);
+    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, setNotification, usuario, hasInitializedVendedores]);
 
     const fetchReportSales = useCallback(async () => {
         try {
             const params = {};
-            if (selectedMonthYear !== 'all') {
-                const [month, year] = selectedMonthYear.split('-');
-                params.month = month;
-                params.year = year;
+            if (selectedDateFilter.mode === 'months') {
+                if (!selectedDateFilter.periods.includes('all') && selectedDateFilter.periods.length > 0) {
+                    params.periods = selectedDateFilter.periods.join(',');
+                }
+            } else if (selectedDateFilter.mode === 'range') {
+                if (selectedDateFilter.startDate && selectedDateFilter.endDate) {
+                    params.start_date = selectedDateFilter.startDate;
+                    params.end_date = selectedDateFilter.endDate;
+                }
             }
             const perms = usuario?.permissions || [];
             const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
@@ -235,7 +298,7 @@ const Ventas = () => {
             // Fail silently for the report, so the user can still see the list
             setReportSales([]);
         }
-    }, [selectedMonthYear, usuario]);
+    }, [selectedDateFilter, usuario]);
 
     useEffect(() => {
         setCurrentPage(1); // Reset to page 1 when filters change
@@ -273,7 +336,7 @@ const Ventas = () => {
     // Effect for Filters
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearchTerm, selectedMonthYear, selectedVendedor, selectedEstado, selectedSede]);
+    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes]);
 
     // Effect for Page Change & Initial Load
     useEffect(() => {
@@ -300,7 +363,109 @@ const Ventas = () => {
         setEstados(["pendiente", "entregado", "anulado"]);
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (estadosRef.current && !estadosRef.current.contains(event.target)) {
+                setIsEstadosOpen(false);
+            }
+            if (sedesRef.current && !sedesRef.current.contains(event.target)) {
+                setIsSedesOpen(false);
+            }
+            if (vendedoresRef.current && !vendedoresRef.current.contains(event.target)) {
+                setIsVendedoresOpen(false);
+            }
+            if (dateRef.current && !dateRef.current.contains(event.target)) {
+                setIsDateOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
+    const toggleEstado = (estadoVal) => {
+        setSelectedEstados(prev => {
+            if (prev.includes(estadoVal)) {
+                return prev.filter(e => e !== estadoVal);
+            } else {
+                return [...prev, estadoVal];
+            }
+        });
+    };
+
+    const selectAllEstados = () => {
+        if (selectedEstados.length === estados.length) {
+            setSelectedEstados([]);
+        } else {
+            setSelectedEstados([...estados]);
+        }
+    };
+
+    const toggleSede = (sedeVal) => {
+        setSelectedSedes(prev => {
+            if (prev.includes(sedeVal)) {
+                return prev.filter(s => s !== sedeVal);
+            } else {
+                return [...prev, sedeVal];
+            }
+        });
+    };
+
+    const selectAllSedes = () => {
+        if (selectedSedes.length === sedesOptions.length) {
+            setSelectedSedes([]);
+        } else {
+            setSelectedSedes([...sedesOptions]);
+        }
+    };
+
+    const togglePeriod = (periodVal) => {
+        setSelectedDateFilter(prev => {
+            const newPeriods = prev.periods.includes(periodVal)
+                ? prev.periods.filter(p => p !== periodVal)
+                : [...prev.periods, periodVal];
+            return { ...prev, mode: 'months', periods: newPeriods };
+        });
+    };
+
+    const selectAllPeriods = () => {
+        setSelectedDateFilter(prev => {
+            if (prev.periods.length === monthOptions.length) {
+                return { ...prev, mode: 'months', periods: [] };
+            } else {
+                return { ...prev, mode: 'months', periods: monthOptions.map(o => o.value) };
+            }
+        });
+    };
+    
+    const handleDateModeChange = (mode) => {
+        setSelectedDateFilter(prev => ({ ...prev, mode }));
+    };
+
+    const handleStartDateChange = (e) => {
+        setSelectedDateFilter(prev => ({ ...prev, startDate: e.target.value }));
+    };
+
+    const handleEndDateChange = (e) => {
+        setSelectedDateFilter(prev => ({ ...prev, endDate: e.target.value }));
+    };
+
+    const toggleVendedor = (vendId) => {
+        setSelectedVendedores(prev => {
+            if (prev.includes(vendId)) {
+                return prev.filter(id => id !== vendId);
+            } else {
+                return [...prev, vendId];
+            }
+        });
+    };
+
+    const selectAllVendedores = () => {
+        if (selectedVendedores.length === vendedoresActivos.length) {
+            setSelectedVendedores([]);
+        } else {
+            setSelectedVendedores(vendedoresActivos.map(v => v.id));
+        }
+    };
 
     // --- Handlers ---
     const handleExpandVenta = async (ventaId) => {
@@ -574,14 +739,24 @@ const Ventas = () => {
         XLSX.writeFile(wb, 'Ventas.xlsx');
     };
 
-    const formatReportTitle = (monthYear) => {
-        if (!monthYear || monthYear === 'all') {
-            return 'Todas las fechas';
+    const formatReportTitle = (dateFilter) => {
+        if (!dateFilter) return 'Histórico de Ventas';
+        
+        if (dateFilter.mode === 'months') {
+            if (dateFilter.periods.length === 0 || dateFilter.periods.includes('all')) {
+                return 'Histórico Completo';
+            }
+            if (dateFilter.periods.length > 1) {
+                return `Varios meses seleccionados (${dateFilter.periods.length})`;
+            }
+            const monthNamesFull = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const p = dateFilter.periods[0];
+            const [month, year] = p.split('-');
+            return `${monthNamesFull[parseInt(month, 10) - 1]} ${year}`;
+        } else {
+            if (!dateFilter.startDate || !dateFilter.endDate) return 'Rango Incompleto';
+            return `${dateFilter.startDate} a ${dateFilter.endDate}`;
         }
-        const [month, year] = monthYear.split('-');
-        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        const monthName = monthNames[parseInt(month, 10) - 1];
-        return `${monthName} ${year}`;
     };
 
     return (
@@ -592,27 +767,46 @@ const Ventas = () => {
                 onClose={() => setNotification({ message: '', type: '' })}
             />
             {usuario && (
-                <div className="sales-summary-report-wrapper">
-                    <div className="report-header">
-                        <h3>{formatReportTitle(selectedMonthYear)}</h3>
-                        <button className="btn-icon" onClick={() => setIsReportVisible(!isReportVisible)}>
-                            {isReportVisible ? <FaLockOpen /> : <FaLock />}
+                <div className={`sales-summary-report-wrapper ${isReportVisible ? 'expanded' : ''}`}>
+                    <div className="report-header" onClick={() => setIsReportVisible(!isReportVisible)}>
+                        <div className="report-header-left">
+                            <div className="report-header-icon-badge">
+                                <FaChartLine />
+                            </div>
+                            <div className="report-header-titles">
+                                <span className="report-header-subtitle">RESUMEN DE VENTAS</span>
+                                <h3 className="report-header-title">{formatReportTitle(selectedDateFilter)}</h3>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            className={`report-header-toggle-btn ${isReportVisible ? 'active' : ''}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsReportVisible(!isReportVisible);
+                            }}
+                            title={isReportVisible ? "Ocultar Estadísticas" : "Ver Estadísticas"}
+                        >
+                            <span>{isReportVisible ? 'Ocultar Estadísticas' : 'Ver Estadísticas'}</span>
+                            {isReportVisible ? <FaChevronUp className="toggle-arrow" /> : <FaChevronDown className="toggle-arrow" />}
                         </button>
                     </div>
                     {isReportVisible && (
-                        <SalesSummaryReport
-                            ventas={reportSales}
-                            vendedores={vendedores}
-                            selectedMonthYear={selectedMonthYear}
-                            formatCurrency={formatCurrency}
-                            capitalizeEstado={capitalizeEstado}
-                        />
+                        <div className="report-content-body">
+                            <SalesSummaryReport
+                                ventas={reportSales}
+                                vendedores={vendedores}
+                                selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
+                                formatCurrency={formatCurrency}
+                                capitalizeEstado={capitalizeEstado}
+                            />
+                        </div>
                     )}
                 </div>
             )}
 
-            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-                <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
+            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
                     <div className="v-search-pill">
                         <FaSearch />
                         <input
@@ -624,32 +818,187 @@ const Ventas = () => {
                     </div>
                     {!searchTerm && (
                         <>
-                            <div className="v-select-pill">
-                                <select value={selectedMonthYear} onChange={(e) => { setSelectedMonthYear(e.target.value); }}>
-                                    {monthOptions.map(option => (
-                                        <option key={option.value} value={option.value}>{option.label}</option>
-                                    ))}
-                                </select>
+                            <div className="v-multi-select-container" ref={dateRef}>
+                                <button
+                                    type="button"
+                                    className={`v-multi-select-btn ${selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length > 0 ? 'active-filter' : selectedDateFilter.mode === 'range' ? 'active-filter' : ''} ${isDateOpen ? 'open' : ''}`}
+                                    onClick={() => setIsDateOpen(prev => !prev)}
+                                >
+                                    <span>
+                                        {selectedDateFilter.mode === 'months'
+                                            ? selectedDateFilter.periods.length === 0
+                                                ? 'Mes: Ninguno'
+                                                : selectedDateFilter.periods.includes('all')
+                                                    ? 'Mes: Todos'
+                                                    : `Mes: ${selectedDateFilter.periods.length} seleccionados`
+                                            : `Rango: ${selectedDateFilter.startDate || '?'} a ${selectedDateFilter.endDate || '?'}`}
+                                    </span>
+                                    <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                                </button>
+                                {isDateOpen && (
+                                    <div className="v-multi-select-popover" style={{ width: '280px' }}>
+                                        <div className="v-popover-tabs" style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '0.5rem' }}>
+                                            <button 
+                                                type="button" 
+                                                style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'months' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'months' ? 'var(--primary)' : '#64748b', fontWeight: selectedDateFilter.mode === 'months' ? '600' : '400', cursor: 'pointer' }}
+                                                onClick={() => handleDateModeChange('months')}
+                                            >
+                                                Por Meses
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'range' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'range' ? 'var(--primary)' : '#64748b', fontWeight: selectedDateFilter.mode === 'range' ? '600' : '400', cursor: 'pointer' }}
+                                                onClick={() => handleDateModeChange('range')}
+                                            >
+                                                Rango Manual
+                                            </button>
+                                        </div>
+                                        
+                                        {selectedDateFilter.mode === 'months' ? (
+                                            <>
+                                                <div className="v-popover-header">
+                                                    <span className="v-popover-title">Filtrar Meses</span>
+                                                    <button type="button" className="v-popover-action-btn" onClick={selectAllPeriods}>
+                                                        {selectedDateFilter.periods.length === monthOptions.length ? 'Ninguno' : 'Todos'}
+                                                    </button>
+                                                </div>
+                                                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                                    {monthOptions.map(option => (
+                                                        <label key={option.value} className="v-popover-item">
+                                                            <input type="checkbox" checked={selectedDateFilter.periods.includes(option.value)} onChange={() => togglePeriod(option.value)} />
+                                                            <span>{option.label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>Fecha de Inicio</label>
+                                                    <input type="date" className="v-date-input" value={selectedDateFilter.startDate} onChange={handleStartDateChange} />
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>Fecha de Fin</label>
+                                                    <input type="date" className="v-date-input" value={selectedDateFilter.endDate} onChange={handleEndDateChange} />
+                                                </div>
+                                                <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, marginTop: '0.25rem', lineHeight: '1.2' }}>
+                                                    * La búsqueda manual ignora la regla de facturación del día 6 al 5.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <div className="v-select-pill">
-                                <select value={selectedEstado} onChange={(e) => { setSelectedEstado(e.target.value); }}>
-                                    <option value="">Estado: Todos</option>
-                                    {estados.map(e => <option key={e} value={e}>{capitalizeEstado(e)}</option>)}
-                                </select>
+                            <div className="v-multi-select-container" ref={estadosRef}>
+                                <button
+                                    type="button"
+                                    className={`v-multi-select-btn ${selectedEstados.length > 0 ? 'active-filter' : ''} ${isEstadosOpen ? 'open' : ''}`}
+                                    onClick={() => setIsEstadosOpen(prev => !prev)}
+                                >
+                                    <span>
+                                        {selectedEstados.length === 0
+                                            ? 'Estado: Ninguno'
+                                            : selectedEstados.length === estados.length
+                                                ? 'Estado: Todos'
+                                                : `Estado: ${selectedEstados.map(capitalizeEstado).join(', ')}`}
+                                    </span>
+                                    <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                                </button>
+
+                                {isEstadosOpen && (
+                                    <div className="v-multi-select-popover">
+                                        <div className="v-popover-header">
+                                            <span className="v-popover-title">Filtrar Estado</span>
+                                            <button
+                                                type="button"
+                                                className="v-popover-action-btn"
+                                                onClick={selectAllEstados}
+                                            >
+                                                {selectedEstados.length === estados.length ? 'Ninguno' : 'Todos'}
+                                            </button>
+                                        </div>
+                                        {estados.map(e => (
+                                            <label key={e} className="v-popover-item">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedEstados.includes(e)}
+                                                    onChange={() => toggleEstado(e)}
+                                                />
+                                                <span>{capitalizeEstado(e)}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <div className="v-select-pill">
-                                <select value={selectedSede} onChange={(e) => { setSelectedSede(e.target.value); }}>
-                                    <option value="">Sede: Todas</option>
-                                    <option value="Lottus 1">Lottus 1</option>
-                                    <option value="Lottus 2">Lottus 2</option>
-                                </select>
+                            <div className="v-multi-select-container" ref={sedesRef}>
+                                <button
+                                    type="button"
+                                    className={`v-multi-select-btn ${selectedSedes.length > 0 ? 'active-filter' : ''} ${isSedesOpen ? 'open' : ''}`}
+                                    onClick={() => setIsSedesOpen(prev => !prev)}
+                                >
+                                    <span>
+                                        {selectedSedes.length === 0
+                                            ? 'Sede: Ninguna'
+                                            : selectedSedes.length === sedesOptions.length
+                                                ? 'Sede: Todas'
+                                                : `Sede: ${selectedSedes.join(', ')}`}
+                                    </span>
+                                    <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                                </button>
+                                {isSedesOpen && (
+                                    <div className="v-multi-select-popover">
+                                        <div className="v-popover-header">
+                                            <span className="v-popover-title">Filtrar Sede</span>
+                                            <button type="button" className="v-popover-action-btn" onClick={selectAllSedes}>
+                                                {selectedSedes.length === sedesOptions.length ? 'Ninguna' : 'Todas'}
+                                            </button>
+                                        </div>
+                                        {sedesOptions.map(s => (
+                                            <label key={s} className="v-popover-item">
+                                                <input type="checkbox" checked={selectedSedes.includes(s)} onChange={() => toggleSede(s)} />
+                                                <span>{s}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
+                            
                             {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
-                                <div className="v-select-pill">
-                                    <select value={selectedVendedor} onChange={(e) => { setSelectedVendedor(e.target.value); }}>
-                                        <option value="">Vendedor: Todos</option>
-                                        {vendedores.map(v => <option key={v.id} value={v.id}>{v.first_name}</option>)}
-                                    </select>
+                                <div className="v-multi-select-container" ref={vendedoresRef}>
+                                    <button
+                                        type="button"
+                                        className={`v-multi-select-btn ${selectedVendedores.length > 0 ? 'active-filter' : ''} ${isVendedoresOpen ? 'open' : ''}`}
+                                        onClick={() => setIsVendedoresOpen(prev => !prev)}
+                                    >
+                                        <span>
+                                            {selectedVendedores.length === 0
+                                                ? 'Vendedor: Ninguno'
+                                                : selectedVendedores.length === vendedoresActivos.length
+                                                    ? 'Vendedor: Todos'
+                                                    : `Vendedores (${selectedVendedores.length})`}
+                                        </span>
+                                        <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                                    </button>
+                                    {isVendedoresOpen && (
+                                        <div className="v-multi-select-popover">
+                                            <div className="v-popover-header">
+                                                <span className="v-popover-title">Filtrar Vendedor</span>
+                                                <button type="button" className="v-popover-action-btn" onClick={selectAllVendedores}>
+                                                    {selectedVendedores.length === vendedoresActivos.length ? 'Ninguno' : 'Todos'}
+                                                </button>
+                                            </div>
+                                            {vendedoresActivos.length === 0 ? (
+                                                <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>No hay vendedores con ventas.</div>
+                                            ) : (
+                                                vendedoresActivos.map(v => (
+                                                    <label key={v.id} className="v-popover-item">
+                                                        <input type="checkbox" checked={selectedVendedores.includes(v.id)} onChange={() => toggleVendedor(v.id)} />
+                                                        <span>{v.first_name}</span>
+                                                    </label>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>

@@ -15,10 +15,22 @@ const TelasPage = () => {
     const [pedidos, setPedidos] = useState([]);
     const [ordenes, setOrdenes] = useState([]);
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
-    const [filters, setFilters] = useState({
-        proveedor: '',
-        estado: ''
-    });
+    
+    const [selectedProveedores, setSelectedProveedores] = useState([]);
+    const [selectedEstados, setSelectedEstados] = useState(['Pendiente', 'En fabrica']);
+    const [isProveedoresOpen, setIsProveedoresOpen] = useState(false);
+    const [isEstadosOpen, setIsEstadosOpen] = useState(false);
+    
+    const proveedoresRef = useRef(null);
+    const estadosRef = useRef(null);
+
+    const estadosTelas = [
+        { value: 'Pendiente', label: 'Pendiente' },
+        { value: 'En fabrica', label: 'En fábrica' },
+        { value: 'En Lottus', label: 'En Lottus' }
+    ];
+
+    const [hasInitializedProveedores, setHasInitializedProveedores] = useState(false);
     const [expandedPedidoId, setExpandedPedidoId] = useState(null);
     const [showPedidoModal, setShowPedidoModal] = useState(false);
     const [showProveedorModal, setShowProveedorModal] = useState(false);
@@ -54,9 +66,44 @@ const TelasPage = () => {
     useEffect(() => {
         fetchData();
         fetchOrdenes();
+    }, [selectedProveedores, selectedEstados, hasInitializedProveedores]);
+
+    useEffect(() => {
         fetchProveedoresTelas();
         fetchDirecciones();
-    }, [filters]);
+    }, []);
+
+    useEffect(() => {
+        if (proveedoresTelas.length > 0 && !hasInitializedProveedores) {
+            setSelectedProveedores(proveedoresTelas.map(p => p.id));
+            setHasInitializedProveedores(true);
+        }
+    }, [proveedoresTelas, hasInitializedProveedores]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (proveedoresRef.current && !proveedoresRef.current.contains(event.target)) setIsProveedoresOpen(false);
+            if (estadosRef.current && !estadosRef.current.contains(event.target)) setIsEstadosOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleProveedor = (id) => {
+        setSelectedProveedores(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    };
+
+    const selectAllProveedores = () => {
+        setSelectedProveedores(prev => prev.length === proveedoresTelas.length ? [] : proveedoresTelas.map(p => p.id));
+    };
+
+    const toggleEstado = (val) => {
+        setSelectedEstados(prev => prev.includes(val) ? prev.filter(e => e !== val) : [...prev, val]);
+    };
+
+    const selectAllEstados = () => {
+        setSelectedEstados(prev => prev.length === estadosTelas.length ? [] : estadosTelas.map(e => e.value));
+    };
 
     // --- Permisos y edición de estado de PedidoTela ---
     // Devuelve true si el usuario puede VER el botón de editar (acceso al pedido)
@@ -149,8 +196,17 @@ const TelasPage = () => {
         setLoading(true);
         try {
             let query = '?';
-            if (filters.proveedor) query += `proveedor=${filters.proveedor}&`;
-            if (filters.estado) query += `estado=${filters.estado}&`;
+            if (selectedProveedores.length > 0) {
+                query += `proveedor=${selectedProveedores.join(',')}&`;
+            } else if (hasInitializedProveedores) {
+                query += `proveedor=ninguno_imposible&`;
+            }
+
+            if (selectedEstados.length > 0) {
+                query += `estado=${selectedEstados.join(',')}&`;
+            } else {
+                query += `estado=ninguno_imposible&`;
+            }
 
             const response = await API.get(`pedidos-telas/${query}`);
             setPedidos(response.data.results || response.data);
@@ -175,10 +231,7 @@ const TelasPage = () => {
         }
     };
 
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-    };
+
 
     const toggleExpand = (id) => {
         setExpandedPedidoId(expandedPedidoId === id ? null : id);
@@ -347,23 +400,56 @@ const TelasPage = () => {
                 type={notification.type}
                 onClose={() => setNotification({ message: '', type: '' })}
             />
-            <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-                <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
-                    <div className="o-select-pill">
-                        <select name="proveedor" value={filters.proveedor} onChange={handleFilterChange}>
-                            <option value="">Proveedor: Todos</option>
-                            {proveedoresTelas.map(p => (
-                                <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
-                            ))}
-                        </select>
+            <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
+                <div className="o-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
+                    <div className="v-multi-select-container" ref={proveedoresRef}>
+                        <button type="button" className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`} onClick={() => setIsProveedoresOpen(prev => !prev)}>
+                            <span>{selectedProveedores.length === 0 ? 'Proveedor: Ninguno' : selectedProveedores.length === proveedoresTelas.length ? 'Proveedor: Todos' : `Proveedores (${selectedProveedores.length})`}</span>
+                            <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                        </button>
+                        {isProveedoresOpen && (
+                            <div className="v-multi-select-popover">
+                                <div className="v-popover-header">
+                                    <span className="v-popover-title">Proveedores</span>
+                                    <button type="button" className="v-popover-action-btn" onClick={selectAllProveedores}>
+                                        {selectedProveedores.length === proveedoresTelas.length ? 'Ninguno' : 'Todos'}
+                                    </button>
+                                </div>
+                                {proveedoresTelas.length === 0 ? (
+                                    <div style={{ padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>No hay proveedores</div>
+                                ) : (
+                                    proveedoresTelas.map(p => (
+                                        <label key={p.id} className="v-popover-item">
+                                            <input type="checkbox" checked={selectedProveedores.includes(p.id)} onChange={() => toggleProveedor(p.id)} />
+                                            <span>{p.nombre_empresa}</span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
-                    <div className="o-select-pill">
-                        <select name="estado" value={filters.estado} onChange={handleFilterChange}>
-                            <option value="">Estado: Todos</option>
-                            <option value="Pendiente">Pendiente</option>
-                            <option value="En fabrica">En fábrica</option>
-                            <option value="En Lottus">En Lottus</option>
-                        </select>
+
+                    <div className="v-multi-select-container" ref={estadosRef}>
+                        <button type="button" className={`v-multi-select-btn ${selectedEstados.length > 0 ? 'active-filter' : ''} ${isEstadosOpen ? 'open' : ''}`} onClick={() => setIsEstadosOpen(prev => !prev)}>
+                            <span>{selectedEstados.length === 0 ? 'Estado: Ninguno' : selectedEstados.length === estadosTelas.length ? 'Estado: Todos' : `Estados (${selectedEstados.length})`}</span>
+                            <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                        </button>
+                        {isEstadosOpen && (
+                            <div className="v-multi-select-popover">
+                                <div className="v-popover-header">
+                                    <span className="v-popover-title">Estados</span>
+                                    <button type="button" className="v-popover-action-btn" onClick={selectAllEstados}>
+                                        {selectedEstados.length === estadosTelas.length ? 'Ninguno' : 'Todos'}
+                                    </button>
+                                </div>
+                                {estadosTelas.map(e => (
+                                    <label key={e.value} className="v-popover-item">
+                                        <input type="checkbox" checked={selectedEstados.includes(e.value)} onChange={() => toggleEstado(e.value)} />
+                                        <span>{e.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 

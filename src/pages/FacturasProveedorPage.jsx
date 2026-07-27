@@ -1662,9 +1662,12 @@ function FacturasProveedorPage() {
 
                                             {/* Sub-sección Dinámica: Telas y Cueros */}
                                             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                                                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                                         🧵 Telas y Cueros (Costos Adicionales)
+                                                        <span style={{ fontSize: '0.68rem', fontWeight: 400, color: '#64748b', fontStyle: 'italic', marginLeft: '0.2rem' }}>
+                                                            — Usar punto (.) para decimales, ej: 2.5
+                                                        </span>
                                                     </span>
                                                     <button
                                                         type="button"
@@ -1688,7 +1691,7 @@ function FacturasProveedorPage() {
                                                                     <select
                                                                         value={tc.tipo || 'tela'}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'tipo', e.target.value)}
-                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff' }}
+                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}
                                                                     >
                                                                         <option value="tela">Tela (m)</option>
                                                                         <option value="cuero">Cuero (dm)</option>
@@ -1699,7 +1702,7 @@ function FacturasProveedorPage() {
                                                                         placeholder={isCuero ? "Ref. Cuero" : "Ref. Tela"}
                                                                         value={tc.referencia || ''}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'referencia', e.target.value)}
-                                                                        style={{ flex: 1, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                                                     />
 
                                                                     <input
@@ -1707,10 +1710,10 @@ function FacturasProveedorPage() {
                                                                         placeholder="Color"
                                                                         value={tc.color || ''}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'color', e.target.value)}
-                                                                        style={{ width: '80px', padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                                                     />
 
-                                                                    <div style={{ position: 'relative', width: '95px' }}>
+                                                                    <div style={{ position: 'relative', flex: '1 1 0%', minWidth: 0 }}>
                                                                         <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.7rem' }}>$</span>
                                                                         <input
                                                                             type="text"
@@ -1720,25 +1723,28 @@ function FacturasProveedorPage() {
                                                                                 const raw = e.target.value.replace(/[^0-9]/g, '');
                                                                                 updateTelaCueroInRow(index, tcIdx, 'costo_unidad', raw);
                                                                             }}
-                                                                            style={{ width: '100%', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                                                         />
                                                                     </div>
 
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', width: '70px', flexShrink: 0 }}>
                                                                         <input
-                                                                            type="number"
-                                                                            step="0.1"
-                                                                            min="0"
-                                                                            placeholder={isCuero ? "Decímetros" : "Metros"}
+                                                                            type="text"
+                                                                            inputMode="decimal"
+                                                                            placeholder={isCuero ? "dm" : "m"}
+                                                                            title="Usar punto (.) para decimales, ej: 2.5"
                                                                             value={tc.cantidad || ''}
-                                                                            onChange={e => updateTelaCueroInRow(index, tcIdx, 'cantidad', e.target.value)}
-                                                                            style={{ width: '70px', padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                            onChange={e => {
+                                                                                const val = e.target.value.replace(',', '.');
+                                                                                updateTelaCueroInRow(index, tcIdx, 'cantidad', val);
+                                                                            }}
+                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                                                         />
                                                                         <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
                                                                     </div>
 
                                                                     {tcSubtotal > 0 && (
-                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', padding: '0 0.3rem' }}>
+                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', padding: '0 0.3rem', flexShrink: 0 }}>
                                                                             = {formatCOP(tcSubtotal)}
                                                                         </span>
                                                                     )}
@@ -1746,7 +1752,7 @@ function FacturasProveedorPage() {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => removeTelaCueroFromRow(index, tcIdx)}
-                                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem' }}
+                                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem', flexShrink: 0 }}
                                                                         title="Quitar esta tela/cuero"
                                                                     >
                                                                         <FaTrashAlt />

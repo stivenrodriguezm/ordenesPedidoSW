@@ -994,6 +994,7 @@
 
 .skeleton-row td {
   padding: 1rem 1.5rem;
+  text-overflow: clip;
 }
 
 /* ==========================================================================
@@ -1175,9 +1176,11 @@
 
 .payment-main-text {
   font-family: 'Roboto Mono', monospace;
-  font-size: 0.9rem;
+  font-size: 0.75rem; /* Reduced font size to prevent overflow */
   font-weight: 600;
   color: var(--ventas-text-dark);
+  word-break: break-word; /* Ensure text wraps instead of overflowing */
+  line-height: 1.2;
 }
 
 .payment-sub-text {
@@ -1513,9 +1516,9 @@
 .v-filters-bar {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .v-search-pill {
@@ -1735,3 +1738,4 @@
     transform: rotate(360deg);
   }
 }
+
