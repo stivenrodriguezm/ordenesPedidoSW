@@ -278,14 +278,18 @@ const Ventas = () => {
                 setTotalCount(fetchedVentas.length || 0);
                 setTotalPages(1);
             }
+            if (currentRequest === requestCount.current) {
+                setIsLoading(false);
+            }
         } catch (error) {
-            console.error('Error cargando ventas:', error);
-            setNotification({ message: 'Error al cargar las ventas.', type: 'error' });
-            setVentas([]);
-            setTotalCount(0);
-            setTotalPages(1);
-        } finally {
-            setIsLoading(false);
+            if (currentRequest === requestCount.current) {
+                console.error('Error cargando ventas:', error);
+                setNotification({ message: 'Error al cargar las ventas.', type: 'error' });
+                setVentas([]);
+                setTotalCount(0);
+                setTotalPages(1);
+                setIsLoading(false);
+            }
         }
     }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, setNotification, usuario, hasInitializedVendedores]);
 
