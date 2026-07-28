@@ -231,6 +231,18 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
         return found ? found.id : idStr;
     };
 
+    const getVentaId = (idStr) => {
+        if (!idStr) return null;
+        const found = ordenes.find(o => String(o.id) === String(idStr));
+        return found ? (found.venta || found.orden_venta || null) : null;
+    };
+
+    const getFormattedDate = () => {
+        const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const d = new Date();
+        return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -430,79 +442,93 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     left: '-9999px',
                     width: '800px',
                     backgroundColor: '#ffffff',
-                    padding: '40px',
-                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    color: '#000000',
+                    padding: '36px',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    color: '#0f172a',
+                    boxSizing: 'border-box',
                     display: 'none',
                 }}
             >
                 {/* Header Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <div style={{ 
-                        backgroundColor: '#000000', 
-                        color: '#ffffff', 
-                        padding: '12px 24px', 
-                        fontWeight: 'bold', 
-                        fontSize: '36px', 
-                        letterSpacing: '5px',
-                        display: 'inline-block',
-                        fontFamily: 'system-ui, -apple-system, sans-serif'
-                    }}>
-                        LOTTUS
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #0f172a', paddingBottom: '16px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <h1 style={{ fontFamily: '"Audiowide", sans-serif', fontSize: '38px', margin: '0', color: '#0f172a', lineHeight: '1', textTransform: 'uppercase', letterSpacing: '2px' }}>LOTTUS</h1>
+                        <p style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', margin: '6px 0 0 0', letterSpacing: '1px', textTransform: 'uppercase' }}>Mobiliario & Diseño</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <h1 style={{ margin: '0', fontSize: '24px', fontWeight: 'normal', color: '#1e293b' }}>Pedido de Telas</h1>
-                        <h2 style={{ margin: '5px 0 0', fontSize: '20px', fontWeight: 'bold', color: '#dc2626' }}>No. {createdPedidoId}</h2>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pedido de Telas</h2>
+                        <div style={{ display: 'inline-block', backgroundColor: '#0f172a', color: 'white', padding: '4px 12px', borderRadius: '4px', marginTop: '8px', fontSize: '18px', fontWeight: '700' }}>
+                            Nº {createdPedidoId}
+                        </div>
                     </div>
                 </div>
 
-                {/* Thick Black Divider Line */}
-                <hr style={{ border: 'none', borderTop: '3px solid #000000', margin: '0 0 25px 0' }} />
-
                 {/* Metadata Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', fontSize: '15px', color: '#1e293b', lineHeight: '1.8' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '28px', fontSize: '14px', lineHeight: '1.6', color: '#334155', backgroundColor: '#f8fafc', padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <div>
-                        <div><strong>Proveedor:</strong> {pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || '' : ''}</div>
-                        <div><strong>Usuario:</strong> {usuario ? `${usuario.first_name} ${usuario.last_name}` : ''}</div>
-                        <div><strong>Orden Asociada:</strong> {pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</div>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Proveedor:</strong>{' '}
+                            <span style={{ color: '#1e293b' }}>{pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || 'N/A' : 'N/A'}</span>
+                        </p>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Solicitante:</strong>{' '}
+                            <span style={{ color: '#1e293b' }}>{usuario ? `${usuario.first_name || ''} ${usuario.last_name || ''}`.trim() : 'N/A'}</span>
+                        </p>
+                        <p style={{ margin: '0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Orden Asociada:</strong>{' '}
+                            <span style={{ color: '#1e293b', fontWeight: '700' }}>{pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</span>
+                        </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <div><strong>Fecha:</strong> {(() => {
-                            const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-                            const d = new Date();
-                            return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
-                        })()}</div>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600' }}>Fecha:</strong>{' '}
+                            <span style={{ color: '#1e293b' }}>{getFormattedDate()}</span>
+                        </p>
+                        <p style={{ margin: '0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600' }}>Venta Asociada:</strong>{' '}
+                            <span style={{ color: '#1e293b', fontWeight: '700' }}>{(() => {
+                                const vId = getVentaId(pdfData?.orden_asociada_id);
+                                return vId ? `#${vId}` : 'N/A';
+                            })()}</span>
+                        </p>
                     </div>
                 </div>
 
                 {/* Details Section */}
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Telas:</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                    <thead>
-                        <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b' }}>Descripción</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b', width: '250px' }}>Cantidad</th>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Detalles de Telas</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+                    <thead style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
+                        <tr>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', borderRadius: '6px 0 0 0' }}>Descripción</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px', width: '160px', borderRadius: '0 6px 0 0' }}>Cantidad</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {pdfData?.detalles.map((detalle, index) => (
-                            <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.tela}</td>
-                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.cantidad}</td>
+                        {pdfData?.detalles && pdfData.detalles.length > 0 ? (
+                            pdfData.detalles.map((detalle, index) => (
+                                <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: '14px 16px', fontSize: '15px', color: '#1e293b', fontWeight: '500' }}>{detalle.tela}</td>
+                                    <td style={{ padding: '14px 16px', fontSize: '16px', color: '#0f172a', textAlign: 'center', fontWeight: '700' }}>{detalle.cantidad}</td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="2" style={{ padding: '14px', textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>Sin detalles registrados</td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
 
                 {/* Delivery Address Section */}
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Dirección de Entrega:</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>Dirección de entrega:</h3>
                 <div style={{ 
                     backgroundColor: '#f8fafc', 
                     border: '1px solid #e2e8f0', 
                     borderRadius: '6px', 
                     padding: '12px 16px', 
-                    fontSize: '15px', 
-                    color: '#334155' 
+                    fontSize: '14px', 
+                    color: '#334155',
+                    lineHeight: '1.5'
                 }}>
                     {pdfData?.direccion_entrega || 'No especificada'}
                 </div>

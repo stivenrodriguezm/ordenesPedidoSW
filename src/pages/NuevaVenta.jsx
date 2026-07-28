@@ -39,7 +39,7 @@ const NuevaVenta = () => {
     id_vendedor: '',
     vendedores_compartidos: [],
     traslado: false,
-    sede: 'Lottus 1',
+    sede: '',
     fecha_venta: '',
     fecha_entrega: '',
     valor_total: ''
@@ -183,7 +183,13 @@ const NuevaVenta = () => {
   // Manejar cambios en los campos de la venta
   const handleVentaChange = (e) => {
     const { name, value } = e.target;
-    setVentaData(prev => ({ ...prev, [name]: value }));
+    if (name === 'valor_total') {
+      const numericValue = value.replace(/\D/g, '');
+      const formattedValue = numericValue ? new Intl.NumberFormat('es-CO').format(numericValue) : '';
+      setVentaData(prev => ({ ...prev, [name]: formattedValue }));
+    } else {
+      setVentaData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Manejar envío del formulario
@@ -213,7 +219,7 @@ const NuevaVenta = () => {
         sede: ventaData.sede,
         fecha_venta: ventaData.fecha_venta,
         fecha_entrega: ventaData.fecha_entrega || null,
-        valor_total: parseFloat(ventaData.valor_total)
+        valor_total: parseFloat(ventaData.valor_total.toString().replace(/\D/g, ''))
       },
       observacion: observacion || undefined
     };
@@ -535,6 +541,7 @@ const NuevaVenta = () => {
                 onChange={handleVentaChange}
                 required
               >
+                <option value="" disabled>Seleccione una sede</option>
                 <option value="Lottus 1">Lottus 1</option>
                 <option value="Lottus 2">Lottus 2</option>
               </select>
@@ -573,10 +580,11 @@ const NuevaVenta = () => {
             <div className="nv-form-group">
                   <label>Valor Total:</label>
                   <input
-                    type="number"
+                    type="text"
                     name="valor_total"
                     value={ventaData.valor_total}
                     onChange={handleVentaChange}
+                    placeholder="0"
                     required
                   />
                 </div>

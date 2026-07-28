@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
+import './OrdenesPage.css';
 import './TelasPage.css';
+import './VentasImprovements.css';
 import * as XLSX from 'xlsx';
 import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
@@ -374,7 +376,14 @@ const TelasPage = () => {
 
     const getOrdenId = (id) => {
         const orden = ordenes.find(o => o.id === parseInt(id));
-        return orden ? orden.id : '';
+        return orden ? orden.id : id;
+    };
+
+    const getVentaId = (ordenAsociadaId) => {
+        if (pdfData?.venta_id) return pdfData.venta_id;
+        if (!ordenAsociadaId) return null;
+        const orden = ordenes.find(o => String(o.id) === String(ordenAsociadaId));
+        return orden ? (orden.venta || orden.orden_venta || null) : null;
     };
 
     const exportPedidos = () => {
@@ -485,11 +494,12 @@ const TelasPage = () => {
                                     <th>ID</th>
                                     <th>Usuario</th>
                                     <th>Proveedor</th>
+                                    <th>Fabricante</th>
                                     <th>Fecha</th>
                                     <th>Estado</th>
                                     <th>Orden Asoc.</th>
                                     <th>Dirección</th>
-                                    <th>Acción</th>
+                                    <th style={{ textAlign: 'right' }}>Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -499,6 +509,7 @@ const TelasPage = () => {
                                             <td><div className="skeleton skeleton-text" style={{ width: '30px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
@@ -507,31 +518,39 @@ const TelasPage = () => {
                                         </tr>
                                     ))
                                 ) : pedidos.length === 0 ? (
-                                    <tr><td colSpan="8" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
+                                    <tr><td colSpan="9" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
                                 ) : (
                                     pedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
                                         <tr className={`table-row-clickable ${expandedPedidoId === pedido.id ? 'expanded-row-highlight' : ''}`} onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
-                                            <td className="font-mono">{pedido.id}</td>
-                                            <td>{pedido.usuario_nombre}</td>
-                                            <td>{pedido.proveedor_nombre}</td>
-                                            <td>{pedido.fecha_creacion}</td>
+                                            <td className="font-mono" style={{ fontWeight: '600' }}>#{pedido.id}</td>
                                             <td>
-                                                <span className={`status-badge ${pedido.estado.toLowerCase().replace(' ', '-')}`}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>
+                                                        {pedido.usuario_nombre ? pedido.usuario_nombre.substring(0, 2).toUpperCase() : 'U'}
+                                                    </div>
+                                                    <span style={{ fontWeight: '500' }}>{pedido.usuario_nombre}</span>
+                                                </div>
+                                            </td>
+                                            <td><span style={{ fontWeight: '600', color: '#0f172a' }}>{pedido.proveedor_nombre}</span></td>
+                                            <td><span style={{ fontWeight: '500', color: '#475569' }}>{pedido.orden_proveedor_nombre || '-'}</span></td>
+                                            <td style={{ color: '#64748b', fontSize: '0.8rem' }}>{pedido.fecha_creacion}</td>
+                                            <td>
+                                                <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
                                                     {pedido.estado}
                                                 </span>
                                             </td>
-                                            <td>{pedido.orden_id ? `#${pedido.orden_id}` : '-'}</td>
-                                            <td className="truncate-text" style={{ maxWidth: '200px' }}>{pedido.direccion_entrega}</td>
-                                            <td>
-                                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(pedido.id); }}>
+                                            <td>{pedido.orden_id ? <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#3b82f6' }}>#{pedido.orden_id}</span> : '-'}</td>
+                                            <td className="truncate-text" style={{ maxWidth: '350px', fontSize: '0.85rem', color: '#334155' }} title={pedido.direccion_entrega}>{pedido.direccion_entrega}</td>
+                                            <td style={{ width: '50px', textAlign: 'right' }}>
+                                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(pedido.id); }} style={{ marginLeft: 'auto' }}>
                                                     {expandedPedidoId === pedido.id ? <FaChevronUp /> : <FaChevronDown />}
                                                 </button>
                                             </td>
                                         </tr>
                                         {expandedPedidoId === pedido.id && (
                                             <tr className="expanded-row">
-                                                <td colSpan="8">
+                                                <td colSpan="9">
                                                     <div className="details-view-wrapper telas-details-wrapper">
                                                         <div className="tela-expanded-wrapper">
                                                             <div className="tela-expanded-header">
@@ -594,8 +613,114 @@ const TelasPage = () => {
                                 )}
                             </tbody>
                         </table>
-                    </div>
                 </div>
+
+                {/* Mobile Card View */}
+                <div className="mobile-view">
+                    {loading ? (
+                        Array.from({ length: 5 }).map((_, index) => (
+                            <div key={`skeleton-card-${index}`} className="mobile-card skeleton-item" style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <div className="skeleton skeleton-text" style={{ width: '50px' }}></div>
+                                    <div className="skeleton skeleton-badge" style={{ width: '80px' }}></div>
+                                </div>
+                                <div className="skeleton skeleton-text" style={{ width: '120px', height: '1.25rem', marginBottom: '0.5rem' }}></div>
+                                <div className="skeleton skeleton-text" style={{ width: '100px', marginBottom: '0.5rem' }}></div>
+                            </div>
+                        ))
+                    ) : pedidos.length > 0 ? (
+                        pedidos.map(pedido => (
+                            <div className="mobile-card" key={pedido.id} style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                <div className="mobile-card-header" onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
+                                    <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                        <span className="card-id" style={{ fontWeight: 'bold', color: '#0f172a' }}>PT #{pedido.id}</span>
+                                        <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
+                                            {pedido.estado}
+                                        </span>
+                                    </div>
+                                    <div className="header-main" style={{ marginBottom: '0.5rem' }}>
+                                        <div style={{ fontWeight: '600', fontSize: '1rem', color: '#1e293b' }}>
+                                            {pedido.proveedor_nombre}
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                            Fabricante: <span style={{ fontWeight: '500', color: '#475569' }}>{pedido.orden_proveedor_nombre || '-'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#64748b' }}>
+                                        <span>{pedido.fecha_creacion}</span>
+                                        <span style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                                            {pedido.orden_id ? `Ord #${pedido.orden_id}` : 'Sin Orden'}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                {expandedPedidoId === pedido.id && (
+                                    <div className="mobile-card-expanded" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Usuario Creador</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
+                                                    {pedido.usuario_nombre ? pedido.usuario_nombre.substring(0, 2).toUpperCase() : 'U'}
+                                                </div>
+                                                <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{pedido.usuario_nombre}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Dirección de Entrega</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#334155' }}>{pedido.direccion_entrega}</div>
+                                        </div>
+
+                                        {hasPermission('EDITAR_ESTADO_TELA_ORDEN') && (
+                                            <button 
+                                                className="btn-edit-estado" 
+                                                style={{ width: '100%', justifyContent: 'center', padding: '0.5rem', marginBottom: '1rem' }}
+                                                onClick={() => setEditEstadoModal({
+                                                    open: true,
+                                                    pedidoId: pedido.id,
+                                                    currentEstado: pedido.estado,
+                                                    newEstado: pedido.estado
+                                                })}
+                                            >
+                                                Editar Estado ✏️
+                                            </button>
+                                        )}
+
+                                        <div className="tela-expanded-body" style={{ padding: '0' }}>
+                                            <h4 style={{ fontSize: '0.9rem', color: '#0f172a', marginBottom: '0.5rem' }}>Detalles de Telas</h4>
+                                            <table className="details-table" style={{ width: '100%' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Tela</th>
+                                                        <th>Cant.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {pedido.detalles && pedido.detalles.length > 0
+                                                        ? pedido.detalles.map(detalle => (
+                                                            <tr key={detalle.id}>
+                                                                <td style={{ fontSize: '0.85rem' }}>{detalle.tela}</td>
+                                                                <td style={{ fontSize: '0.85rem' }}>{detalle.cantidad}</td>
+                                                            </tr>
+                                                        ))
+                                                        : <tr><td colSpan="2" style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles.</td></tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    ) : (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                            No hay pedidos registrados
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Pagination Controls */}
 
             {/* Modal Editar Estado de Pedido Tela */}
             {editEstadoModal.open && (
@@ -798,7 +923,7 @@ const TelasPage = () => {
 
             {/* Hidden Preview for PDF/Image Generation */}
             <div
-                id="telas-preview"
+                id="pedido-tela-preview"
                 ref={previewRef}
                 style={{
                     position: 'absolute',
@@ -806,75 +931,93 @@ const TelasPage = () => {
                     left: '-9999px',
                     width: '800px',
                     backgroundColor: '#ffffff',
-                    padding: '40px',
-                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    color: '#000000',
+                    padding: '36px',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    color: '#0f172a',
+                    boxSizing: 'border-box',
                     display: 'none',
                 }}
             >
                 {/* Header Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <div style={{ 
-                        backgroundColor: '#000000', 
-                        color: '#ffffff', 
-                        padding: '12px 24px', 
-                        fontWeight: 'bold', 
-                        fontSize: '36px', 
-                        letterSpacing: '5px',
-                        display: 'inline-block',
-                        fontFamily: 'system-ui, -apple-system, sans-serif'
-                    }}>
-                        LOTTUS
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #0f172a', paddingBottom: '16px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <h1 style={{ fontFamily: '"Audiowide", sans-serif', fontSize: '38px', margin: '0', color: '#0f172a', lineHeight: '1', textTransform: 'uppercase', letterSpacing: '2px' }}>LOTTUS</h1>
+                        <p style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', margin: '6px 0 0 0', letterSpacing: '1px', textTransform: 'uppercase' }}>Mobiliario & Diseño</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <h1 style={{ margin: '0', fontSize: '24px', fontWeight: 'normal', color: '#1e293b' }}>Pedido de Telas</h1>
-                        <h2 style={{ margin: '5px 0 0', fontSize: '20px', fontWeight: 'bold', color: '#dc2626' }}>No. {createdPedidoId}</h2>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pedido de Telas</h2>
+                        <div style={{ display: 'inline-block', backgroundColor: '#0f172a', color: 'white', padding: '4px 12px', borderRadius: '4px', marginTop: '8px', fontSize: '18px', fontWeight: '700' }}>
+                            Nº {createdPedidoId}
+                        </div>
                     </div>
                 </div>
 
-                {/* Thick Black Divider Line */}
-                <hr style={{ border: 'none', borderTop: '3px solid #000000', margin: '0 0 25px 0' }} />
-
                 {/* Metadata Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', fontSize: '15px', color: '#1e293b', lineHeight: '1.8' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '28px', fontSize: '14px', lineHeight: '1.6', color: '#334155', backgroundColor: '#f8fafc', padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <div>
-                        <div><strong>Proveedor:</strong> {pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || '' : ''}</div>
-                        <div><strong>Usuario:</strong> {usuario ? `${usuario.first_name} ${usuario.last_name}` : ''}</div>
-                        <div><strong>Orden Asociada:</strong> {pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</div>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Proveedor:</strong>{' '}
+                            <span style={{ color: '#1e293b' }}>{pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || 'N/A' : 'N/A'}</span>
+                        </p>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Solicitante:</strong>{' '}
+                            <span style={{ color: '#1e293b' }}>{usuario ? `${usuario.first_name || ''} ${usuario.last_name || ''}`.trim() : 'N/A'}</span>
+                        </p>
+                        <p style={{ margin: '0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Orden Asociada:</strong>{' '}
+                            <span style={{ color: '#1e293b', fontWeight: '700' }}>{pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : (pdfData?.orden_id ? `#${pdfData.orden_id}` : 'N/A')}</span>
+                        </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <div><strong>Fecha:</strong> {getFormattedDate()}</div>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600' }}>Fecha:</strong>{' '}
+                            <span style={{ color: '#1e293b' }}>{getFormattedDate()}</span>
+                        </p>
+                        <p style={{ margin: '0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '600' }}>Venta Asociada:</strong>{' '}
+                            <span style={{ color: '#1e293b', fontWeight: '700' }}>{(() => {
+                                const vId = getVentaId(pdfData?.orden_asociada_id);
+                                return vId ? `#${vId}` : 'N/A';
+                            })()}</span>
+                        </p>
                     </div>
                 </div>
 
                 {/* Details Section */}
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Telas:</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                    <thead>
-                        <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b' }}>Descripción</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', fontSize: '15px', color: '#1e293b', width: '250px' }}>Cantidad</th>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Detalles de Telas</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+                    <thead style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
+                        <tr>
+                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', borderRadius: '6px 0 0 0' }}>Descripción</th>
+                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px', width: '160px', borderRadius: '0 6px 0 0' }}>Cantidad</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {pdfData?.detalles.map((detalle, index) => (
-                            <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.tela}</td>
-                                <td style={{ padding: '12px 16px', fontSize: '15px', color: '#334155' }}>{detalle.cantidad}</td>
+                        {pdfData?.detalles && pdfData.detalles.length > 0 ? (
+                            pdfData.detalles.map((detalle, index) => (
+                                <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: '14px 16px', fontSize: '15px', color: '#1e293b', fontWeight: '500' }}>{detalle.tela}</td>
+                                    <td style={{ padding: '14px 16px', fontSize: '16px', color: '#0f172a', textAlign: 'center', fontWeight: '700' }}>{detalle.cantidad}</td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="2" style={{ padding: '14px', textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>Sin detalles registrados</td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
 
                 {/* Delivery Address Section */}
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '25px 0 12px 0' }}>Dirección de Entrega:</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>Dirección de entrega:</h3>
                 <div style={{ 
                     backgroundColor: '#f8fafc', 
                     border: '1px solid #e2e8f0', 
                     borderRadius: '6px', 
                     padding: '12px 16px', 
-                    fontSize: '15px', 
-                    color: '#334155' 
+                    fontSize: '14px', 
+                    color: '#334155',
+                    lineHeight: '1.5'
                 }}>
                     {pdfData?.direccion_entrega || 'No especificada'}
                 </div>
