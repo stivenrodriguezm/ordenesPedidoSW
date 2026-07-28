@@ -707,7 +707,7 @@ const Ventas = () => {
     const formatCurrencyForExport = (value) => {
         if (value === null || value === undefined) return null;
         const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
-        return isNaN(num) ? null : num;
+        return isNaN(num) ? null : Math.round(num).toString();
     };
 
     const exportVentas = () => {
