@@ -257,10 +257,13 @@ const Ventas = () => {
             let fetchedVentas = response.data.results || response.data || [];
             
             // Enforce exact requested sorting: Date DESC, then ID DESC
+            // Using string comparison (localeCompare) to prevent NaN issues with Date parsing
             fetchedVentas.sort((a, b) => {
-                const dateA = new Date(a.fecha_venta).getTime();
-                const dateB = new Date(b.fecha_venta).getTime();
-                if (dateA !== dateB) return dateB - dateA; // Fecha de venta DESC
+                const dateA = a.fecha_venta || "";
+                const dateB = b.fecha_venta || "";
+                if (dateA !== dateB) {
+                    return dateB.localeCompare(dateA); // Fecha de venta DESC
+                }
                 return b.id - a.id; // ID DESC
             });
 
