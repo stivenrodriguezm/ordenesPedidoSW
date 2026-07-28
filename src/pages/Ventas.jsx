@@ -320,45 +320,12 @@ const Ventas = () => {
         }
     }, [selectedDateFilter, usuario]);
 
-    useEffect(() => {
-        setCurrentPage(1); // Reset to page 1 when filters change
-        fetchVentas(1);
-    }, [fetchVentas]);
-
-    useEffect(() => {
-        // Fetch when page changes (but not when filters change, as that's handled above)
-        // Actually, fetchVentas depends on filters. 
-        // We need to separate the trigger.
-        // Let's simplify: 
-        // 1. When filters change, we call setCurrentPage(1).
-        // 2. When currentPage changes, we call fetchVentas(currentPage).
-        // But fetchVentas needs the current filters.
-        // The dependency array of fetchVentas includes filters.
-        // So if filters change, fetchVentas changes.
-        // We want to avoid double fetching.
-
-        // Correct pattern:
-        // We can just call fetchVentas(currentPage) here.
-        // But if filters change, we want to reset to page 1.
-        // So we need a separate effect for filters?
-
-        // Let's rely on the fact that fetchVentas is recreated when filters change.
-        // We can just call it. But we need to pass the page.
-        // If we just use `useEffect(() => { fetchVentas(currentPage); }, [fetchVentas, currentPage])`,
-        // then when filters change, fetchVentas changes, and it runs with OLD currentPage.
-        // We want it to run with page 1.
-
-        // So:
-        // When filters change (debouncedSearchTerm, selectedMonthYear, etc.), we setPage(1).
-        // Then page changes, and we fetch.
-    }, []);
-
-    // Effect for Filters
+    // Effect for Filters (reset page to 1)
     useEffect(() => {
         setCurrentPage(1);
     }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes]);
 
-    // Effect for Page Change & Initial Load
+    // Effect for Page Change & Filter Changes (single unified trigger)
     useEffect(() => {
         fetchVentas(currentPage);
     }, [currentPage, fetchVentas]);
@@ -371,7 +338,12 @@ const Ventas = () => {
         const fetchVendedores = async () => {
             try {
                 const response = await API.get(`/vendedores/`);
-                setVendedores(response.data || []);
+                const list = response.data || [];
+                setVendedores(list);
+                if (list.length > 0 && !hasInitializedVendedores) {
+                    setSelectedVendedores(list.map(v => v.id));
+                    setHasInitializedVendedores(true);
+                }
             } catch (error) {
                 console.error('Error cargando vendedores:', error);
             }
