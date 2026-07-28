@@ -372,7 +372,7 @@ const Caja = () => {
                       </span>
                     </td>
                     <td className={`text-right font-mono value-${item.tipo}`}>
-                      {item.tipo === 'egreso' ? '-' : '+'}{formatCurrency(item.valor)}
+                      {item.tipo === 'egreso' || parseFloat(item.valor) < 0 ? '-' : (parseFloat(item.valor) > 0 || item.tipo === 'ingreso' ? '+' : '')}{formatCurrency(Math.abs(parseFloat(item.valor) || 0))}
                     </td>
                     <td className="text-right font-mono text-muted">{formatCurrency(item.total_acumulado)}</td>
                   </tr>
@@ -402,7 +402,7 @@ const Caja = () => {
                 </div>
                 <div className="card-right">
                   <div className={`card-amount value-${item.tipo}`}>
-                    {item.tipo === 'egreso' ? '-' : '+'}{formatCurrency(item.valor)}
+                    {item.tipo === 'egreso' || parseFloat(item.valor) < 0 ? '-' : (parseFloat(item.valor) > 0 || item.tipo === 'ingreso' ? '+' : '')}{formatCurrency(Math.abs(parseFloat(item.valor) || 0))}
                   </div>
                   <div className="card-balance">
                     Saldo: {formatCurrency(item.total_acumulado)}

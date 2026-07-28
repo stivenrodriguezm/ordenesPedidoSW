@@ -4,12 +4,14 @@ import './Modal.css'; // Reutilizamos los estilos de modales existentes
 const CierreCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
   const [cierreTipo, setCierreTipo] = useState('exacto');
   const [descuadre, setDescuadre] = useState('');
+  const [descuadreTipo, setDescuadreTipo] = useState('faltante');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const dataToSave = {};
     if (cierreTipo === 'descuadre') {
       dataToSave.descuadre = descuadre;
+      dataToSave.signo = descuadreTipo;
     }
     onSave(dataToSave);
   };
@@ -33,17 +35,27 @@ const CierreCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
           </div>
 
           {cierreTipo === 'descuadre' && (
-            <div className="form-group">
-              <label>Valor del Descuadre</label>
-              <input 
-                type="number" 
-                value={descuadre} 
-                onChange={(e) => setDescuadre(e.target.value)} 
-                required 
-                step="any" 
-                placeholder="Ingrese el monto del descuadre"
-              />
-            </div>
+            <>
+              <div className="form-group">
+                <label>Tipo de Descuadre</label>
+                <select value={descuadreTipo} onChange={(e) => setDescuadreTipo(e.target.value)} required>
+                  <option value="faltante">Faltante (Menos dinero en caja)</option>
+                  <option value="sobrante">Sobrante (Más dinero en caja)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Valor del Descuadre</label>
+                <input 
+                  type="number" 
+                  value={descuadre} 
+                  onChange={(e) => setDescuadre(e.target.value)} 
+                  required 
+                  min="0"
+                  step="any" 
+                  placeholder="Ingrese el monto"
+                />
+              </div>
+            </>
           )}
 
           <button type="submit" className="modal-submit" disabled={isLoading}>

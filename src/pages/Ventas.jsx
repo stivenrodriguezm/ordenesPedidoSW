@@ -223,10 +223,8 @@ const Ventas = () => {
                         params.periods = selectedDateFilter.periods.join(',');
                     }
                 } else if (selectedDateFilter.mode === 'range') {
-                    if (selectedDateFilter.startDate && selectedDateFilter.endDate) {
-                        params.start_date = selectedDateFilter.startDate;
-                        params.end_date = selectedDateFilter.endDate;
-                    }
+                    if (selectedDateFilter.startDate) params.start_date = selectedDateFilter.startDate;
+                    if (selectedDateFilter.endDate) params.end_date = selectedDateFilter.endDate;
                 }
                 const perms = usuario?.permissions || [];
                 const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
@@ -301,10 +299,8 @@ const Ventas = () => {
                     params.periods = selectedDateFilter.periods.join(',');
                 }
             } else if (selectedDateFilter.mode === 'range') {
-                if (selectedDateFilter.startDate && selectedDateFilter.endDate) {
-                    params.start_date = selectedDateFilter.startDate;
-                    params.end_date = selectedDateFilter.endDate;
-                }
+                if (selectedDateFilter.startDate) params.start_date = selectedDateFilter.startDate;
+                if (selectedDateFilter.endDate) params.end_date = selectedDateFilter.endDate;
             }
             const perms = usuario?.permissions || [];
             const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
