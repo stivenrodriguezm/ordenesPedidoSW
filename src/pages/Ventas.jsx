@@ -202,7 +202,12 @@ const Ventas = () => {
 
     const monthOptions = generateMonthOptions();
 
+    const requestCount = useRef(0);
+
     const fetchVentas = useCallback(async (page = 1) => {
+        requestCount.current += 1;
+        const currentRequest = requestCount.current;
+
         setIsLoading(true);
         try {
             const params = {
@@ -246,16 +251,28 @@ const Ventas = () => {
                 }
             }
             const response = await API.get(`/ventas/`, { params });
+            
+            if (currentRequest !== requestCount.current) return;
+
+            let fetchedVentas = response.data.results || response.data || [];
+            
+            // Enforce exact requested sorting: Date DESC, then ID DESC
+            fetchedVentas.sort((a, b) => {
+                const dateA = new Date(a.fecha_venta).getTime();
+                const dateB = new Date(b.fecha_venta).getTime();
+                if (dateA !== dateB) return dateB - dateA; // Fecha de venta DESC
+                return b.id - a.id; // ID DESC
+            });
 
             // Handle paginated response
             if (response.data.results) {
-                setVentas(response.data.results);
+                setVentas(fetchedVentas);
                 setTotalCount(response.data.count);
                 setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
             } else {
-                // Fallback for non-paginated response (shouldn't happen with standard DRF pagination, but good for safety)
-                setVentas(response.data || []);
-                setTotalCount(response.data.length || 0);
+                // Fallback for non-paginated response
+                setVentas(fetchedVentas);
+                setTotalCount(fetchedVentas.length || 0);
                 setTotalPages(1);
             }
         } catch (error) {
