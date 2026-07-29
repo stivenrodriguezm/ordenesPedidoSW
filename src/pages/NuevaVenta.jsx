@@ -283,7 +283,7 @@ const NuevaVenta = () => {
       <div className="nv-title-header premium-v2">
         <div className="title-wrapper">
           <div className="title-icon-badge">
-            <FaShoppingCart className="title-icon" />
+            <FaShoppingCart />
           </div>
           <div className="title-text-group">
             <h1>Nueva Venta</h1>
@@ -561,7 +561,7 @@ const NuevaVenta = () => {
                 <div className="nv-form-group">
                   <label>Fecha de Venta:</label>
               <input
-                type="date"
+                type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
                 name="fecha_venta"
                 value={ventaData.fecha_venta}
                 onChange={handleVentaChange}
@@ -571,7 +571,7 @@ const NuevaVenta = () => {
             <div className="nv-form-group">
               <label>Fecha de Entrega:</label>
               <input
-                type="date"
+                type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
                 name="fecha_entrega"
                 value={ventaData.fecha_entrega}
                 onChange={handleVentaChange}

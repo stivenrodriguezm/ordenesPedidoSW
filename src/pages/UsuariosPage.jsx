@@ -170,7 +170,8 @@ const FEATURES_CATALOG = [
   { module: "Facturas Proveedor", features: [
       { code: "VER_FACTURAS", label: "Acceso a Facturas" },
       { code: "CREAR_FACTURA", label: "Habilitar creación de facturas" },
-      { code: "EDITAR_FACTURA", label: "Habilitar edición de facturas" }
+      { code: "EDITAR_FACTURA", label: "Habilitar edición de facturas" },
+      { code: "EDITAR_FECHAS_FACTURA", label: "Habilitar edición de fechas (Factura y Pago)" }
     ]
   },
   { module: "Pedidos", features: [

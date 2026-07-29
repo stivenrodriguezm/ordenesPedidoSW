@@ -621,3 +621,88 @@ main {
 .skeleton-row td {
   padding: 1rem 1.5rem;
 }
+
+/* ==========================================================================
+   Shared Header Styles (Premium V2)
+   ========================================================================== */
+.form-title-header.premium-v2,
+.nv-title-header.premium-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 0.85rem 1.35rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.title-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #274385;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  box-shadow: 0 0 12px rgba(39, 67, 133, 0.4);
+  flex-shrink: 0;
+}
+
+.title-text-group h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.title-subtitle {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+/* Global Primary Button Standardization (Estilo Botón General / Nueva Venta) */
+.btn-primary,
+.pt-btn-primary,
+.btn-submit-action,
+.btn-primary-modal,
+.o-btn-primary-glow,
+.rem-btn-primary,
+.ref-btn-primary,
+.fact-btn-primary,
+.btn-crear-pedido,
+.btn-primary-glow {
+  background: #274385 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-primary:hover:not(:disabled),
+.pt-btn-primary:hover:not(:disabled),
+.btn-submit-action:hover:not(:disabled),
+.btn-primary-modal:hover:not(:disabled),
+.o-btn-primary-glow:hover:not(:disabled),
+.rem-btn-primary:hover:not(:disabled),
+.ref-btn-primary:hover:not(:disabled),
+.fact-btn-primary:hover:not(:disabled),
+.btn-crear-pedido:hover:not(:disabled),
+.btn-primary-glow:hover:not(:disabled) {
+  background: #1a2d59 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 5px 20px #192b54 !important;
+}

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import API from '../services/api';
 import { AppContext } from '../AppContext';
-import { FaTrashAlt, FaPlus, FaBuilding, FaMapMarkerAlt, FaBoxes } from 'react-icons/fa';
+import { FaTrashAlt, FaPlus, FaBuilding, FaMapMarkerAlt, FaBoxes, FaLayerGroup } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
-import logoFinal from '../assets/logoFinal.png';
+import AppNotification from './AppNotification';
 import './CrearPedidoTelaModal.css';
 
-const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociadaId = '' }) => {
+const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociadaId = '', showNotification }) => {
     const { usuario } = useContext(AppContext);
     const [ordenes, setOrdenes] = useState([]);
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
@@ -16,14 +16,24 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
     const [isOtraDireccion, setIsOtraDireccion] = useState(false);
     const [createdPedidoId, setCreatedPedidoId] = useState(null);
     const [pdfData, setPdfData] = useState(null);
+    const [toast, setToast] = useState({ message: '', type: '' });
     const previewRef = useRef(null);
+
+    const showToast = (message, type = 'success') => {
+        if (typeof showNotification === 'function') {
+            showNotification(message, type);
+        }
+        setToast({ message, type });
+    };
+
+    const [tipoMaterial, setTipoMaterial] = useState('Tela'); // 'Tela' | 'Cuero'
 
     const [newPedido, setNewPedido] = useState({
         proveedor: '',
         direccion_entrega: '',
         direccion_entrega_custom: '',
         orden_asociada_id: initialOrdenAsociadaId,
-        detalles: [{ tela: '', cantidad: '' }]
+        detalles: [{ referencia: '', color: '', cantidad: '' }]
     });
 
     const [newProveedor, setNewProveedor] = useState({
@@ -40,6 +50,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             fetchProveedoresTelas();
             fetchDirecciones();
             setNewPedido(prev => ({ ...prev, orden_asociada_id: initialOrdenAsociadaId }));
+            setToast({ message: '', type: '' });
         }
     }, [isOpen, initialOrdenAsociadaId]);
 
@@ -78,10 +89,10 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             setShowProveedorModal(false);
             setNewProveedor({ nombre_empresa: '', nombre_encargado: '', contacto: '' });
             fetchProveedoresTelas();
-            alert('Proveedor creado exitosamente');
+            showToast('Proveedor creado exitosamente', 'success');
         } catch (error) {
             console.error("Error creating proveedor:", error);
-            alert('Error al crear proveedor');
+            showToast('Error al crear proveedor', 'error');
         }
     };
 
@@ -92,10 +103,10 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             setShowDireccionModal(false);
             setNewDireccion({ nombre: '', detalles: '' });
             fetchDirecciones();
-            alert('Dirección guardada exitosamente');
+            showToast('Dirección guardada exitosamente', 'success');
         } catch (error) {
             console.error("Error creating direccion:", error);
-            alert('Error al guardar dirección');
+            showToast('Error al guardar dirección', 'error');
         }
     };
 
@@ -110,7 +121,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             }
         } catch (error) {
             console.error("Error deleting direccion:", error);
-            alert('Error al eliminar la dirección');
+            showToast('Error al eliminar la dirección', 'error');
         }
     };
 
@@ -126,55 +137,83 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
         setNewPedido(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleAddDetalle = () => {
+        setNewPedido({
+            ...newPedido,
+            detalles: [...newPedido.detalles, { referencia: '', color: '', cantidad: '' }]
+        });
+    };
+
+    const handleRemoveDetalle = (index) => {
+        const updatedDetalles = newPedido.detalles.filter((_, i) => i !== index);
+        setNewPedido({ ...newPedido, detalles: updatedDetalles });
+    };
+
     const handleDetalleChange = (index, field, value) => {
-        const newDetalles = [...newPedido.detalles];
-        newDetalles[index][field] = value;
-        setNewPedido(prev => ({ ...prev, detalles: newDetalles }));
-    };
-
-    const addDetalle = () => {
-        setNewPedido(prev => ({
-            ...prev,
-            detalles: [...prev.detalles, { tela: '', cantidad: '' }]
-        }));
-    };
-
-    const removeDetalle = (index) => {
-        const newDetalles = newPedido.detalles.filter((_, i) => i !== index);
-        setNewPedido(prev => ({ ...prev, detalles: newDetalles }));
+        const updatedDetalles = [...newPedido.detalles];
+        updatedDetalles[index][field] = value;
+        setNewPedido({ ...newPedido, detalles: updatedDetalles });
     };
 
     const handleCreatePedido = async (e) => {
         e.preventDefault();
-        let dirFila = newPedido.direccion_entrega;
-        if (isOtraDireccion) {
-            if (!newPedido.direccion_entrega_custom.trim()) {
-                alert("Por favor escriba la dirección de entrega.");
-                return;
-            }
-            dirFila = newPedido.direccion_entrega_custom;
-        } else {
-            const addr = direcciones.find(d => String(d.id) === String(newPedido.direccion_entrega));
-            if (addr) dirFila = `${addr.nombre} - ${addr.detalles}`;
+        
+        if (!newPedido.proveedor) {
+            showToast("Por favor seleccione un proveedor.", 'error');
+            return;
         }
 
+        let finalDireccion = '';
+        if (isOtraDireccion) {
+            if (!newPedido.direccion_entrega_custom.trim()) {
+                showToast("Por favor escriba la dirección de entrega.", 'error');
+                return;
+            }
+            finalDireccion = newPedido.direccion_entrega_custom.trim();
+        } else {
+            const dirObj = direcciones.find(d => String(d.id) === String(newPedido.direccion_entrega));
+            finalDireccion = dirObj ? `${dirObj.nombre} - ${dirObj.detalles}` : '';
+        }
+
+        if (!finalDireccion) {
+            showToast("Por favor seleccione o escriba la dirección de entrega.", 'error');
+            return;
+        }
+
+        const validDetalles = newPedido.detalles.filter(d => d.referencia.trim() !== '' && parseFloat(d.cantidad) > 0);
+
+        if (validDetalles.length === 0) {
+            showToast("Por favor ingrese al menos una referencia y cantidad válida.", 'error');
+            return;
+        }
+
+        const payload = {
+            proveedor: parseInt(newPedido.proveedor),
+            direccion_entrega: finalDireccion,
+            estado: 'Pendiente',
+            orden_asociada_id: newPedido.orden_asociada_id ? parseInt(newPedido.orden_asociada_id) : null,
+            detalles: validDetalles.map(d => {
+                const desc = `${tipoMaterial === 'Cuero' ? '[CUERO] ' : ''}${d.referencia.trim()}${d.color && d.color.trim() ? ` - Color: ${d.color.trim()}` : ''}`;
+                return {
+                    tela: desc,
+                    cantidad: parseFloat(String(d.cantidad).replace(',', '.')) || 1
+                };
+            })
+        };
+
+        setPdfData({
+            ...payload,
+            tipo_material: tipoMaterial,
+            detalles: validDetalles.map(d => ({
+                referencia: d.referencia.trim(),
+                color: d.color && d.color.trim() ? d.color.trim() : 'Standard',
+                cantidad: parseFloat(d.cantidad) || 1,
+                unidad: tipoMaterial === 'Cuero' ? 'dm' : 'mts'
+            }))
+        });
+
         try {
-            const payload = {
-                proveedor: parseInt(newPedido.proveedor),
-                direccion_entrega: dirFila,
-                estado: 'Pendiente',
-                orden_asociada_id: newPedido.orden_asociada_id ? parseInt(newPedido.orden_asociada_id) : null,
-                detalles: newPedido.detalles.filter(d => d.tela && d.cantidad)
-            };
-
             const response = await API.post('pedidos-telas/', payload);
-
-            setPdfData({
-                proveedor: newPedido.proveedor,
-                direccion_entrega: dirFila,
-                orden_asociada_id: newPedido.orden_asociada_id,
-                detalles: newPedido.detalles.filter(d => d.tela && d.cantidad)
-            });
 
             setCreatedPedidoId(response.data.id);
             setNewPedido({
@@ -182,12 +221,14 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 direccion_entrega: '',
                 direccion_entrega_custom: '',
                 orden_asociada_id: '',
-                detalles: [{ tela: '', cantidad: '' }]
+                detalles: [{ referencia: '', color: '', cantidad: '' }]
             });
+            setTipoMaterial('Tela');
             setIsOtraDireccion(false);
         } catch (error) {
-            console.error("Error creating pedido tela:", error);
-            alert('Error al crear pedido de tela');
+            console.error("Error creating pedido tela:", error.response?.data || error);
+            const serverMsg = error.response?.data ? JSON.stringify(error.response.data) : 'Error al crear pedido de tela';
+            showToast(serverMsg.length < 100 ? serverMsg : 'Error al crear pedido de tela', 'error');
         }
     };
 
@@ -196,26 +237,31 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             const generatePDF = async () => {
                 try {
                     previewRef.current.style.display = 'block';
+                    if (document.fonts && document.fonts.ready) {
+                        await document.fonts.ready;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 150));
                     const canvas = await html2canvas(previewRef.current, {
                         backgroundColor: '#ffffff',
                         scale: 2,
                         useCORS: true,
+                        logging: false,
                     });
                     previewRef.current.style.display = 'none';
 
                     const image = canvas.toDataURL('image/png');
                     const link = document.createElement('a');
                     link.href = image;
-                    link.download = `pedido_telas_${createdPedidoId}.png`;
+                    link.download = `pedido_material_${createdPedidoId}.png`;
                     link.click();
 
+                    showToast(`Pedido de ${tipoMaterial.toLowerCase()} creado exitosamente`, 'success');
                     setCreatedPedidoId(null);
-                    alert('Pedido de tela creado exitosamente');
                     if (onSuccess) onSuccess();
                     onClose();
                 } catch (error) {
                     console.error('Error generating PDF:', error);
-                    alert('Pedido de tela creado exitosamente, pero hubo un error al descargar la imagen.');
+                    showToast('Pedido creado exitosamente, pero hubo un error al descargar la imagen.', 'error');
                     setCreatedPedidoId(null);
                     if (onSuccess) onSuccess();
                     onClose();
@@ -223,7 +269,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             };
             generatePDF();
         }
-    }, [createdPedidoId, onClose, onSuccess]);
+    }, [createdPedidoId, onClose, onSuccess, tipoMaterial]);
 
     const getOrdenId = (idStr) => {
         if (!idStr) return '';
@@ -245,6 +291,8 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
 
     if (!isOpen) return null;
 
+    const unitSuffix = tipoMaterial === 'Cuero' ? 'dcm.' : 'mts.';
+
     return (
         <>
             <div className="pt-modal-overlay">
@@ -253,8 +301,8 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                         <div className="pt-modal-title">
                             <span className="pt-modal-icon">📦</span>
                             <div>
-                                <h2>Nuevo Pedido de Telas</h2>
-                                <p>Solicita material rápidamente al proveedor.</p>
+                                <h2>Nuevo Pedido de Materiales</h2>
+                                <p>Solicita telas o cueros rápidamente al proveedor.</p>
                             </div>
                         </div>
                         <button className="pt-modal-close" type="button" onClick={onClose}>&times;</button>
@@ -289,64 +337,107 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                             </div>
                         </div>
 
-                        {/* Productos / Telas */}
+                        {/* Sección Tipo de Material & Detalles */}
                         <div className="pt-section-box">
                             <div className="pt-section-header">
-                                <h4>Detalles (Telas)</h4>
+                                <div className="pt-section-title-group">
+                                    <h4>Detalles del Pedido</h4>
+                                </div>
+                                <div className="pt-material-toggle">
+                                    <button 
+                                        type="button" 
+                                        className={`pt-toggle-btn ${tipoMaterial === 'Tela' ? 'active' : ''}`} 
+                                        onClick={() => setTipoMaterial('Tela')}
+                                    >
+                                        🧵 Tela (mts.)
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`pt-toggle-btn ${tipoMaterial === 'Cuero' ? 'active' : ''}`} 
+                                        onClick={() => setTipoMaterial('Cuero')}
+                                    >
+                                        🐄 Cuero (dcm.)
+                                    </button>
+                                </div>
                             </div>
+
                             <div className="pt-detalles-list">
                                 {newPedido.detalles.map((detalle, index) => (
                                     <div key={index} className="pt-detalle-row">
-                                        <div className="pt-detalle-col-main">
-                                            <input required type="text" placeholder="Referencia / Descripción de Tela" value={detalle.tela} onChange={(e) => handleDetalleChange(index, 'tela', e.target.value)} />
+                                        <div className="pt-detalle-col pt-col-ref">
+                                            <label className="pt-col-label">Referencia</label>
+                                            <input 
+                                                required 
+                                                type="text" 
+                                                placeholder={tipoMaterial === 'Cuero' ? 'Ej. Nappa Premium' : 'Ej. Lino Blanco'} 
+                                                value={detalle.referencia} 
+                                                onChange={(e) => handleDetalleChange(index, 'referencia', e.target.value)} 
+                                            />
                                         </div>
-                                        <div className="pt-detalle-col-qty">
-                                            <input required type="text" placeholder="Cant. (ej. 150m)" value={detalle.cantidad} onChange={(e) => handleDetalleChange(index, 'cantidad', e.target.value)} />
+                                        <div className="pt-detalle-col pt-col-color">
+                                            <label className="pt-col-label">Color</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Ej. Negro / Azul" 
+                                                value={detalle.color} 
+                                                onChange={(e) => handleDetalleChange(index, 'color', e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="pt-detalle-col pt-col-qty">
+                                            <label className="pt-col-label">Cant. ({unitSuffix})</label>
+                                            <input 
+                                                required 
+                                                type="text" 
+                                                placeholder={tipoMaterial === 'Cuero' ? 'Ej. 1400' : 'Ej. 1.6'} 
+                                                value={detalle.cantidad} 
+                                                onChange={(e) => handleDetalleChange(index, 'cantidad', e.target.value)} 
+                                            />
                                         </div>
                                         <div className="pt-detalle-col-action">
                                             {newPedido.detalles.length > 1 ? (
-                                                <button type="button" className="pt-btn-icon-danger" onClick={() => removeDetalle(index)} title="Eliminar fila">
+                                                <button type="button" className="pt-btn-icon-danger" onClick={() => handleRemoveDetalle(index)} title="Eliminar fila">
                                                     <FaTrashAlt />
                                                 </button>
                                             ) : (
-                                                <div style={{width: '32px'}}></div>
+                                                <div className="pt-btn-placeholder"></div>
                                             )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <button type="button" className="pt-btn-add" onClick={addDetalle}>
-                                <FaPlus /> Añadir otra tela
+
+                            <button type="button" className="pt-btn-add" onClick={handleAddDetalle}>
+                                <FaPlus /> Añadir {tipoMaterial === 'Cuero' ? 'cuero' : 'tela'}
                             </button>
                         </div>
 
-                        {/* Lugar de Entrega */}
-                        <div className="pt-form-group pt-mt-4">
-                            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span><FaMapMarkerAlt /> Lugar de Entrega</span>
-                                <button type="button" className="pt-link-btn" onClick={() => setShowDireccionModal(true)}>
-                                    + Gestionar Direcciones
-                                </button>
+                        {/* Fila Dirección de Entrega */}
+                        <div className="pt-form-group">
+                            <label style={{ justifyContent: 'space-between', width: '100%' }}>
+                                <span><FaMapMarkerAlt /> Dirección de Entrega</span>
+                                {(usuario?.role?.toLowerCase() === 'administrador' || usuario?.role?.toLowerCase() === 'auxiliar') && (
+                                    <button type="button" className="pt-link-btn" onClick={() => setShowDireccionModal(true)}>
+                                        ⚙️ Gestionar
+                                    </button>
+                                )}
                             </label>
                             <div className="pt-select-wrapper">
                                 <select required name="direccion_entrega" value={newPedido.direccion_entrega} onChange={handlePedidoChange}>
-                                    <option value="">Seleccione lugar de entrega...</option>
+                                    <option value="">Seleccione una dirección...</option>
                                     {direcciones.map(d => (
-                                        <option key={d.id} value={d.id}>{d.nombre} ({d.detalles})</option>
+                                        <option key={d.id} value={d.id}>{d.nombre} - {d.detalles}</option>
                                     ))}
-                                    <option value="OTRA">+ Especificar otra dirección...</option>
+                                    <option value="OTRA">Otra dirección (escribir manualmente)</option>
                                 </select>
                             </div>
                         </div>
 
                         {isOtraDireccion && (
-                            <div className="pt-form-group pt-custom-address">
-                                <label>Dirección Específica</label>
-                                <textarea placeholder="Escriba la dirección de entrega detallada..." value={newPedido.direccion_entrega_custom} onChange={(e) => setNewPedido(prev => ({ ...prev, direccion_entrega_custom: e.target.value }))} rows="2"></textarea>
+                            <div className="pt-form-group">
+                                <textarea required name="direccion_entrega_custom" value={newPedido.direccion_entrega_custom} onChange={handlePedidoChange} placeholder="Escriba la dirección de entrega detallada..." rows="2"></textarea>
                             </div>
                         )}
 
-                        {/* Footer Sticky */}
                         <div className="pt-modal-footer">
                             <button type="button" className="pt-btn-secondary" onClick={onClose}>Cancelar</button>
                             <button type="submit" className="pt-btn-primary">Guardar Pedido</button>
@@ -360,7 +451,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 <div className="pt-modal-overlay pt-z-max">
                     <div className="pt-modal-content pt-modal-sm">
                         <div className="pt-modal-header">
-                            <h3>Nuevo Proveedor de Telas</h3>
+                            <h3>Nuevo Proveedor</h3>
                             <button className="pt-modal-close" type="button" onClick={() => setShowProveedorModal(false)}>&times;</button>
                         </div>
                         <form onSubmit={handleCreateProveedor} className="pt-modal-body">
@@ -432,7 +523,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 </div>
             )}
 
-            {/* Hidden Div for PDF/Image Generation */}
+            {/* Hidden Div for PDF/Image Generation (Corporate Elegant Modern Redesign) */}
             <div
                 id="pedido-tela-preview"
                 ref={previewRef}
@@ -442,7 +533,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     left: '-9999px',
                     width: '800px',
                     backgroundColor: '#ffffff',
-                    padding: '36px',
+                    padding: '40px',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                     color: '#0f172a',
                     boxSizing: 'border-box',
@@ -450,43 +541,83 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 }}
             >
                 {/* Header Section */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #0f172a', paddingBottom: '16px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000000', paddingBottom: '16px', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <h1 style={{ fontFamily: '"Audiowide", sans-serif', fontSize: '38px', margin: '0', color: '#0f172a', lineHeight: '1', textTransform: 'uppercase', letterSpacing: '2px' }}>LOTTUS</h1>
-                        <p style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', margin: '6px 0 0 0', letterSpacing: '1px', textTransform: 'uppercase' }}>Mobiliario & Diseño</p>
-                    </div>
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pedido de Telas</h2>
-                        <div style={{ display: 'inline-block', backgroundColor: '#0f172a', color: 'white', padding: '4px 12px', borderRadius: '4px', marginTop: '8px', fontSize: '18px', fontWeight: '700' }}>
-                            Nº {createdPedidoId}
+                        {/* REDISEÑO COMPLETO DEL LOGO LOTTUS */}
+                        <div style={{ 
+                            backgroundColor: '#000000', 
+                            width: '260px',
+                            height: '66px',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            boxSizing: 'border-box' 
+                        }}>
+                            <span style={{ 
+                                position: 'absolute',
+                                left: '0',
+                                right: '0',
+                                textAlign: 'center',
+                                top: '2px',
+                                fontFamily: '"Audiowide", sans-serif', 
+                                fontSize: '34px', 
+                                color: '#ffffff', 
+                                letterSpacing: '6px', 
+                                lineHeight: '1', 
+                                margin: '0',
+                                padding: '0',
+                                display: 'block'
+                            }}>
+                                LOTTUS
+                            </span>
                         </div>
+                    </div>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>ORDEN DE MATERIAL</span>
+                        <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px', lineHeight: '1' }}>
+                            {pdfData?.tipo_material === 'Cuero' ? 'PEDIDO DE CUEROS' : 'PEDIDO DE TELAS'}
+                        </h2>
+                        {/* NÚMERO DE ORDEN EN ROJO */}
+                        <span style={{ 
+                            color: '#dc2626', 
+                            fontSize: '16px', 
+                            fontWeight: '900', 
+                            letterSpacing: '1px', 
+                            lineHeight: '1', 
+                            marginTop: '2px'
+                        }}>
+                            Nº {createdPedidoId}
+                        </span>
                     </div>
                 </div>
 
                 {/* Metadata Section */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '28px', fontSize: '14px', lineHeight: '1.6', color: '#334155', backgroundColor: '#f8fafc', padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', fontSize: '13px', color: '#334155', backgroundColor: '#f8fafc', padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <div>
                         <p style={{ margin: '0 0 8px 0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Proveedor:</strong>{' '}
-                            <span style={{ color: '#1e293b' }}>{pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || 'N/A' : 'N/A'}</span>
+                            <strong style={{ color: '#0f172a', fontWeight: '700', display: 'inline-block', width: '110px' }}>Proveedor:</strong>{' '}
+                            <span style={{ color: '#0f172a', fontWeight: '700' }}>{pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || 'N/A' : 'N/A'}</span>
                         </p>
                         <p style={{ margin: '0 0 8px 0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Solicitante:</strong>{' '}
-                            <span style={{ color: '#1e293b' }}>{usuario ? `${usuario.first_name || ''} ${usuario.last_name || ''}`.trim() : 'N/A'}</span>
+                            <strong style={{ color: '#0f172a', fontWeight: '700', display: 'inline-block', width: '110px' }}>Solicitante:</strong>{' '}
+                            <span style={{ color: '#334155', fontWeight: '600' }}>{usuario ? `${usuario.first_name || ''} ${usuario.last_name || ''}`.trim() : 'N/A'}</span>
                         </p>
                         <p style={{ margin: '0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '600', display: 'inline-block', width: '130px' }}>Orden Asociada:</strong>{' '}
-                            <span style={{ color: '#1e293b', fontWeight: '700' }}>{pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</span>
+                            <strong style={{ color: '#0f172a', fontWeight: '700', display: 'inline-block', width: '110px' }}>Material:</strong>{' '}
+                            <span style={{ color: '#0f172a', fontWeight: '800' }}>{pdfData?.tipo_material || 'Tela'}</span>
                         </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                         <p style={{ margin: '0 0 8px 0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '600' }}>Fecha:</strong>{' '}
-                            <span style={{ color: '#1e293b' }}>{getFormattedDate()}</span>
+                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Fecha:</strong>{' '}
+                            <span style={{ color: '#334155', fontWeight: '600' }}>{getFormattedDate()}</span>
+                        </p>
+                        <p style={{ margin: '0 0 8px 0' }}>
+                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Orden Asociada:</strong>{' '}
+                            <span style={{ color: '#0f172a', fontWeight: '700' }}>{pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</span>
                         </p>
                         <p style={{ margin: '0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '600' }}>Venta Asociada:</strong>{' '}
-                            <span style={{ color: '#1e293b', fontWeight: '700' }}>{(() => {
+                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Venta Asociada:</strong>{' '}
+                            <span style={{ color: '#0f172a', fontWeight: '700' }}>{(() => {
                                 const vId = getVentaId(pdfData?.orden_asociada_id);
                                 return vId ? `#${vId}` : 'N/A';
                             })()}</span>
@@ -495,44 +626,63 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 </div>
 
                 {/* Details Section */}
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Detalles de Telas</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
-                    <thead style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    ESPECIFICACIÓN DE MATERIALES
+                </h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                    <thead style={{ backgroundColor: '#000000', color: '#ffffff' }}>
                         <tr>
-                            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', borderRadius: '6px 0 0 0' }}>Descripción</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px', width: '160px', borderRadius: '0 6px 0 0' }}>Cantidad</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '12px', width: '40px', letterSpacing: '0.5px', color: '#ffffff' }}>#</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '12px', letterSpacing: '0.5px', color: '#ffffff' }}>Referencia</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '12px', width: '180px', letterSpacing: '0.5px', color: '#ffffff' }}>Color</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', fontSize: '12px', width: '140px', letterSpacing: '0.5px', color: '#ffffff' }}>Cantidad</th>
                         </tr>
                     </thead>
                     <tbody>
                         {pdfData?.detalles && pdfData.detalles.length > 0 ? (
                             pdfData.detalles.map((detalle, index) => (
-                                <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                    <td style={{ padding: '14px 16px', fontSize: '15px', color: '#1e293b', fontWeight: '500' }}>{detalle.tela}</td>
-                                    <td style={{ padding: '14px 16px', fontSize: '16px', color: '#0f172a', textAlign: 'center', fontWeight: '700' }}>{detalle.cantidad}</td>
+                                <tr key={index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                                    <td style={{ padding: '12px 14px', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>{index + 1}</td>
+                                    <td style={{ padding: '12px 14px', fontSize: '14px', color: '#0f172a', fontWeight: '700' }}>{detalle.referencia}</td>
+                                    <td style={{ padding: '12px 14px', fontSize: '13px', color: '#334155', fontWeight: '500' }}>{detalle.color || 'Standard'}</td>
+                                    <td style={{ padding: '12px 14px', fontSize: '14px', color: '#000000', textAlign: 'right', fontWeight: '800' }}>
+                                        {detalle.cantidad} {detalle.unidad}
+                                    </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="2" style={{ padding: '14px', textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>Sin detalles registrados</td>
+                                <td colSpan="4" style={{ padding: '14px', textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>Sin detalles registrados</td>
                             </tr>
                         )}
                     </tbody>
                 </table>
 
                 {/* Delivery Address Section */}
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>Dirección de entrega:</h3>
                 <div style={{ 
                     backgroundColor: '#f8fafc', 
                     border: '1px solid #e2e8f0', 
-                    borderRadius: '6px', 
-                    padding: '12px 16px', 
-                    fontSize: '14px', 
-                    color: '#334155',
-                    lineHeight: '1.5'
+                    borderRadius: '8px', 
+                    padding: '14px 18px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px' 
                 }}>
-                    {pdfData?.direccion_entrega || 'No especificada'}
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.8px', whiteSpace: 'nowrap' }}>
+                        Dirección de entrega:
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#0f172a', fontWeight: '600' }}>
+                        {pdfData?.direccion_entrega || 'No especificada'}
+                    </span>
                 </div>
             </div>
+
+            {/* AppToast / Notification Component for Modal alerts */}
+            <AppNotification 
+                message={toast.message} 
+                type={toast.type} 
+                onClose={() => setToast({ message: '', type: '' })} 
+            />
         </>
     );
 };

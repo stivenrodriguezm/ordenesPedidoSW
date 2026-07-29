@@ -697,11 +697,11 @@ function RemisionesPage() {
                     </div>
                     <div className="v-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0 0.8rem', height: '34px' }}>
                         <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Desde</span>
-                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
+                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
                     </div>
                     <div className="v-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0 0.8rem', height: '34px' }}>
                         <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Hasta</span>
-                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
+                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
                     </div>
                     <div className="v-select-pill">
                         <select value={estadoFilter} onChange={e => setEstadoFilter(e.target.value)}>

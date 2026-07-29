@@ -33,8 +33,6 @@ const DISPONIBILIDAD_LABELS = {
 const DISPONIBILIDAD_OPTIONS = [
     { key: 'exhibicion',    label: 'Exhibición' },
     { key: 'cliente',       label: 'Cliente' },
-    { key: 'por_despachar', label: 'Por Despachar' },
-    { key: 'despachado',    label: 'Despachado' },
     { key: 'entregado',     label: 'Entregado' },
     { key: 'por_reparar',   label: 'Por Reparar' },
     { key: 'consignacion',  label: 'Consignación' },
@@ -802,11 +800,28 @@ function InventarioPage() {
         };
     });
 
-    // ── Filter ────────────────────────────────────────────────────────────────
+    // ── Proveedor index per grupo (for multi-provider group filter) ──────────
+    const grouped_proveedorIds = {};
+    items.forEach(item => {
+        if (item.grupoId && item.prod?.proveedorId) {
+            if (!grouped_proveedorIds[item.grupoId]) grouped_proveedorIds[item.grupoId] = [];
+            if (!grouped_proveedorIds[item.grupoId].includes(item.prod.proveedorId)) {
+                grouped_proveedorIds[item.grupoId].push(item.prod.proveedorId);
+            }
+        }
+    });
+
+        // ── Filter ────────────────────────────────────────────────────────────────
     const filtered = items.filter(item => {
         const grupoObj = item.grupoId ? grupos.find(g => g.id === item.grupoId) : null;
 
-        if (filterProveedor && item.prod?.proveedorId !== parseInt(filterProveedor)) return false;
+        if (filterProveedor) {
+            const pid = parseInt(filterProveedor);
+            const itemMatch = item.prod?.proveedorId === pid;
+            // For grouped items: also match if any item in the group belongs to this provider
+            const grupoMatch = item.grupoId && grouped_proveedorIds && grouped_proveedorIds[item.grupoId]?.includes(pid);
+            if (!itemMatch && !grupoMatch) return false;
+        }
         
         if (filterCategoria) {
             const matchItem = String(item.prod?.categoriaId) === filterCategoria || String(item.cat?.id) === filterCategoria;
@@ -931,28 +946,8 @@ function InventarioPage() {
 
     // ── Inline disponibilidad badge (C) ───────────────────────────────────────
     const renderDispBadge = (inv) => {
-        if (inlineEditItem === inv.dbId) {
-            return (
-                <select
-                    className="inv-inline-disp-select"
-                    defaultValue={inv.disponibilidad}
-                    autoFocus
-                    onChange={e => handleInlineDisp(inv.dbId, e.target.value)}
-                    onBlur={() => setInlineEditItem(null)}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {DISPONIBILIDAD_OPTIONS.map(({ key, label }) => (
-                        <option key={key} value={key}>{label}</option>
-                    ))}
-                </select>
-            );
-        }
         return (
-            <span
-                className={`disp-badge disp-${inv.disponibilidad} inv-disp-clickable`}
-                onClick={e => { e.stopPropagation(); setInlineEditItem(inv.dbId); }}
-                title="Click para cambiar disponibilidad"
-            >
+            <span className={`disp-badge disp-${inv.disponibilidad}`}>
                 {DISPONIBILIDAD_LABELS[inv.disponibilidad] || '—'}
             </span>
         );
@@ -1116,100 +1111,154 @@ function InventarioPage() {
             }
         });
 
-        const rows = [];
+        const combined = [];
 
         Object.entries(groupedById).forEach(([gIdStr, gItems]) => {
             const grupoId   = parseInt(gIdStr);
             const grupoObj  = grupos.find(g => g.id === grupoId) || { id: grupoId, nombre: `Grupo ${gIdStr}` };
-            const isExpanded = expandedGroups[grupoId];
-            const first     = gItems[0];
-            const color     = first.prod ? getCatColor(first.prod.categoriaId) : '#94a3b8';
+            
             const dispSet   = new Set(gItems.map(i => i.disponibilidad));
             const dispUni   = dispSet.size === 1 ? [...dispSet][0] : null;
-            const nonBuenEstado = gItems.find(i => i.estado_fisico && i.estado_fisico !== 'buen_estado');
-            const grupoEstadoFisico = nonBuenEstado ? nonBuenEstado.estado_fisico : 'buen_estado';
 
-            const uProveedor = [...new Set(gItems.map(i => i.proveedorNombre))];
-            const gProveedor = uProveedor.length === 1 && uProveedor[0] ? uProveedor[0] : null;
+            const uProveedor = [...new Set(gItems.map(i => i.proveedorNombre).filter(Boolean).filter(p => p !== '—'))];
+            const gProveedorIsShared = uProveedor.length > 1;
+            const gProveedor = uProveedor.length === 0
+                ? null
+                : uProveedor.length === 1
+                    ? uProveedor[0]
+                    : uProveedor.join(', ');
 
             const uFactura = [...new Set(gItems.map(i => i.facturaManual))];
             const gFactura = uFactura.length === 1 && uFactura[0] ? uFactura[0] : null;
 
             const uFecha = [...new Set(gItems.map(i => i.fechaIngreso))];
-            const gFecha = uFecha.length === 1 && uFecha[0] ? uFecha[0].split('-').reverse().join('/') : null;
+            const gFechaRaw = uFecha.length === 1 && uFecha[0] ? uFecha[0] : null;
+            const gFecha = gFechaRaw ? gFechaRaw.split('-').reverse().join('/') : null;
 
             const uSede = [...new Set(gItems.map(i => i.sede_nombre))];
             const gSede = uSede.length === 1 && uSede[0] ? uSede[0] : null;
 
             const uZona = [...new Set(gItems.map(i => i.zona_nombre))];
             const gZona = uZona.length === 1 && uZona[0] ? uZona[0] : null;
+            
+            const nonBuenEstado = gItems.find(i => i.estado_fisico && i.estado_fisico !== 'buen_estado');
+            const grupoEstadoFisico = nonBuenEstado ? nonBuenEstado.estado_fisico : 'buen_estado';
 
-            rows.push(
-                <tr key={`grupo-${grupoId}`} className="inv-group-header-row" onClick={() => toggleGroup(grupoId)}>
-                    <td><span className="inv-group-id-badge">G{String(grupoId).padStart(3, '0')}</span></td>
-                    <td className="inv-proveedor-col" title={gProveedor || ''}>{gProveedor || <span className="empty-val">—</span>}</td>
-                    <td className="inv-factura-col" title={gFactura || ''}>{gFactura || <span className="empty-val">—</span>}</td>
-                    <td className="inv-numeric" title={grupoObj.venta_id}>{grupoObj.venta_id || <span className="empty-val">—</span>}</td>
-                    <td>
-                        {dispUni
-                            ? <span className={`disp-badge disp-${dispUni}`}>{DISPONIBILIDAD_LABELS[dispUni]}</span>
-                            : <span className="disp-badge inv-disp-mixto">Mixto</span>}
-                    </td>
-                    <td title={gFecha || ''}>{gFecha || <span className="empty-val">—</span>}</td>
-                    <td title={grupoObj.nombre}>
-                        <div className="prod-name-cell">
-                            <span className="inv-group-nombre-small">{grupoObj.nombre}</span>
-                        </div>
-                    </td>
-                    <td>
-                        {grupoObj.categoria_nombre && (
-                            <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': getCatColor(grupoObj.categoria_id) || '#94a3b8' }}>
-                                {grupoObj.categoria_nombre}
-                            </span>
-                        )}
-                    </td>
-                    <td title={grupoObj.subcategoria_nombre || ''}>{grupoObj.subcategoria_nombre || <span className="empty-val">—</span>}</td>
-                    <td><span className="empty-val">—</span></td>
-                    <td><span className="empty-val">—</span></td>
-                    <td>
-                        <span className="inv-group-count-pill" style={{ marginLeft: 0 }}>{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
-                    </td>
-                    <td title={grupoEstadoFisico} style={{textTransform: 'capitalize'}}>{grupoEstadoFisico.replace(/_/g, ' ')}</td>
-                    <td title={gSede || ''}>{gSede || <span className="empty-val">—</span>}</td>
-                    <td title={gZona || ''}>{gZona || <span className="empty-val">—</span>}</td>
-                    <td className="inv-obs-col" title={grupoObj.observacion || ''}>{grupoObj.observacion || <span className="empty-val">—</span>}</td>
-                    {hasPermission('VER_COSTOS_INVENTARIO') && showCostoCol && (
-                        <td className="inv-costo-col" style={{ fontWeight: 700, color: '#1e293b' }}>
-                            {formatCOP(parseFloat(grupoObj.costo_total) || 0)}
-                        </td>
-                    )}
-                    <td style={{ textAlign: 'center' }}>
-                        <div className="inv-group-actions">
-                            {hasPermission('EDITAR_ITEM_INVENTARIO') && (
-                                <button className="inv-group-edit-btn" title="Editar grupo"
-                                    onClick={e => { e.stopPropagation(); openGrupoEdit(grupoObj, gItems); }}>
-                                    <FaEdit />
-                                </button>
-                            )}
-                            <button className={`inv-group-toggle ${isExpanded ? 'active' : ''}`}
-                                onClick={e => { e.stopPropagation(); toggleGroup(grupoId); }}>
-                                {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            );
-
-            if (isExpanded) {
-                gItems.forEach((inv, i) =>
-                    rows.push(renderItemRow(inv, `g${grupoId}-item-${i}`, 'inv-group-child-row'))
-                );
-            }
+            combined.push({
+                isGroupRow: true,
+                grupoId,
+                grupoObj,
+                gItems,
+                gProveedorIsShared,
+                gProveedorLabel: gProveedor,
+                // Virtual properties to allow sorting via getSorted()
+                id: `G${String(grupoId).padStart(3, '0')}`,
+                prod: { nombre: grupoObj.nombre },
+                cat: { nombre: grupoObj.categoria_nombre },
+                subcat: { nombre: grupoObj.subcategoria_nombre },
+                proveedorNombre: gProveedorIsShared ? 'Proveedor Compartido' : gProveedor,
+                facturaManual: gFactura,
+                fechaIngreso: gFechaRaw,
+                disponibilidad: dispUni || 'mixto',
+                costo_especifico: parseFloat(grupoObj.costo_total) || 0,
+                ventaId: grupoObj.venta_id,
+                observacion: grupoObj.observacion,
+                gFecha,
+                gSede,
+                gZona,
+                grupoEstadoFisico
+            });
         });
 
         if (viewMode === 'default') {
-            ungrouped.forEach(inv => rows.push(renderItemRow(inv, inv.dbId)));
+            combined.push(...ungrouped);
         }
+
+        const sortedCombined = getSorted(combined);
+        const rows = [];
+
+        sortedCombined.forEach(item => {
+            if (item.isGroupRow) {
+                const { grupoId, grupoObj, gItems, gProveedorIsShared, gProveedorLabel, gFactura, gFecha, gSede, gZona, dispUni, grupoEstadoFisico } = item;
+                const isExpanded = expandedGroups[grupoId];
+
+                rows.push(
+                    <tr key={`grupo-${grupoId}`} className="inv-group-header-row" onClick={() => toggleGroup(grupoId)}>
+                        <td><span className="inv-group-id-badge">{item.id}</span></td>
+                        <td className="inv-proveedor-col" title={gProveedorLabel || ''}>
+                            {gProveedorIsShared
+                                ? (
+                                    <span style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Compartido</span>
+                                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{gProveedorLabel || '—'}</span>
+                                    </span>
+                                )
+                                : (gProveedorLabel || <span className="empty-val">—</span>)
+                            }
+                        </td>
+                        <td className="inv-factura-col" title={gFactura || ''}>{gFactura || <span className="empty-val">—</span>}</td>
+                        <td className="inv-numeric" title={grupoObj.venta_id}>{grupoObj.venta_id || <span className="empty-val">—</span>}</td>
+                        <td>
+                            {dispUni
+                                ? <span className={`disp-badge disp-${dispUni}`}>{DISPONIBILIDAD_LABELS[dispUni]}</span>
+                                : <span className="disp-badge inv-disp-mixto">Mixto</span>}
+                        </td>
+                        <td title={gFecha || ''}>{gFecha || <span className="empty-val">—</span>}</td>
+                        <td title={grupoObj.nombre}>
+                            <div className="prod-name-cell">
+                                <span className="inv-group-nombre-small">{grupoObj.nombre}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {grupoObj.categoria_nombre && (
+                                <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': getCatColor(grupoObj.categoria_id) || '#94a3b8' }}>
+                                    {grupoObj.categoria_nombre}
+                                </span>
+                            )}
+                        </td>
+                        <td title={grupoObj.subcategoria_nombre || ''}>{grupoObj.subcategoria_nombre || <span className="empty-val">—</span>}</td>
+                        <td><span className="empty-val">—</span></td>
+                        <td><span className="empty-val">—</span></td>
+                        <td>
+                            <span className="inv-group-count-pill" style={{ marginLeft: 0 }}>{gItems.length} ítem{gItems.length !== 1 ? 's' : ''}</span>
+                        </td>
+                        <td title={grupoEstadoFisico} style={{textTransform: 'capitalize'}}>{grupoEstadoFisico.replace(/_/g, ' ')}</td>
+                        <td title={gSede || ''}>{gSede || <span className="empty-val">—</span>}</td>
+                        <td title={gZona || ''}>{gZona || <span className="empty-val">—</span>}</td>
+                        <td className="inv-obs-col" title={grupoObj.observacion || ''}>{grupoObj.observacion || <span className="empty-val">—</span>}</td>
+                        {hasPermission('VER_COSTOS_INVENTARIO') && showCostoCol && (
+                            <td className="inv-costo-col" style={{ fontWeight: 700, color: '#1e293b' }}>
+                                {formatCOP(parseFloat(grupoObj.costo_total) || 0)}
+                            </td>
+                        )}
+                        <td style={{ textAlign: 'center' }}>
+                            <div className="inv-group-actions">
+                                {hasPermission('EDITAR_ITEM_INVENTARIO') && (
+                                    <button className="inv-group-edit-btn" title="Editar grupo"
+                                        onClick={e => { e.stopPropagation(); openGrupoEdit(grupoObj, gItems); }}>
+                                        <FaEdit />
+                                    </button>
+                                )}
+                                <button className={`inv-group-toggle ${isExpanded ? 'active' : ''}`}
+                                    onClick={e => { e.stopPropagation(); toggleGroup(grupoId); }}>
+                                    {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                );
+
+                if (isExpanded) {
+                    // Sorting children inside a group could optionally use getSorted(gItems) or leave as is. Let's leave as is to preserve nested structure, or apply getSorted:
+                    const sortedGItems = sortConfig.key ? getSorted(gItems) : gItems;
+                    sortedGItems.forEach((inv, i) =>
+                        rows.push(renderItemRow(inv, `g${grupoId}-item-${i}`, 'inv-group-child-row'))
+                    );
+                }
+            } else {
+                rows.push(renderItemRow(item, item.dbId));
+            }
+        });
 
         if (viewMode === 'groups_only' && rows.length === 0) {
             return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '2rem' }}>No hay grupos con los filtros actuales.</td></tr>;
@@ -1341,11 +1390,11 @@ function InventarioPage() {
                                     </div>
                                     <div className="inv-filter-group">
                                         <label>Fecha Ingreso (Desde)</label>
-                                        <input type="date" value={filterFechaInicio} onChange={e => setFilterFechaInicio(e.target.value)} />
+                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaInicio} onChange={e => setFilterFechaInicio(e.target.value)} />
                                     </div>
                                     <div className="inv-filter-group">
                                         <label>Fecha Ingreso (Hasta)</label>
-                                        <input type="date" value={filterFechaFin} onChange={e => setFilterFechaFin(e.target.value)} />
+                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaFin} onChange={e => setFilterFechaFin(e.target.value)} />
                                     </div>
                                 </div>
                                 {hasFilters && (
@@ -2073,7 +2122,7 @@ function InventarioPage() {
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 3' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Fecha Ingreso</label>
-                                        <input type="date" className="ifg-input" value={itemEditModal.form.fecha_ingreso} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, fecha_ingreso: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
+                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="ifg-input" value={itemEditModal.form.fecha_ingreso} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, fecha_ingreso: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 6' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Observación</label>

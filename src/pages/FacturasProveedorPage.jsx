@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
-import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner } from 'react-icons/fa';
 import './FacturasProveedorPage.css';
+import './VentasImprovements.css';
 
 const getTodayStr = () => {
     const d = new Date();
@@ -65,17 +66,18 @@ function formatDate(dtStr) {
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
-// Estados disponibles para facturas
+// Estados disponibles para facturas en frontend
 const ESTADOS_FACTURA = [
     { value: 'pendiente', label: 'Pendiente' },
-    { value: 'pagada', label: 'Pagada' },
-    { value: 'atrasada', label: 'Atrasada' },
-    { value: 'anulada', label: 'Anulada' },
+    { value: 'por_pagar', label: 'Por pagar' },
+    { value: 'atrasado', label: 'Atrasado' },
+    { value: 'pagado', label: 'Pagado' },
 ];
 
 function FacturasProveedorPage() {
-    const { proveedores } = useContext(AppContext);
+    const { proveedores, usuario } = useContext(AppContext);
     const hasPermission = usePermissions();
+    const canEditFechas = hasPermission('EDITAR_FECHAS_FACTURA');
     const [facturas, setFacturas] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [subcategorias, setSubcategorias] = useState([]);
@@ -114,15 +116,35 @@ function FacturasProveedorPage() {
         toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 4000);
     };
 
-    // Filtros
-    const [filterEstado, setFilterEstado] = useState('');
-    const [filterProveedor, setFilterProveedor] = useState('');
+    // Filtros & Ordenamiento
+    const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'por_pagar', 'atrasado']);
+    const [selectedProveedores, setSelectedProveedores] = useState([]);
     const [filterFechaDesde, setFilterFechaDesde] = useState('');
     const [filterFechaHasta, setFilterFechaHasta] = useState('');
     const [filterSearch, setFilterSearch] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'fechaPago', direction: 'asc' });
 
-    // Modal editar factura (obs + estado)
-    const [editModal, setEditModal] = useState(null); // { id, observaciones, estado }
+    // Modal editar factura (obs + estado + fechas + productos)
+    const [editModal, setEditModal] = useState(null);
+
+    // Popovers de filtro
+    const [isEstadosOpen, setIsEstadosOpen] = useState(false);
+    const [isProveedoresOpen, setIsProveedoresOpen] = useState(false);
+    const estadosRef = useRef(null);
+    const proveedoresRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (estadosRef.current && !estadosRef.current.contains(event.target)) {
+                setIsEstadosOpen(false);
+            }
+            if (proveedoresRef.current && !proveedoresRef.current.contains(event.target)) {
+                setIsProveedoresOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const { data: referencias = [] } = useQuery({
         queryKey: ['productos-all'],
@@ -132,63 +154,66 @@ function FacturasProveedorPage() {
         },
     });
 
-    useEffect(() => {
-        const fetchFacturas = async () => {
-            setIsLoadingFacturas(true);
-            setErrorFacturas(false);
-            try {
-                const facRes = await API.get('/suministros/facturas/');
-                const fetchFacturasHeavy = async () => {
-                    try {
-                        const heavyRes = await API.get('/suministros/facturas/?full=true');
-                        const heavyData = heavyRes.data.results || heavyRes.data;
-                        
-                        setFacturas(prev => prev.map(f => {
-                            const hf = heavyData.find(x => x.id === f.id);
-                            if (hf && !f._detailsLoaded) {
-                                const rawItems = (hf.items_inventario && hf.items_inventario.length > 0)
-                                    ? hf.items_inventario
-                                    : (hf.detalles || hf.productos || []);
-                                const prods = rawItems.map(p => ({
-                                    ...p,
-                                    id: p.id_referencia || p.id,
-                                    referenciaId: p.referencia,
-                                    referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
-                                    categoriaId: p.categoria,
-                                    subcategoriaId: p.subcategoria,
-                                    ventaId: p.venta_id || p.venta,
-                                    costo: p.costo_especifico !== undefined ? p.costo_especifico : p.costo,
-                                    grupo_nombre: p.grupo_nombre || (p.grupo ? p.grupo.nombre : null),
-                                    grupo_categoria_nombre: p.grupo_categoria_nombre,
-                                    grupo_subcategoria_nombre: p.grupo_subcategoria_nombre,
-                                }));
-                                return { ...f, ...hf, productos: prods, _detailsLoaded: true };
-                            }
-                            return f;
-                        }));
-                    } catch (err) {
-                        console.error("Error fetching heavy facturas in background", err);
-                    }
-                };
+    const fetchFacturas = async () => {
+        setIsLoadingFacturas(true);
+        setErrorFacturas(false);
+        try {
+            const facRes = await API.get('/suministros/facturas/');
+            const fetchFacturasHeavy = async () => {
+                try {
+                    const heavyRes = await API.get('/suministros/facturas/?full=true');
+                    const heavyData = heavyRes.data.results || heavyRes.data;
+                    
+                    setFacturas(prev => prev.map(f => {
+                        const hf = heavyData.find(x => x.id === f.id);
+                        if (hf && !f._detailsLoaded) {
+                            const rawItems = (hf.items_inventario && hf.items_inventario.length > 0)
+                                ? hf.items_inventario
+                                : (hf.detalles || hf.productos || []);
+                            const prods = rawItems.map(p => ({
+                                ...p,
+                                id: p.id_referencia || p.id,
+                                referenciaId: p.referencia,
+                                referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
+                                categoriaId: p.categoria,
+                                subcategoriaId: p.subcategoria,
+                                ventaId: p.venta_id || p.venta,
+                                costo: p.costo_especifico !== undefined ? p.costo_especifico : p.costo,
+                                grupo_nombre: p.grupo_nombre || (p.grupo ? p.grupo.nombre : null),
+                                grupo_id: p.grupo_id || (p.grupo ? (typeof p.grupo === 'object' ? p.grupo.id : p.grupo) : null),
+                                grupo_categoria_nombre: p.grupo_categoria_nombre,
+                                grupo_subcategoria_nombre: p.grupo_subcategoria_nombre,
+                            }));
+                            return { ...f, ...hf, productos: prods, _detailsLoaded: true };
+                        }
+                        return f;
+                    }));
+                } catch (err) {
+                    console.error("Error fetching heavy facturas in background", err);
+                }
+            };
 
-                const formattedFacturas = (facRes.data.results || facRes.data).map(f => ({
-                    ...f,
-                    idManual: f.id_manual,
-                    fechaFactura: f.fecha_factura,
-                    fechaPago: f.fecha_pago,
-                    proveedorNombre: f.proveedor_nombre,
-                    productos: [],
-                    _detailsLoaded: false
-                }));
-                setFacturas(formattedFacturas);
-                fetchFacturasHeavy(); // Trigger background fetch
-            } catch (err) {
-                console.error("Error fetching facturas", err);
-                setErrorFacturas(true);
-            } finally {
-                setIsLoadingFacturas(false);
-            }
-        };
+            const formattedFacturas = (facRes.data.results || facRes.data).map(f => ({
+                ...f,
+                idManual: f.id_manual,
+                fechaFactura: f.fecha_factura,
+                fechaPago: f.fecha_pago,
+                proveedorNombre: f.proveedor_nombre,
+                productos: [],
+                _detailsLoaded: false
+            }));
+            setFacturas(formattedFacturas);
+            fetchFacturasHeavy(); // Trigger background fetch
+        } catch (err) {
+            console.error("Error fetching facturas", err);
+            setErrorFacturas(true);
+        } finally {
+            setIsLoadingFacturas(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFacturas();
 
         const fetchMeta = async () => {
             setIsLoadingMeta(true);
@@ -564,50 +589,170 @@ function FacturasProveedorPage() {
         }
     };
 
-    // Returns the visual estado: if 'pendiente' but fechaPago is in the past, show as 'atrasada'
+    // Returns the visual estado based on fechaPago and pagado flag
     const getEfectiveEstado = (f) => {
         const estado = (f.estado || 'pendiente').toLowerCase();
-        if (estado === 'pendiente' && f.fechaPago) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const fechaPagoDate = new Date(f.fechaPago + 'T00:00:00');
-            if (fechaPagoDate < today) return 'atrasada';
+        if (estado === 'pagada' || estado === 'pagado') return 'pagado';
+        if (estado === 'anulada') return 'anulada';
+
+        const todayStr = getTodayStr();
+        const fechaPagoStr = f.fechaPago ? String(f.fechaPago).split('T')[0] : '';
+        if (!fechaPagoStr) return 'pendiente';
+
+        if (fechaPagoStr > todayStr) return 'pendiente';
+        if (fechaPagoStr === todayStr) return 'por_pagar';
+        return 'atrasado';
+    };
+
+    const getEstadoClass = (effectiveEstado) => {
+        const e = (effectiveEstado || '').toLowerCase();
+        if (e === 'pagado' || e === 'pagada') return 'status-badge status-pagado';
+        if (e === 'por_pagar') return 'status-badge status-por-pagar';
+        if (e === 'atrasado' || e === 'atrasada') return 'status-badge status-atrasado';
+        if (e === 'anulada') return 'status-badge status-anulada';
+        return 'status-badge status-pendiente';
+    };
+
+    const getEstadoLabel = (effectiveEstado) => {
+        const e = (effectiveEstado || '').toLowerCase();
+        if (e === 'pagado' || e === 'pagada') return 'Pagado';
+        if (e === 'por_pagar') return 'Por pagar';
+        if (e === 'atrasado' || e === 'atrasada') return 'Atrasado';
+        if (e === 'anulada') return 'Anulada';
+        return 'Pendiente';
+    };
+
+    const allProveedorOptions = React.useMemo(() => {
+        return [...new Set(facturas.map(f => f.proveedorNombre))].filter(Boolean);
+    }, [facturas]);
+
+    const toggleEstado = (estadoVal) => {
+        setSelectedEstados(prev => {
+            if (prev.includes(estadoVal)) {
+                return prev.filter(e => e !== estadoVal);
+            } else {
+                return [...prev, estadoVal];
+            }
+        });
+    };
+
+    const selectAllEstados = () => {
+        if (selectedEstados.length === ESTADOS_FACTURA.length) {
+            setSelectedEstados([]);
+        } else {
+            setSelectedEstados(ESTADOS_FACTURA.map(e => e.value));
         }
-        return estado;
+    };
+
+    const toggleProveedor = (provName) => {
+        setSelectedProveedores(prev => {
+            if (prev.includes(provName)) {
+                return prev.filter(p => p !== provName);
+            } else {
+                return [...prev, provName];
+            }
+        });
+    };
+
+    const selectAllProveedores = (allNames) => {
+        if (selectedProveedores.length === allNames.length) {
+            setSelectedProveedores([]);
+        } else {
+            setSelectedProveedores(allNames);
+        }
+    };
+
+    const handleSort = (key) => {
+        setSortConfig(prev => {
+            if (prev.key === key) {
+                return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            return { key, direction: 'asc' };
+        });
+    };
+
+    const renderSortIcon = (key) => {
+        if (sortConfig.key !== key) {
+            return <FaSort style={{ opacity: 0.35, fontSize: '0.75rem', flexShrink: 0 }} />;
+        }
+        return sortConfig.direction === 'asc' 
+            ? <FaSortUp style={{ color: '#274385', fontSize: '0.8rem', flexShrink: 0, marginBottom: '-2px' }} />
+            : <FaSortDown style={{ color: '#274385', fontSize: '0.8rem', flexShrink: 0, marginTop: '-2px' }} />;
     };
 
     const filteredFacturas = React.useMemo(() => {
-        return facturas.filter(f => {
+        let result = facturas.filter(f => {
             if (filterSearch) {
                 const q = filterSearch.toLowerCase();
                 if (
                     !String(f.id).toLowerCase().includes(q) &&
-                    !(f.idManual || '').toLowerCase().includes(q)
+                    !(f.idManual || '').toLowerCase().includes(q) &&
+                    !(f.proveedorNombre || '').toLowerCase().includes(q)
                 ) return false;
             }
-            if (filterEstado && getEfectiveEstado(f) !== filterEstado.toLowerCase()) return false;
-            if (filterProveedor && f.proveedorNombre?.toLowerCase() !== filterProveedor.toLowerCase()) return false;
+
+            const effEst = getEfectiveEstado(f);
+            if (selectedEstados.length > 0 && !selectedEstados.includes(effEst)) {
+                return false;
+            }
+
+            if (selectedProveedores.length > 0 && !selectedProveedores.includes(f.proveedorNombre)) {
+                return false;
+            }
+
             if (filterFechaDesde && f.fechaFactura < filterFechaDesde) return false;
             if (filterFechaHasta && f.fechaFactura > filterFechaHasta) return false;
+
             return true;
         });
-    }, [facturas, filterSearch, filterEstado, filterProveedor, filterFechaDesde, filterFechaHasta]);
 
-    const getEstadoClass = (estado) => {
-        const e = (estado || '').toLowerCase();
-        if (e === 'pagada') return 'status-badge status-finalizada';
-        if (e === 'pendiente') return 'status-badge status-creada';
-        if (e === 'atrasada') return 'status-badge status-anulada';
-        if (e === 'anulada') return 'status-badge status-devuelta';
-        // legacy "a tiempo"
-        if (e === 'a tiempo') return 'status-badge status-despachada';
-        return 'status-badge status-creada';
-    };
+        if (sortConfig.key) {
+            result.sort((a, b) => {
+                if (sortConfig.key === 'id' || sortConfig.key === 'idManual') {
+                    const numA = parseInt(String(a.idManual || a.id).replace(/[^0-9]/g, '')) || 0;
+                    const numB = parseInt(String(b.idManual || b.id).replace(/[^0-9]/g, '')) || 0;
+                    return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+                }
+                if (sortConfig.key === 'valor') {
+                    const numA = parseFloat(a.valor) || 0;
+                    const numB = parseFloat(b.valor) || 0;
+                    return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+                }
 
-    const hasFilters = filterEstado || filterProveedor || filterFechaDesde || filterFechaHasta || filterSearch;
+                let valA = '';
+                let valB = '';
+                if (sortConfig.key === 'proveedor') {
+                    valA = (a.proveedorNombre || '').toLowerCase();
+                    valB = (b.proveedorNombre || '').toLowerCase();
+                } else if (sortConfig.key === 'fechaFactura') {
+                    valA = a.fechaFactura || '';
+                    valB = b.fechaFactura || '';
+                } else if (sortConfig.key === 'fechaPago') {
+                    valA = a.fechaPago || '';
+                    valB = b.fechaPago || '';
+                } else if (sortConfig.key === 'estado') {
+                    valA = getEfectiveEstado(a);
+                    valB = getEfectiveEstado(b);
+                } else {
+                    valA = a[sortConfig.key] || '';
+                    valB = b[sortConfig.key] || '';
+                }
+
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [facturas, filterSearch, selectedEstados, selectedProveedores, filterFechaDesde, filterFechaHasta, sortConfig]);
+
+    const defaultEstados = ['pendiente', 'por_pagar', 'atrasado'];
+    const estadosModified = selectedEstados.length !== defaultEstados.length || !selectedEstados.every(e => defaultEstados.includes(e));
+    const hasFilters = estadosModified || selectedProveedores.length > 0 || filterFechaDesde || filterFechaHasta || filterSearch;
     const handleClearFilters = () => {
-        setFilterEstado('');
-        setFilterProveedor('');
+        setSelectedEstados(['pendiente', 'por_pagar', 'atrasado']);
+        setSelectedProveedores([]);
         setFilterFechaDesde('');
         setFilterFechaHasta('');
         setFilterSearch('');
@@ -634,38 +779,41 @@ function FacturasProveedorPage() {
                 observacion: p.observacion || '',
                 disponibilidad: p.disponibilidad || 'exhibicion',
                 estado_fisico: p.estado_fisico || 'buen_estado',
-                zona: p.zona || null,
-                venta: p.venta_id || p.venta || null,
-                grupo: p.grupo_id || p.grupo || null,
-                cantidad: 1,
-                telas_cueros: Array.isArray(p.telas_cueros) && p.telas_cueros.length > 0
-                    ? p.telas_cueros.map(tc => ({
-                        id: tc.id || Date.now() + Math.random(),
-                        tipo: tc.tipo || 'tela',
-                        referencia: tc.referencia || '',
-                        color: tc.color || '',
-                        unidad_medida: tc.unidad_medida || (tc.tipo === 'cuero' ? 'decimetro' : 'metro'),
-                        costo_unidad: tc.costo_unidad || '',
-                        cantidad: tc.cantidad || ''
-                    }))
-                    : (p.lleva_tela || p.tela_referencia || p.tela_color
-                        ? [{
-                            id: Date.now(),
-                            tipo: 'tela',
-                            referencia: p.tela_referencia || '',
-                            color: p.tela_color || '',
-                            unidad_medida: 'metro',
-                            costo_unidad: p.tela_costo_metro || '',
-                            cantidad: p.tela_cantidad_metros || ''
-                        }]
-                        : [])
+                zona: p.zona,
+                venta: p.venta_id || p.venta,
+                grupo: p.grupo_id || p.grupo,
+                lleva_tela: Boolean(p.telas_cueros && p.telas_cueros.length > 0),
+                tela_referencia: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].referencia : '',
+                tela_color: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].color : '',
+                tela_costo_metro: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].costo_unidad : '',
+                tela_cantidad_metros: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].cantidad : '',
+                telas_cueros: p.telas_cueros || (p.tela_referencia
+                    ? [{
+                        tipo: 'tela',
+                        referencia: p.tela_referencia || '',
+                        color: p.tela_color || '',
+                        unidad_medida: 'metro',
+                        costo_unidad: p.tela_costo_metro || '',
+                        cantidad: p.tela_cantidad_metros || ''
+                    }]
+                    : [])
             }));
+
+            const cleanDate = (dStr) => {
+                if (!dStr) return '';
+                const s = String(dStr).trim();
+                if (s.includes('T')) return s.split('T')[0];
+                if (s.includes(' ')) return s.split(' ')[0];
+                return s;
+            };
 
             setEditModal({
                 id: f.id,
-                id_manual: f.id_manual || f.idManual || '',
-                estado: f.estado || 'pendiente',
-                observaciones: f.observaciones || '',
+                id_manual: fData.id_manual || f.id_manual || f.idManual || '',
+                estado: fData.estado || f.estado || 'pendiente',
+                fecha_factura: cleanDate(fData.fecha_factura || f.fecha_factura || f.fechaFactura),
+                fecha_pago: cleanDate(fData.fecha_pago || f.fecha_pago || f.fechaPago),
+                observaciones: fData.observaciones || f.observaciones || '',
                 productos: prods,
             });
         } catch (err) {
@@ -681,41 +829,52 @@ function FacturasProveedorPage() {
         if (!editModal) return;
         setIsSavingEdit(true);
         try {
+            const validProductos = (editModal.productos || [])
+                .map(p => {
+                    const refNum = parseInt(p.referenciaId || p.referencia);
+                    if (isNaN(refNum)) return null;
+                    return {
+                        referencia: refNum,
+                        categoria: p.categoria ? parseInt(p.categoria) : null,
+                        subcategoria: p.subcategoria ? parseInt(p.subcategoria) : null,
+                        variacion: p.variacion || '',
+                        costo: parseFloat(p.costo) || 0,
+                        cantidad: parseInt(p.cantidad) || 1,
+                        grupo_id: p.grupo ? parseInt(p.grupo) : null,
+                        observacion: p.observacion || '',
+                        disponibilidad: p.disponibilidad || 'exhibicion',
+                        estado_fisico: p.estado_fisico || 'buen_estado',
+                        zona: p.zona ? parseInt(p.zona) : null,
+                        venta_id: p.venta ? parseInt(p.venta) : null,
+                        telas_cueros: (p.telas_cueros || []).map(tc => ({
+                            tipo: tc.tipo || 'tela',
+                            referencia: (tc.referencia || '').trim(),
+                            color: (tc.color || '').trim(),
+                            unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
+                            costo_unidad: parseFloat(tc.costo_unidad) || 0,
+                            cantidad: parseFloat(tc.cantidad) || 0
+                        }))
+                    };
+                })
+                .filter(Boolean);
+
             const payload = {
                 id_manual: editModal.id_manual,
                 estado: editModal.estado,
                 observaciones: editModal.observaciones,
-                productos: (editModal.productos || []).map(p => ({
-                    referencia: parseInt(p.referenciaId || p.referencia),
-                    categoria: p.categoria ? parseInt(p.categoria) : null,
-                    subcategoria: p.subcategoria ? parseInt(p.subcategoria) : null,
-                    variacion: p.variacion || '',
-                    costo: parseFloat(p.costo) || 0,
-                    cantidad: parseInt(p.cantidad) || 1,
-                    grupo_id: p.grupo ? parseInt(p.grupo) : null,
-                    observacion: p.observacion || '',
-                    disponibilidad: p.disponibilidad || 'exhibicion',
-                    estado_fisico: p.estado_fisico || 'buen_estado',
-                    zona: p.zona ? parseInt(p.zona) : null,
-                    venta_id: p.venta ? parseInt(p.venta) : null,
-                    telas_cueros: (p.telas_cueros || []).map(tc => ({
-                        tipo: tc.tipo || 'tela',
-                        referencia: (tc.referencia || '').trim(),
-                        color: (tc.color || '').trim(),
-                        unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
-                        costo_unidad: parseFloat(tc.costo_unidad) || 0,
-                        cantidad: parseFloat(tc.cantidad) || 0
-                    }))
-                }))
+                fecha_factura: editModal.fecha_factura || null,
+                fecha_pago: editModal.fecha_pago || null,
+                productos: validProductos
             };
 
             await API.patch(`/suministros/facturas/${editModal.id}/`, payload);
-            showToast("Factura y parámetros de tela actualizados correctamente.", "success");
+            showToast("Factura y parámetros actualizados correctamente.", "success");
             setEditModal(null);
             fetchFacturas();
         } catch (err) {
-            console.error(err);
-            showToast("Error al actualizar la factura.", "error");
+            console.error("Error al guardar edición de factura:", err);
+            const serverMsg = err.response?.data?.detail || err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : '');
+            showToast(serverMsg ? `Error: ${serverMsg}` : "Error al actualizar la factura.", "error");
         } finally {
             setIsSavingEdit(false);
         }
@@ -723,7 +882,7 @@ function FacturasProveedorPage() {
 
     return (
         <div className="page-container">
-            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
+            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
                 <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
                     <div className="v-search-pill">
                         <FaSearch />
@@ -734,31 +893,101 @@ function FacturasProveedorPage() {
                             onChange={e => setFilterSearch(e.target.value)}
                         />
                     </div>
-                    <div className="v-select-pill">
-                        <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
-                            <option value="">Estado: Todos</option>
-                            {ESTADOS_FACTURA.map(e => (
-                                <option key={e.value} value={e.value}>{e.label}</option>
-                            ))}
-                        </select>
+                    {/* Estado Multi-Select Checklist */}
+                    <div className="v-multi-select-container" ref={estadosRef}>
+                        <button
+                            type="button"
+                            className={`v-multi-select-btn ${selectedEstados.length > 0 ? 'active-filter' : ''} ${isEstadosOpen ? 'open' : ''}`}
+                            onClick={() => setIsEstadosOpen(prev => !prev)}
+                        >
+                            <span>
+                                {selectedEstados.length === 0
+                                    ? 'Estado: Ninguno'
+                                    : selectedEstados.length === ESTADOS_FACTURA.length
+                                        ? 'Estado: Todos'
+                                        : `Estado: ${selectedEstados.map(e => ESTADOS_FACTURA.find(opt => opt.value === e)?.label || e).join(', ')}`}
+                            </span>
+                            <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                        </button>
+
+                        {isEstadosOpen && (
+                            <div className="v-multi-select-popover">
+                                <div className="v-popover-header">
+                                    <span className="v-popover-title">Filtrar Estado</span>
+                                    <button
+                                        type="button"
+                                        className="v-popover-action-btn"
+                                        onClick={selectAllEstados}
+                                    >
+                                        {selectedEstados.length === ESTADOS_FACTURA.length ? 'Ninguno' : 'Todos'}
+                                    </button>
+                                </div>
+                                {ESTADOS_FACTURA.map(e => (
+                                    <label key={e.value} className="v-popover-item">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedEstados.includes(e.value)}
+                                            onChange={() => toggleEstado(e.value)}
+                                        />
+                                        <span>{e.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <div className="v-select-pill">
-                        <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
-                            <option value="">Proveedor: Todos</option>
-                            {[...new Set(facturas.map(f => f.proveedorNombre))].filter(Boolean).map(n => (
-                                <option key={n} value={n}>{n}</option>
-                            ))}
-                        </select>
+
+                    {/* Proveedor Multi-Select Checklist */}
+                    <div className="v-multi-select-container" ref={proveedoresRef}>
+                        <button
+                            type="button"
+                            className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`}
+                            onClick={() => setIsProveedoresOpen(prev => !prev)}
+                        >
+                            <span>
+                                {selectedProveedores.length === 0
+                                    ? 'Proveedor: Todos'
+                                    : selectedProveedores.length === allProveedorOptions.length
+                                        ? 'Proveedor: Todos'
+                                        : `Proveedor: ${selectedProveedores.length} seleccionados`}
+                            </span>
+                            <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
+                        </button>
+
+                        {isProveedoresOpen && (
+                            <div className="v-multi-select-popover">
+                                <div className="v-popover-header">
+                                    <span className="v-popover-title">Filtrar Proveedor</span>
+                                    <button
+                                        type="button"
+                                        className="v-popover-action-btn"
+                                        onClick={() => selectAllProveedores(allProveedorOptions)}
+                                    >
+                                        {selectedProveedores.length === allProveedorOptions.length ? 'Ninguno' : 'Todos'}
+                                    </button>
+                                </div>
+                                {allProveedorOptions.map(n => (
+                                    <label key={n} className="v-popover-item">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedProveedores.length === 0 || selectedProveedores.includes(n)}
+                                            onChange={() => toggleProveedor(n)}
+                                        />
+                                        <span>{n}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
+
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Desde</label>
-                        <input type="date" value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
+                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
                             onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
                             style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hasta</label>
-                        <input type="date" value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
+                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
                             onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
                             style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
@@ -783,12 +1012,42 @@ function FacturasProveedorPage() {
                     <table className="premium-table">
                         <thead>
                             <tr>
-                                <th>ID Factura</th>
-                                <th>Proveedor</th>
-                                <th>Fecha Factura</th>
-                                <th>Fecha Pago</th>
-                                <th>Estado</th>
-                                <th>Valor</th>
+                                <th className={`sortable-th ${sortConfig.key === 'idManual' ? 'active-sort-th' : ''}`} onClick={() => handleSort('idManual')}>
+                                    <span className="th-sort-wrapper">
+                                        <span>ID Factura</span>
+                                        {renderSortIcon('idManual')}
+                                    </span>
+                                </th>
+                                <th className={`sortable-th ${sortConfig.key === 'proveedor' ? 'active-sort-th' : ''}`} onClick={() => handleSort('proveedor')}>
+                                    <span className="th-sort-wrapper">
+                                        <span>Proveedor</span>
+                                        {renderSortIcon('proveedor')}
+                                    </span>
+                                </th>
+                                <th className={`sortable-th ${sortConfig.key === 'fechaFactura' ? 'active-sort-th' : ''}`} onClick={() => handleSort('fechaFactura')}>
+                                    <span className="th-sort-wrapper">
+                                        <span>Fecha Factura</span>
+                                        {renderSortIcon('fechaFactura')}
+                                    </span>
+                                </th>
+                                <th className={`sortable-th ${sortConfig.key === 'fechaPago' ? 'active-sort-th' : ''}`} onClick={() => handleSort('fechaPago')}>
+                                    <span className="th-sort-wrapper">
+                                        <span>Fecha Pago</span>
+                                        {renderSortIcon('fechaPago')}
+                                    </span>
+                                </th>
+                                <th className={`sortable-th ${sortConfig.key === 'estado' ? 'active-sort-th' : ''}`} onClick={() => handleSort('estado')}>
+                                    <span className="th-sort-wrapper">
+                                        <span>Estado</span>
+                                        {renderSortIcon('estado')}
+                                    </span>
+                                </th>
+                                <th className={`sortable-th ${sortConfig.key === 'valor' ? 'active-sort-th' : ''}`} onClick={() => handleSort('valor')}>
+                                    <span className="th-sort-wrapper">
+                                        <span>Valor</span>
+                                        {renderSortIcon('valor')}
+                                    </span>
+                                </th>
                                 <th>Observaciones</th>
                                 <th style={{ width: 60, textAlign: 'center' }}>Detalle</th>
                             </tr>
@@ -820,8 +1079,7 @@ function FacturasProveedorPage() {
                                         <td title={f.fechaPago ? formatDate(f.fechaPago) : '—'}>{f.fechaPago ? formatDate(f.fechaPago) : <span className="empty-val">—</span>}</td>
                                         <td>
                                             <span className={getEstadoClass(getEfectiveEstado(f))}>
-                                                {ESTADOS_FACTURA.find(e => e.value === getEfectiveEstado(f))?.label
-                                                    || (getEfectiveEstado(f) ? getEfectiveEstado(f).charAt(0).toUpperCase() + getEfectiveEstado(f).slice(1) : 'Pendiente')}
+                                                {getEstadoLabel(getEfectiveEstado(f))}
                                             </span>
                                         </td>
                                         <td title={formatCOP(f.valor)}><span className="valor-cop">{formatCOP(f.valor)}</span></td>
@@ -838,10 +1096,10 @@ function FacturasProveedorPage() {
                                             <td colSpan="8">
                                                 <div className="factura-expanded-premium">
                                                     {loadingDetailsId === f.id ? (
-                                                        <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                            <div className="skeleton-badge" style={{ width: 48, height: 48, borderRadius: '50%', marginBottom: '1rem' }}></div>
-                                                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Cargando detalles de la factura...</span>
-                                                        </div>
+                                                         <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                             <FaSpinner style={{ fontSize: '2.2rem', color: '#274385', animation: 'spin 0.8s linear infinite', marginBottom: '0.8rem' }} />
+                                                             <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#334155' }}>Cargando detalles de la factura...</span>
+                                                         </div>
                                                     ) : (
                                                         <>
                                                             <div className="expanded-top-bar">
@@ -886,7 +1144,7 @@ function FacturasProveedorPage() {
                                                                                 }
                                                                             });
 
-                                                                            const renderProductCard = (p, keyIndex) => {
+                                                                            const renderProductCard = (p, keyIndex, isNested = false) => {
                                                                                 const refNombre = p.referencia_nombre || p.producto_nombre || (p.referenciaId ? `Ref. #${p.referenciaId}` : '—');
                                                                                 const catNombre = p.categoria_nombre || null;
                                                                                 const subNombre = p.subcategoria_nombre || null;
@@ -903,14 +1161,18 @@ function FacturasProveedorPage() {
                                                                                 const hasTC = tcList.length > 0;
 
                                                                                 return (
-                                                                                    <div key={keyIndex} className="invoice-item-card compact-card">
+                                                                                    <div 
+                                                                                        key={keyIndex} 
+                                                                                        className={`invoice-item-card compact-card ${isNested ? 'nested-item-card' : ''}`}
+                                                                                        style={isNested ? { borderLeft: '3px solid #0284c7', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' } : {}}
+                                                                                    >
                                                                                         <div className="compact-col compact-col-main">
                                                                                             <div className="compact-title-group">
                                                                                                 <span className="item-id-badge">#{p.id || '—'}</span>
                                                                                                 <h4 className="item-title" title={refNombre}>{refNombre}</h4>
                                                                                             </div>
                                                                                             <div className="item-tags">
-                                                                                                {grupoNombre && <span className="item-tag" style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
+                                                                                                {!isNested && grupoNombre && <span className="item-tag" style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
                                                                                                 {catNombre && <span className="item-tag">{catNombre}</span>}
                                                                                                 {subNombre && <span className="item-tag">{subNombre}</span>}
                                                                                             </div>
@@ -963,15 +1225,14 @@ function FacturasProveedorPage() {
                                                                                                     <strong style={{ color: '#0f172a' }}>{formatCOP(baseCosto + totalTCCosto)}</strong>
                                                                                                 </div>
                                                                                             )}
+                                                                                            {p.imagen && (
+                                                                                                <div className="compact-col compact-col-action">
+                                                                                                    <button type="button" className="btn-view-img" title="Ver imagen">
+                                                                                                        <FaImage />
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
-
-                                                                                        {p.imagen && (
-                                                                                            <div className="compact-col compact-col-action">
-                                                                                                <button type="button" className="btn-view-img" title="Ver imagen">
-                                                                                                    <FaImage />
-                                                                                                </button>
-                                                                                            </div>
-                                                                                        )}
                                                                                     </div>
                                                                                 );
                                                                             };
@@ -986,8 +1247,13 @@ function FacturasProveedorPage() {
                                                                                 const catLabel = items[0]?.grupo_categoria_nombre || '';
                                                                                 const subcatLabel = items[0]?.grupo_subcategoria_nombre || '';
                                                                                 
+                                                                                const uniqueRefs = [...new Set(items.map(i => i.referencia_nombre || (i.referenciaId ? `Ref. #${i.referenciaId}` : null)).filter(Boolean))];
+                                                                                const refsLabel = uniqueRefs.length > 0 ? uniqueRefs.join(', ') : '—';
+                                                                                const grupoIdVal = items[0]?.grupo_id || items[0]?.grupo;
+                                                                                const grupoBadgeStr = grupoIdVal ? `#G-${grupoIdVal}` : 'GRUPO';
+
                                                                                 const ventas = [...new Set(items.map(i => i.ventaId).filter(Boolean))];
-                                                                                const ventasLabel = ventas.length > 0 ? `Venta: #${ventas.join(', #')}` : null;
+                                                                                const ventasLabel = ventas.length > 0 ? `Venta #${ventas.join(', #')}` : null;
                                                                                 
                                                                                 const dispCounts = {};
                                                                                 items.forEach(i => {
@@ -1012,40 +1278,137 @@ function FacturasProveedorPage() {
                                                                                 });
 
                                                                                 elements.push(
-                                                                                    <div key={`group-${gName}`} className="invoice-group-card" style={{ gridColumn: '1 / -1', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', marginBottom: '0.5rem', background: '#fff', alignSelf: 'start', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                                                                                        <div className="group-header" onClick={() => toggleNestedGroup(f.id, gName)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', cursor: 'pointer', borderBottom: isExpanded ? '1px solid #cbd5e1' : 'none', transition: 'background 0.2s', gap: '1rem' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                                                                                            <div className="group-info" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1 }}>
-                                                                                                <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                                                                                                    <FaLayerGroup />
-                                                                                                </div>
-                                                                                                <div style={{ flex: 1 }}>
-                                                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                                                                                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>{gName}</h4>
-                                                                                                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{formatCOP(totalCosto)}</span>
-                                                                                                    </div>
-                                                                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                                                                                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
-                                                                                                        {catLabel && <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', fontWeight: 500 }}>{catLabel}</span>}
-                                                                                                        {subcatLabel && <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', fontWeight: 500 }}>{subcatLabel}</span>}
-                                                                                                        {ventasLabel && <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontWeight: 500, display: 'flex', alignItems: 'center' }}><FaShoppingCart style={{marginRight: 4}}/> {ventasLabel}</span>}
-                                                                                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: 500 }} title="Disponibilidad general">{dispLabels}</span>
-                                                                                                        {badStateCount > 0 && <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', fontWeight: 500, display: 'flex', alignItems: 'center' }}><FaExclamationTriangle style={{marginRight: 4}}/> {badStateCount} en mal estado</span>}
-                                                                                                    </div>
-                                                                                                </div>
+                                                                                    <div 
+                                                                                        key={`group-${gName}`} 
+                                                                                        className={`invoice-item-card compact-card group-card-compact ${isExpanded ? 'is-expanded-group' : ''}`}
+                                                                                        onClick={() => toggleNestedGroup(f.id, gName)}
+                                                                                        style={{
+                                                                                            cursor: 'pointer',
+                                                                                            gridColumn: isExpanded ? '1 / -1' : 'auto',
+                                                                                            borderColor: isExpanded ? '#0284c7' : 'var(--color-border)',
+                                                                                            background: isExpanded ? '#f0f9ff' : '#ffffff',
+                                                                                            transition: 'all 0.25s ease'
+                                                                                        }}
+                                                                                    >
+                                                                                        <div className="compact-col compact-col-main">
+                                                                                            <div className="compact-title-group">
+                                                                                                <span className="item-id-badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
+                                                                                                    <FaLayerGroup style={{ fontSize: '0.65rem' }} /> {grupoBadgeStr}
+                                                                                                </span>
+                                                                                                <h4 className="item-title" title={gName}>{gName}</h4>
                                                                                             </div>
-                                                                                            <button className="btn-expand-group" style={{ background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#475569', cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0, fontSize: '0.85rem' }} onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}>
-                                                                                                {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                                                                                            <div className="group-ref-subtitle" style={{ fontSize: '0.78rem', color: '#0369a1', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                                <span style={{ color: '#64748b', fontWeight: 500 }}>Ref:</span> <span title={refsLabel}>{refsLabel}</span>
+                                                                                            </div>
+                                                                                            <div className="item-tags" style={{ marginTop: '0.2rem' }}>
+                                                                                                <span className="item-tag" style={{ background: '#0284c7', color: '#ffffff', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
+                                                                                                {catLabel && <span className="item-tag">{catLabel}</span>}
+                                                                                                {subcatLabel && <span className="item-tag">{subcatLabel}</span>}
+                                                                                            </div>
+                                                                                        </div>
+
+                                                                                        <div className="compact-col compact-col-desc">
+                                                                                            <div className="item-desc truncate-text" title={dispLabels}>
+                                                                                                <span className="desc-label">Disp:</span> <span className="desc-val">{dispLabels}</span>
+                                                                                            </div>
+                                                                                            {ventasLabel && (
+                                                                                                <div className="item-desc" style={{ marginTop: '0.2rem' }}>
+                                                                                                    <span className="item-venta-link" style={{ fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                                                                                        <FaShoppingCart style={{ fontSize: '0.65rem' }} /> {ventasLabel}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {badStateCount > 0 && (
+                                                                                                <div className="item-desc" style={{ marginTop: '0.2rem', color: '#b91c1c', fontWeight: 600, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                                                                    <FaExclamationTriangle style={{ fontSize: '0.65rem' }} /> {badStateCount} en mal estado
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        <div className="compact-col compact-col-status">
+                                                                                            <button 
+                                                                                                type="button" 
+                                                                                                className="btn-expand-group-pill"
+                                                                                                onClick={(e) => { e.stopPropagation(); toggleNestedGroup(f.id, gName); }}
+                                                                                                style={{
+                                                                                                    display: 'inline-flex',
+                                                                                                    alignItems: 'center',
+                                                                                                    gap: '0.4rem',
+                                                                                                    padding: '0.35rem 0.75rem',
+                                                                                                    borderRadius: '20px',
+                                                                                                    fontSize: '0.75rem',
+                                                                                                    fontWeight: 700,
+                                                                                                    border: '1.5px solid #0284c7',
+                                                                                                    background: isExpanded ? '#0284c7' : '#e0f2fe',
+                                                                                                    color: isExpanded ? '#ffffff' : '#0369a1',
+                                                                                                    cursor: 'pointer',
+                                                                                                    transition: 'all 0.2s ease'
+                                                                                                }}
+                                                                                            >
+                                                                                                <span>{isExpanded ? 'Plegar' : `Ver Ítems (${items.length})`}</span>
+                                                                                                {isExpanded ? <FaChevronUp style={{ fontSize: '0.65rem' }} /> : <FaChevronDown style={{ fontSize: '0.65rem' }} />}
                                                                                             </button>
                                                                                         </div>
+
+                                                                                        <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
+                                                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                                                                <span className="item-costo" style={{ color: '#0284c7', fontSize: '1.05rem', fontWeight: 800 }}>{formatCOP(totalCosto)}</span>
+                                                                                                <span style={{ fontSize: '0.62rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Costo Total Grupo</span>
+                                                                                            </div>
+                                                                                        </div>
+
                                                                                         {isExpanded && (
-                                                                                            <div className="group-items-container" style={{ padding: '1.25rem', background: '#f8fafc', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                                                                                                {sortedItems.map((item) => renderProductCard(item, item.originalIndex))}
+                                                                                            <div 
+                                                                                                className="group-nested-panel" 
+                                                                                                onClick={(e) => e.stopPropagation()} 
+                                                                                                style={{
+                                                                                                    gridColumn: '1 / -1',
+                                                                                                    width: '100%',
+                                                                                                    marginTop: '0.75rem',
+                                                                                                    paddingTop: '0.85rem',
+                                                                                                    borderTop: '1.5px solid #bae6fd'
+                                                                                                }}
+                                                                                            >
+                                                                                                <div 
+                                                                                                    className="group-nested-header" 
+                                                                                                    style={{
+                                                                                                        display: 'flex',
+                                                                                                        alignItems: 'center',
+                                                                                                        justifyContent: 'space-between',
+                                                                                                        marginBottom: '0.75rem',
+                                                                                                        padding: '0.5rem 0.75rem',
+                                                                                                        background: '#ffffff',
+                                                                                                        borderRadius: '8px',
+                                                                                                        border: '1px solid #bae6fd'
+                                                                                                    }}
+                                                                                                >
+                                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                                                        <FaLayerGroup style={{ color: '#0284c7', fontSize: '0.9rem' }} />
+                                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                                                                                                            Componentes de {gName} <span style={{ color: '#0369a1', fontWeight: 600 }}>(Ref: {refsLabel})</span>
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0369a1' }}>
+                                                                                                        Subtotal: {formatCOP(totalCosto)}
+                                                                                                    </div>
+                                                                                                </div>
+
+                                                                                                <div 
+                                                                                                    className="group-nested-grid" 
+                                                                                                    style={{
+                                                                                                        display: 'grid',
+                                                                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                                                                                        gap: '0.85rem'
+                                                                                                    }}
+                                                                                                >
+                                                                                                    {sortedItems.map((item) => renderProductCard(item, item.originalIndex, true))}
+                                                                                                </div>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
                                                                                 );
                                                                             });
-                                                                            
+
                                                                             standalones.forEach(item => {
                                                                                 elements.push(renderProductCard(item, item.originalIndex));
                                                                             });
@@ -1091,19 +1454,73 @@ function FacturasProveedorPage() {
                                     />
                                 </div>
                                 <div className="edit-factura-field">
-                                    <label>Estado</label>
-                                    <div className="edit-estado-options">
-                                        {ESTADOS_FACTURA.map(e => (
-                                            <button
-                                                key={e.value}
-                                                type="button"
-                                                className={`estado-option-btn${editModal.estado === e.value ? ' selected' : ''} estado-color-${e.value}`}
-                                                onClick={() => setEditModal(prev => ({ ...prev, estado: e.value }))}
-                                            >
-                                                {e.label}
-                                            </button>
-                                        ))}
+                                    <label>Estado de la Factura</label>
+                                    <div className="edit-estado-options" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+                                        {(() => {
+                                            const todayStr = getTodayStr();
+                                            const fechaPagoStr = editModal.fecha_pago || '';
+                                            let dynamicOption = { value: 'pendiente', label: 'Pendiente', badgeClass: 'status-pendiente' };
+                                            
+                                            if (fechaPagoStr) {
+                                                if (fechaPagoStr > todayStr) {
+                                                    dynamicOption = { value: 'pendiente', label: 'Pendiente', badgeClass: 'status-pendiente' };
+                                                } else if (fechaPagoStr === todayStr) {
+                                                    dynamicOption = { value: 'por_pagar', label: 'Por pagar', badgeClass: 'status-por-pagar' };
+                                                } else {
+                                                    dynamicOption = { value: 'atrasado', label: 'Atrasado', badgeClass: 'status-atrasado' };
+                                                }
+                                            }
+                                            const isPagado = editModal.estado === 'pagada' || editModal.estado === 'pagado';
+
+                                            return (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className={`estado-option-btn ${dynamicOption.badgeClass} ${!isPagado ? 'selected' : ''}`}
+                                                        onClick={() => setEditModal(prev => ({ ...prev, estado: 'pendiente' }))}
+                                                        style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}
+                                                    >
+                                                        {dynamicOption.label}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`estado-option-btn status-pagado ${isPagado ? 'selected' : ''}`}
+                                                        onClick={() => setEditModal(prev => ({ ...prev, estado: 'pagada' }))}
+                                                        style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}
+                                                    >
+                                                        Pagada
+                                                    </button>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div className="edit-factura-field">
+                                    <label>Fecha Factura {!canEditFechas && <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 400 }}>(Lectura)</span>}</label>
+                                    <input 
+                                        type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} 
+                                        className="ifg-input"
+                                        value={editModal.fecha_factura || ''} 
+                                        onChange={e => setEditModal(prev => ({ ...prev, fecha_factura: e.target.value }))}
+                                        onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
+                                        disabled={!canEditFechas}
+                                        style={{ cursor: canEditFechas ? 'pointer' : 'default' }}
+                                    />
+                                </div>
+                                <div className="edit-factura-field">
+                                    <label>Fecha Pago {!canEditFechas && <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 400 }}>(Lectura)</span>}</label>
+                                    <input 
+                                        type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} 
+                                        className="ifg-input"
+                                        value={editModal.fecha_pago || ''} 
+                                        onChange={e => setEditModal(prev => ({ ...prev, fecha_pago: e.target.value }))}
+                                        onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
+                                        disabled={!canEditFechas}
+                                        style={{ cursor: canEditFechas ? 'pointer' : 'default' }}
+                                    />
                                 </div>
                             </div>
 
@@ -1323,12 +1740,12 @@ function FacturasProveedorPage() {
                                 <div className="fct-row-3col">
                                     <div className="fct-field">
                                         <label>Fecha Factura</label>
-                                        <input required type="date" value={form.fechaFactura}
+                                        <input required type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={form.fechaFactura}
                                             onChange={e => handleField('fechaFactura', e.target.value)} />
                                     </div>
                                     <div className="fct-field">
                                         <label>Fecha de Pago</label>
-                                        <input type="date" value={form.fechaPago}
+                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={form.fechaPago}
                                             onChange={e => handleField('fechaPago', e.target.value)} />
                                     </div>
                                     <div className="fct-field">
@@ -1564,10 +1981,9 @@ function FacturasProveedorPage() {
                                                 </div>
                                                 <div className="fct-field">
                                                     <label>Disponibilidad</label>
-                                                    <select value={row.disponibilidad} onChange={e => handleRefRow(index, 'disponibilidad', e.target.value)}>
+                                                     <select value={row.disponibilidad} onChange={e => handleRefRow(index, 'disponibilidad', e.target.value)}>
                                                         <option value="exhibicion">Exhibición</option>
                                                         <option value="cliente">Cliente</option>
-                                                        <option value="por_despachar">Por Despachar</option>
                                                         <option value="por_reparar">Por Reparar</option>
                                                         <option value="consignacion">Consignación</option>
                                                         <option value="no_venta">No a la venta</option>

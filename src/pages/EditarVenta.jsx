@@ -282,7 +282,7 @@ const EditarVenta = () => {
             <div className="form-group">
               <label>Fecha de Venta:</label>
               <input
-                type="date"
+                type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
                 name="fecha_venta"
                 value={ventaData.fecha_venta}
                 onChange={handleVentaChange}
@@ -292,7 +292,7 @@ const EditarVenta = () => {
             <div className="form-group">
               <label>Fecha de Entrega:</label>
               <input
-                type="date"
+                type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
                 name="fecha_entrega"
                 value={ventaData.fecha_entrega}
                 onChange={handleVentaChange}

@@ -241,7 +241,7 @@ function CrearPedidoPage() {
       <div className="form-title-header premium-v2">
         <div className="title-wrapper">
           <div className="title-icon-badge">
-            <FaFileSignature className="title-icon" />
+            <FaFileSignature />
           </div>
           <div className="title-text-group">
             <h1>Crear Nuevo Pedido</h1>
@@ -302,7 +302,7 @@ function CrearPedidoPage() {
 
             <div className="form-group">
               <label htmlFor="fecha">Fecha Esperada:</label>
-              <input id="fecha" type="date" name="fecha" value={pedido.fecha} onChange={handleChange} min={getTodayString()} required />
+              <input id="fecha" type="date" name="fecha" value={pedido.fecha} onChange={handleChange} min={getTodayString()} onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} required />
             </div>
 
             <div className="form-group-toggles">

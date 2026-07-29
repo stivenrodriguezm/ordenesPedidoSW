@@ -29,7 +29,7 @@ const RemisionModal = ({ isOpen, onClose, onSave, isLoading }) => {
         </div>
         <div className="form-group">
           <label>Fecha:</label>
-          <input type="date" name="fecha" value={remisionData.fecha} onChange={handleChange} required />
+          <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha" value={remisionData.fecha} onChange={handleChange} required />
         </div>
         <button type="submit" className="modal-submit" disabled={isLoading}>
           {isLoading ? 'Guardando...' : 'Guardar Remisión'}

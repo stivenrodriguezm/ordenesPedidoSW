@@ -986,6 +986,7 @@ const OrdenesPage = () => {
         isOpen={isTelaModalOpen}
         onClose={() => setIsTelaModalOpen(false)}
         initialOrdenAsociadaId={expandedOrderId}
+        showNotification={showNotification}
         onSuccess={async () => {
           setIsTelaModalOpen(false);
           if (expandedOrderId) {

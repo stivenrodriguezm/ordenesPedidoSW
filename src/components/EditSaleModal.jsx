@@ -125,11 +125,11 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
         <div className="form-group">
           <label>Fecha de Venta:</label>
-          <input type="date" name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isFieldsDisabled} />
+          <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isFieldsDisabled} />
         </div>
         <div className="form-group">
           <label>Fecha de Entrega:</label>
-          <input type="date" name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isFieldsDisabled} />
+          <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isFieldsDisabled} />
         </div>
 
         <div className="form-group">

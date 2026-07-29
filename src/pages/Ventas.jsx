@@ -69,9 +69,13 @@ const Ventas = () => {
     const [hasInitializedVendedores, setHasInitializedVendedores] = useState(false);
     const vendedoresRef = useRef(null);
 
+    const validReportSales = React.useMemo(() => {
+        return reportSales.filter(venta => venta.estado !== 'anulado');
+    }, [reportSales]);
+
     const vendedoresActivos = React.useMemo(() => {
         const sellersMap = new Map();
-        reportSales.forEach(venta => {
+        validReportSales.forEach(venta => {
             if (venta.vendedor) {
                 const vendId = typeof venta.vendedor === 'object' ? venta.vendedor.id : venta.vendedor;
                 if (vendId) sellersMap.set(vendId, true);
@@ -84,7 +88,7 @@ const Ventas = () => {
             }
         });
         return vendedores.filter(v => sellersMap.has(v.id));
-    }, [reportSales, vendedores]);
+    }, [validReportSales, vendedores]);
 
     useEffect(() => {
         if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
@@ -786,7 +790,7 @@ const Ventas = () => {
                     {isReportVisible && (
                         <div className="report-content-body">
                             <SalesSummaryReport
-                                ventas={reportSales}
+                                ventas={validReportSales}
                                 vendedores={vendedores}
                                 selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
                                 formatCurrency={formatCurrency}
@@ -867,11 +871,11 @@ const Ventas = () => {
                                             <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                     <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>Fecha de Inicio</label>
-                                                    <input type="date" className="v-date-input" value={selectedDateFilter.startDate} onChange={handleStartDateChange} />
+                                                    <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="v-date-input" value={selectedDateFilter.startDate} onChange={handleStartDateChange} />
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                     <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>Fecha de Fin</label>
-                                                    <input type="date" className="v-date-input" value={selectedDateFilter.endDate} onChange={handleEndDateChange} />
+                                                    <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="v-date-input" value={selectedDateFilter.endDate} onChange={handleEndDateChange} />
                                                 </div>
                                                 <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, marginTop: '0.25rem', lineHeight: '1.2' }}>
                                                     * La búsqueda manual ignora la regla de facturación del día 6 al 5.
@@ -1190,15 +1194,23 @@ const Ventas = () => {
                                                                                     <div className={`payment-status-dot ${pago.estado === 'Confirmado' ? 'confirmed' : 'pending'}`}></div>
                                                                                 </div>
                                                                                 <div className="payment-details">
-                                                                                    <span className="payment-main-text">
-                                                                                        RC. #{pago.id}, {formatShortDate(pago.fecha)}, {formatCurrency(pago.valor)}
-                                                                                    </span>
-                                                                                    <span className="payment-sub-text">
+                                                                                    <div className="payment-main-row">
+                                                                                        <span className="pago-rc">RC. #{pago.id}</span>
+                                                                                        <span className="pago-valor">{formatCurrency(pago.valor)}</span>
+                                                                                    </div>
+                                                                                    <div className="payment-sub-row">
+                                                                                        <span className="pago-fecha">{formatShortDate(pago.fecha)}</span>
+                                                                                        <span className="pago-sep">•</span>
                                                                                         <span className={`payment-status ${pago.estado === 'Confirmado' ? 'text-green' : 'text-orange'}`}>
                                                                                             ({pago.estado})
-                                                                                        </span>{' '}
-                                                                                        <span className="payment-method">{pago.metodo_pago}</span>
-                                                                                    </span>
+                                                                                        </span>
+                                                                                        {pago.metodo_pago && (
+                                                                                            <>
+                                                                                                <span className="pago-sep">•</span>
+                                                                                                <span className="payment-method">{pago.metodo_pago}</span>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
                                                                         ))}

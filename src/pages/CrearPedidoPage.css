@@ -11,52 +11,6 @@
   width: 100%;
 }
 
-/* Header principal compacto */
-.form-title-header.premium-v2 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #ffffff;
-  padding: 0.75rem 1.25rem;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
-}
-
-.title-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.title-icon-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #0284c7, #2563eb);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-  flex-shrink: 0;
-}
-
-.title-text-group h1 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-.title-subtitle {
-  margin: 0.1rem 0 0 0;
-  font-size: 0.78rem;
-  color: #64748b;
-}
-
 /* Botones del Header */
 .header-actions {
   display: flex;

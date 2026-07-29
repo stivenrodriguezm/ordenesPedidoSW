@@ -296,12 +296,12 @@ const Caja = () => {
           </div>
           <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Desde</label>
-            <input type="date" name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange}
+            <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange}
               style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
           </div>
           <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Hasta</label>
-            <input type="date" name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange}
+            <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange}
               style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
           </div>
           {(filters.query || filters.fecha_inicio) && (

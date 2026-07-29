@@ -790,7 +790,7 @@ function NuevaRemisionPage() {
 
                                         <div className="rfg-group">
                                             <label className="rfg-label">Fecha de Entrega</label>
-                                            <input required type="date" className="rfg-input" value={form.fechaEntrega}
+                                            <input required type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="rfg-input" value={form.fechaEntrega}
                                                 onChange={e => handleField('fechaEntrega', e.target.value)} />
                                         </div>
 

@@ -1265,17 +1265,17 @@
     filter: brightness(0.95);
 }
 
-.estado-option-btn.estado-color-pagada          { background: #eff6ff; color: #1d4ed8; border-color: #eff6ff; }
-.estado-option-btn.estado-color-pagada.selected  { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,0.12); }
+.estado-option-btn.status-pendiente          { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+.estado-option-btn.status-pendiente.selected { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25); }
 
-.estado-option-btn.estado-color-pendiente          { background: #fefce8; color: #ca8a04; border-color: #fefce8; }
-.estado-option-btn.estado-color-pendiente.selected  { border-color: #ca8a04; box-shadow: 0 0 0 3px rgba(202,138,4,0.12); }
+.estado-option-btn.status-por-pagar          { background: #fef3c7; color: #b45309; border-color: #fde047; }
+.estado-option-btn.status-por-pagar.selected { border-color: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.25); }
 
-.estado-option-btn.estado-color-atrasada          { background: #fef2f2; color: #dc2626; border-color: #fef2f2; }
-.estado-option-btn.estado-color-atrasada.selected  { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }
+.estado-option-btn.status-atrasado          { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.estado-option-btn.status-atrasado.selected { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25); }
 
-.estado-option-btn.estado-color-anulada          { background: #f8fafc; color: #64748b; border-color: #f8fafc; }
-.estado-option-btn.estado-color-anulada.selected  { border-color: #64748b; box-shadow: 0 0 0 3px rgba(100,116,139,0.12); }
+.estado-option-btn.status-pagado           { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.estado-option-btn.status-pagado.selected  { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25); }
 
 .edit-factura-footer {
     display: flex;
@@ -2202,9 +2202,9 @@
 .v-filters-bar {
     display: flex;
     gap: 0.5rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    overflow-x: auto;
+    overflow: visible !important;
 }
 
 .v-search-pill {
@@ -2383,4 +2383,180 @@
 .fct-toast-close:hover {
     background: rgba(255, 255, 255, 0.25);
     opacity: 1;
+}
+
+/* Custom Status Badges for Facturas */
+.status-pendiente {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    border: 1px solid #7dd3fc !important;
+}
+
+.status-por-pagar {
+    background: #fef3c7 !important;
+    color: #b45309 !important;
+    border: 1px solid #fde047 !important;
+}
+
+.status-atrasado {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    border: 1px solid #fca5a5 !important;
+}
+
+.status-pagado {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border: 1px solid #86efac !important;
+}
+
+/* Sortable Table Header */
+.premium-table th.sortable-th,
+.premium-table th.sortable-th * {
+    cursor: pointer !important;
+}
+
+.premium-table th.sortable-th {
+    user-select: none;
+    transition: all 0.15s ease;
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap !important;
+}
+
+.premium-table th.sortable-th .th-sort-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.premium-table th.sortable-th:hover {
+    background-color: #e2e8f0 !important;
+    color: #274385 !important;
+}
+
+.premium-table th.sortable-th.active-sort-th {
+    background-color: #e8eef9 !important;
+    color: #274385 !important;
+    font-weight: 800;
+}
+
+/* Multi-Select Checklist Dropdown Component Styles */
+.v-multi-select-container {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.v-multi-select-btn {
+    height: 34px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    padding: 0 0.85rem;
+    font-size: 0.82rem;
+    color: #334155;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.v-multi-select-btn:hover,
+.v-multi-select-btn.open {
+    border-color: #274385;
+    color: #274385;
+    background-color: #f8fafc;
+}
+
+.v-multi-select-btn.active-filter {
+    background: #f0f9ff;
+    border-color: #0284c7;
+    color: #0369a1;
+    font-weight: 600;
+}
+
+.v-multi-select-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 1000;
+    min-width: 200px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    animation: fctPopoverFade 0.15s ease-out;
+}
+
+@keyframes fctPopoverFade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.v-popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0.4rem 0.4rem 0.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 0.25rem;
+}
+
+.v-popover-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.v-popover-action-btn {
+    background: none;
+    border: none;
+    color: #0284c7;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 0.2rem;
+}
+
+.v-popover-action-btn:hover {
+    text-decoration: underline;
+}
+
+.v-popover-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: #334155;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.v-popover-item:hover {
+    background: #f1f5f9;
+}
+
+.v-popover-item input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #274385;
+    width: 15px;
+    height: 15px;
 }
