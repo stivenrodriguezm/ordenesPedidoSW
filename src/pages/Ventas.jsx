@@ -69,13 +69,9 @@ const Ventas = () => {
     const [hasInitializedVendedores, setHasInitializedVendedores] = useState(false);
     const vendedoresRef = useRef(null);
 
-    const validReportSales = React.useMemo(() => {
-        return reportSales.filter(venta => venta.estado !== 'anulado');
-    }, [reportSales]);
-
     const vendedoresActivos = React.useMemo(() => {
         const sellersMap = new Map();
-        validReportSales.forEach(venta => {
+        reportSales.forEach(venta => {
             if (venta.vendedor) {
                 const vendId = typeof venta.vendedor === 'object' ? venta.vendedor.id : venta.vendedor;
                 if (vendId) sellersMap.set(vendId, true);
@@ -88,7 +84,7 @@ const Ventas = () => {
             }
         });
         return vendedores.filter(v => sellersMap.has(v.id));
-    }, [validReportSales, vendedores]);
+    }, [reportSales, vendedores]);
 
     useEffect(() => {
         if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
@@ -790,7 +786,7 @@ const Ventas = () => {
                     {isReportVisible && (
                         <div className="report-content-body">
                             <SalesSummaryReport
-                                ventas={validReportSales}
+                                ventas={reportSales}
                                 vendedores={vendedores}
                                 selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
                                 formatCurrency={formatCurrency}

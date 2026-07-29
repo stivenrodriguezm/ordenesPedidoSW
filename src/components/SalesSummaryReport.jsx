@@ -57,7 +57,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         let salesToday = 0;
         let totalRecaudo = 0;
         let totalSaldo = 0;
-        let salesCount = ventas.length;
+        let salesCount = 0; // Only count non-anuladas
 
         const salesByDate = {};
         const salesByStatus = { pendiente: 0, entregado: 0, anulado: 0 };
@@ -74,6 +74,23 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         }
 
         ventas.forEach(venta => {
+            const statusRaw = venta.estado ? venta.estado.toLowerCase() : 'pendiente';
+            const isAnulado = statusRaw.includes('anulad');
+            
+            // 1. Siempre sumar al estado de pedidos
+            if (isAnulado) {
+                salesByStatus['anulado']++;
+            } else if (salesByStatus[statusRaw] !== undefined) {
+                salesByStatus[statusRaw]++;
+            } else {
+                salesByStatus['pendiente']++;
+            }
+
+            // 2. Si es anulado, ignorar para el resto de métricas
+            if (isAnulado) return;
+
+            salesCount++; // Contar solo no anuladas
+
             const numSellers = 1 + (venta.vendedores_compartidos ? venta.vendedores_compartidos.length : 0);
             const valorFull = parseFloat(venta.valor_total) || 0;
             const valorPerSeller = valorFull / numSellers;
@@ -91,16 +108,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             const date = venta.fecha_venta;
             if (date) {
                 salesByDate[date] = (salesByDate[date] || 0) + valorFull;
-            }
-
-            const status = venta.estado ? venta.estado.toLowerCase() : 'pendiente';
-            if (salesByStatus[status] !== undefined) {
-                salesByStatus[status]++;
-            } else {
-                salesByStatus['pendiente']++;
-            }
-
-            if (date) {
+                
                 const dayIndex = new Date(`${date}T12:00:00`).getDay();
                 salesByDayOfWeek[dayIndex] += valorFull;
             }
