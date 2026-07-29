@@ -381,6 +381,7 @@ const TelasPage = () => {
             'ID': p.id,
             'Usuario': p.usuario_nombre,
             'Proveedor': p.proveedor_nombre,
+            'Fabricante': p.orden_proveedor_nombre || '-',
             'Fecha': p.fecha_creacion,
             'Estado': p.estado,
             'Orden Asociada': p.orden_id ? `#${p.orden_id}` : '-',

@@ -982,6 +982,7 @@
     position: sticky;
     top: 1rem;
     z-index: 150;
+    overflow: visible;
 }
 
 .v-btn-primary-glow {
@@ -1591,12 +1592,12 @@
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    width: 500px;
+    width: 480px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
-    z-index: 1000;
+    z-index: 2000;
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
@@ -1638,6 +1639,8 @@
     outline: none;
     transition: all 0.2s;
     background: white;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .inv-filter-group select:focus,
