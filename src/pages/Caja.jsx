@@ -22,6 +22,8 @@ import {
 import AppNotification from '../components/AppNotification';
 import CierreCajaModal from '../components/CierreCajaModal';
 
+import { formatCOP } from '../utils/formatCOP';
+
 // --- Helper Components ---
 
 const TransactionIcon = ({ type }) => {
@@ -32,15 +34,23 @@ const TransactionIcon = ({ type }) => {
 
 const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
   const hasPermission = usePermissions();
-  const [formState, setFormState] = useState({ tipo: 'ingreso', concepto: '', valor: '' });
+  const initialType = hasPermission('CREAR_EGRESO_CAJA') ? 'egreso' : 'ingreso';
+  const [formState, setFormState] = useState({ tipo: initialType, concepto: '', valor: '' });
 
   useEffect(() => {
-    if (isOpen) setFormState({ tipo: 'ingreso', concepto: '', valor: '' });
+    if (isOpen) {
+      setFormState({ tipo: initialType, concepto: '', valor: '' });
+    }
   }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormState(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleValorChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    setFormState(prev => ({ ...prev, valor: raw }));
   };
 
   const handleSubmit = (e) => {
@@ -50,72 +60,100 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
 
   if (!isOpen) return null;
 
+  const numericVal = parseInt(formState.valor) || 0;
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content premium-modal">
-        <div className="modal-header">
-          <h3>Nuevo Movimiento</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="lottus-modal-header">
+          <div className="lottus-modal-title-wrap">
+            <div className="lottus-modal-icon-badge">
+              <FaExchangeAlt />
+            </div>
+            <div>
+              <div className="lottus-modal-type-badge">
+                <span className="lottus-badge-dot"></span> Movimiento de Caja
+              </div>
+              <h3 className="lottus-modal-title">Nuevo Movimiento</h3>
+              <p className="lottus-modal-subtitle">Registra un egreso o ingreso directo en caja general.</p>
+            </div>
+          </div>
+          <button type="button" className="lottus-close-btn" onClick={onClose} title="Cerrar">×</button>
         </div>
-        <form onSubmit={handleSubmit} className="premium-form">
-          <div className="form-group">
-            <label>Tipo de Movimiento</label>
-            <div className="type-selector">
-              {hasPermission('CREAR_INGRESO_CAJA') && (
-                <button 
-                  type="button"
-                  className={`type-btn income ${formState.tipo === 'ingreso' ? 'active' : ''}`}
-                  onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
-                >
-                  <FaArrowUp /> Ingreso
-                </button>
-              )}
+
+        <form onSubmit={handleSubmit} className="lottus-modal-form">
+          {/* Tipo de Movimiento Toggle */}
+          <div className="lottus-form-group full">
+            <label>Tipo de Movimiento <span className="lottus-req">*</span></label>
+            <div className="lottus-toggle-row">
               {hasPermission('CREAR_EGRESO_CAJA') && (
                 <button 
                   type="button"
-                  className={`type-btn expense ${formState.tipo === 'egreso' ? 'active' : ''}`}
+                  className={`lottus-toggle-btn ${formState.tipo === 'egreso' ? 'active' : ''}`}
                   onClick={() => setFormState(prev => ({ ...prev, tipo: 'egreso' }))}
                 >
-                  <FaArrowDown /> Egreso
+                  <FaArrowDown style={{ fontSize: '0.75rem', marginRight: '0.25rem' }} /> Egreso
+                </button>
+              )}
+              {hasPermission('CREAR_INGRESO_CAJA') && (
+                <button 
+                  type="button"
+                  className={`lottus-toggle-btn ${formState.tipo === 'ingreso' ? 'active' : ''}`}
+                  onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
+                >
+                  <FaArrowUp style={{ fontSize: '0.75rem', marginRight: '0.25rem' }} /> Ingreso
                 </button>
               )}
             </div>
             <input type="hidden" name="tipo" value={formState.tipo} />
           </div>
 
-          <div className="form-group">
-            <label>Concepto</label>
+          {/* Concepto */}
+          <div className="lottus-form-group full">
+            <label>Concepto <span className="lottus-req">*</span></label>
             <input
               type="text"
               name="concepto"
               value={formState.concepto}
               onChange={handleChange}
               required
-              placeholder="Ej: Pago de servicios, Abono..."
-              className="premium-input"
+              placeholder="Ej: Pago de servicios públicos, compra insumos..."
+              className="lottus-input"
             />
           </div>
 
-          <div className="form-group">
-            <label>Valor</label>
-            <div className="input-with-icon">
-              <span className="currency-symbol">$</span>
+          {/* Valor */}
+          <div className="lottus-form-group full">
+            <div className="lottus-label-flex">
+              <label>Valor Movimiento <span className="lottus-req">*</span></label>
+              {numericVal > 0 && (
+                <span className="lottus-val-preview">{formatCOP(numericVal)}</span>
+              )}
+            </div>
+            <div className="lottus-input-icon">
+              <span className="lottus-prefix">$</span>
               <input
-                type="number"
+                type="text"
                 name="valor"
-                value={formState.valor}
-                onChange={handleChange}
+                value={formState.valor ? formatCOP(numericVal).replace('$', '').trim() : ''}
+                onChange={handleValorChange}
                 required
-                step="any"
-                placeholder="0.00"
-                className="premium-input"
+                placeholder="0"
+                className="lottus-input lottus-input-pl"
               />
             </div>
           </div>
 
-          <button type="submit" className="btn-primary full-width" disabled={isLoading}>
-            {isLoading ? 'Procesando...' : 'Registrar Movimiento'}
-          </button>
+          {/* Footer Actions */}
+          <div className="lottus-modal-actions">
+            <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
+              Cancelar
+            </button>
+            <button type="submit" className="lottus-btn-submit" disabled={isLoading || !formState.concepto || numericVal <= 0}>
+              {isLoading ? 'Registrando...' : 'Registrar Movimiento'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

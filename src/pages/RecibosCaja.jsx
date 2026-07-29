@@ -24,6 +24,8 @@ import {
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
 
+import { formatCOP } from '../utils/formatCOP';
+
 // --- Helper Components ---
 
 const PaymentIcon = ({ method }) => {
@@ -35,12 +37,12 @@ const PaymentIcon = ({ method }) => {
 };
 
 const PAYMENT_METHODS = [
-  { label: 'Efectivo', color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
-  { label: 'Davivienda', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' },
-  { label: 'Bancolombia', color: '#f59e0b', bg: '#fffbeb', border: '#fcd34d' },
-  { label: 'Bold', color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
-  { label: 'Datafono Lottus', color: '#0284c7', bg: '#f0f9ff', border: '#7dd3fc' },
-  { label: 'Otro', color: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
+  { label: 'Efectivo', icon: <FaMoneyBillWave /> },
+  { label: 'Davivienda', icon: <FaUniversity /> },
+  { label: 'Bancolombia', icon: <FaUniversity /> },
+  { label: 'Bold', icon: <FaCalculator /> },
+  { label: 'Datafono Lottus', icon: <FaCreditCard /> },
+  { label: 'Otro', icon: <FaMobileAlt /> },
 ];
 
 const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading }) => {
@@ -56,6 +58,10 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   }, [isOpen]);
 
   const handleChange = (e) => setNewRC({ ...newRC, [e.target.name]: e.target.value });
+  const handleValorChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    setNewRC({ ...newRC, valor: raw });
+  };
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!newRC.metodo_pago) return;
@@ -64,42 +70,45 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
 
   if (!isOpen) return null;
 
-  const selectedMethod = PAYMENT_METHODS.find(m => m.label === newRC.metodo_pago);
+  const numericVal = parseInt(newRC.valor) || 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content rc-modal-box" onClick={e => e.stopPropagation()}>
+      <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="rc-modal-header-bar">
-          <div className="rc-modal-title-wrap">
-            <div className="rc-modal-icon-wrap">
+        <div className="lottus-modal-header">
+          <div className="lottus-modal-title-wrap">
+            <div className="lottus-modal-icon-badge">
               <FaWallet />
             </div>
             <div>
-              <h3>Nuevo Recibo de Caja</h3>
-              <p className="rc-modal-subtitle">Registra un pago recibido de cliente</p>
+              <div className="lottus-modal-type-badge">
+                <span className="lottus-badge-dot"></span> Recibo de Ingreso
+              </div>
+              <h3 className="lottus-modal-title">Nuevo Recibo de Caja</h3>
+              <p className="lottus-modal-subtitle">Ingresa los datos generales del recibo de ingreso.</p>
             </div>
           </div>
-          <button type="button" className="rc-close-btn" onClick={onClose}>×</button>
+          <button type="button" className="lottus-close-btn" onClick={onClose} title="Cerrar">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="rc-premium-form">
+        <form onSubmit={handleSubmit} className="lottus-modal-form">
           {/* Row: ID + Fecha */}
-          <div className="rc-form-row">
-            <div className="rc-form-group">
-              <label>No. Recibo</label>
-              <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="RC-001" className="rc-input" />
+          <div className="lottus-form-row">
+            <div className="lottus-form-group">
+              <label>No. Recibo <span className="lottus-req">*</span></label>
+              <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ej: RC-001" className="lottus-input" />
             </div>
-            <div className="rc-form-group">
-              <label>Fecha</label>
-              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha" value={newRC.fecha} onChange={handleChange} required className="rc-input" />
+            <div className="lottus-form-group">
+              <label>Fecha <span className="lottus-req">*</span></label>
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha" value={newRC.fecha} onChange={handleChange} required className="lottus-input" />
             </div>
           </div>
 
           {/* Venta */}
-          <div className="rc-form-group rc-full">
-            <label>Venta Asociada</label>
-            <select name="venta" value={newRC.venta} onChange={handleChange} required className="rc-input">
+          <div className="lottus-form-group full">
+            <label>Venta Asociada <span className="lottus-req">*</span></label>
+            <select name="venta" value={newRC.venta} onChange={handleChange} required className="lottus-select">
               <option value="">Seleccionar Venta...</option>
               {ventas.map((venta) => (
                 <option key={venta.id_venta} value={venta.id_venta}>Venta #{venta.id_venta}</option>
@@ -108,55 +117,63 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
           </div>
 
           {/* Método de Pago */}
-          <div className="rc-form-group rc-full">
-            <label>Método de Pago</label>
-            <div className="rc-payment-grid">
-              {PAYMENT_METHODS.map((method) => (
-                <button
-                  key={method.label}
-                  type="button"
-                  className={`rc-payment-btn ${newRC.metodo_pago === method.label ? 'active' : ''}`}
-                  style={newRC.metodo_pago === method.label ? {
-                    background: method.bg,
-                    borderColor: method.border,
-                    color: method.color,
-                  } : {}}
-                  onClick={() => setNewRC({ ...newRC, metodo_pago: method.label })}
-                >
-                  {method.label}
-                </button>
-              ))}
+          <div className="lottus-form-group full">
+            <label>Método de Pago <span className="lottus-req">*</span></label>
+            <div className="lottus-payment-grid">
+              {PAYMENT_METHODS.map((method) => {
+                const isActive = newRC.metodo_pago === method.label;
+                return (
+                  <button
+                    key={method.label}
+                    type="button"
+                    className={`lottus-payment-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => setNewRC({ ...newRC, metodo_pago: method.label })}
+                  >
+                    <span className="lottus-pay-icon">{method.icon}</span>
+                    <span>{method.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Valor */}
-          <div className="rc-form-group rc-full">
-            <label>Valor Recibido</label>
-            <div className="rc-input-icon">
-              <FaMoneyBillWave className="rc-input-icon-svg" />
+          <div className="lottus-form-group full">
+            <div className="lottus-label-flex">
+              <label>Valor Recibido <span className="lottus-req">*</span></label>
+              {numericVal > 0 && (
+                <span className="lottus-val-preview">{formatCOP(numericVal)}</span>
+              )}
+            </div>
+            <div className="lottus-input-icon">
+              <span className="lottus-prefix">$</span>
               <input
-                type="number"
+                type="text"
                 name="valor"
-                value={newRC.valor}
-                onChange={handleChange}
+                value={newRC.valor ? formatCOP(numericVal).replace('$', '').trim() : ''}
+                onChange={handleValorChange}
                 required
-                min="0"
-                step="any"
                 placeholder="0"
-                className="rc-input rc-input-pl"
+                className="lottus-input lottus-input-pl"
               />
             </div>
           </div>
 
           {/* Nota */}
-          <div className="rc-form-group rc-full">
-            <label>Nota <span className="rc-hint">(opcional)</span></label>
-            <textarea name="nota" value={newRC.nota} onChange={handleChange} placeholder="Detalles adicionales..." rows="2" className="rc-input" />
+          <div className="lottus-form-group full">
+            <label>Notas / Observaciones <span className="lottus-hint">(opcional)</span></label>
+            <textarea name="nota" value={newRC.nota} onChange={handleChange} placeholder="Detalles o notas sobre el recibo..." rows="2" className="lottus-input" />
           </div>
 
-          <button type="submit" className="rc-submit-btn" disabled={isLoading || !newRC.metodo_pago}>
-            {isLoading ? 'Procesando...' : 'Crear Recibo'}
-          </button>
+          {/* Footer Actions */}
+          <div className="lottus-modal-actions">
+            <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
+              Cancelar
+            </button>
+            <button type="submit" className="lottus-btn-submit" disabled={isLoading || !newRC.metodo_pago || !newRC.id || !newRC.venta || numericVal <= 0}>
+              {isLoading ? 'Guardando...' : 'Crear Recibo'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

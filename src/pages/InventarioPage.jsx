@@ -717,7 +717,11 @@ function InventarioPage() {
             
             // Mass updates for items
             const itemPatchPayload = {};
-            if (disponibilidad) itemPatchPayload.disponibilidad = disponibilidad;
+            const groupTargetDisp = disponibilidad || (gItems.length > 0 ? gItems[0].disponibilidad : 'exhibicion');
+            const isDispDesynced = gItems.some(item => String(item.disponibilidad) !== String(groupTargetDisp));
+            if (disponibilidad || isDispDesynced) {
+                itemPatchPayload.disponibilidad = groupTargetDisp;
+            }
             if (estadoFisico) itemPatchPayload.estado_fisico = estadoFisico;
             if (zonaId) itemPatchPayload.zona = parseInt(zonaId);
             
@@ -1117,8 +1121,8 @@ function InventarioPage() {
             const grupoId   = parseInt(gIdStr);
             const grupoObj  = grupos.find(g => g.id === grupoId) || { id: grupoId, nombre: `Grupo ${gIdStr}` };
             
-            const dispSet   = new Set(gItems.map(i => i.disponibilidad));
-            const dispUni   = dispSet.size === 1 ? [...dispSet][0] : null;
+            const dispUni   = grupoObj.disponibilidad || (gItems.length > 0 ? gItems[0].disponibilidad : 'exhibicion') || 'exhibicion';
+            gItems.forEach(i => { i.disponibilidad = dispUni; });
 
             const uProveedor = [...new Set(gItems.map(i => i.proveedorNombre).filter(Boolean).filter(p => p !== '—'))];
             const gProveedorIsShared = uProveedor.length > 1;
@@ -1159,7 +1163,7 @@ function InventarioPage() {
                 proveedorNombre: gProveedorIsShared ? 'Proveedor Compartido' : gProveedor,
                 facturaManual: gFactura,
                 fechaIngreso: gFechaRaw,
-                disponibilidad: dispUni || 'mixto',
+                disponibilidad: dispUni,
                 costo_especifico: parseFloat(grupoObj.costo_total) || 0,
                 ventaId: grupoObj.venta_id,
                 observacion: grupoObj.observacion,
@@ -1179,7 +1183,7 @@ function InventarioPage() {
 
         sortedCombined.forEach(item => {
             if (item.isGroupRow) {
-                const { grupoId, grupoObj, gItems, gProveedorIsShared, gProveedorLabel, gFactura, gFecha, gSede, gZona, dispUni, grupoEstadoFisico } = item;
+                const { grupoId, grupoObj, gItems, gProveedorIsShared, gProveedorLabel, gFactura, gFecha, gSede, gZona, disponibilidad: dispUni, grupoEstadoFisico } = item;
                 const isExpanded = expandedGroups[grupoId];
 
                 rows.push(
@@ -1199,9 +1203,7 @@ function InventarioPage() {
                         <td className="inv-factura-col" title={gFactura || ''}>{gFactura || <span className="empty-val">—</span>}</td>
                         <td className="inv-numeric" title={grupoObj.venta_id}>{grupoObj.venta_id || <span className="empty-val">—</span>}</td>
                         <td>
-                            {dispUni
-                                ? <span className={`disp-badge disp-${dispUni}`}>{DISPONIBILIDAD_LABELS[dispUni]}</span>
-                                : <span className="disp-badge inv-disp-mixto">Mixto</span>}
+                            <span className={`disp-badge disp-${dispUni}`}>{DISPONIBILIDAD_LABELS[dispUni] || dispUni}</span>
                         </td>
                         <td title={gFecha || ''}>{gFecha || <span className="empty-val">—</span>}</td>
                         <td title={grupoObj.nombre}>
@@ -2064,8 +2066,10 @@ function InventarioPage() {
                                         </select>
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 3' }}>
-                                        <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Disponibilidad</label>
-                                        <select className="ifg-input" value={itemEditModal.form.disponibilidad} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, disponibilidad: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
+                                        <label className="ifg-label" style={{ fontSize: '0.6rem' }}>
+                                            Disponibilidad {!!itemEditModal.form.grupoId && <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 400 }}>(Del grupo)</span>}
+                                        </label>
+                                        <select className="ifg-input" value={itemEditModal.form.disponibilidad} disabled={!!itemEditModal.form.grupoId} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, disponibilidad: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                             {DISPONIBILIDAD_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
                                         </select>
                                     </div>
@@ -2099,14 +2103,19 @@ function InventarioPage() {
                                             const newGroupId = e.target.value;
                                             let newVentaId = itemEditModal.form.ventaId;
                                             let newCategoriaId = itemEditModal.form.categoriaId;
+                                            let newDisp = itemEditModal.form.disponibilidad;
                                             if (newGroupId) {
                                                 const nGroup = grupos.find(g => String(g.id) === String(newGroupId));
+                                                const gItem = items.find(i => String(i.grupoId) === String(newGroupId));
                                                 if (nGroup) {
                                                     newVentaId = String(nGroup.venta || nGroup.venta_id || '');
                                                     newCategoriaId = String(nGroup.categoria || nGroup.categoria_id || '');
                                                 }
+                                                if (gItem && gItem.disponibilidad) {
+                                                    newDisp = gItem.disponibilidad;
+                                                }
                                             }
-                                            setItemEditModal(prev => ({ ...prev, form: { ...prev.form, grupoId: newGroupId, ventaId: newVentaId, categoriaId: newCategoriaId } }));
+                                            setItemEditModal(prev => ({ ...prev, form: { ...prev.form, grupoId: newGroupId, ventaId: newVentaId, categoriaId: newCategoriaId, disponibilidad: newDisp } }));
                                         }} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                             <option value="">Ninguno (individual)</option>
                                             {grupos.filter(g => g.activo !== false).map(g => (

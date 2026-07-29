@@ -23,6 +23,7 @@ const ComprobantesEgreso = lazy(() => import("./pages/ComprobantesEgreso"));
 const TelasPage = lazy(() => import("./pages/TelasPage"));
 
 const FacturasProveedorPage = lazy(() => import("./pages/FacturasProveedorPage"));
+const NuevaFacturaPage = lazy(() => import("./pages/NuevaFacturaPage"));
 const RemisionesPage = lazy(() => import("./pages/RemisionesPage"));
 const NuevaRemisionPage = lazy(() => import("./pages/NuevaRemisionPage"));
 const InventarioPage = lazy(() => import("./pages/InventarioPage"));
@@ -110,6 +111,7 @@ function App() {
                   <Route path="/comprobantes-egreso" element={<PrivateRoute feature="ACCESO_EGRESOS"><ComprobantesEgreso /></PrivateRoute>} />
 
                   <Route path="/suministros/facturas" element={<PrivateRoute feature="VER_FACTURAS"><FacturasProveedorPage /></PrivateRoute>} />
+                  <Route path="/suministros/facturas/nueva" element={<PrivateRoute feature="CREAR_FACTURA"><NuevaFacturaPage /></PrivateRoute>} />
                   <Route path="/suministros/remisiones" element={<PrivateRoute feature="VER_REMISIONES"><RemisionesPage /></PrivateRoute>} />
                   <Route path="/nuevaRemision" element={<PrivateRoute feature="CREAR_REMISION"><NuevaRemisionPage /></PrivateRoute>} />
                   <Route path="/suministros/inventario" element={<PrivateRoute feature="VER_INVENTARIO"><InventarioPage /></PrivateRoute>} />

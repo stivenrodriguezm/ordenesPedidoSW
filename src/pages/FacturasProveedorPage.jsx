@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
@@ -75,6 +76,8 @@ const ESTADOS_FACTURA = [
 ];
 
 function FacturasProveedorPage() {
+    const navigate = useNavigate();
+    const location = useLocation();
     const { proveedores, usuario } = useContext(AppContext);
     const hasPermission = usePermissions();
     const canEditFechas = hasPermission('EDITAR_FECHAS_FACTURA');
@@ -115,6 +118,13 @@ function FacturasProveedorPage() {
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 4000);
     };
+
+    useEffect(() => {
+        if (location.state?.toastMessage) {
+            showToast(location.state.toastMessage, location.state.toastType || 'success');
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state]);
 
     // Filtros & Ordenamiento
     const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'por_pagar', 'atrasado']);
@@ -982,13 +992,11 @@ function FacturasProveedorPage() {
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Desde</label>
                         <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
-                            onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
                             style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hasta</label>
                         <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
-                            onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
                             style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     {hasFilters && (
@@ -999,7 +1007,7 @@ function FacturasProveedorPage() {
                 </div>
                 <div style={{ flexShrink: 0 }}>
                     {hasPermission('CREAR_FACTURA') && (
-                        <button className="v-btn-primary-glow" onClick={() => setShowModal(true)}>
+                        <button className="v-btn-primary-glow" onClick={() => navigate('/suministros/facturas/nueva')}>
                             <FaPlus />
                             <span>Nueva Factura</span>
                         </button>
@@ -1505,7 +1513,6 @@ function FacturasProveedorPage() {
                                         className="ifg-input"
                                         value={editModal.fecha_factura || ''} 
                                         onChange={e => setEditModal(prev => ({ ...prev, fecha_factura: e.target.value }))}
-                                        onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
                                         disabled={!canEditFechas}
                                         style={{ cursor: canEditFechas ? 'pointer' : 'default' }}
                                     />
@@ -1517,7 +1524,6 @@ function FacturasProveedorPage() {
                                         className="ifg-input"
                                         value={editModal.fecha_pago || ''} 
                                         onChange={e => setEditModal(prev => ({ ...prev, fecha_pago: e.target.value }))}
-                                        onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }}
                                         disabled={!canEditFechas}
                                         style={{ cursor: canEditFechas ? 'pointer' : 'default' }}
                                     />

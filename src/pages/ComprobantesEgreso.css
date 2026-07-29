@@ -758,285 +758,399 @@
   gap: 0.75rem;
 }
 
-.ce-modal-icon-wrap {
-  width: 36px;
-  height: 36px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  flex-shrink: 0;
-}
+/* ==========================================================================
+   Lottus Corporate Unified Form Modals (Recibos de Caja & Comprobantes de Egreso)
+   ========================================================================== */
 
-.ce-modal-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: white;
-}
-
-.ce-modal-subtitle {
-  margin: 2px 0 0;
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.75);
-}
-
-.ce-modal-header .modal-close {
-  color: white;
-  opacity: 0.8;
-  font-size: 1.5rem;
-  line-height: 1;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-top: -2px;
-}
-
-.ce-modal-header .modal-close:hover {
-  opacity: 1;
-}
-
-/* Form */
-.ce-premium-form {
-  padding: 1.25rem 1.5rem;
+.lottus-form-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 530px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  max-height: calc(90vh - 90px);
-  overflow-y: auto;
 }
 
-.ce-form-row {
+.lottus-modal-header {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e8edf3;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+}
+
+.lottus-modal-title-wrap {
+  display: flex;
+  align-items: center;
   gap: 0.75rem;
 }
 
-.ce-form-group {
+.lottus-modal-icon-badge {
+  width: 38px;
+  height: 38px;
+  background: #dbeafe;
+  color: #2563eb;
+  border-radius: 9px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  border: 1px solid #bfdbfe;
+}
+
+.lottus-modal-type-badge {
+  display: inline-flex;
+  align-items: center;
   gap: 0.3rem;
-  flex: 1;
-}
-
-.ce-form-group.ce-full {
-  flex: none;
-  width: 100%;
-}
-
-.ce-form-group label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--slate-600);
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.65rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  margin-bottom: 0.15rem;
+  border: 1px solid #dbeafe;
 }
 
-.ce-input {
+.lottus-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.lottus-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.lottus-modal-subtitle {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.lottus-close-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.lottus-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.lottus-modal-form {
+  padding: 1rem 1.25rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(90vh - 80px);
+  overflow-y: auto;
+}
+
+.lottus-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.lottus-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lottus-form-group.full {
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1.5px solid var(--slate-200);
-  border-radius: 10px;
-  font-size: 0.875rem;
-  color: var(--slate-800);
-  background: var(--slate-50);
-  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.lottus-form-group label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.lottus-req {
+  color: #ef4444;
+}
+
+.lottus-hint {
+  font-weight: 400;
+  text-transform: none;
+  color: #94a3b8;
+}
+
+.lottus-label-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lottus-val-preview {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 0.1rem 0.45rem;
+  border-radius: 5px;
+  border: 1px solid #dbeafe;
+}
+
+.lottus-input,
+.lottus-select {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #1e293b;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
   box-sizing: border-box;
 }
 
-.ce-input:focus {
-  outline: none;
-  border-color: var(--rose-500);
-  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.12);
-  background: white;
+.lottus-input:focus,
+.lottus-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
-.ce-input-icon {
+.lottus-input-icon {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.ce-currency {
+.lottus-prefix {
   position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--slate-400);
-  font-weight: 600;
-  font-size: 0.875rem;
+  left: 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
   pointer-events: none;
 }
 
-.ce-input-pl {
-  padding-left: 1.75rem;
+.lottus-input-pl {
+  padding-left: 1.6rem !important;
+  font-weight: 700;
+  color: #2563eb !important;
 }
 
-.ce-hint {
-  font-weight: 400;
-  text-transform: none;
-  color: var(--slate-400);
-  letter-spacing: 0;
-}
-
-/* Toggle Row */
-.ce-toggle-row {
+/* Segmented Toggle Control (Comprobantes de Egreso) */
+.lottus-toggle-row {
   display: flex;
-  gap: 0.5rem;
-  background: var(--slate-100);
-  border-radius: 10px;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  border-radius: 8px;
   padding: 3px;
+  border: 1px solid #e2e8f0;
 }
 
-.ce-toggle-btn {
+.lottus-toggle-btn {
   flex: 1;
-  padding: 0.5rem 0.75rem;
+  padding: 0.38rem 0.65rem;
   border: none;
-  border-radius: 8px;
-  font-size: 0.82rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  color: var(--slate-600);
-  transition: all 0.2s;
+  color: #64748b;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
-.ce-toggle-btn.active {
-  background: white;
-  color: var(--rose-600);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+.lottus-toggle-btn.active {
+  background: #ffffff;
+  color: #1d4ed8;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-/* Facturas List */
-.ce-facturas-list {
+/* Facturas List (Comprobantes de Egreso) */
+.lottus-facturas-list {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-height: 180px;
+  max-height: 160px;
   overflow-y: auto;
-  border: 1.5px solid var(--slate-200);
-  border-radius: 10px;
-  padding: 0.5rem;
-  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.35rem;
+  background: #ffffff;
 }
 
-.ce-facturas-empty {
-  font-size: 0.82rem;
-  color: var(--slate-400);
+.lottus-facturas-empty {
+  font-size: 0.78rem;
+  color: #94a3b8;
   font-style: italic;
-  padding: 0.75rem;
+  padding: 0.65rem;
   text-align: center;
-  border: 1.5px dashed var(--slate-200);
-  border-radius: 10px;
-  background: var(--slate-50);
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
-.ce-factura-item {
+.lottus-factura-item {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.5rem 0.65rem;
-  border-radius: 8px;
+  gap: 0.5rem;
+  padding: 0.38rem 0.6rem;
+  border-radius: 6px;
   cursor: pointer;
-  border: 1.5px solid transparent;
-  background: var(--slate-50);
-  transition: all 0.15s;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  transition: all 0.15s ease;
   user-select: none;
 }
 
-.ce-factura-item:hover {
-  background: var(--rose-50);
-  border-color: var(--rose-100);
+.lottus-factura-item:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
-.ce-factura-item.selected {
-  background: var(--rose-50);
-  border-color: var(--rose-500);
+.lottus-factura-item.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
 }
 
-.ce-factura-item input[type="checkbox"] {
-  accent-color: var(--rose-500);
-  width: 15px;
-  height: 15px;
+.lottus-factura-item input[type="checkbox"] {
+  accent-color: #2563eb;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
 }
 
-.ce-factura-info {
+.lottus-factura-info {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
 }
 
-.ce-factura-id {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--slate-800);
+.lottus-factura-id {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-.ce-factura-valor {
+.lottus-factura-valor {
   font-size: 0.75rem;
-  color: var(--slate-500);
-  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: #2563eb;
 }
 
-.ce-factura-estado {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 20px;
+.lottus-factura-estado {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
   text-transform: capitalize;
   flex-shrink: 0;
 }
 
-.ce-factura-estado.pendiente {
+.lottus-factura-estado.pendiente {
   background: #fef3c7;
   color: #92400e;
 }
 
-.ce-factura-estado.atrasada {
-  background: #ffe4e6;
-  color: var(--rose-900);
+.lottus-factura-estado.atrasada {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
-.ce-concepto-preview {
-  margin-top: 0.4rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--slate-100);
+.lottus-concepto-preview {
+  margin-top: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.lottus-concepto-preview strong {
+  color: #0f172a;
+}
+
+/* Actions Footer */
+.lottus-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.lottus-btn-cancel {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.45rem 0.95rem;
   border-radius: 8px;
-  font-size: 0.8rem;
-  color: var(--slate-600);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.ce-concepto-preview strong {
-  color: var(--slate-800);
+.lottus-btn-cancel:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
-/* Submit button */
-.ce-submit-btn {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-  color: white;
+.lottus-btn-submit {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
   border: none;
-  border-radius: 12px;
-  font-size: 0.95rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.02em;
-  margin-top: 0.25rem;
-  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.3);
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
-.ce-submit-btn:hover:not(:disabled) {
+.lottus-btn-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
 }
 
-.ce-submit-btn:disabled {
-  opacity: 0.65;
+.lottus-btn-submit:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
 }
