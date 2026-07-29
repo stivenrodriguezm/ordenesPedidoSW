@@ -307,6 +307,7 @@ const Ventas = () => {
             if (!canSeeAll) {
                 params.vendedor = usuario.id;
             }
+            params.is_report = 'true';
             // Note: This might still fail if the dataset is huge, but it won't crash the main list
             const response = await API.get(`/ventas/`, { params });
             // If response is paginated, we might only get the first page. 
