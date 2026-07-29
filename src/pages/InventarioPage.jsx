@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import API from '../services/api';
 import { formatCOP } from '../utils/formatCOP';
-import { exportToCSV } from '../utils/exportToCSV';
+import * as XLSX from 'xlsx';
 import {
     FaSearch, FaFileExport, FaTimes, FaPlus, FaImage, FaCamera, FaUpload,
     FaLayerGroup, FaEdit, FaSave, FaChevronDown, FaChevronUp,
@@ -932,7 +932,7 @@ function InventarioPage() {
     };
 
     const handleExport = () => {
-        exportToCSV('Inventario_Lottus.csv', filtered.map(item => ({
+        const dataToExport = filtered.map(item => ({
             'ID Producto': item.id,
             'Proveedor': item.proveedorNombre,
             'Factura': item.facturaManual || '',
@@ -945,7 +945,11 @@ function InventarioPage() {
             'Variación': item.variacion || '',
             'Costo': item.costo_especifico || '',
             'Observación': item.observacion || '',
-        })));
+        }));
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+        XLSX.writeFile(wb, 'Inventario_Lottus.xlsx');
     };
 
     // ── Inline disponibilidad badge (C) ───────────────────────────────────────
