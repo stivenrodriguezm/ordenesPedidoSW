@@ -598,10 +598,6 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                             <span style={{ color: '#0f172a', fontWeight: '700' }}>{pdfData ? proveedoresTelas.find(p => p.id === parseInt(pdfData.proveedor))?.nombre_empresa || 'N/A' : 'N/A'}</span>
                         </p>
                         <p style={{ margin: '0 0 8px 0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '700', display: 'inline-block', width: '110px' }}>Fabricante:</strong>{' '}
-                            <span style={{ color: '#0f172a', fontWeight: '700' }}>{pdfData && pdfData.orden_asociada_id ? ordenes.find(o => String(o.id) === String(pdfData.orden_asociada_id))?.proveedor_nombre || 'N/A' : 'N/A'}</span>
-                        </p>
-                        <p style={{ margin: '0 0 8px 0' }}>
                             <strong style={{ color: '#0f172a', fontWeight: '700', display: 'inline-block', width: '110px' }}>Solicitante:</strong>{' '}
                             <span style={{ color: '#334155', fontWeight: '600' }}>{usuario ? `${usuario.first_name || ''} ${usuario.last_name || ''}`.trim() : 'N/A'}</span>
                         </p>

@@ -75,7 +75,24 @@ const TelasPage = () => {
     useEffect(() => {
         fetchProveedoresTelas();
         fetchDirecciones();
+        fetchOrdenes();
     }, []);
+
+    const fetchOrdenes = async () => {
+        try {
+            const response = await API.get('ordenes-pedido/');
+            const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
+            setOrdenes(data);
+        } catch (error) {
+            try {
+                const response = await API.get('listar-pedidos/');
+                const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
+                setOrdenes(data);
+            } catch (err) {
+                console.error("Error fetching ordenes:", err);
+            }
+        }
+    };
 
     useEffect(() => {
         if (proveedoresTelas.length > 0 && !hasInitializedProveedores) {
@@ -376,12 +393,25 @@ const TelasPage = () => {
         return orden ? (orden.venta || orden.orden_venta || null) : null;
     };
 
+    const getFabricante = (pedido) => {
+        if (pedido.orden_proveedor_nombre && pedido.orden_proveedor_nombre !== '-' && pedido.orden_proveedor_nombre !== 'N/A') {
+            return pedido.orden_proveedor_nombre;
+        }
+        if (pedido.orden_id) {
+            const orden = ordenes.find(o => String(o.id) === String(pedido.orden_id));
+            if (orden && orden.proveedor_nombre && orden.proveedor_nombre !== 'N/A') {
+                return orden.proveedor_nombre;
+            }
+        }
+        return '-';
+    };
+
     const exportPedidos = () => {
         const dataToExport = pedidos.map(p => ({
             'ID': p.id,
             'Usuario': p.usuario_nombre,
             'Proveedor': p.proveedor_nombre,
-            'Fabricante': p.orden_proveedor_nombre || '-',
+            'Fabricante': getFabricante(p),
             'Fecha': p.fecha_creacion,
             'Estado': p.estado,
             'Orden Asociada': p.orden_id ? `#${p.orden_id}` : '-',
@@ -524,7 +554,7 @@ const TelasPage = () => {
                                                 </div>
                                             </td>
                                             <td><span style={{ fontWeight: '600', color: '#0f172a' }}>{pedido.proveedor_nombre}</span></td>
-                                            <td><span style={{ fontWeight: '500', color: '#475569' }}>{pedido.orden_proveedor_nombre || '-'}</span></td>
+                                            <td><span style={{ fontWeight: '500', color: '#475569' }}>{getFabricante(pedido)}</span></td>
                                             <td style={{ color: '#64748b', fontSize: '0.8rem' }}>{pedido.fecha_creacion}</td>
                                             <td>
                                                 <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
@@ -634,7 +664,7 @@ const TelasPage = () => {
                                             {pedido.proveedor_nombre}
                                         </div>
                                         <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                            Fabricante: <span style={{ fontWeight: '500', color: '#475569' }}>{pedido.orden_proveedor_nombre || '-'}</span>
+                                            Fabricante: <span style={{ fontWeight: '500', color: '#475569' }}>{getFabricante(pedido)}</span>
                                         </div>
                                     </div>
                                     <div className="header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#64748b' }}>
