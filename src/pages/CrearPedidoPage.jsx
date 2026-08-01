@@ -170,6 +170,10 @@ function CrearPedidoPage() {
       showError('La fecha esperada no puede ser anterior al día de hoy.');
       return;
     }
+    if (!pedido.productos || pedido.productos.length === 0) {
+      showError('Debe agregar al menos un producto antes de crear el pedido.');
+      return;
+    }
     const productoInvalido = pedido.productos.find(p => !p.referencia);
     if (productoInvalido) {
       showError('Por favor seleccione una referencia para cada producto.');
@@ -381,7 +385,7 @@ function CrearPedidoPage() {
             <img src={logoFinal} className="logoPedido" alt="Logo Lottus" />
             <div className="numPedido">
               <h2>Orden de Pedido</h2>
-              <p className="numeroOP">No. {numeroOP || "..."}</p>
+              <p className="numeroOP" style={{ color: '#dc2626', fontWeight: 700 }}>No. {numeroOP || "..."}</p>
             </div>
           </div>
 

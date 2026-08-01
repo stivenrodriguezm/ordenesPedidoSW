@@ -1339,6 +1339,16 @@ const Ventas = () => {
                                                                                         <span className="oc-v2-label">Tela</span>
                                                                                         <span className="oc-v2-value italic">{pedido.tela || 'Sin tela'}</span>
                                                                                     </div>
+                                                                                    <div className="oc-v2-section oc-v2-dest">
+                                                                                        <span className="oc-v2-label">Exhibición</span>
+                                                                                        <span className="oc-v2-value">
+                                                                                            {pedido.es_exhibicion ? (
+                                                                                                <span className="exh-badge exh-si" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#dcfce7', color: '#15803d' }}>Sí</span>
+                                                                                            ) : (
+                                                                                                <span className="exh-badge exh-no" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#f1f5f9', color: '#94a3b8' }}>No</span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                    </div>
                                                                                     {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
                                                                                         <div className="oc-v2-section oc-v2-cost">
                                                                                             <span className="oc-v2-label">Costo</span>

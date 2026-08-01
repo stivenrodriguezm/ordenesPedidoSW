@@ -8,7 +8,8 @@ import {
     FaPlus, FaTrashAlt, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, 
     FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaFileInvoiceDollar, 
     FaClipboardList, FaBuilding, FaCalendarAlt, FaArrowLeft, FaDollarSign, 
-    FaStickyNote, FaTag, FaBoxes, FaMapMarkerAlt, FaShoppingCart, FaUserCheck
+    FaStickyNote, FaTag, FaBoxes, FaMapMarkerAlt, FaShoppingCart, FaUserCheck,
+    FaChevronDown, FaSearch
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import './NuevaFacturaPage.css';
@@ -34,6 +35,7 @@ const emptyRef = () => ({
     estado_fisico: 'buen_estado',
     zonaId: '',
     ventaId: '', 
+    opId: '',
     imagen: null, 
     visible: true,
     telas_cueros: [], 
@@ -136,6 +138,73 @@ export default function NuevaFacturaPage() {
     const [newGrupoName, setNewGrupoName] = useState('');
     const [newGrupoCategoria, setNewGrupoCategoria] = useState('');
     const [newGrupoSubcategoria, setNewGrupoSubcategoria] = useState('');
+
+    const { data: ordenesProveedor = [] } = useQuery({
+        queryKey: ['ordenes-proveedor', form.proveedorId],
+        queryFn: async () => {
+            if (!form.proveedorId) return [];
+            const res = await API.get(`/ordenes-pedido/?proveedor=${form.proveedorId}&page_size=500`);
+            return res.data.results || res.data || [];
+        },
+        enabled: !!form.proveedorId,
+    });
+
+    // Estado de buscador de OP por fila
+    const [opSearchState, setOpSearchState] = useState({});
+
+    const getOpSearch = (index) => opSearchState[index] || { query: '', open: false };
+    const setOpSearch = (index, patch) => setOpSearchState(prev => ({ 
+        ...prev, 
+        [index]: { ...getOpSearch(index), ...patch } 
+    }));
+
+    const handleSelectOp = (index, orden) => {
+        setForm(prev => {
+            const prods = [...prev.productos];
+            const ventaId = orden.venta ? String(orden.venta) : '';
+            
+            let nuevasTelas = [];
+            if (orden.telas_asociadas && orden.telas_asociadas.length > 0) {
+                nuevasTelas = orden.telas_asociadas.map(t => {
+                    let raw = t.tela || '';
+                    let tipo = 'tela';
+                    if (raw.includes('[CUERO]')) {
+                        tipo = 'cuero';
+                        raw = raw.replace('[CUERO]', '');
+                    }
+                    let referencia = raw.trim();
+                    let color = '';
+                    if (raw.includes(' - Color: ')) {
+                        const parts = raw.split(' - Color: ');
+                        referencia = parts[0].trim();
+                        color = parts[1].trim();
+                    } else if (raw.toLowerCase().includes('color:')) {
+                        const parts = raw.split(/color:/i);
+                        referencia = parts[0].replace(/-\s*$/, '').trim();
+                        color = parts[1].trim();
+                    }
+                    return {
+                        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+                        tipo,
+                        referencia,
+                        color,
+                        cantidad: t.cantidad || 1,
+                        costo_unidad: ''
+                    };
+                });
+            }
+
+            prods[index] = { 
+                ...prods[index], 
+                opId: String(orden.id),
+                ventaId: ventaId,
+                disponibilidad: ventaId ? 'cliente' : prods[index].disponibilidad,
+                telas_cueros: nuevasTelas.length > 0 ? nuevasTelas : prods[index].telas_cueros
+            };
+            return { ...prev, productos: prods };
+        });
+        setOpSearch(index, { query: '', open: false });
+    };
 
     const CATEGORIAS = categorias;
     const SUBCATEGORIAS = subcategorias;
@@ -727,8 +796,8 @@ export default function NuevaFacturaPage() {
                                             </div>
                                         </div>
 
-                                        {/* Fila 2: Costo Unitario | Cantidad | Estado Físico | Zona Inicial | Disponibilidad | Venta */}
-                                        <div className="nf-ref-grid-dynamic">
+                                        {/* Fila 2: Costo Unitario | Cantidad | Estado Físico | Zona Inicial */}
+                                        <div className="nf-ref-grid-4">
                                             <div className="nf-form-group">
                                                 <label>Costo Unitario <span className="nf-req">*</span></label>
                                                 <div className="nf-prefix-wrap">
@@ -784,38 +853,168 @@ export default function NuevaFacturaPage() {
                                                 </select>
                                             </div>
 
-                                            <div className="nf-form-group">
-                                                <label>Disponibilidad</label>
-                                                <select value={row.disponibilidad} onChange={e => handleRefRow(index, 'disponibilidad', e.target.value)}>
-                                                    <option value="exhibicion">Exhibición</option>
-                                                    <option value="cliente">Cliente</option>
-                                                    <option value="por_reparar">Por Reparar</option>
-                                                    <option value="consignacion">Consignación</option>
-                                                    <option value="no_venta">No a la venta</option>
-                                                </select>
-                                            </div>
-
-                                            {(row.disponibilidad === 'cliente' || row.disponibilidad === 'por_despachar') && (
-                                                <div className="nf-form-group">
-                                                    <label>Venta Asociada</label>
-                                                    <select 
-                                                        value={row.ventaId} 
-                                                        disabled={!!row.grupoLocalId}
-                                                        onChange={e => handleRefRow(index, 'ventaId', e.target.value)}>
-                                                        <option value="">Seleccione Venta...</option>
-                                                        {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
-                                                    </select>
-                                                    {row.grupoLocalId && (
-                                                        <small className="nf-inherited-hint">
-                                                            Hereda venta del grupo.
-                                                        </small>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
 
-                                        {/* Fila 3: Grupo | Observación | Imagen */}
+                                        {/* Fila 3: OP Asociada | Grupo | Observación */}
                                         <div className="nf-ref-grid-3">
+                                            {/* OP Asociada */}
+                                            {(() => {
+                                                const { query: opQ, open: opOpen } = getOpSearch(index);
+                                                const filteredOPs = ordenesProveedor.filter(o => 
+                                                    String(o.id).includes(opQ) ||
+                                                    (o.proveedor_nombre || '').toLowerCase().includes(opQ.toLowerCase())
+                                                );
+                                                const selectedOp = ordenesProveedor.find(o => String(o.id) === String(row.opId));
+                                                return (
+                                                    <div className="nf-form-group" style={{ position: 'relative' }}>
+                                                        <label>OP Asociada <span className="nf-optional">(opcional)</span></label>
+                                                        <div 
+                                                            onClick={() => setOpSearch(index, { open: !opOpen })}
+                                                            className="nf-select"
+                                                            style={{ 
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                                cursor: 'pointer', color: selectedOp ? '#1e293b' : '#94a3b8', userSelect: 'none',
+                                                                padding: '0.45rem 0.65rem'
+                                                            }}
+                                                        >
+                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                                                                {selectedOp ? `OP #${selectedOp.id}` : (form.proveedorId ? 'Seleccionar...' : 'Falta proveedor')}
+                                                            </span>
+                                                            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                                                {row.opId && (
+                                                                    <span
+                                                                        onClick={e => { e.stopPropagation(); handleRefRow(index, 'opId', ''); }}
+                                                                        style={{ marginRight: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}
+                                                                        title="Quitar OP"
+                                                                    >×</span>
+                                                                )}
+                                                                <FaChevronDown size={10} style={{ color: '#94a3b8' }} />
+                                                            </div>
+                                                        </div>
+                                                        {opOpen && (
+                                                            <div style={{
+                                                                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
+                                                                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                                                marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                                                                display: 'flex', flexDirection: 'column'
+                                                            }}>
+                                                                <div style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px 8px 0 0' }}>
+                                                                    <div style={{ position: 'relative' }}>
+                                                                        <FaSearch size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Buscar OP por número..."
+                                                                            value={opQ}
+                                                                            onChange={e => setOpSearch(index, { query: e.target.value })}
+                                                                            onClick={e => e.stopPropagation()}
+                                                                            style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 1.75rem', border: '1px solid #e2e8f0', borderRadius: '5px', background: '#f8fafc', color: '#1e293b', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                                                                            autoFocus
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ overflowY: 'auto', maxHeight: '200px' }}>
+                                                                    {!form.proveedorId ? (
+                                                                        <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Selecciona un proveedor primero</div>
+                                                                    ) : filteredOPs.length === 0 ? (
+                                                                        <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes para este proveedor</div>
+                                                                    ) : filteredOPs.map(orden => (
+                                                                        <div
+                                                                            key={orden.id}
+                                                                            onClick={() => handleSelectOp(index, orden)}
+                                                                            style={{
+                                                                                padding: '9px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9',
+                                                                                background: String(row.opId) === String(orden.id) ? '#eff6ff' : 'transparent',
+                                                                                transition: 'background 0.15s'
+                                                                            }}
+                                                                            onMouseEnter={e => { if (String(row.opId) !== String(orden.id)) e.currentTarget.style.background = '#f8fafc'; }}
+                                                                            onMouseLeave={e => { if (String(row.opId) !== String(orden.id)) e.currentTarget.style.background = 'transparent'; }}
+                                                                        >
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                                <span style={{ fontWeight: 600, color: '#1e40af', fontSize: '0.85rem' }}>OP #{orden.id}</span>
+                                                                                {orden.venta && <span style={{ fontSize: '0.75rem', color: '#059669', background: '#d1fae5', padding: '1px 6px', borderRadius: '4px' }}>Venta #{orden.venta}</span>}
+                                                                            </div>
+                                                                            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                                                                                {orden.estado} {orden.fecha_esperada ? `• Esperada: ${orden.fecha_esperada}` : ''}
+                                                                            </div>
+                                                                            {orden.observacion && (
+                                                                                <div style={{ fontSize: '0.75rem', color: '#0f766e', marginTop: '2px', fontStyle: 'italic' }}>
+                                                                                    📝 Obs: {orden.observacion}
+                                                                                </div>
+                                                                            )}
+                                                                            {orden.detalles && orden.detalles.length > 0 && (
+                                                                                <div style={{ fontSize: '0.75rem', color: '#334155', marginTop: '2px' }}>
+                                                                                    📦 {orden.detalles.map(d => `${d.cantidad}x ${d.referencia_nombre || ''}`).join(', ')}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* Tarjeta Informativa de la OP Asociada - colapsable */}
+                                            {(() => {
+                                                const selectedOp = ordenesProveedor.find(o => String(o.id) === String(row.opId));
+                                                if (!selectedOp) return null;
+                                                const opDetailOpen = getOpSearch(index).detailOpen || false;
+                                                return (
+                                                    <div style={{ gridColumn: '1 / -1' }}>
+                                                        <div
+                                                            onClick={() => setOpSearch(index, { detailOpen: !opDetailOpen })}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                                padding: '0.4rem 0.75rem',
+                                                                background: '#e0f2fe', border: '1px solid #bae6fd',
+                                                                borderRadius: opDetailOpen ? '7px 7px 0 0' : '7px',
+                                                                fontSize: '0.8rem', fontWeight: 600, color: '#0369a1',
+                                                                cursor: 'pointer', userSelect: 'none', marginTop: '6px'
+                                                            }}
+                                                        >
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                📦 Contenido OP #{selectedOp.id}
+                                                                {selectedOp.vendedor && <span style={{ fontWeight: 400, fontSize: '0.75rem' }}>• {selectedOp.vendedor}</span>}
+                                                                {selectedOp.venta && <span style={{ background: '#bae6fd', color: '#0c4a6e', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.75rem' }}>{opDetailOpen ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
+                                                        </div>
+
+                                                        {opDetailOpen && (
+                                                            <div style={{
+                                                                padding: '0.65rem 0.85rem',
+                                                                background: '#f0f9ff', border: '1px solid #bae6fd',
+                                                                borderTop: 'none', borderRadius: '0 0 7px 7px',
+                                                                fontSize: '0.82rem', color: '#0369a1'
+                                                            }}>
+                                                                {selectedOp.observacion && (
+                                                                    <div style={{ marginBottom: '6px', color: '#0f766e', background: '#f0fdf4', padding: '4px 8px', borderRadius: '4px', border: '1px solid #bbf7d0', fontSize: '0.8rem' }}>
+                                                                        📝 <strong>Observación del Pedido:</strong> {selectedOp.observacion}
+                                                                    </div>
+                                                                )}
+                                                                {selectedOp.detalles && selectedOp.detalles.length > 0 ? (
+                                                                    <div>
+                                                                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0284c7', marginBottom: '3px' }}>Productos del Pedido:</div>
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                            {selectedOp.detalles.map((d, dIdx) => (
+                                                                                <div key={dIdx} style={{ background: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e0f2fe', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                                                                                    <span style={{ fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px' }}>{d.cantidad}x</span>
+                                                                                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{d.referencia_nombre || 'Referencia'}</span>
+                                                                                    {d.especificaciones && <span style={{ color: '#64748b', fontSize: '0.78rem' }}>({d.especificaciones})</span>}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ color: '#64748b', fontSize: '0.78rem', fontStyle: 'italic' }}>(Sin detalles de productos en esta OP)</div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+
                                             <div className="nf-form-group">
                                                 <label>Grupo <span className="nf-optional">(opcional)</span></label>
                                                 <select
@@ -824,19 +1023,19 @@ export default function NuevaFacturaPage() {
                                                     className={`nf-select-grupo ${row.grupoLocalId ? 'nf-select-grupo--active' : ''}`}
                                                 >
                                                     <option value="">Individual (Sin Grupo)</option>
+                                                    {form.grupoInstances.length > 0 && (
+                                                        <optgroup label="── Nuevos en esta factura ──">
+                                                            {form.grupoInstances.map(gi => (
+                                                                <option key={gi.localId} value={gi.localId}>{gi.nombre}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    )}
                                                     {gruposActivos.length > 0 && (
                                                         <optgroup label="── Grupos existentes ──">
                                                             {gruposActivos.map(g => (
                                                                 <option key={`existing-${g.id}`} value={String(g.id)}>
                                                                     G{String(g.id).padStart(3, '0')} — {g.nombre}
                                                                 </option>
-                                                            ))}
-                                                        </optgroup>
-                                                    )}
-                                                    {form.grupoInstances.length > 0 && (
-                                                        <optgroup label="── Nuevos en esta factura ──">
-                                                            {form.grupoInstances.map(gi => (
-                                                                <option key={gi.localId} value={gi.localId}>{gi.nombre}</option>
                                                             ))}
                                                         </optgroup>
                                                     )}
@@ -853,41 +1052,6 @@ export default function NuevaFacturaPage() {
                                                 />
                                             </div>
 
-                                            <div className="nf-form-group">
-                                                <label>Imagen</label>
-                                                <div className="nf-img-zone">
-                                                    {row.imagen ? (
-                                                        <div className="nf-img-preview">
-                                                            <FaImage className="nf-img-icon" />
-                                                            <span className="nf-img-name">{row.imagen.name}</span>
-                                                            <button 
-                                                                type="button" 
-                                                                className="nf-img-remove" 
-                                                                onClick={() => handleRefRow(index, 'imagen', null)}
-                                                            >&times;</button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="nf-img-actions">
-                                                            <label className="nf-img-btn">
-                                                                <FaUpload /> Adjuntar
-                                                                <input 
-                                                                    type="file" 
-                                                                    hidden 
-                                                                    accept="image/*" 
-                                                                    onChange={e => handleRefRow(index, 'imagen', e.target.files[0])} 
-                                                                />
-                                                            </label>
-                                                            <button 
-                                                                type="button" 
-                                                                className="nf-img-btn" 
-                                                                onClick={() => showToast('Simulación: foto con cámara', 'success')}
-                                                            >
-                                                                <FaCamera /> Foto
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
                                         </div>
 
                                         {/* Sub-sección Telas y Cueros */}

@@ -1375,6 +1375,7 @@
 .oc-v2-prov { flex: 2; min-width: 120px; }
 .oc-v2-dates { flex: 2; min-width: 140px; }
 .oc-v2-tela { flex: 1.5; min-width: 100px; }
+.oc-v2-dest { flex: 1; min-width: 80px; }
 .oc-v2-cost { flex: 1.5; min-width: 100px; }
 .oc-v2-status { width: 100px; display: flex; align-items: flex-start; justify-content: center; }
 .oc-v2-action { width: 40px; display: flex; align-items: center; justify-content: flex-end; }

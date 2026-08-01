@@ -19,6 +19,7 @@ import {
   FaWallet,
   FaChevronLeft,
   FaChevronRight,
+  FaChevronDown,
   FaCalculator
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
@@ -50,10 +51,14 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
+  const [ventaSearch, setVentaSearch] = useState('');
+  const [showVentaDropdown, setShowVentaDropdown] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setNewRC({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
+      setVentaSearch('');
+      setShowVentaDropdown(false);
     }
   }, [isOpen]);
 
@@ -71,6 +76,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   if (!isOpen) return null;
 
   const numericVal = parseInt(newRC.valor) || 0;
+  const filteredVentas = ventas.filter(v => v.id_venta.toString().includes(ventaSearch));
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -106,14 +112,54 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
           </div>
 
           {/* Venta */}
-          <div className="lottus-form-group full">
+          <div className="lottus-form-group full" style={{ position: 'relative' }}>
             <label>Venta Asociada <span className="lottus-req">*</span></label>
-            <select name="venta" value={newRC.venta} onChange={handleChange} required className="lottus-select">
-              <option value="">Seleccionar Venta...</option>
-              {ventas.map((venta) => (
-                <option key={venta.id_venta} value={venta.id_venta}>Venta #{venta.id_venta}</option>
-              ))}
-            </select>
+            
+            <div 
+              className="lottus-select" 
+              onClick={() => setShowVentaDropdown(!showVentaDropdown)}
+              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span>{newRC.venta ? `Venta #${newRC.venta}` : 'Seleccionar Venta...'}</span>
+              <FaChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+            </div>
+
+            {showVentaDropdown && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Buscar # de venta..." 
+                    value={ventaSearch}
+                    onChange={(e) => setVentaSearch(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: '#f8fafc', color: '#1e293b', fontSize: '0.9rem', outline: 'none' }}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ overflowY: 'auto', flex: 1, maxHeight: '200px' }}>
+                  {filteredVentas.length > 0 ? filteredVentas.map(venta => (
+                    <div 
+                      key={venta.id_venta}
+                      onClick={() => {
+                        setNewRC({ ...newRC, venta: venta.id_venta });
+                        setShowVentaDropdown(false);
+                        setVentaSearch('');
+                      }}
+                      style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: newRC.venta === venta.id_venta ? '#ecfdf5' : 'transparent', color: newRC.venta === venta.id_venta ? '#059669' : '#334155', fontWeight: newRC.venta === venta.id_venta ? '600' : '400', transition: 'background 0.2s, color 0.2s' }}
+                      onMouseEnter={(e) => { if(newRC.venta !== venta.id_venta) e.target.style.background = '#f8fafc' }}
+                      onMouseLeave={(e) => { if(newRC.venta !== venta.id_venta) e.target.style.background = 'transparent' }}
+                    >
+                      Venta #{venta.id_venta}
+                    </div>
+                  )) : (
+                    <div style={{ padding: '12px', color: '#64748b', textAlign: 'center', fontSize: '0.9rem' }}>
+                      No se encontraron ventas
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Método de Pago */}

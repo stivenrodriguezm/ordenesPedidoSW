@@ -586,6 +586,7 @@ function FacturasProveedorPage() {
                     grupo_nombre: p.grupo_nombre || (p.grupo ? p.grupo.nombre : null),
                     grupo_categoria_nombre: p.grupo_categoria_nombre,
                     grupo_subcategoria_nombre: p.grupo_subcategoria_nombre,
+                    vendedor_nombre: p.vendedor_nombre,
                 }));
                 setFacturas(prev => prev.map(f => 
                     f.id === id ? { ...f, ...fData, productos: prods, _detailsLoaded: true } : f
@@ -1219,7 +1220,9 @@ function FacturasProveedorPage() {
                                                                                                     {p.disponibilidad === 'no_venta' ? 'No a la venta' : p.disponibilidad === 'exhibicion' ? 'Exhibición' : p.disponibilidad === 'consignacion' ? 'Consignación' : p.disponibilidad === 'cliente' ? 'Cliente' : p.disponibilidad === 'por_despachar' ? 'Por Despachar' : (p.disponibilidad.charAt(0).toUpperCase() + p.disponibilidad.slice(1))}
                                                                                                 </span>
                                                                                             ) : <span className="empty-val">—</span>}
-                                                                                            <span className="item-venta-link">{p.ventaId ? `Venta #${p.ventaId}` : 'Sin asignar'}</span>
+                                                                                            <span className="item-venta-link" title={p.vendedor_nombre ? `Vendedor: ${p.vendedor_nombre}` : ''}>
+                                                                                                {p.ventaId ? `Venta #${p.ventaId}${p.vendedor_nombre ? ` (${p.vendedor_nombre})` : ''}` : 'Sin asignar'}
+                                                                                            </span>
                                                                                         </div>
 
                                                                                         <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
@@ -1260,8 +1263,8 @@ function FacturasProveedorPage() {
                                                                                 const grupoIdVal = items[0]?.grupo_id || items[0]?.grupo;
                                                                                 const grupoBadgeStr = grupoIdVal ? `#G-${grupoIdVal}` : 'GRUPO';
 
-                                                                                const ventas = [...new Set(items.map(i => i.ventaId).filter(Boolean))];
-                                                                                const ventasLabel = ventas.length > 0 ? `Venta #${ventas.join(', #')}` : null;
+                                                                                const ventasWithSellers = [...new Set(items.filter(i => i.ventaId).map(i => i.vendedor_nombre ? `Venta #${i.ventaId} (${i.vendedor_nombre})` : `Venta #${i.ventaId}`))];
+                                                                                const ventasLabel = ventasWithSellers.length > 0 ? ventasWithSellers.join(', ') : null;
                                                                                 
                                                                                 const dispCounts = {};
                                                                                 items.forEach(i => {
