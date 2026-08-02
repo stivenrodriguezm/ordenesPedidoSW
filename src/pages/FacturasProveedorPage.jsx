@@ -222,36 +222,35 @@ function FacturasProveedorPage() {
         }
     };
 
+    const fetchMeta = async () => {
+        setIsLoadingMeta(true);
+        try {
+            const [catRes, subRes, ordRes, gruRes, sedesRes, zonasRes] = await Promise.all([
+                API.get('/suministros/categorias/'),
+                API.get('/suministros/subcategorias/'),
+                API.get('/get-pendientes-ids/'),
+                API.get('/suministros/grupos/'),
+                API.get('/suministros/sedes/?page_size=1000'),
+                API.get('/suministros/zonas/?page_size=1000')
+            ]);
+            const allGrupos = gruRes.data.results || gruRes.data || [];
+            setGruposActivos(allGrupos.filter(g => g.activo !== false));
+            setSedes(sedesRes.data.results || sedesRes.data || []);
+            setZonas(zonasRes.data.results || zonasRes.data || []);
+            setCategorias(catRes.data.results || catRes.data);
+            setSubcategorias(subRes.data.results || subRes.data);
+            setOrdenesPendientes(ordRes.data || []);
+        } catch (err) {
+            console.error("Error fetching metadata", err);
+        } finally {
+            setIsLoadingMeta(false);
+        }
+    };
+
+    // Carga inicial: fetchMeta y fetchFacturas en paralelo — una sola vez
     useEffect(() => {
-        fetchFacturas();
-
-        const fetchMeta = async () => {
-            setIsLoadingMeta(true);
-            try {
-                const [catRes, subRes, ordRes, gruRes, sedesRes, zonasRes] = await Promise.all([
-                    API.get('/suministros/categorias/'),
-                    API.get('/suministros/subcategorias/'),
-                    API.get('/get-pendientes-ids/'),
-                    API.get('/suministros/grupos/'),
-                    API.get('/suministros/sedes/?page_size=1000'),
-                    API.get('/suministros/zonas/?page_size=1000')
-                ]);
-                const allGrupos = gruRes.data.results || gruRes.data || [];
-                setGruposActivos(allGrupos.filter(g => g.activo !== false));
-                setSedes(sedesRes.data.results || sedesRes.data || []);
-                setZonas(zonasRes.data.results || zonasRes.data || []);
-                setCategorias(catRes.data.results || catRes.data);
-                setSubcategorias(subRes.data.results || subRes.data);
-                setOrdenesPendientes(ordRes.data || []);
-            } catch (err) {
-                console.error("Error fetching metadata", err);
-            } finally {
-                setIsLoadingMeta(false);
-            }
-        };
-
-        fetchFacturas();
         fetchMeta();
+        fetchFacturas();
     }, []);
 
     const CATEGORIAS = categorias;

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import './OrdenesPage.css';
 import './TelasPage.css';
 import './VentasImprovements.css';
+import { usePageRefresh } from '../hooks/usePageRefresh';
 import * as XLSX from 'xlsx';
 import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
@@ -72,11 +73,11 @@ const TelasPage = () => {
         }
     }, [selectedProveedores, selectedEstados, hasInitializedProveedores]);
 
-    useEffect(() => {
-        fetchProveedoresTelas();
-        fetchDirecciones();
-        fetchOrdenes();
+    const fetchInit = useCallback(async () => {
+        await Promise.allSettled([fetchProveedoresTelas(), fetchDirecciones(), fetchOrdenes()]);
     }, []);
+
+    usePageRefresh(fetchInit);
 
     const fetchOrdenes = async () => {
         try {

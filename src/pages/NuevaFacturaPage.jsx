@@ -139,15 +139,26 @@ export default function NuevaFacturaPage() {
     const [newGrupoCategoria, setNewGrupoCategoria] = useState('');
     const [newGrupoSubcategoria, setNewGrupoSubcategoria] = useState('');
 
-    const { data: ordenesProveedor = [] } = useQuery({
+    const { data: ordenesProveedor = [], refetch: refetchOrdenesProveedor } = useQuery({
         queryKey: ['ordenes-proveedor', form.proveedorId],
         queryFn: async () => {
             if (!form.proveedorId) return [];
-            const res = await API.get(`/ordenes-pedido/?proveedor=${form.proveedorId}&page_size=500`);
+            // Usar listar-pedidos con filtro de proveedor Y estado (solo pendientes/en proceso)
+            const res = await API.get(`/listar-pedidos/`, {
+                params: {
+                    id_proveedor: form.proveedorId,
+                    estado: 'en_proceso,pendiente',
+                    ordering: '-id',
+                    page_size: 500,
+                }
+            });
             return res.data.results || res.data || [];
         },
         enabled: !!form.proveedorId,
     });
+
+    // Mapa mutable de OP completas (detalles cargados lazy) — no viene de useQuery
+    const [ordenesCompletasMap, setOrdenesCompletasMap] = useState({});
 
     // Estado de buscador de OP por fila
     const [opSearchState, setOpSearchState] = useState({});
@@ -158,52 +169,84 @@ export default function NuevaFacturaPage() {
         [index]: { ...getOpSearch(index), ...patch } 
     }));
 
-    const handleSelectOp = (index, orden) => {
+    const parseTelasFromOrden = (orden) => {
+        if (!orden.telas_asociadas || orden.telas_asociadas.length === 0) return [];
+        return orden.telas_asociadas.map(t => {
+            let raw = t.tela || '';
+            let tipo = 'tela';
+            if (raw.includes('[CUERO]')) {
+                tipo = 'cuero';
+                raw = raw.replace('[CUERO]', '');
+            }
+            let referencia = raw.trim();
+            let color = '';
+            if (raw.includes(' - Color: ')) {
+                const parts = raw.split(' - Color: ');
+                referencia = parts[0].trim();
+                color = parts[1].trim();
+            } else if (raw.toLowerCase().includes('color:')) {
+                const parts = raw.split(/color:/i);
+                referencia = parts[0].replace(/-\s*$/, '').trim();
+                color = parts[1].trim();
+            }
+            return {
+                id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+                tipo,
+                referencia,
+                color,
+                cantidad: t.cantidad || 1,
+                costo_unidad: ''
+            };
+        });
+    };
+
+    const handleSelectOp = async (index, ordenBase) => {
+        // Cerrar dropdown inmediatamente
+        setOpSearch(index, { query: '', open: false });
+
+        // Aplicar datos básicos de la OP (lo que tenemos del listado)
         setForm(prev => {
             const prods = [...prev.productos];
-            const ventaId = orden.venta ? String(orden.venta) : '';
-            
-            let nuevasTelas = [];
-            if (orden.telas_asociadas && orden.telas_asociadas.length > 0) {
-                nuevasTelas = orden.telas_asociadas.map(t => {
-                    let raw = t.tela || '';
-                    let tipo = 'tela';
-                    if (raw.includes('[CUERO]')) {
-                        tipo = 'cuero';
-                        raw = raw.replace('[CUERO]', '');
-                    }
-                    let referencia = raw.trim();
-                    let color = '';
-                    if (raw.includes(' - Color: ')) {
-                        const parts = raw.split(' - Color: ');
-                        referencia = parts[0].trim();
-                        color = parts[1].trim();
-                    } else if (raw.toLowerCase().includes('color:')) {
-                        const parts = raw.split(/color:/i);
-                        referencia = parts[0].replace(/-\s*$/, '').trim();
-                        color = parts[1].trim();
-                    }
-                    return {
-                        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
-                        tipo,
-                        referencia,
-                        color,
-                        cantidad: t.cantidad || 1,
-                        costo_unidad: ''
-                    };
-                });
-            }
-
-            prods[index] = { 
-                ...prods[index], 
-                opId: String(orden.id),
+            const ventaId = ordenBase.venta ? String(ordenBase.venta) : '';
+            prods[index] = {
+                ...prods[index],
+                opId: String(ordenBase.id),
                 ventaId: ventaId,
                 disponibilidad: ventaId ? 'cliente' : prods[index].disponibilidad,
-                telas_cueros: nuevasTelas.length > 0 ? nuevasTelas : prods[index].telas_cueros
+                _opLoading: true,  // indicador de carga
             };
             return { ...prev, productos: prods };
         });
-        setOpSearch(index, { query: '', open: false });
+
+        // Cargar detalles completos de la OP de forma lazy
+        try {
+            const res = await API.get(`/ordenes-pedido/${ordenBase.id}/completo/`);
+            const ordenCompleta = res.data;
+            const nuevasTelas = parseTelasFromOrden(ordenCompleta);
+
+            setForm(prev => {
+                const prods = [...prev.productos];
+                const ventaId = ordenCompleta.venta ? String(ordenCompleta.venta) : '';
+                // Guardar la orden completa en el mapa local para la tarjeta informativa
+                setOrdenesCompletasMap(prev => ({ ...prev, [String(ordenCompleta.id)]: ordenCompleta }));
+                prods[index] = {
+                    ...prods[index],
+                    opId: String(ordenCompleta.id),
+                    ventaId: ventaId,
+                    disponibilidad: ventaId ? 'cliente' : prods[index].disponibilidad,
+                    telas_cueros: nuevasTelas.length > 0 ? nuevasTelas : prods[index].telas_cueros,
+                    _opLoading: false,
+                };
+                return { ...prev, productos: prods };
+            });
+        } catch (err) {
+            console.error('Error cargando detalles de OP:', err);
+            setForm(prev => {
+                const prods = [...prev.productos];
+                prods[index] = { ...prods[index], _opLoading: false };
+                return { ...prev, productos: prods };
+            });
+        }
     };
 
     const CATEGORIAS = categorias;
@@ -284,7 +327,8 @@ export default function NuevaFacturaPage() {
                     const newGroup = prev.grupoInstances.find(g => String(g.localId) === String(value));
                     
                     if (existGroup) {
-                        newVentaId = String(existGroup.venta || existGroup.venta_id || '');
+                        const existVenta = existGroup.venta || existGroup.venta_id;
+                        newVentaId = existVenta ? String(existVenta) : currentProd.ventaId;
                     } else if (newGroup) {
                         if (currentProd.categoriaId && String(newGroup.categoriaId) !== String(currentProd.categoriaId)) {
                             showToast(`El grupo "${newGroup.nombre}" es para otra categoría.`, 'error');
@@ -298,6 +342,9 @@ export default function NuevaFacturaPage() {
                             newGrupoInstances = newGrupoInstances.map(g => g.localId === newGroup.localId ? newGroup : g);
                         }
                     }
+                }
+                if (newVentaId) {
+                    newDisp = 'cliente';
                 }
                 prods[index] = { ...currentProd, grupoLocalId: value, ventaId: newVentaId, disponibilidad: newDisp };
             } else if (field === 'ventaId') {
@@ -860,11 +907,13 @@ export default function NuevaFacturaPage() {
                                             {/* OP Asociada */}
                                             {(() => {
                                                 const { query: opQ, open: opOpen } = getOpSearch(index);
-                                                const filteredOPs = ordenesProveedor.filter(o => 
-                                                    String(o.id).includes(opQ) ||
-                                                    (o.proveedor_nombre || '').toLowerCase().includes(opQ.toLowerCase())
-                                                );
-                                                const selectedOp = ordenesProveedor.find(o => String(o.id) === String(row.opId));
+                                                const filteredOPs = ordenesProveedor.filter(o => {
+                                                    const isPending = o.estado === 'pendiente' || o.estado === 'en_proceso';
+                                                    if (!isPending) return false;
+                                                    return String(o.id).includes(opQ) ||
+                                                        (o.proveedor_nombre || '').toLowerCase().includes(opQ.toLowerCase());
+                                                });
+                                                const selectedOp = ordenesCompletasMap[String(row.opId)] || ordenesProveedor.find(o => String(o.id) === String(row.opId));
                                                 return (
                                                     <div className="nf-form-group" style={{ position: 'relative' }}>
                                                         <label>OP Asociada <span className="nf-optional">(opcional)</span></label>
@@ -916,7 +965,7 @@ export default function NuevaFacturaPage() {
                                                                     {!form.proveedorId ? (
                                                                         <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Selecciona un proveedor primero</div>
                                                                     ) : filteredOPs.length === 0 ? (
-                                                                        <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes para este proveedor</div>
+                                                                        <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes pendientes para este proveedor</div>
                                                                     ) : filteredOPs.map(orden => (
                                                                         <div
                                                                             key={orden.id}
@@ -957,7 +1006,7 @@ export default function NuevaFacturaPage() {
 
                                             {/* Tarjeta Informativa de la OP Asociada - colapsable */}
                                             {(() => {
-                                                const selectedOp = ordenesProveedor.find(o => String(o.id) === String(row.opId));
+                                                const selectedOp = ordenesCompletasMap[String(row.opId)] || ordenesProveedor.find(o => String(o.id) === String(row.opId));
                                                 if (!selectedOp) return null;
                                                 const opDetailOpen = getOpSearch(index).detailOpen || false;
                                                 return (

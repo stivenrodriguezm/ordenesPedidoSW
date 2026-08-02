@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import API from '../services/api';
+import { usePageRefresh } from '../hooks/usePageRefresh';
 import { formatCOP } from '../utils/formatCOP';
 import { generateRemisionPDF } from '../utils/generateRemisionPDF';
 import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaSpinner } from 'react-icons/fa';
@@ -189,8 +190,7 @@ function RemisionesPage() {
     const [inventarioLoaded, setInventarioLoaded] = useState(false);
     const [inventarioLoading, setInventarioLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchAll = async () => {
+    const fetchAll = useCallback(async () => {
             setIsLoading(true);
             try {
                 const safeGet = (url) => API.get(url).catch(err => {
@@ -198,7 +198,6 @@ function RemisionesPage() {
                     return { data: { results: [], data: [] } };
                 });
 
-                // Only load what's needed for the table view — inventario is lazy-loaded when modal opens
                 const [remRes, ordRes, vendRes, transpRes] = await Promise.all([
                     API.get('/suministros/remisiones/'),
                     safeGet('/get-pendientes-ids/'),
@@ -233,9 +232,9 @@ function RemisionesPage() {
             } finally {
                 setIsLoading(false);
             }
-        };
-        fetchAll();
     }, []);
+
+    usePageRefresh(fetchAll);
 
     // Lazy load inventario only when creating a new remision
     const loadInventarioData = async () => {

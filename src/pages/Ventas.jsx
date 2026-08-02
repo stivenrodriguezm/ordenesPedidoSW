@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import API from '../services/api';
+import { usePageRefresh } from '../hooks/usePageRefresh';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { FaChevronDown, FaChevronUp, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen, FaBoxOpen, FaChartBar, FaChartLine } from "react-icons/fa";
@@ -335,22 +336,21 @@ const Ventas = () => {
         fetchReportSales();
     }, [fetchReportSales]);
 
-    useEffect(() => {
-        const fetchVendedores = async () => {
-            try {
-                const response = await API.get(`/vendedores/`);
-                const list = response.data || [];
-                setVendedores(list);
-                if (list.length > 0 && !hasInitializedVendedores) {
-                    setSelectedVendedores(list.map(v => v.id));
-                    setHasInitializedVendedores(true);
-                }
-            } catch (error) {
-                console.error('Error cargando vendedores:', error);
+    const fetchVendedoresInit = useCallback(async () => {
+        try {
+            const response = await API.get(`/vendedores/`);
+            const list = response.data || [];
+            setVendedores(list);
+            if (list.length > 0 && !hasInitializedVendedores) {
+                setSelectedVendedores(list.map(v => v.id));
+                setHasInitializedVendedores(true);
             }
-        };
-        fetchVendedores();
-    }, []);
+        } catch (error) {
+            console.error('Error cargando vendedores:', error);
+        }
+    }, [hasInitializedVendedores]);
+
+    usePageRefresh(fetchVendedoresInit);
 
     useEffect(() => {
         setEstados(["pendiente", "entregado", "anulado"]);

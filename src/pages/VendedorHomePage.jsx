@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../AppContext';
 import api from '../services/api';
+import { usePageRefresh } from '../hooks/usePageRefresh';
 import {
     FaPlus,
     FaClipboardList,
@@ -39,20 +40,16 @@ const VendedorHomePage = () => {
             const now = new Date();
             const options = { timeZone: 'America/Bogota', hour: '2-digit', hour12: false };
             const hour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
-
             if (hour < 12) return 'Buenos días';
             if (hour < 18) return 'Buenas tardes';
             return 'Buenas noches';
         };
-
         setGreeting(getGreeting());
-
-        // Set random motivational quote
         const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
         setMotivationalQuote(randomQuote);
-
-        fetchDashboardData();
     }, []);
+
+    usePageRefresh(fetchDashboardData);
 
     const fetchDashboardData = async () => {
         try {

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { AppContext } from '../AppContext';
+import { usePageRefresh } from '../hooks/usePageRefresh';
 import { Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -47,38 +48,33 @@ const AdminHomePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
+    const fetchData = useCallback(async () => {
         const getGreeting = () => {
             const now = new Date();
             const options = { timeZone: 'America/Bogota', hour: '2-digit', hour12: false };
             const hour = parseInt(new Intl.DateTimeFormat('en-US', options).format(now));
-
             if (hour < 12) return 'Buenos días';
             if (hour < 18) return 'Buenas tardes';
             return 'Buenas noches';
         };
         setGreeting(getGreeting());
-
-        const fetchData = async () => {
-            try {
-                const [statsResponse, chartResponse] = await Promise.all([
-                    api.get('/dashboard-stats/'),
-                    api.get('/sales-chart-data/')
-                ]);
-
-                setStats(statsResponse.data);
-                setChartData(chartResponse.data);
-
-            } catch (err) {
-                setError('No se pudieron cargar los datos del dashboard.');
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
+        setLoading(true);
+        try {
+            const [statsResponse, chartResponse] = await Promise.all([
+                api.get('/dashboard-stats/'),
+                api.get('/sales-chart-data/')
+            ]);
+            setStats(statsResponse.data);
+            setChartData(chartResponse.data);
+        } catch (err) {
+            setError('No se pudieron cargar los datos del dashboard.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    usePageRefresh(fetchData);
 
     const formatCurrency = (value) => {
         if (value === null || value === undefined) return '$0';

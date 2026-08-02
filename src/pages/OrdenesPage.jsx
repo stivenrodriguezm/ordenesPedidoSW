@@ -122,7 +122,6 @@ const OrdenesPage = () => {
   const navigate = useNavigate();
 
   const [filteredOrdenes, setFilteredOrdenes] = useState([]);
-  const [baseOrdenes, setBaseOrdenes] = useState([]); // Base para extraer vendedores activos
   const [vendedores, setVendedores] = useState([]);
 
   // Estados de Filtros Multi-Select
@@ -222,40 +221,16 @@ const OrdenesPage = () => {
     fetchVendedores();
   }, [token]);
 
-  // Lógica para baseOrdenes y vendedoresActivos
-  useEffect(() => {
-    if (!user) return;
-    const fetchBaseOrdenes = async () => {
-      try {
-        const params = { ordering: '-id' };
-        if (selectedEstados.length > 0) params.estado = selectedEstados.join(',');
-        else params.estado = 'ninguno_imposible';
-        
-        if (selectedProveedores.length > 0) params.id_proveedor = selectedProveedores.join(',');
-        else if (hasInitializedProveedores) params.id_proveedor = 'ninguno_imposible';
-
-        if (selectedExhibiciones.length === 1) params.es_exhibicion = selectedExhibiciones[0];
-        
-        const response = await API.get(`/listar-pedidos/`, { params });
-        let fetched = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
-        setBaseOrdenes(fetched);
-      } catch (error) {
-        console.error("Error base orders", error);
-        setBaseOrdenes([]);
-      }
-    };
-    fetchBaseOrdenes();
-  }, [selectedEstados, selectedProveedores, selectedExhibiciones, token, user, hasInitializedProveedores]);
-
   const vendedoresActivos = React.useMemo(() => {
+    // Extraer vendedores activos directamente del resultado filtrado — sin segundo request
     const sellersMap = new Map();
-    baseOrdenes.forEach(orden => {
+    filteredOrdenes.forEach(orden => {
       if (orden.vendedor) {
         sellersMap.set(orden.vendedor.toLowerCase(), true);
       }
     });
     return vendedores.filter(v => v.first_name && sellersMap.has(v.first_name.toLowerCase()));
-  }, [baseOrdenes, vendedores]);
+  }, [filteredOrdenes, vendedores]);
 
   useEffect(() => {
     if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
