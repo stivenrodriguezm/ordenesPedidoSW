@@ -29,7 +29,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
     {
       title: "Bases de Datos",
       items: [
-        { to: "/bases-datos", icon: <FaBoxes />, label: "Bases de Datos", feature: "BASES_DATOS" },
+        { to: "/bases-de-datos", icon: <FaBoxes />, label: "Bases de Datos", feature: "BASES_DATOS" },
       ]
     },
     {
