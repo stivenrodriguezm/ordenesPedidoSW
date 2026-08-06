@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Entorno virtual Python (scripts de mantenimiento legacy)
+venv/

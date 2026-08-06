@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { FaFileInvoiceDollar } from 'react-icons/fa';
 import API from '../services/api';
+import { useVendedores } from '../hooks/useSharedData';
 import AppNotification from '../components/AppNotification';
+import { PageHeader, Button, LoadingBlock, ErrorState } from '../components/ui';
 import './EditarVenta.css';
 
 const EditarVenta = () => {
@@ -36,23 +39,27 @@ const EditarVenta = () => {
   // Estado para la observación
   const [observacion, setObservacion] = useState('');
 
-  // Estado para los vendedores
-  const [vendedores, setVendedores] = useState([]);
+  // Estado para los vendedores (React Query, compartido entre páginas)
+  const { data: vendedores = [], isError: isVendedoresError, error: vendedoresError } = useVendedores();
 
   // Estados para manejo de errores y carga
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch vendedores and venta details on mount
+  // Mismo manejo de error que tenía el fetch crudo de vendedores
+  useEffect(() => {
+    if (isVendedoresError) {
+      console.error('Error cargando datos:', vendedoresError);
+      setErrorMessage('Error al cargar los datos de la venta.');
+    }
+  }, [isVendedoresError, vendedoresError]);
+
+  // Fetch venta details on mount
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
 
       try {
-        // Fetch vendedores
-        const vendedoresResponse = await API.get(`/vendedores/`);
-        setVendedores(vendedoresResponse.data);
-
         // Fetch venta details
         const ventaResponse = await API.get(`/ventas/${id}/`);
         const ventaDetails = ventaResponse.data;
@@ -161,14 +168,21 @@ const EditarVenta = () => {
   };
 
   return (
-    <div className="editar-venta-container">
-      {errorMessage && <div className="error-message">{errorMessage}</div>}
-      {isLoading && (
-        <div className="loader-container">
-          <div className="loader"></div>
-        </div>
-      )}
-      
+    <div className="ds-page editar-venta-container ds-fade-in">
+      <PageHeader
+        icon={FaFileInvoiceDollar}
+        title={`Editar Venta #${id}`}
+        subtitle="Actualiza los datos del cliente y de la venta."
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleCancel} disabled={isLoading}>Cancelar</Button>
+            <Button variant="primary" onClick={handleSubmit} loading={isLoading}>Actualizar Venta</Button>
+          </>
+        }
+      />
+      {errorMessage && <ErrorState message={errorMessage} />}
+      {isLoading && <LoadingBlock message="Cargando datos de la venta..." />}
+
       <div className="form-sections">
         {/* Sección de Cliente */}
         <div className="cliente-section card">
@@ -322,14 +336,6 @@ const EditarVenta = () => {
         </div>
       </div>
 
-      <div className="form-actions">
-        <button className="cancel-button" onClick={handleCancel} disabled={isLoading}>
-          Cancelar
-        </button>
-        <button className="submit-button" onClick={handleSubmit} disabled={isLoading}>
-          Actualizar Venta
-        </button>
-      </div>
       {/* Componente Global de Notificaciones Elegante */}
       <AppNotification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
     </div>

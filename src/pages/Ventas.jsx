@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import API from '../services/api';
 import { usePageRefresh } from '../hooks/usePageRefresh';
-import * as XLSX from 'xlsx';
+import { useVendedores } from '../hooks/useSharedData';
 import { useNavigate } from 'react-router-dom';
 import { FaChevronDown, FaChevronUp, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen, FaBoxOpen, FaChartBar, FaChartLine } from "react-icons/fa";
 import Modal from '../components/Modal';
@@ -9,6 +9,7 @@ import AppNotification from '../components/AppNotification';
 import EditSaleModal from '../components/EditSaleModal';
 import RemisionModal from '../components/RemisionModal';
 import SalesSummaryReport from '../components/SalesSummaryReport';
+import { PageHeader, Button, Badge, LoadingBlock, ErrorState } from '../components/ui';
 import { AppContext, usePermissions } from '../AppContext';
 import './Ventas.css';
 import './VentasImprovements.css';
@@ -24,7 +25,7 @@ const Ventas = () => {
     const navigate = useNavigate();
     const [ventas, setVentas] = useState([]);
     const [reportSales, setReportSales] = useState([]);
-    const [vendedores, setVendedores] = useState([]);
+    const { data: vendedores = [], isError: isVendedoresError, error: vendedoresError, refetch: refetchVendedores } = useVendedores();
     const [estados, setEstados] = useState([]);
     const [isReportVisible, setIsReportVisible] = useState(false);
 
@@ -228,7 +229,7 @@ const Ventas = () => {
                     if (selectedDateFilter.endDate) params.end_date = selectedDateFilter.endDate;
                 }
                 const perms = usuario?.permissions || [];
-                const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
+                const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role?.toLowerCase() === 'administrador';
                 if (!canSeeAll) {
                     params.vendedor = usuario.id;
                 } else {
@@ -304,7 +305,7 @@ const Ventas = () => {
                 if (selectedDateFilter.endDate) params.end_date = selectedDateFilter.endDate;
             }
             const perms = usuario?.permissions || [];
-            const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role.toLowerCase() === 'administrador';
+            const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role?.toLowerCase() === 'administrador';
             if (!canSeeAll) {
                 params.vendedor = usuario.id;
             }
@@ -336,21 +337,20 @@ const Ventas = () => {
         fetchReportSales();
     }, [fetchReportSales]);
 
-    const fetchVendedoresInit = useCallback(async () => {
-        try {
-            const response = await API.get(`/vendedores/`);
-            const list = response.data || [];
-            setVendedores(list);
-            if (list.length > 0 && !hasInitializedVendedores) {
-                setSelectedVendedores(list.map(v => v.id));
-                setHasInitializedVendedores(true);
-            }
-        } catch (error) {
-            console.error('Error cargando vendedores:', error);
+    useEffect(() => {
+        if (isVendedoresError) {
+            console.error('Error cargando vendedores:', vendedoresError);
         }
-    }, [hasInitializedVendedores]);
+    }, [isVendedoresError, vendedoresError]);
 
-    usePageRefresh(fetchVendedoresInit);
+    useEffect(() => {
+        if (vendedores.length > 0 && !hasInitializedVendedores) {
+            setSelectedVendedores(vendedores.map(v => v.id));
+            setHasInitializedVendedores(true);
+        }
+    }, [vendedores, hasInitializedVendedores]);
+
+    usePageRefresh(refetchVendedores);
 
     useEffect(() => {
         setEstados(["pendiente", "entregado", "anulado"]);
@@ -477,7 +477,6 @@ const Ventas = () => {
         try {
             // Fetch Details and Receipts in PARALLEL
             // We split this to avoid backend timeouts on heavy sales.
-            console.log(`Fetching details and receipts for venta ${ventaId}`);
             const [detailsRes, recibosRes] = await Promise.allSettled([
                 API.get(`/ventas/${ventaId}/`),
                 API.get('/recibos-caja/', { params: { venta_id: ventaId, page_size: 50 } })
@@ -511,7 +510,6 @@ const Ventas = () => {
             // Handle Receipts Response
             if (recibosRes.status === 'fulfilled') {
                 recibosData = recibosRes.value.data.results || [];
-                console.log(`Fetched ${recibosData.length} receipts for venta ${ventaId}:`, recibosData);
             } else {
                 console.error('Error fetching receipts:', recibosRes.reason);
                 // If receipts fail, we just show empty list but don't crash the whole view
@@ -546,28 +544,35 @@ const Ventas = () => {
         }
     };
 
-    const handleExpandNestedOrder = async (orderId) => {
+    const handleExpandNestedOrder = async (orderId, initialDetalles = null) => {
         if (expandedNestedOrderId === orderId) {
             setExpandedNestedOrderId(null);
             setNestedOrderDetails(null);
         } else {
             setExpandedNestedOrderId(orderId);
-            setNestedOrderDetails(null);
+            const parsedInitial = Array.isArray(initialDetalles) ? initialDetalles : [];
+            setNestedOrderDetails(parsedInitial);
             setLoadingNestedDetails(true);
             try {
                 const response = await API.get(`/pedidos/${orderId}/detalles/`);
-                // Ensure we handle paginated ({ results: [...] }), object wrapper ({ detalles: [...] }), and non-paginated ([...]) responses
                 let data = [];
-                if (response.data.detalles && Array.isArray(response.data.detalles)) {
+                if (response.data && Array.isArray(response.data.detalles)) {
                     data = response.data.detalles;
-                } else if (response.data.results && Array.isArray(response.data.results)) {
+                } else if (response.data && Array.isArray(response.data.results)) {
                     data = response.data.results;
                 } else if (Array.isArray(response.data)) {
                     data = response.data;
                 }
-                setNestedOrderDetails(data);
+                if (data && data.length > 0) {
+                    setNestedOrderDetails(data);
+                } else if (parsedInitial.length > 0) {
+                    setNestedOrderDetails(parsedInitial);
+                }
             } catch (error) {
                 console.error('Error cargando detalles del pedido anidado:', error);
+                if (parsedInitial.length > 0) {
+                    setNestedOrderDetails(parsedInitial);
+                }
             } finally {
                 setLoadingNestedDetails(false);
             }
@@ -575,6 +580,15 @@ const Ventas = () => {
     };
 
     const getStatusClass = (status) => status ? status.toLowerCase().replace(/ /g, '-') : '';
+
+    // Tono del Badge del UI kit según el estado de la venta
+    const estadoTone = (status) => {
+        const e = (status || '').toLowerCase();
+        if (['pagada', 'completada', 'entregada'].includes(e)) return 'success';
+        if (['pendiente', 'en proceso'].includes(e)) return 'warning';
+        if (['anulada', 'cancelada'].includes(e)) return 'danger';
+        return 'neutral';
+    };
 
 
     const handleEditObservacionClick = (tipo, obs) => {
@@ -669,7 +683,6 @@ const Ventas = () => {
                 }
             }
             setNotification({ message: friendlyError, type: 'error' });
-            console.log('Notification set to error:', { message: friendlyError, type: 'error' });
         } finally {
             setIsSubmittingObs(false);
         }
@@ -711,7 +724,8 @@ const Ventas = () => {
         return isNaN(num) ? null : Math.round(num).toString();
     };
 
-    const exportVentas = () => {
+    const exportVentas = async () => {
+        const XLSX = await import('xlsx');
         const dataToExport = ventas.map(venta => ({
             'O.C.': venta.id,
             'F. Venta': formatShortDate(venta.fecha_venta),
@@ -753,52 +767,56 @@ const Ventas = () => {
     };
 
     return (
-        <div className="page-container">
+        <div className="ds-page ventas-page ds-fade-in">
             <AppNotification
                 message={notification.message}
                 type={notification.type}
                 onClose={() => setNotification({ message: '', type: '' })}
             />
-            {usuario && (
-                <div className={`sales-summary-report-wrapper ${isReportVisible ? 'expanded' : ''}`}>
-                    <div className="report-header" onClick={() => setIsReportVisible(!isReportVisible)}>
-                        <div className="report-header-left">
-                            <div className="report-header-icon-badge">
-                                <FaChartLine />
-                            </div>
-                            <div className="report-header-titles">
-                                <span className="report-header-subtitle">RESUMEN DE VENTAS</span>
-                                <h3 className="report-header-title">{formatReportTitle(selectedDateFilter)}</h3>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            className={`report-header-toggle-btn ${isReportVisible ? 'active' : ''}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsReportVisible(!isReportVisible);
-                            }}
-                            title={isReportVisible ? "Ocultar Estadísticas" : "Ver Estadísticas"}
-                        >
-                            <span>{isReportVisible ? 'Ocultar Estadísticas' : 'Ver Estadísticas'}</span>
-                            {isReportVisible ? <FaChevronUp className="toggle-arrow" /> : <FaChevronDown className="toggle-arrow" />}
-                        </button>
+            <PageHeader
+                icon={FaChartLine}
+                title={formatReportTitle(selectedDateFilter)}
+                subtitle="Gestión y seguimiento de las ventas registradas"
+                actions={
+                    <>
+                        {usuario?.role?.toLowerCase() === 'administrador' && (
+                            <Button variant="ghost" icon={FaFileExport} onClick={exportVentas} title="Exportar Excel" />
+                        )}
+                        {usuario && (
+                            <Button 
+                                variant="secondary" 
+                                icon={FaChartBar} 
+                                onClick={() => setIsReportVisible(!isReportVisible)}
+                                title={isReportVisible ? "Ocultar Estadísticas" : "Ver Estadísticas"}
+                            >
+                                <span className="long-text">{isReportVisible ? "Ocultar Estadísticas" : "Estadísticas"}</span>
+                                <span className="short-text">Estad.</span>
+                            </Button>
+                        )}
+                        {hasPermission('CREAR_VENTA') && (
+                            <Button variant="primary" icon={FaPlus} onClick={() => navigate('/ventas/nueva')}>
+                                <span className="long-text">Nueva Venta</span>
+                                <span className="short-text">Nueva</span>
+                            </Button>
+                        )}
+                    </>
+                }
+            />
+            {usuario && isReportVisible && (
+                <div className="sales-summary-report-wrapper expanded">
+                    <div className="report-content-body">
+                        <SalesSummaryReport
+                            ventas={reportSales}
+                            vendedores={vendedores}
+                            selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
+                            formatCurrency={formatCurrency}
+                            capitalizeEstado={capitalizeEstado}
+                        />
                     </div>
-                    {isReportVisible && (
-                        <div className="report-content-body">
-                            <SalesSummaryReport
-                                ventas={reportSales}
-                                vendedores={vendedores}
-                                selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
-                                formatCurrency={formatCurrency}
-                                capitalizeEstado={capitalizeEstado}
-                            />
-                        </div>
-                    )}
                 </div>
             )}
 
-            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
+            <div className="ds-card ventas-filters">
                 <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
                     <div className="v-search-pill">
                         <FaSearch />
@@ -956,7 +974,7 @@ const Ventas = () => {
                                 )}
                             </div>
                             
-                            {(usuario?.role.toLowerCase() === 'administrador' || usuario?.role.toLowerCase() === 'auxiliar') && (
+                            {(usuario?.role?.toLowerCase() === 'administrador' || usuario?.role?.toLowerCase() === 'auxiliar') && (
                                 <div className="v-multi-select-container" ref={vendedoresRef}>
                                     <button
                                         type="button"
@@ -995,21 +1013,6 @@ const Ventas = () => {
                                 </div>
                             )}
                         </>
-                    )}
-                </div>
-                
-                <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {usuario?.role.toLowerCase() === 'administrador' && (
-                        <button className="v-btn-ghost" onClick={exportVentas} title="Exportar Excel">
-                            <FaFileExport />
-                        </button>
-                    )}
-                    {hasPermission('CREAR_VENTA') && (
-                        <button className="v-btn-primary-glow" onClick={() => navigate('/nuevaVenta')}>
-                            <FaPlus />
-                            <span className="long-text">Nueva Venta</span>
-                            <span className="short-text">Nueva</span>
-                        </button>
                     )}
                 </div>
             </div>
@@ -1101,14 +1104,14 @@ const Ventas = () => {
                                                 </>
                                             )}
                                             <td className="td-pedidos">
-                                                <span className={`status-badge ${venta.estado_pedidos ? 'pedido-realizado' : 'pedido-pendiente'}`}>
+                                                <Badge tone={venta.estado_pedidos ? 'success' : 'warning'}>
                                                     {venta.estado_pedidos ? 'Pedido' : 'Pendiente'}
-                                                </span>
+                                                </Badge>
                                             </td>
                                             <td className="td-estado">
-                                                <span className={`status-badge ${getStatusClass(venta.estado)}`}>
+                                                <Badge tone={estadoTone(venta.estado)}>
                                                     {capitalizeEstado(venta.estado)}
-                                                </span>
+                                                </Badge>
                                             </td>
                                             <td className="td-accion">
                                                 <button
@@ -1126,17 +1129,9 @@ const Ventas = () => {
                                             <tr className="expanded-row">
                                                 <td colSpan="13" className="expanded-row-content">
                                                     {loadingDetails ? (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '1rem', width: '100%', textAlign: 'center' }}>
-                                                            <div className="loader-spinner"></div>
-                                                            <p className="loader-text">Cargando detalles...</p>
-                                                        </div>
+                                                        <LoadingBlock message="Cargando detalles..." />
                                                     ) : detailsError ? (
-                                                        <div className="error-message-container">
-                                                            <p className="error-text">{detailsError}</p>
-                                                            <button className="btn-secondary" onClick={() => handleExpandVenta(venta.id)}>
-                                                                Reintentar Carga
-                                                            </button>
-                                                        </div>
+                                                        <ErrorState message={detailsError} onRetry={() => handleExpandVenta(venta.id)} />
                                                     ) : ventaDetails ? (
                                                         <div className="venta-details-view">
                                                             {isPartialData && (
@@ -1304,16 +1299,16 @@ const Ventas = () => {
                                                                 <div className="pedidos-header">
                                                                     <h4>Órdenes de Pedido</h4>
                                                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                                        <button className="v-btn-primary-glow" onClick={() => navigate('/ordenes/nuevo', { state: { ventaId: venta.id } })}>
-                                                                            <FaPlus /> Agregar Pedido
-                                                                        </button>
+                                                                        <Button variant="primary" size="sm" icon={FaPlus} onClick={() => navigate('/ordenes/nuevo', { state: { ventaId: venta.id } })}>
+                                                                            Agregar Pedido
+                                                                        </Button>
                                                                         {(hasPermission('EDITAR_VENTA') || hasPermission('EDITAR_ESTADO_VENTA') || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA')) && (
-                                                                            <button className="v-btn-primary-glow" onClick={() => {
+                                                                            <Button variant="secondary" size="sm" icon={FaEdit} onClick={() => {
                                                                                 setEditSaleData(ventaDetails);
                                                                                 setShowEditSaleModal(true);
                                                                             }}>
-                                                                                <FaEdit /> Editar Venta
-                                                                            </button>
+                                                                                Editar Venta
+                                                                            </Button>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -1322,7 +1317,7 @@ const Ventas = () => {
                                                                     <div className="orders-cards-container">
                                                                         {ventaDetails.ordenes_pedido.map((pedido) => (
                                                                             <div key={pedido.id} className={`order-card-v2 ${expandedNestedOrderId === pedido.id ? 'expanded' : ''}`}>
-                                                                                <div className="order-card-v2-header" onClick={() => handleExpandNestedOrder(pedido.id)}>
+                                                                                <div className="order-card-v2-header" onClick={() => handleExpandNestedOrder(pedido.id, pedido.detalles)}>
                                                                                     <div className="oc-v2-section oc-v2-id">
                                                                                         <span className="oc-v2-label">Orden</span>
                                                                                         <span className="oc-v2-value highlight">#{pedido.id}</span>
@@ -1377,10 +1372,10 @@ const Ventas = () => {
                                                                                             <div className="nested-products-grid">
                                                                                                 {Array.isArray(nestedOrderDetails) && nestedOrderDetails.length > 0 ? (
                                                                                                     nestedOrderDetails.map((detalle, idx) => (
-                                                                                                        <div className="product-item-v2" key={idx}>
+                                                                                                        <div className="product-item-v2" key={detalle.id || idx}>
                                                                                                             <div className="pi-qty">{detalle.cantidad}x</div>
                                                                                                             <div className="pi-details">
-                                                                                                                <span className="pi-ref">{detalle.referencia}</span>
+                                                                                                                <span className="pi-ref">{detalle.referencia_nombre || detalle.referencia || 'Producto'}</span>
                                                                                                                 {detalle.especificaciones && <span className="pi-spec">{detalle.especificaciones}</span>}
                                                                                                             </div>
                                                                                                         </div>
@@ -1436,9 +1431,9 @@ const Ventas = () => {
                                 <div className="mobile-sale-summary" onClick={() => handleExpandVenta(venta.id)}>
                                     <div className="summary-row-top">
                                         <span className="summary-id">#{venta.id}</span>
-                                        <span className={`status-badge ${getStatusClass(venta.estado)}`}>
+                                        <Badge tone={estadoTone(venta.estado)}>
                                             {capitalizeEstado(venta.estado)}
-                                        </span>
+                                        </Badge>
                                     </div>
                                     <div className="summary-row-main">
                                         <h3 className="summary-vendor">{venta.vendedor_nombre || 'Vendedor no asignado'}</h3>
@@ -1546,7 +1541,7 @@ const Ventas = () => {
                                                             <div key={op.id} className="mobile-order-compact">
                                                                 <div className="mo-header">
                                                                     <span className="mo-id">OP-{op.id}</span>
-                                                                    <span className={`status-badge-sm ${op.estado?.toLowerCase()}`}>{capitalizeEstado(op.estado)}</span>
+                                                                    <Badge tone={estadoTone(op.estado)}>{capitalizeEstado(op.estado)}</Badge>
                                                                 </div>
                                                                 <div className="mo-body">
                                                                     <span className="mo-provider">{op.proveedor_nombre}</span>
@@ -1677,8 +1672,6 @@ const Ventas = () => {
                     />
                 )
             }
-            {console.log('Usuario en Ventas.jsx:', usuario)}
-            {console.log('Usuario en Ventas.jsx:', usuario)}
 
             <RemisionModal
                 isOpen={showRemisionModal}

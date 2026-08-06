@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import './OrdenesPage.css';
 import './TelasPage.css';
 import './VentasImprovements.css';
 import { usePageRefresh } from '../hooks/usePageRefresh';
-import * as XLSX from 'xlsx';
-import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport } from 'react-icons/fa';
-import html2canvas from 'html2canvas';
+import useDebounce from '../hooks/useDebounce';
+import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport, FaSearch, FaLayerGroup } from 'react-icons/fa';
 import logoFinal from '../assets/logoFinal.png';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
 import AppNotification from '../components/AppNotification';
+import { PageHeader, Button, Badge, Modal, Skeleton, EmptyState, ErrorState } from '../components/ui';
 
 const TelasPage = () => {
     const { usuario } = useContext(AppContext);
@@ -20,10 +22,13 @@ const TelasPage = () => {
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
     
     const [selectedProveedores, setSelectedProveedores] = useState([]);
-    const [selectedEstados, setSelectedEstados] = useState(['Pendiente', 'En fabrica']);
+    const [selectedEstados, setSelectedEstados] = useState(['Pendiente', 'En Lottus']);
     const [isProveedoresOpen, setIsProveedoresOpen] = useState(false);
     const [isEstadosOpen, setIsEstadosOpen] = useState(false);
     
+    const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 400);
+
     const proveedoresRef = useRef(null);
     const estadosRef = useRef(null);
 
@@ -65,6 +70,31 @@ const TelasPage = () => {
         nombre_encargado: '',
         contacto: ''
     });
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            let query = '?';
+            if (selectedProveedores.length > 0) {
+                query += `proveedor=${encodeURIComponent(selectedProveedores.join(','))}&`;
+            } else if (hasInitializedProveedores) {
+                query += `proveedor=ninguno_imposible&`;
+            }
+
+            if (selectedEstados.length > 0) {
+                query += `estado=${encodeURIComponent(selectedEstados.join(','))}&`;
+            } else {
+                query += `estado=ninguno_imposible&`;
+            }
+
+            const response = await API.get(`pedidos-telas/${query}`);
+            setPedidos(response.data.results || response.data);
+        } catch (error) {
+            console.error("Error fetching pedidos telas:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         // Only fetch data once providers have been initialized (or if filters change after that)
@@ -187,6 +217,7 @@ const TelasPage = () => {
             const generatePDF = async () => {
                 try {
                     previewRef.current.style.display = 'block';
+                    const { default: html2canvas } = await import('html2canvas');
                     const canvas = await html2canvas(previewRef.current, {
                         backgroundColor: '#ffffff',
                         scale: 2,
@@ -214,30 +245,6 @@ const TelasPage = () => {
         }
     }, [createdPedidoId]);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            let query = '?';
-            if (selectedProveedores.length > 0) {
-                query += `proveedor=${selectedProveedores.join(',')}&`;
-            } else if (hasInitializedProveedores) {
-                query += `proveedor=ninguno_imposible&`;
-            }
-
-            if (selectedEstados.length > 0) {
-                query += `estado=${selectedEstados.join(',')}&`;
-            } else {
-                query += `estado=ninguno_imposible&`;
-            }
-
-            const response = await API.get(`pedidos-telas/${query}`);
-            setPedidos(response.data.results || response.data);
-        } catch (error) {
-            console.error("Error fetching pedidos telas:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
 
 
@@ -407,8 +414,20 @@ const TelasPage = () => {
         return '-';
     };
 
-    const exportPedidos = () => {
-        const dataToExport = pedidos.map(p => ({
+    const displayedPedidos = useMemo(() => {
+        if (!debouncedSearchTerm) return pedidos;
+        const term = debouncedSearchTerm.toLowerCase();
+        return pedidos.filter(pedido => 
+            pedido.id?.toString().includes(term) || 
+            pedido.usuario_nombre?.toLowerCase().includes(term) ||
+            pedido.proveedor_nombre?.toLowerCase().includes(term) ||
+            pedido.orden_id?.toString().includes(term)
+        );
+    }, [pedidos, debouncedSearchTerm]);
+
+    const exportPedidos = async () => {
+        const XLSX = await import('xlsx');
+        const dataToExport = displayedPedidos.map(p => ({
             'ID': p.id,
             'Usuario': p.usuario_nombre,
             'Proveedor': p.proveedor_nombre,
@@ -425,14 +444,56 @@ const TelasPage = () => {
     };
 
     return (
-        <div className="page-container">
+        <div className="ds-page telas-page ds-fade-in">
             <AppNotification 
                 message={notification.message}
                 type={notification.type}
                 onClose={() => setNotification({ message: '', type: '' })}
             />
-            <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
+
+            <PageHeader
+                icon={FaLayerGroup}
+                title="Telas"
+                subtitle="Gestión y seguimiento de pedidos de telas a proveedores"
+                actions={
+                    <>
+                        {hasPermission('DESCARGAR_PEDIDO_TELA') && (
+                            <Button variant="ghost" icon={FaFileExport} onClick={exportPedidos} title="Exportar Excel" />
+                        )}
+                        {hasPermission('ADMINISTRAR_DIRECCIONES_TELA') && (
+                            <Button variant="ghost" icon={FaCog} onClick={() => setShowDireccionModal(true)} title="Gestionar Direcciones">
+                                <span className="long-text">Direcciones</span>
+                            </Button>
+                        )}
+                        {hasPermission('ADMINISTRAR_PROVEEDORES_TELA') && (
+                            <Button variant="ghost" icon={FaPlus} onClick={() => setShowProveedorModal(true)} title="Nuevo Proveedor">
+                                <span className="long-text">Proveedor</span>
+                            </Button>
+                        )}
+                        {hasPermission('CREAR_PEDIDO_TELA') && (
+                            <Button variant="primary" icon={FaPlus} onClick={() => setShowPedidoModal(true)}>
+                                <span className="long-text">Nuevo Pedido</span>
+                                <span className="short-text">Nuevo</span>
+                            </Button>
+                        )}
+                    </>
+                }
+            />
+
+            <div className="ds-card telas-filters">
                 <div className="o-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
+                    
+                    {/* Nuevo Buscador */}
+                    <div className="v-search-pill">
+                        <FaSearch />
+                        <input
+                            type="text"
+                            placeholder="Buscar PT, Proveedor, Cliente..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
                     <div className="v-multi-select-container" ref={proveedoresRef}>
                         <button type="button" className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`} onClick={() => setIsProveedoresOpen(prev => !prev)}>
                             <span>{selectedProveedores.length === 0 ? 'Proveedor: Ninguno' : selectedProveedores.length === proveedoresTelas.length ? 'Proveedor: Todos' : `Proveedores (${selectedProveedores.length})`}</span>
@@ -483,29 +544,6 @@ const TelasPage = () => {
                         )}
                     </div>
                 </div>
-
-                <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {hasPermission('DESCARGAR_PEDIDO_TELA') && (
-                        <button className="o-btn-ghost" onClick={exportPedidos} title="Exportar Excel">
-                            <FaFileExport /> Exportar
-                        </button>
-                    )}
-                    {hasPermission('ADMINISTRAR_DIRECCIONES_TELA') && (
-                        <button className="o-btn-ghost" onClick={() => setShowDireccionModal(true)} title="Gestionar Direcciones">
-                            <FaCog /> Direcciones
-                        </button>
-                    )}
-                    {hasPermission('ADMINISTRAR_PROVEEDORES_TELA') && (
-                        <button className="o-btn-ghost" onClick={() => setShowProveedorModal(true)} title="Nuevo Proveedor">
-                            <FaPlus /> Proveedor
-                        </button>
-                    )}
-                    {hasPermission('CREAR_PEDIDO_TELA') && (
-                        <button className="o-btn-primary-glow" onClick={() => setShowPedidoModal(true)}>
-                            <FaPlus /> <span className="long-text">Nuevo Pedido</span><span className="short-text">Nuevo</span>
-                        </button>
-                    )}
-                </div>
             </div>
 
             <div className="ordenes-container">
@@ -539,10 +577,10 @@ const TelasPage = () => {
                                             <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
                                         </tr>
                                     ))
-                                ) : pedidos.length === 0 ? (
+                                ) : displayedPedidos.length === 0 ? (
                                     <tr><td colSpan="9" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
                                 ) : (
-                                    pedidos.map(pedido => (
+                                    displayedPedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
                                         <tr className={`table-row-clickable ${expandedPedidoId === pedido.id ? 'expanded-row-highlight' : ''}`} onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
                                             <td className="font-mono" style={{ fontWeight: '600' }}>#{pedido.id}</td>
@@ -650,8 +688,8 @@ const TelasPage = () => {
                                 <div className="skeleton skeleton-text" style={{ width: '100px', marginBottom: '0.5rem' }}></div>
                             </div>
                         ))
-                    ) : pedidos.length > 0 ? (
-                        pedidos.map(pedido => (
+                    ) : displayedPedidos.length > 0 ? (
+                        displayedPedidos.map(pedido => (
                             <div className="mobile-card" key={pedido.id} style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                 <div className="mobile-card-header" onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
                                     <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -745,7 +783,7 @@ const TelasPage = () => {
             {/* Pagination Controls */}
 
             {/* Modal Editar Estado de Pedido Tela */}
-            {editEstadoModal.open && (
+            {editEstadoModal.open && createPortal(
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '400px' }}>
                         <div className="modal-header">
@@ -777,11 +815,12 @@ const TelasPage = () => {
                             >Guardar</button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Modal Crear Proveedor */}
-            {showProveedorModal && (
+            {showProveedorModal && createPortal(
                 <div className="modal-overlay">
                     <div className="modal-content">
                         <h3>Nuevo Proveedor de Telas</h3>
@@ -804,11 +843,12 @@ const TelasPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Modal Crear Dirección (Solo admin o auxiliar) */}
-            {showDireccionModal && (
+            {showDireccionModal && createPortal(
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '500px' }}>
                         <div className="modal-header">
@@ -852,7 +892,8 @@ const TelasPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Componente Modal Unificado para Crear Pedido de Telas/Cueros */}

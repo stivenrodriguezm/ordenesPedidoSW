@@ -1,39 +1,51 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AppContext } from '../AppContext';
 import api from '../services/api';
 import { usePageRefresh } from '../hooks/usePageRefresh';
+import { StatCard, Badge, LoadingBlock, ErrorState, EmptyState } from '../components/ui';
 import {
-    FaPlus,
     FaClipboardList,
     FaFileInvoiceDollar,
-    FaUsers,
     FaHistory,
     FaShoppingCart,
     FaExclamationTriangle,
     FaClock,
-    FaHourglassHalf
+    FaHourglassHalf,
+    FaArrowRight,
+    FaQuoteLeft
 } from 'react-icons/fa';
 import './VendedorHomePage.css';
-import Loader from '../components/Loader';
+import { formatCOP } from '../utils/formatCOP';
+import { formatDateLarga, getTodayStr, formatDateCorta } from '../utils/dates';
+
+const MOTIVATIONAL_QUOTES = [
+    "El éxito es la suma de pequeños esfuerzos repetidos día tras día.",
+    "No cuentes los días, haz que los días cuenten.",
+    "La diferencia entre lo imposible y lo posible está en la determinación de una persona.",
+    "El único modo de hacer un gran trabajo es amar lo que haces.",
+    "Cada venta es el comienzo de una nueva relación.",
+    "Tu actitud determina tu dirección.",
+    "El secreto del éxito está en la constancia del propósito."
+];
+
+const QUICK_ACTIONS = [
+    { to: '/ordenes/nuevo', icon: FaShoppingCart, label: 'Crear Pedido', hint: 'Inicia un nuevo pedido', primary: true },
+    { to: '/ventas', icon: FaFileInvoiceDollar, label: 'Mis Ventas', hint: 'Historial de ventas' },
+    { to: '/ordenes', icon: FaClipboardList, label: 'Mis Pedidos', hint: 'Estado de pedidos' },
+];
 
 const VendedorHomePage = () => {
     const { usuario } = useContext(AppContext);
+    const navigate = useNavigate();
     const [greeting, setGreeting] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [stats, setStats] = useState(null);
     const [recentActivity, setRecentActivity] = useState([]);
-    const [motivationalQuote, setMotivationalQuote] = useState('');
-
-    const motivationalQuotes = [
-        "El éxito es la suma de pequeños esfuerzos repetidos día tras día.",
-        "No cuentes los días, haz que los días cuenten.",
-        "La diferencia entre lo imposible y lo posible está en la determinación de una persona.",
-        "El único modo de hacer un gran trabajo es amar lo que haces.",
-        "Cada venta es el comienzo de una nueva relación.",
-        "Tu actitud determina tu dirección.",
-        "El secreto del éxito está en la constancia del propósito."
-    ];
+    const [motivationalQuote] = useState(
+        () => MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]
+    );
 
     useEffect(() => {
         const getGreeting = () => {
@@ -45,13 +57,11 @@ const VendedorHomePage = () => {
             return 'Buenas noches';
         };
         setGreeting(getGreeting());
-        const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
-        setMotivationalQuote(randomQuote);
     }, []);
 
-    usePageRefresh(fetchDashboardData);
-
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
         try {
             const [statsResponse, activityResponse] = await Promise.all([
                 api.get('/dashboard-stats/'),
@@ -60,167 +70,127 @@ const VendedorHomePage = () => {
 
             setStats(statsResponse.data);
             setRecentActivity(activityResponse.data);
-        } catch (error) {
-            console.error('Error fetching dashboard data:', error);
+        } catch (err) {
+            setError('No se pudo cargar tu información. Intenta de nuevo.');
+            console.error('Error fetching dashboard data:', err);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const formatCurrency = (value) => {
-        if (value === null || value === undefined) return '$0';
-        return new Intl.NumberFormat('es-CO', {
-            style: 'currency',
-            currency: 'COP',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(value);
-    };
-
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        const options = { month: 'short', day: 'numeric' };
-        return date.toLocaleDateString('es-ES', options);
-    };
-
-    const getTimeBasedGradient = () => {
-        const now = new Date();
-        const hour = now.getHours();
-
-        if (hour < 12) return 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)'; // Morning - Deep Blue
-        if (hour < 18) return 'linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 100%)'; // Afternoon - Dark Blue
-        return 'linear-gradient(135deg, #0c4a6e 0%, #0891b2 100%)'; // Evening - Ocean Blue
-    };
+    usePageRefresh(fetchDashboardData);
 
     if (loading) {
-        return <Loader text="Cargando tu espacio..." />;
+        return (
+            <div className="ds-page">
+                <LoadingBlock message="Cargando tu espacio..." />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="ds-page">
+                <ErrorState message={error} onRetry={fetchDashboardData} />
+            </div>
+        );
     }
 
     return (
-        <div className="vendedor-home-container">
-            {/* Hero Section */}
-            <header className="vendedor-hero" style={{ background: getTimeBasedGradient() }}>
-                <div className="hero-content">
-                    <h1 className="vendedor-greeting">
-                        {greeting}, <span className="user-name">{usuario?.first_name || 'Vendedor'}</span>!
-                    </h1>
-                    <p className="vendedor-quote">"{motivationalQuote}"</p>
+        <div className="ds-page vendedor-home ds-fade-in">
+            {/* Hero */}
+            <header className="vendedor-hero ds-card">
+                <div className="vendedor-hero__avatar">
+                    {usuario?.first_name?.charAt(0)?.toUpperCase() || 'V'}
                 </div>
+                <div className="vendedor-hero__text">
+                    <h1 className="vendedor-hero__greeting">
+                        {greeting}, {usuario?.first_name || 'Vendedor'}
+                    </h1>
+                    <p className="vendedor-hero__date">{formatDateLarga(getTodayStr())}</p>
+                </div>
+                <p className="vendedor-hero__quote">
+                    <FaQuoteLeft /> {motivationalQuote}
+                </p>
             </header>
 
-            {/* Statistics Dashboard */}
-            <section className="stats-dashboard">
-                <div className="stats-grid">
-                    <div className="stat-card stat-ventas-pendientes">
-                        <div className="stat-icon">
-                            <FaExclamationTriangle />
-                        </div>
-                        <div className="stat-content">
-                            <p className="stat-label">Ventas pendientes por entregar</p>
-                            <h3 className="stat-value">{stats?.ventas_pendientes || 0}</h3>
-                        </div>
-                        <div className="stat-decoration"></div>
-                    </div>
-
-                    <div className="stat-card stat-pedidos-pendientes">
-                        <div className="stat-icon">
-                            <FaHourglassHalf />
-                        </div>
-                        <div className="stat-content">
-                            <p className="stat-label">Ventas con pedidos pendientes</p>
-                            <h3 className="stat-value">{stats?.pedidos_pendientes || 0}</h3>
-                        </div>
-                        <div className="stat-decoration"></div>
-                    </div>
-
-                    <div className="stat-card stat-ordenes-atrasadas">
-                        <div className="stat-icon">
-                            <FaClock />
-                        </div>
-                        <div className="stat-content">
-                            <p className="stat-label">Órdenes de pedido atrasadas</p>
-                            <h3 className="stat-value">{stats?.ordenes_atrasadas || 0}</h3>
-                        </div>
-                        <div className="stat-decoration"></div>
-                    </div>
-                </div>
+            {/* KPIs */}
+            <section className="vendedor-kpis">
+                <StatCard
+                    icon={FaExclamationTriangle}
+                    label="Ventas por entregar"
+                    value={stats?.ventas_pendientes ?? 0}
+                    tone="warning"
+                    onClick={() => navigate('/ventas')}
+                />
+                <StatCard
+                    icon={FaHourglassHalf}
+                    label="Pedidos pendientes"
+                    value={stats?.pedidos_pendientes ?? 0}
+                    tone="info"
+                    onClick={() => navigate('/ordenes')}
+                />
+                <StatCard
+                    icon={FaClock}
+                    label="Órdenes atrasadas"
+                    value={stats?.ordenes_atrasadas ?? 0}
+                    tone="danger"
+                    onClick={() => navigate('/ordenes')}
+                />
             </section>
 
-            {/* Quick Actions */}
-            <section className="quick-actions">
-                <h2 className="section-title">Accesos Rápidos</h2>
-                <div className="actions-grid">
-
-                    <Link to="/ordenes/nuevo" className="action-card">
-                        <div className="action-icon-wrapper">
-                            <FaShoppingCart className="action-icon" />
-                        </div>
-                        <h3>Crear Pedido</h3>
-                        <p>Inicia un nuevo pedido para un cliente</p>
-                        <span className="action-arrow">→</span>
-                    </Link>
-
-                    <Link to="/ventas" className="action-card">
-                        <div className="action-icon-wrapper">
-                            <FaFileInvoiceDollar className="action-icon" />
-                        </div>
-                        <h3>Mis Ventas</h3>
-                        <p>Consulta el historial de tus ventas</p>
-                        <span className="action-arrow">→</span>
-                    </Link>
-
-                    <Link to="/ordenes" className="action-card">
-                        <div className="action-icon-wrapper">
-                            <FaClipboardList className="action-icon" />
-                        </div>
-                        <h3>Mis Pedidos</h3>
-                        <p>Revisa el estado de tus pedidos</p>
-                        <span className="action-arrow">→</span>
-                    </Link>
-
-                </div>
-            </section>
-
-            {/* Recent Activity */}
-            <section className="recent-activity">
-                <div className="section-header">
-                    <h2 className="section-title">
-                        <FaHistory className="title-icon" />
-                        Actividad Reciente
-                    </h2>
-                </div>
-
-                {recentActivity && recentActivity.length > 0 ? (
-                    <div className="activity-timeline">
-                        {recentActivity.map((item, index) => (
-                            <div key={index} className={`activity-item activity-${item.type}`}>
-                                <div className="activity-marker"></div>
-                                <div className="activity-content">
-                                    <div className="activity-header">
-                                        <span className="activity-type-badge">
-                                            {item.type === 'venta' ? 'Venta' : 'Pedido'}
-                                        </span>
-                                        <span className="activity-date">
-                                            {formatDate(item.fecha)}
-                                        </span>
-                                    </div>
-                                    <p className="activity-description">
-                                        {item.type === 'venta'
-                                            ? `Venta #${item.id} - ${item.cliente}`
-                                            : `Pedido #${item.id} - ${item.proveedor}`
-                                        }
-                                    </p>
-                                </div>
-                            </div>
+            <div className="vendedor-grid">
+                {/* Accesos rápidos */}
+                <aside className="ds-card vendedor-actions">
+                    <div className="vendedor-section-head">
+                        <h2>Accesos Rápidos</h2>
+                    </div>
+                    <div className="vendedor-actions__list">
+                        {QUICK_ACTIONS.map(({ to, icon: Icon, label, hint, primary }) => (
+                            <Link
+                                key={to}
+                                to={to}
+                                className={`vendedor-action ${primary ? 'vendedor-action--primary' : ''}`}
+                            >
+                                <span className="vendedor-action__icon"><Icon /></span>
+                                <span className="vendedor-action__body">
+                                    <span className="vendedor-action__label">{label}</span>
+                                    <span className="vendedor-action__hint">{hint}</span>
+                                </span>
+                                <FaArrowRight className="vendedor-action__arrow" />
+                            </Link>
                         ))}
                     </div>
-                ) : (
-                    <div className="empty-activity">
-                        <p>No hay actividad reciente</p>
+                </aside>
+
+                {/* Actividad reciente */}
+                <section className="ds-card vendedor-activity">
+                    <div className="vendedor-section-head">
+                        <h2><FaHistory style={{ marginRight: '0.4rem', color: 'var(--text-muted)' }} /> Actividad Reciente</h2>
                     </div>
-                )}
-            </section>
+                    {recentActivity?.length > 0 ? (
+                        <ul className="vendedor-activity__list">
+                            {recentActivity.map((item, index) => (
+                                <li key={index} className="vendedor-activity__item">
+                                    <Badge tone={item.type === 'venta' ? 'accent' : 'info'}>
+                                        {item.type === 'venta' ? 'Venta' : 'Pedido'}
+                                    </Badge>
+                                    <span className="vendedor-activity__desc">
+                                        {item.type === 'venta'
+                                            ? `#${item.id} · ${item.cliente}`
+                                            : `#${item.id} · ${item.proveedor}`}
+                                    </span>
+                                    <span className="vendedor-activity__date">
+                                        {formatDateCorta(item.fecha)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <EmptyState title="Sin actividad reciente" message="Tus ventas y pedidos recientes aparecerán aquí." />
+                    )}
+                </section>
+            </div>
         </div>
     );
 };

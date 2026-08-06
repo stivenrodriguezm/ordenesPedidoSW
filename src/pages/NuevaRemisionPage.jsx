@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import API from '../services/api';
+import { useVendedores, usePendientesIds } from '../hooks/useSharedData';
 import { formatCOP } from '../utils/formatCOP';
 import { generateRemisionPDF } from '../utils/generateRemisionPDF';
-import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaSpinner, FaTruck } from 'react-icons/fa';
 import { AppContext, usePermissions } from '../AppContext';
+import { PageHeader, Button, LoadingBlock } from '../components/ui';
 import './RemisionesPage.css';
 
 const ESTADO_LABELS = {
@@ -134,8 +136,9 @@ function NuevaRemisionPage() {
     const [grupos, setGrupos] = useState([]);
     
     // Adicional: state for dropdowns
-    const [ordenesPendientes, setOrdenesPendientes] = useState([]);
-    const [vendedores, setVendedores] = useState([]);
+    // Vendedores y órdenes pendientes vienen de los hooks compartidos (React Query)
+    const { data: ordenesPendientes = [] } = usePendientesIds();
+    const { data: vendedores = [] } = useVendedores();
     const [transportadores, setTransportadores] = useState([]);
 
     const [showModal, setShowModal] = useState(false);
@@ -190,16 +193,9 @@ function NuevaRemisionPage() {
                 });
 
                 // Only load what's needed for the table view — inventario is lazy-loaded when modal opens
-                const [ordRes, vendRes, transpRes] = await Promise.all([
-                    
-                    safeGet('/get-pendientes-ids/'),
-                    safeGet('/vendedores/'),
-                    safeGet('/transportadores/'),
-                ]);
-                
+                // vendedores y pendientes-ids se cargan vía useVendedores/usePendientesIds
+                const transpRes = await safeGet('/transportadores/');
 
-                setOrdenesPendientes(Array.isArray(ordRes.data) ? ordRes.data : []);
-                setVendedores(Array.isArray(vendRes.data) ? vendRes.data : []);
                 setTransportadores(Array.isArray(transpRes.data) ? transpRes.data : []);
             } catch (error) {
                 console.error("Error fetching remisiones:", error);
@@ -557,7 +553,7 @@ function NuevaRemisionPage() {
 
         if (!qrInput.trim()) return;
         try {
-            const res = await API.get(`/suministros/inventario/por-qr/?qr=${qrInput.trim()}`);
+            const res = await API.get(`/suministros/inventario/por-qr/?qr=${encodeURIComponent(qrInput.trim())}`);
             const item = res.data;
             if (item && item.id) {
                 setForm(prev => {
@@ -634,13 +630,13 @@ function NuevaRemisionPage() {
                                     />
                                 </td>
                                 <td>
-                                    <span className="inv-id-badge" style={{ backgroundColor: '#e2e8f0', color: '#475569' }}>
+                                    <span className="inv-id-badge" style={{ backgroundColor: 'var(--gray-200)', color: 'var(--gray-600)' }}>
                                         G-{grupo.id}
                                     </span>
                                 </td>
                                 <td className="inv-nombre">
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <strong style={{ color: '#0f172a' }}>{grupo.nombre}</strong>
+                                        <strong style={{ color: 'var(--gray-900)' }}>{grupo.nombre}</strong>
                                         <span className="inv-count-badge inv-count--ok">{items.length} ítems disp.</span>
                                     </div>
                                 </td>
@@ -657,12 +653,12 @@ function NuevaRemisionPage() {
                                 <td className="inv-nombre">
                                     {provIds.length === 1 && firstProvNombre ? firstProvNombre : provIds.length > 1 ? 'Varios' : '—'}
                                 </td>
-                                <td className="obs-cell-col" style={{ color: '#94a3b8' }}>—</td>
+                                <td className="obs-cell-col" style={{ color: 'var(--text-muted)' }}>—</td>
                                 <td>{groupVenta}</td>
                                 <td className="obs-cell-col">
                                     <ObsCell text={grupo.descripcion || grupo.observacion || ''} />
                                 </td>
-                                <td style={{ textAlign: 'center', color: '#64748b' }}>
+                                <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                                     {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                                 </td>
                             </tr>
@@ -756,17 +752,14 @@ function NuevaRemisionPage() {
 
     if (isLoading) {
         return (
-            <div className="page-container" style={{ padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', color: '#64748b' }}>
-                    <FaSpinner className="spin-icon" style={{ fontSize: '2.5rem' }} />
-                    <span style={{ fontSize: '1.2rem', fontWeight: '500' }}>Cargando información...</span>
-                </div>
+            <div className="ds-page">
+                <LoadingBlock message="Cargando información..." />
             </div>
         );
     }
 
     return (
-        <div className="page-container" style={{ padding: '2rem' }}>
+        <div className="ds-page nueva-remision-page ds-fade-in">
             <div className={`rem-toast rem-toast--${toast.type}${toast.visible ? ' rem-toast--visible' : ''}`}>
                 {toast.type === 'success'
                     ? <FaCheckCircle className="rem-toast-icon" />
@@ -778,7 +771,23 @@ function NuevaRemisionPage() {
                 </button>
             </div>
 
-            <div className="rem-modal rem-modal-visible" style={{ position: 'relative', width: '100%', maxWidth: '1200px', margin: '0 auto', maxHeight: 'none', display: 'flex', flexDirection: 'column', overflow: 'visible', background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+            <PageHeader
+                icon={FaTruck}
+                title="Nueva Remisión"
+                subtitle="Registra una nueva remisión de entrega"
+                actions={(
+                    <Button
+                        variant="secondary"
+                        icon={FaChevronLeft}
+                        onClick={() => navigate('/suministros/remisiones')}
+                        disabled={isSubmitting}
+                    >
+                        Volver
+                    </Button>
+                )}
+            />
+
+            <div className="ds-card rem-nueva-card">
                         <form onSubmit={handleSubmit} className="rem-form">
                             {/* ── SCROLLABLE BODY ── */}
                             <div className="rem-form-body">
@@ -903,38 +912,13 @@ function NuevaRemisionPage() {
                                                             />
                                                         </div>
                                                         {loadingSugeridoSaldo ? (
-                                                            <div 
-                                                                style={{
-                                                                    backgroundColor: '#f8fafc',
-                                                                    border: '1px dashed #cbd5e1',
-                                                                    borderRadius: '4px',
-                                                                    padding: '0 0.5rem',
-                                                                    height: '38px',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    fontSize: '0.85rem',
-                                                                    color: '#64748b',
-                                                                    whiteSpace: 'nowrap'
-                                                                }}
-                                                            >
-                                                                <FaSpinner className="spin-icon" style={{ marginRight: '6px' }} />
+                                                            <div className="rem-saldo-hint">
+                                                                <FaSpinner className="spin-icon" />
                                                                 Cargando...
                                                             </div>
                                                         ) : sugeridoSaldo !== null && (
-                                                            <div 
-                                                                style={{
-                                                                    backgroundColor: '#eff6ff',
-                                                                    border: '1px dashed #93c5fd',
-                                                                    borderRadius: '4px',
-                                                                    padding: '0 0.5rem',
-                                                                    height: '38px',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    fontSize: '0.85rem',
-                                                                    color: '#1e3a8a',
-                                                                    whiteSpace: 'nowrap',
-                                                                    cursor: 'pointer'
-                                                                }}
+                                                            <div
+                                                                className="rem-saldo-sugerido"
                                                                 onClick={() => {
                                                                     setForm(prev => ({
                                                                         ...prev,
@@ -1003,7 +987,7 @@ function NuevaRemisionPage() {
                                             <label className="rfg-label">
                                                 Vendedor
                                                 {form.sharedSellersInfo && (
-                                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'normal', marginLeft: '0.5rem', fontStyle: 'italic' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'normal', marginLeft: '0.5rem', fontStyle: 'italic' }}>
                                                         (Compartida con: {form.sharedSellersInfo})
                                                     </span>
                                                 )}
@@ -1027,7 +1011,7 @@ function NuevaRemisionPage() {
                                     <div className="rem-inventario-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                                         <div className="rem-section-title">Productos a Entregar</div>
                                         
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <div className="rem-qr-group">
                                             <input 
                                                 type="text" 
                                                 placeholder="Escanear QR..." 
@@ -1039,10 +1023,9 @@ function NuevaRemisionPage() {
                                                         handleQRScan(e);
                                                     }
                                                 }}
-                                                className="rem-search-input"
-                                                style={{ padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                                                className="rem-search-input rem-qr-input"
                                             />
-                                            <button type="button" onClick={handleQRScan} className="btn-general" style={{ padding: '0.4rem 1rem' }}>Agregar QR</button>
+                                            <Button type="button" size="sm" onClick={handleQRScan}>Agregar QR</Button>
                                         </div>
 
                                         <div className="rem-search-wrapper">
@@ -1059,8 +1042,8 @@ function NuevaRemisionPage() {
 
                                     {/* Selected items table */}
                                     {selectedItems.length > 0 && (
-                                        <div className="rem-inv-table-wrap" style={{ marginTop: '1rem', borderTop: '2px solid #e2e8f0', paddingTop: '1rem' }}>
-                                            <div style={{ marginBottom: '0.75rem', fontWeight: 600, color: '#334155' }}>Resumen de la Selección:</div>
+                                        <div className="rem-inv-table-wrap rem-selected-summary">
+                                            <div className="rem-selected-summary-title">Resumen de la Selección:</div>
                                             <table className="rem-inv-table">
                                                 <thead>
                                                     <tr>
@@ -1167,7 +1150,7 @@ function NuevaRemisionPage() {
                                      </div>
                                     </>
                                 ) : (
-                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
+                                    <div className="rem-inv-empty-hint">
                                         Por favor seleccione una O.C. Asociada o "Sin orden asociada" para visualizar el inventario.
                                     </div>
                                 )}
@@ -1175,17 +1158,12 @@ function NuevaRemisionPage() {
                             </div>{/* end rem-form-body */}
 
                             <div className="rem-modal-footer">
-                                <button type="button" className="rem-btn-secondary" onClick={() => navigate('/suministros/remisiones')} disabled={isSubmitting}>Cancelar</button>
-                                <button
-                                    type="submit"
-                                    className={`btn-general${isSubmitting ? ' btn-loading' : ''}`}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting
-                                        ? <><FaSpinner className="spin-icon" /> Creando...</>
-                                        : <><FaPlus /> Crear Remisión</>
-                                    }
-                                </button>
+                                <Button variant="secondary" onClick={() => navigate('/suministros/remisiones')} disabled={isSubmitting}>
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" icon={FaPlus} loading={isSubmitting}>
+                                    Crear Remisión
+                                </Button>
                             </div>
                         </form>
             </div>

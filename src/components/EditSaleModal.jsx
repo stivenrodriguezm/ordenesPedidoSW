@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './EditSaleModal.css';
 import Modal from './Modal';
+import { Button } from './ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppContext, usePermissions } from '../AppContext';
 import API from '../services/api';
@@ -33,7 +34,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         vendedores_compartidos: saleData.vendedores_compartidos || [],
         traslado: saleData.traslado || false,
         sede: saleData.sede || 'Lottus 1',
-        valor_total: parseInt(saleData.valor_total),
+        valor_total: Number.isFinite(Number(saleData.valor_total)) ? Number(saleData.valor_total) : 0,
         estado: saleData.estado,
         estado_pedidos: saleData.estado_pedidos,
       });
@@ -217,9 +218,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         </div>
 
         <div className="edit-sale-modal-actions">
-          <button type="submit" className="v-btn-primary-glow" style={{ minWidth: '160px', height: '44px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Button type="submit" style={{ minWidth: '160px' }}>
             Guardar Cambios
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

@@ -15,31 +15,6 @@
     text-align: center;
   }
   
-  .error-message {
-    background-color: #ffe6e6;
-    color: #d32f2f;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    text-align: center;
-    font-size: 14px;
-  }
-  
-  .loader-container {
-    text-align: center;
-    padding: 20px 0;
-  }
-  
-  .loader {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #000;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto;
-  }
-  
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -54,7 +29,7 @@
   .cliente-section, .venta-section {
     flex: 1;
     padding: 20px;
-    background-color: #fff;
+    background-color: var(--surface);
     border-radius: 10px;
     border: 1px solid #e5e7eb;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -107,7 +82,7 @@
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
-    background-color: #fff;
+    background-color: var(--surface);
     transition: border-color 0.3s ease;
   }
   
@@ -124,7 +99,7 @@
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
-    background-color: #fff;
+    background-color: var(--surface);
     resize: vertical;
     transition: border-color 0.3s ease;
   }
@@ -133,53 +108,6 @@
     outline: none;
     border-color: #000000;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-  }
-  
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 10px;
-    background-color: #f5f5f5;
-    border-top: 1px solid #e5e7eb;
-    border-radius: 0 0 10px 10px;
-  }
-  
-  .cancel-button, .submit-button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-  }
-  
-  .cancel-button {
-    background-color: #d1d5db;
-    color: #333;
-  }
-  
-  .cancel-button:disabled {
-    background-color: #e5e7eb;
-    cursor: not-allowed;
-  }
-  
-  .cancel-button:hover:not(:disabled) {
-    background-color: #b0b7c2;
-  }
-  
-  .submit-button {
-    background-color: #16a34a;
-    color: #fff;
-  }
-  
-  .submit-button:disabled {
-    background-color: #d1d5db;
-    cursor: not-allowed;
-  }
-  
-  .submit-button:hover:not(:disabled) {
-    background-color: #15803d;
   }
   
   /* Responsive Adjustments */

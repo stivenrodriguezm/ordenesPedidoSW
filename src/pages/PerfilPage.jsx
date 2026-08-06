@@ -1,15 +1,15 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../AppContext';
 import API from '../services/api';
-import { 
-    FaCheckCircle, 
-    FaExclamationCircle, 
-    FaUser, 
-    FaLock, 
-    FaShieldAlt, 
-    FaSpinner,
+import {
+    FaCheckCircle,
+    FaExclamationCircle,
+    FaUser,
+    FaLock,
+    FaShieldAlt,
     FaIdBadge
 } from 'react-icons/fa';
+import { PageHeader, Button, Badge } from '../components/ui';
 import './PerfilPage.css';
 
 const PerfilPage = () => {
@@ -28,7 +28,7 @@ const PerfilPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (newPassword !== confirmPassword) {
             setNotification({ message: 'Las nuevas contraseñas no coinciden.', type: 'error' });
             return;
@@ -54,36 +54,42 @@ const PerfilPage = () => {
     };
 
     const roleText = usuario?.role || 'Usuario';
+    const roleLabel = roleText.charAt(0).toUpperCase() + roleText.slice(1);
     const fullName = `${usuario?.first_name || ''} ${usuario?.last_name || ''}`.trim() || 'Usuario Desconocido';
     const username = usuario?.username || 'usuario';
 
     return (
-        <div className="page-container perfil-container">
+        <div className="ds-page perfil-page ds-fade-in">
+            <PageHeader
+                icon={FaUser}
+                title="Mi Perfil"
+                subtitle="Información de tu cuenta y configuración de seguridad"
+            />
             <div className="perfil-grid">
                 {/* Left Column: User Overview */}
-                <div className="perfil-card">
+                <div className="ds-card perfil-card">
                     <div className="perfil-avatar">
                         {getInitials(usuario?.first_name, usuario?.last_name)}
                     </div>
-                    
+
                     <div className="perfil-info">
                         <h3>{fullName}</h3>
                         <p>@{username}</p>
-                        
+
                         <div className="perfil-badge">
                             <FaIdBadge />
-                            {roleText.charAt(0).toUpperCase() + roleText.slice(1)}
+                            {roleLabel}
                         </div>
                     </div>
 
-                    <h4 style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h4 className="perfil-section-title">
                         <FaUser /> Detalles de la Cuenta
                     </h4>
-                    
+
                     <ul className="perfil-details-list">
                         <li>
                             <span className="detail-label">Estado</span>
-                            <span className="badge-active">Activo</span>
+                            <Badge tone="success">Activo</Badge>
                         </li>
                         <li>
                             <span className="detail-label">Cuenta</span>
@@ -91,13 +97,13 @@ const PerfilPage = () => {
                         </li>
                         <li>
                             <span className="detail-label">Rol Asignado</span>
-                            <span className="detail-value">{roleText.charAt(0).toUpperCase() + roleText.slice(1)}</span>
+                            <span className="detail-value">{roleLabel}</span>
                         </li>
                     </ul>
                 </div>
 
                 {/* Right Column: Security Settings */}
-                <div className="perfil-card">
+                <div className="ds-card perfil-card">
                     <div className="perfil-card-header">
                         <div className="perfil-icon-bg">
                             <FaShieldAlt />
@@ -109,54 +115,54 @@ const PerfilPage = () => {
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label htmlFor="oldPassword">
-                                <FaLock style={{ marginRight: '0.5rem', color: 'var(--color-text-placeholder)' }} />
-                                Contraseña Actual
+                        <div className="ds-field">
+                            <label className="ds-label" htmlFor="oldPassword">
+                                <FaLock /> Contraseña Actual
                             </label>
-                            <input 
+                            <input
+                                className="ds-input"
                                 type="password"
                                 id="oldPassword"
                                 value={oldPassword}
                                 onChange={(e) => setOldPassword(e.target.value)}
                                 placeholder="Ingresa tu contraseña actual"
-                                required 
+                                required
                             />
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="newPassword">
-                                <FaLock style={{ marginRight: '0.5rem', color: 'var(--color-text-placeholder)' }} />
-                                Nueva Contraseña
+                        <div className="ds-field">
+                            <label className="ds-label" htmlFor="newPassword">
+                                <FaLock /> Nueva Contraseña
                             </label>
-                            <input 
+                            <input
+                                className="ds-input"
                                 type="password"
                                 id="newPassword"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="Ingresa la nueva contraseña"
-                                required 
+                                required
                             />
-                            <small style={{ color: 'var(--color-text-placeholder)', display: 'block', marginTop: '0.5rem' }}>
+                            <small className="ds-muted" style={{ display: 'block', marginTop: '0.4rem' }}>
                                 La contraseña debe tener al menos 8 caracteres.
                             </small>
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="confirmPassword">
-                                <FaLock style={{ marginRight: '0.5rem', color: 'var(--color-text-placeholder)' }} />
-                                Confirmar Nueva Contraseña
+                        <div className="ds-field">
+                            <label className="ds-label" htmlFor="confirmPassword">
+                                <FaLock /> Confirmar Nueva Contraseña
                             </label>
-                            <input 
+                            <input
+                                className="ds-input"
                                 type="password"
                                 id="confirmPassword"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="Repite la nueva contraseña"
-                                required 
+                                required
                             />
                         </div>
-                        
+
                         {notification.message && (
                             <div className={`notification-box ${notification.type}`}>
                                 {notification.type === 'success' ? <FaCheckCircle size={20} /> : <FaExclamationCircle size={20} />}
@@ -164,21 +170,10 @@ const PerfilPage = () => {
                             </div>
                         )}
 
-                        <div style={{ marginTop: '2rem' }}>
-                            <button 
-                                type="submit" 
-                                className="btn-primary"
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <FaSpinner className="loader" style={{ width: '20px', height: '20px', borderWidth: '2px', marginBottom: 0, animation: 'spin 1s linear infinite' }} />
-                                        Actualizando...
-                                    </>
-                                ) : (
-                                    'Actualizar Contraseña'
-                                )}
-                            </button>
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <Button type="submit" loading={isLoading}>
+                                {isLoading ? 'Actualizando...' : 'Actualizar Contraseña'}
+                            </Button>
                         </div>
                     </form>
                 </div>

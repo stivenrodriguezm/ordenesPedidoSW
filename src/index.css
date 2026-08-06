@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@400;500;600;700&display=swap');
-@import "tailwindcss";
 
 /* ==========================================================================
    1. Importación de Fuentes (Inter & Audiowide)
@@ -11,53 +10,37 @@
 :root {
   /* Tipografía */
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-display: 'Audiowide', cursive;
 
   /* Paleta de Colores Principal - Light Mode Profesional */
-  --color-background: #f7f7f7;
-  /* Gris muy claro para el fondo */
-  --color-surface: #ffffff;
+  --color-background: var(--bg-app);
+  /* Fondo de la aplicación */
+  --color-surface: var(--surface);
   /* Blanco puro para tarjetas y superficies */
-  --color-border: #dee2e6;
+  --color-border: var(--border);
   /* Borde sutil y claro */
-  --color-border-hover: #ced4da;
+  --color-border-hover: var(--border-strong);
   /* Borde más oscuro para interacción */
 
   /* Paleta de Texto */
-  --color-text-primary: #212529;
+  --color-text-primary: var(--gray-800);
   /* Negro suave para la máxima legibilidad */
-  --color-text-secondary: #495057;
+  --color-text-secondary: var(--gray-500);
   /* Gris oscuro para texto secundario */
-  --color-text-placeholder: #adb5bd;
+  --color-text-placeholder: var(--gray-400);
   /* Gris más claro para placeholders */
 
-  /* Paleta de Acentos Azules */
-  --color-primary: #1657b8;
-  /* Azul vibrante principal */
-  --color-primary-hover: #104ca7;
-  /* Azul más oscuro para interacción */
-  --color-primary-focus-shadow: rgba(13, 110, 253, 0.25);
+  /* Paleta de Acento (esmeralda, alineada con tokens.css) */
+  --color-primary: var(--accent);
+  /* Acento principal */
+  --color-primary-hover: var(--accent-hover);
+  /* Acento para interacción */
+  --color-primary-focus-shadow: var(--accent-ring);
   /* Sombra/Glow para focus */
-  --color-primary-light-bg: #f5f7fc;
-  /* Fondo azul claro para estados activos/hover sutiles */
-
-  /* Paleta Oscura para el Sidebar */
-  --color-sidebar-bg: #091420;
-  /* Azul marino muy oscuro */
-  --color-sidebar-text: #c8d0d8;
-  /* Texto gris claro */
-  --color-sidebar-text-hover: #ffffff;
-  /* Texto blanco para hover/activo */
-  --color-sidebar-active-bg: rgba(13, 110, 253, 0.1);
-  /* Fondo translúcido azul para item activo */
-  --color-sidebar-border: #1d2d44;
-  /* Borde interno del sidebar */
+  --color-primary-light-bg: var(--accent-soft);
+  /* Fondo suave para estados activos/hover sutiles */
 
   /* Colores de Estado */
-  --color-destructive: #dc3545;
-  /* Rojo para acciones de borrado o error */
-  --color-destructive-hover: #bb2d3b;
-  --color-success: #198754;
+  --color-success: var(--success);
   /* Verde para confirmaciones */
 
   /* Sombras y Radios */
@@ -91,19 +74,17 @@ body {
 
 .main-content {
   flex-grow: 1;
-  margin-left: 260px;
-  /* Default expanded width */
+  margin-left: var(--sidebar-w);
   padding: 2rem;
-  padding-top: calc(80px + 2rem);
-  /* Match new header height */
+  padding-top: calc(var(--header-h) + 2rem);
   min-width: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 100vh;
-  background-color: var(--color-background);
+  background-color: var(--bg-app);
 }
 
 .sidebar-collapsed .main-content {
-  margin-left: 80px;
+  margin-left: var(--sidebar-w-collapsed);
 }
 
 .content-wrapper {
@@ -115,35 +96,6 @@ body {
 main {
   padding: 0;
   width: 100%;
-}
-
-/* Estilo unificado para los contenedores de página */
-.page-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* Estilo unificado para los encabezados de página */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-header h1 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-/* Estilo unificado para las tablas */
-.table-container {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
 }
 
 /* Estilo unificado para el loader */
@@ -192,7 +144,7 @@ main {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1050;
   backdrop-filter: blur(4px);
 }
 
@@ -248,7 +200,7 @@ main {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 1rem;
-  background-color: #fff;
+  background-color: var(--surface);
   color: var(--color-text-primary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -259,23 +211,6 @@ main {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-focus-shadow);
-}
-
-.modal-submit {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  margin-top: 1rem;
-  transition: background-color 0.2s ease;
-}
-
-.modal-submit:hover {
-  background-color: var(--color-primary-hover);
 }
 
 /* Styles for checkbox groups */
@@ -310,69 +245,6 @@ main {
   }
 }
 
-/* ==========================================================================
-   Premium Glass Header & Filters (Global)
-   ========================================================================== */
-.v-glass-header {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 16px;
-    padding: 0.75rem 1.25rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    position: sticky;
-    top: 1rem;
-    z-index: 150;
-}
-
-.v-btn-primary-glow,
-.btn-general {
-    background: #274385;
-    color: white;
-    border: none;
-    padding: 0 0.85rem;
-    height: 34px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.v-btn-primary-glow:hover,
-.btn-general:hover {
-    background: #1a2d59;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px #192b54;
-}
-
-.v-btn-ghost {
-    background: transparent;
-    border: 1px solid #e2e8f0;
-    color: #475569;
-    padding: 0 0.6rem;
-    height: 34px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.v-btn-ghost:hover {
-    background: #f8fafc;
-    color: #0f172a;
-}
-
 .v-filters-bar {
     display: flex;
     gap: 0.5rem;
@@ -382,8 +254,8 @@ main {
 }
 
 .v-search-pill {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface);
+    border: 1px solid var(--gray-200);
     border-radius: 9999px;
     padding: 0 0.6rem;
     height: 34px;
@@ -396,18 +268,18 @@ main {
 }
 
 .v-search-pill:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: var(--gray-50);
+    border-color: var(--gray-300);
 }
 
 .v-search-pill:focus-within {
-    border-color: #cbd5e1 !important;
+    border-color: var(--gray-300) !important;
     box-shadow: none !important;
-    background: #ffffff;
+    background: var(--surface);
 }
 
 .v-search-pill svg {
-    color: #94a3b8;
+    color: var(--gray-400);
     font-size: 0.75rem;
     flex-shrink: 0;
 }
@@ -417,7 +289,7 @@ main {
     outline: none !important;
     box-shadow: none !important;
     font-size: 0.82rem;
-    color: #475569;
+    color: var(--gray-600);
     background: transparent !important;
     width: 120px;
     padding: 0;
@@ -432,13 +304,13 @@ main {
 }
 
 .v-select-pill select {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface);
+    border: 1px solid var(--gray-200);
     border-radius: 9999px;
     padding: 0 0.8rem;
     height: 100%;
     font-size: 0.82rem;
-    color: #475569;
+    color: var(--gray-600);
     cursor: pointer;
     appearance: auto;
     outline: none;
@@ -446,19 +318,19 @@ main {
 }
 
 .v-select-pill select:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: var(--gray-50);
+    border-color: var(--gray-300);
 }
 
 .v-select-pill select:focus {
     outline: none !important;
-    border-color: #cbd5e1 !important;
+    border-color: var(--gray-300) !important;
     box-shadow: none !important;
 }
 
 .fct-clear-pill {
     background: #fee2e2;
-    color: #ef4444;
+    color: var(--danger);
     border: none;
     width: 28px;
     height: 28px;
@@ -473,75 +345,14 @@ main {
 }
 
 .fct-clear-pill:hover {
-    background: #ef4444;
+    background: var(--danger);
     color: white;
-}
-/* ==========================================================================
-   Shared Premium Glass Header & Filter Styles (global)
-   ========================================================================== */
-.o-glass-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 0.75rem 1.25rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 1rem;
-  z-index: 50;
-}
-
-.o-btn-primary-glow {
-  background: #274385;
-  color: white;
-  border: none;
-  padding: 0 0.85rem;
-  height: 34px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.o-btn-primary-glow:hover {
-  background: #1a2d59;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px #192b54;
-}
-
-.o-btn-secondary-glow {
-  background: white;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-  padding: 0 0.85rem;
-  height: 34px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.o-btn-secondary-glow:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: #94a3b8;
 }
 
 .o-btn-ghost {
   background: transparent;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  border: 1px solid var(--gray-200);
+  color: var(--gray-600);
   padding: 0 0.6rem;
   height: 34px;
   border-radius: 8px;
@@ -553,8 +364,8 @@ main {
   flex-shrink: 0;
 }
 .o-btn-ghost:hover {
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--gray-50);
+  color: var(--gray-900);
 }
 
 .o-filters-bar {
@@ -572,20 +383,20 @@ main {
   flex-shrink: 0;
 }
 .o-select-pill select {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
   border-radius: 9999px;
   padding: 0 0.8rem;
   height: 100%;
   font-size: 0.82rem;
-  color: #475569;
+  color: var(--gray-600);
   cursor: pointer;
   appearance: auto;
   outline: none;
   transition: all 0.2s;
 }
-.o-select-pill select:hover { background: #f8fafc; border-color: #cbd5e1; }
-.o-select-pill select:focus { outline: none !important; border-color: #cbd5e1 !important; box-shadow: none !important; }
+.o-select-pill select:hover { background: var(--gray-50); border-color: var(--gray-300); }
+.o-select-pill select:focus { outline: none !important; border-color: var(--gray-300) !important; box-shadow: none !important; }
 
 /* ==========================================================================
    Global Skeleton Loader Styles
@@ -622,87 +433,26 @@ main {
   padding: 1rem 1.5rem;
 }
 
-/* ==========================================================================
-   Shared Header Styles (Premium V2)
-   ========================================================================== */
-.form-title-header.premium-v2,
-.nv-title-header.premium-v2 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #ffffff;
-  padding: 0.85rem 1.35rem;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
-}
-
-.title-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.title-icon-badge {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: #274385;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
-  box-shadow: 0 0 12px rgba(39, 67, 133, 0.4);
-  flex-shrink: 0;
-}
-
-.title-text-group h1 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-.title-subtitle {
-  margin: 0.15rem 0 0 0;
-  font-size: 0.78rem;
-  color: #64748b;
-}
-
 /* Global Primary Button Standardization (Estilo Botón General / Nueva Venta) */
 .btn-primary,
 .pt-btn-primary,
-.btn-submit-action,
 .btn-primary-modal,
-.o-btn-primary-glow,
-.rem-btn-primary,
-.ref-btn-primary,
-.fact-btn-primary,
-.btn-crear-pedido,
-.btn-primary-glow {
-  background: #274385 !important;
-  color: #ffffff !important;
+.fact-btn-primary {
+  background: var(--accent) !important;
+  color: var(--surface) !important;
   border: none !important;
   border-radius: 8px !important;
   font-size: 0.85rem !important;
-  font-weight: 600 !important;
-  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4) !important;
+  font-weight: 600;
+  box-shadow: 0 0 15px var(--accent-ring) !important;
   transition: all 0.2s ease !important;
 }
 
 .btn-primary:hover:not(:disabled),
 .pt-btn-primary:hover:not(:disabled),
-.btn-submit-action:hover:not(:disabled),
 .btn-primary-modal:hover:not(:disabled),
-.o-btn-primary-glow:hover:not(:disabled),
-.rem-btn-primary:hover:not(:disabled),
-.ref-btn-primary:hover:not(:disabled),
-.fact-btn-primary:hover:not(:disabled),
-.btn-crear-pedido:hover:not(:disabled),
-.btn-primary-glow:hover:not(:disabled) {
-  background: #1a2d59 !important;
+.fact-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover) !important;
   transform: translateY(-2px) !important;
-  box-shadow: 0 5px 20px #192b54 !important;
+  box-shadow: 0 5px 20px var(--accent-ring) !important;
 }

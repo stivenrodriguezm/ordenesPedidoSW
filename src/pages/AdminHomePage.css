@@ -1,442 +1,217 @@
 /* ==========================================================================
-   Admin Dashboard Premium Responsive Redesign (Lottus)
+   AdminHomePage — Dashboard (Lottus Design System)
    ========================================================================== */
-:root {
-    --dash-primary: #1657b8;       
-    --dash-primary-glow: rgba(22, 87, 184, 0.4);
-    --dash-accent: #3b82f6;
-    --dash-success: #10b981;
-    --dash-warning: #f59e0b;
-    --dash-danger: #ef4444;
-    --dash-bg: #f8fafc;
-    --dash-surface: #ffffff;
-    --dash-text-main: #0f172a;
-    --dash-text-muted: #64748b;
-    --dash-border: #e2e8f0;
-    
-    --dash-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --dash-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    --dash-shadow-glow: 0 8px 16px -4px var(--dash-primary-glow);
-    
-    --dash-radius: 12px;
-    --dash-radius-lg: 16px;
-}
 
-body {
-    background-color: var(--dash-bg);
-}
+/* ---- Hero ---- */
 
-.admin-home-container {
-    padding: 1.5rem;
-    min-height: 100vh;
-    background: var(--dash-bg);
-    animation: fadeIn 0.4s ease-out;
-    box-sizing: border-box;
-    width: 100%;
-    margin: 0 auto;
-    max-width: 1920px;
-}
-
-/* ==========================================================================
-   Hero Section
-   ========================================================================== */
 .admin-hero {
-    position: relative;
-    padding: 1.25rem 2rem;
-    border-radius: var(--dash-radius-lg);
-    color: white;
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-    box-shadow: var(--dash-shadow-md);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.4rem 1.6rem;
 }
 
-.admin-hero::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 40vw;
-    height: 40vw;
-    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
-    border-radius: 50%;
-    pointer-events: none;
+.admin-hero__avatar {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3);
 }
 
-.user-avatar-large {
-    width: 46px;
-    height: 46px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    font-weight: 700;
-    flex-shrink: 0;
+.admin-hero__greeting {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
-.hero-content {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+.admin-hero__date {
+  margin-top: 0.2rem;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  text-transform: capitalize;
 }
 
-.admin-greeting {
-    font-size: 1.35rem;
-    font-weight: 700;
-    margin: 0;
-    line-height: 1.2;
+/* ---- KPIs ---- */
+
+.admin-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
 }
 
-.user-name {
-    background: rgba(255, 255, 255, 0.15);
-    padding: 0.15rem 0.75rem;
-    border-radius: 8px;
-    backdrop-filter: blur(5px);
+/* ---- Grid principal ---- */
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
 }
 
-.admin-subtitle {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    margin: 0;
+.admin-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem 0.9rem;
+  border-bottom: 1px solid var(--border);
 }
 
-/* ==========================================================================
-   Statistics Grid (Ventas compact style)
-   ========================================================================== */
-.stats-section {
-    margin-bottom: 2rem;
+.admin-section-head h2 {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
 }
 
-.stats-grid-enhanced {
-    display: grid;
-    /* Responsive grid: min 250px per card, expands to fill */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.25rem;
+.admin-section-head .ds-muted {
+  font-size: var(--fs-xs);
+  margin-top: 0.15rem;
 }
 
-.stat-card-enhanced {
-    background: var(--dash-surface);
-    border-radius: var(--dash-radius);
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: var(--dash-shadow-md);
-    border: 1px solid var(--dash-border);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
-    overflow: hidden;
+/* ---- Gráfica ---- */
+
+.admin-chart__canvas {
+  padding: 1rem 1.25rem 1.25rem;
+  height: 340px;
 }
 
-.stat-card-enhanced:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+/* ---- Acciones rápidas ---- */
+
+.admin-actions__list {
+  display: flex;
+  flex-direction: column;
+  padding: 0.6rem;
+  gap: 0.15rem;
 }
 
-.stat-icon-wrapper {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    flex-shrink: 0;
+.admin-action {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: var(--r-md);
+  color: var(--gray-700);
+  transition: background var(--t-fast);
 }
 
-/* Icon Colors */
-.stat-ventas-mes .stat-icon-wrapper { background: #e0f2fe; color: #0284c7; }
-.stat-pedidos-pendientes .stat-icon-wrapper { background: #fef3c7; color: #d97706; }
-.stat-ordenes-atrasadas .stat-icon-wrapper { background: #fee2e2; color: #dc2626; }
-
-.stat-details {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+.admin-action:hover {
+  background: var(--gray-50);
 }
 
-.stat-label {
-    font-size: 0.85rem;
-    color: var(--dash-text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 0.25rem 0;
+.admin-action__icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.95rem;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--dash-text-main);
-    margin: 0 0 0.25rem 0;
+.admin-action:hover .admin-action__icon {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
-.stat-trend {
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-weight: 600;
+.admin-action--primary .admin-action__icon {
+  background: var(--accent);
+  color: #fff;
 }
 
-.stat-trend.positive { color: var(--dash-success); }
-.stat-trend.warning { color: var(--dash-danger); }
-.stat-trend.neutral { color: var(--dash-warning); }
-
-/* ==========================================================================
-   Main Content Grid (Actions & Chart)
-   ========================================================================== */
-.main-content-grid {
-    display: grid;
-    /* On large screens: Actions (1fr) and Chart (2fr) */
-    grid-template-columns: minmax(300px, 1fr) minmax(400px, 2fr);
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+.admin-action__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
-/* Base Card Style */
-.quick-actions-section, .chart-section, .recent-sales-section {
-    background: var(--dash-surface);
-    border-radius: var(--dash-radius);
-    padding: 1.5rem;
-    box-shadow: var(--dash-shadow-md);
-    border: 1px solid var(--dash-border);
+.admin-action__label {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--gray-800);
 }
 
-.chart-section {
-    display: flex;
-    flex-direction: column;
+.admin-action__hint {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--dash-border);
+.admin-action__arrow {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--gray-300);
+  transition: color var(--t-fast), transform var(--t-fast);
 }
 
-.section-header h2 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--dash-text-main);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+.admin-action:hover .admin-action__arrow {
+  color: var(--accent);
+  transform: translateX(3px);
 }
 
-.view-all-link {
-    color: var(--dash-primary);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: opacity 0.2s;
-}
-.view-all-link:hover {
-    opacity: 0.8;
+/* ---- Últimas ventas ---- */
+
+.admin-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--accent);
 }
 
-/* Actions Grid inside Quick Actions */
-.actions-grid-admin {
+.admin-view-all:hover {
+  color: var(--accent-hover);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 1280px) {
+  .admin-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions__list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+  }
 }
 
-.action-card-admin {
-    background: var(--dash-bg);
-    border: 1px solid var(--dash-border);
-    border-radius: 10px;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.75rem;
-    text-decoration: none;
-    color: var(--dash-text-main);
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.action-card-admin:hover {
-    background: var(--dash-primary);
-    color: white;
-    border-color: var(--dash-primary);
-    box-shadow: var(--dash-shadow-glow);
-    transform: translateY(-3px);
-}
-
-.action-icon-bg {
-    width: 40px;
-    height: 40px;
-    background: white;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    color: var(--dash-primary);
-    box-shadow: var(--dash-shadow-sm);
-    transition: all 0.2s ease;
-}
-
-.action-card-admin:hover .action-icon-bg {
-    color: var(--dash-primary);
-}
-
-.action-card-admin h3 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin: 0;
-}
-.action-card-admin p {
-    display: none; /* Hide description for more compact look */
-}
-
-/* Chart Wrapper */
-.chart-wrapper {
-    position: relative;
-    flex: 1;
-    min-height: 300px;
-    width: 100%;
-}
-
-/* ==========================================================================
-   Tables
-   ========================================================================== */
-.table-wrapper {
-    overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid var(--dash-border);
-}
-
-.sales-table-enhanced {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-}
-
-.sales-table-enhanced th {
-    background: var(--dash-bg);
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: var(--dash-text-muted);
-    border-bottom: 2px solid var(--dash-border);
-    text-transform: uppercase;
-}
-
-.sales-table-enhanced td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--dash-border);
-    color: var(--dash-text-main);
-}
-
-.sales-table-enhanced tbody tr:hover {
-    background: rgba(243, 244, 246, 0.5);
-}
-
-/* Badges */
-.badge {
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-.badge.gold { background: #fef08a; color: #854d0e; }
-.badge.silver { background: #e5e7eb; color: #374151; }
-.badge.bronze { background: #fed7aa; color: #9a3412; }
-.badge.standard { background: #dbeafe; color: #1e40af; }
-
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: capitalize;
-}
-.status-badge.completado, .status-badge.entregado { background: #dcfce7; color: #166534; }
-.status-badge.pendiente, .status-badge.en_curso { background: #fef9c3; color: #854d0e; }
-.status-badge.anulado { background: #fee2e2; color: #991b1b; }
-
-/* ==========================================================================
-   Responsive Breakpoints
-   ========================================================================== */
-
-/* Large Laptops & Standard Monitors (1024px - 1400px) */
-@media (max-width: 1200px) {
-    .main-content-grid {
-        grid-template-columns: 1fr;
-    }
-    .actions-grid-admin {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-/* Tablets Portrait (768px - 1023px) */
-@media (max-width: 992px) {
-    .actions-grid-admin {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .admin-hero {
-        flex-direction: column;
-        text-align: center;
-        padding: 1.5rem;
-    }
-    .admin-greeting {
-        font-size: 1.75rem;
-    }
-}
-
-/* Mobile Devices (iPhone etc - < 768px) */
 @media (max-width: 768px) {
-    .admin-home-container {
-        padding: 1rem;
-    }
-    .stats-grid-enhanced {
-        grid-template-columns: 1fr;
-    }
-    .actions-grid-admin {
-        grid-template-columns: 1fr;
-    }
-    .action-card-admin {
-        flex-direction: row;
-        text-align: left;
-        padding: 0.75rem 1rem;
-    }
-    .action-card-admin h3 {
-        margin: 0;
-    }
-    .admin-greeting {
-        font-size: 1.5rem;
-    }
-    .user-avatar-large {
-        width: 50px;
-        height: 50px;
-        font-size: 1.5rem;
-    }
-    .quick-actions-section, .chart-section, .recent-sales-section {
-        padding: 1rem;
-    }
-    .chart-wrapper {
-        height: 250px !important;
-    }
+  .admin-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-chart__canvas {
+    height: 280px;
+  }
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}.sale-id { font-weight: 700; color: var(--dash-text-muted); }
-.valor-cell { font-weight: 700; color: var(--dash-success); }
-.cliente-cell { font-weight: 600; }
+@media (max-width: 560px) {
+  .admin-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions__list {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-hero__greeting {
+    font-size: var(--fs-xl);
+  }
+}

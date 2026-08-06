@@ -3,9 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
 import "./ReferenciasPage.css";
 import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaTags, FaTrash, FaSearch, FaTimes, FaSitemap, FaSave } from "react-icons/fa";
-import * as XLSX from 'xlsx';
 import { AppContext } from "../AppContext";
 import AppNotification from '../components/AppNotification';
+import { PageHeader, Button } from '../components/ui';
 
 // ─── Inline notification helper ───────────────────────────────────────────────
 const InlineNotif = ({ message, type }) => {
@@ -28,7 +28,6 @@ const InlineNotif = ({ message, type }) => {
 const CategoriasModal = ({ isOpen, onClose }) => {
   const [nombre, setNombre] = useState('');
   const [notif, setNotif] = useState({ message: '', type: '' });
-  const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
 
   // Auto-dismiss notification
@@ -49,7 +48,7 @@ const CategoriasModal = ({ isOpen, onClose }) => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => API.post('/suministros/categorias/', data, { headers: { Authorization: `Bearer ${token}` } }),
+    mutationFn: (data) => API.post('/suministros/categorias/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-categorias'] });
       setNombre('');
@@ -62,7 +61,7 @@ const CategoriasModal = ({ isOpen, onClose }) => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => API.delete(`/suministros/categorias/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
+    mutationFn: (id) => API.delete(`/suministros/categorias/${id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-categorias'] });
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
@@ -95,9 +94,9 @@ const CategoriasModal = ({ isOpen, onClose }) => {
             className="mgmt-input"
             required
           />
-          <button type="submit" className="ref-btn-primary" disabled={createMutation.isLoading} style={{ whiteSpace: 'nowrap' }}>
+          <Button type="submit" size="sm" loading={createMutation.isPending} style={{ whiteSpace: 'nowrap' }}>
             <FaPlus /> Agregar
-          </button>
+          </Button>
         </form>
 
         <div style={{ maxHeight: 320, overflowY: 'auto' }}>
@@ -114,7 +113,7 @@ const CategoriasModal = ({ isOpen, onClose }) => {
                     onClick={() => { if (window.confirm(`¿Eliminar la categoría "${cat.nombre}"?`)) deleteMutation.mutate(cat.id); }}
                     className="delete-btn"
                     title="Eliminar categoría"
-                    disabled={deleteMutation.isLoading}
+                    disabled={deleteMutation.isPending}
                   >
                     <FaTrash size={13} />
                   </button>
@@ -139,7 +138,6 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   const [filterCatId, setFilterCatId] = useState(''); // for list filtering
   const [notif, setNotif] = useState({ message: '', type: '' });
   const [editingSubcat, setEditingSubcat] = useState(null);
-  const token = localStorage.getItem("accessToken");
   const queryClient = useQueryClient();
 
   // Auto-dismiss notification
@@ -178,7 +176,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => API.post('/suministros/subcategorias/', data, { headers: { Authorization: `Bearer ${token}` } }),
+    mutationFn: (data) => API.post('/suministros/subcategorias/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['productos-all'] });
@@ -194,7 +192,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => API.put(`/suministros/subcategorias/${id}/`, data, { headers: { Authorization: `Bearer ${token}` } }),
+    mutationFn: ({ id, data }) => API.put(`/suministros/subcategorias/${id}/`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['productos-all'] });
@@ -211,7 +209,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => API.delete(`/suministros/subcategorias/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
+    mutationFn: (id) => API.delete(`/suministros/subcategorias/${id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['referencias'] });
@@ -303,11 +301,11 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                 <button
                   type="submit"
                   className="subcat-form__submit"
-                  disabled={createMutation.isLoading || updateMutation.isLoading}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                   style={{ flex: 1, margin: 0, height: '36px' }}
                 >
                   {editingSubcat ? <FaSave style={{ marginRight: 6 }} /> : <FaPlus style={{ marginRight: 6 }} />}
-                  {createMutation.isLoading || updateMutation.isLoading ? 'Guardando...' : (editingSubcat ? 'Guardar Cambios' : 'Agregar Subcategoría')}
+                  {createMutation.isPending || updateMutation.isPending ? 'Guardando...' : (editingSubcat ? 'Guardar Cambios' : 'Agregar Subcategoría')}
                 </button>
                 {editingSubcat && (
                   <button
@@ -370,7 +368,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                           onClick={() => setEditingSubcat(sub)}
                           className="action-btn"
                           title="Editar subcategoría"
-                          style={{ padding: '0.35rem', color: '#1e3a8a' }}
+                          style={{ padding: '0.35rem', color: 'var(--accent)' }}
                         >
                           <FaEdit size={13} />
                         </button>
@@ -381,7 +379,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                           }}
                           className="delete-btn"
                           title="Eliminar subcategoría"
-                          disabled={deleteMutation.isLoading}
+                          disabled={deleteMutation.isPending}
                           style={{ padding: '0.35rem' }}
                         >
                           <FaTrash size={12} />
@@ -541,10 +539,10 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
           </div>
 
           <div className="ref-modal-actions">
-            <button type="button" className="ref-btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="ref-btn-primary" disabled={isLoading}>
+            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" loading={isLoading}>
               {isLoading ? 'Guardando...' : (referencia ? 'Guardar Cambios' : 'Crear Referencia')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -674,8 +672,8 @@ function ReferenciasPage() {
     mutationFn: (referenciaData) => {
       const { id, ...data } = referenciaData;
       return id
-        ? API.put(`referencias/${id}/`, data, { headers: { Authorization: `Bearer ${token}` } })
-        : API.post("referencias/", data, { headers: { Authorization: `Bearer ${token}` } });
+        ? API.put(`referencias/${id}/`, data)
+        : API.post("referencias/", data);
     },
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["referencias"] });
@@ -693,7 +691,8 @@ function ReferenciasPage() {
   const handleCloseModal = () => setIsModalOpen(false);
   const handleSave = (data) => mutation.mutate(data);
 
-  const exportReferencias = () => {
+  const exportReferencias = async () => {
+    const XLSX = await import('xlsx');
     const dataToExport = sortedReferencias.map(ref => ({
       'Referencia': ref.nombre,
       'Proveedor': ref.proveedor_name,
@@ -707,73 +706,72 @@ function ReferenciasPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="ds-page referencias-page ds-fade-in">
       <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
-          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem', flexShrink: 0 }} />
+      <PageHeader
+        icon={FaTags}
+        title="Referencias"
+        subtitle="Catálogo de referencias de productos"
+        actions={
+          <>
+            <Button variant="ghost" icon={FaTags} onClick={() => setIsCategoriasModalOpen(true)} title="Gestionar categorías" />
+            <Button variant="ghost" icon={FaSitemap} onClick={() => setIsSubcategoriasModalOpen(true)}>
+              <span className="long-text">Subcategorías</span>
+              <span className="short-text">Subcat.</span>
+            </Button>
+            {usuario?.role === 'administrador' && (
+              <Button variant="ghost" icon={FaFileExport} onClick={exportReferencias} title="Exportar a Excel" />
+            )}
+            <Button variant="primary" icon={FaPlus} onClick={() => handleOpenModal()}>
+              <span className="long-text">Nueva Referencia</span>
+              <span className="short-text">Nueva</span>
+            </Button>
+          </>
+        }
+      />
+      <div className="ds-card ref-filters" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap' }}>
+        <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'nowrap' }}>
+          <div className="v-search-pill" style={{ width: '320px', maxWidth: '100%' }}>
+            <FaSearch />
             <input
               type="text"
               placeholder="Buscar referencia..."
               value={filterSearch}
               onChange={e => setFilterSearch(e.target.value)}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '160px' }}
+              style={{ width: '100%' }}
             />
           </div>
-          <div className="o-select-pill">
-            <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)}>
-              <option value="">Categoría: Todas</option>
+          <div className="v-select-pill">
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Categoría:</span>
+            <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.5rem' }}>
+              <option value="">Todas</option>
               {categorias.map(c => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}
             </select>
           </div>
-          <div className="o-select-pill">
-            <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
-              <option value="">Proveedor: Todos</option>
+          <div className="v-select-pill">
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Proveedor:</span>
+            <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.5rem' }}>
+              <option value="">Todos</option>
               {proveedores.map(p => (
                 <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
               ))}
             </select>
           </div>
           {hasFilters && (
-            <button className="o-btn-ghost" onClick={clearFilters} title="Limpiar filtros">
+            <button className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
               <FaTimes />
             </button>
           )}
         </div>
-
-        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* Categorías */}
-          <button className="o-btn-ghost" onClick={() => setIsCategoriasModalOpen(true)} title="Gestionar categorías">
-            <FaTags />
-          </button>
-
-          {/* Subcategorías */}
-          <button className="v-btn-ghost" onClick={() => setIsSubcategoriasModalOpen(true)} title="Gestionar subcategorías">
-            <FaSitemap /> Subcategorías
-          </button>
-
-          {/* Exportar */}
-          {usuario?.role === 'administrador' && (
-            <button className="v-btn-ghost" onClick={exportReferencias} title="Exportar a Excel">
-              <FaFileExport /> Exportar
-            </button>
-          )}
-
-          {/* Nueva Referencia */}
-          <button className="v-btn-primary-glow" onClick={() => handleOpenModal()}>
-            <FaPlus /> Nueva Referencia
-          </button>
-        </div>
       </div>
 
-      <div className="ordenes-container">
+      <div className="ordenes-container ds-card">
         <div className="desktop-view">
           <table className="premium-table">
             <thead>
@@ -839,8 +837,8 @@ function ReferenciasPage() {
                         onClick={() => handleOpenModal(ref)}
                         className="action-btn"
                         title="Editar referencia"
-                        disabled={mutation.isLoading}
-                        style={{ margin: '0 auto', color: '#1e3a8a', padding: '0.45rem' }}
+                        disabled={mutation.isPending}
+                        style={{ margin: '0 auto', color: 'var(--accent)', padding: '0.45rem' }}
                       >
                         <FaEdit size={16} />
                       </button>
@@ -861,7 +859,7 @@ function ReferenciasPage() {
         onSave={handleSave}
         proveedores={proveedores}
         referencia={editingReferencia}
-        isLoading={mutation.isLoading}
+        isLoading={mutation.isPending}
         categorias={categorias}
         subcategorias={subcategorias}
       />

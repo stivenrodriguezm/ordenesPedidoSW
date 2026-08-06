@@ -2,11 +2,11 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import API from '../services/api';
 import { 
-  FaPlus, FaEdit, FaUserShield, FaUserPlus, FaUserCog, FaUsers, 
-  FaChevronLeft, FaChevronRight, FaTimes, FaSpinner, FaCheckCircle, FaExclamationCircle
+  FaPlus, FaEdit, FaUserShield, FaUsers, 
+  FaChevronLeft, FaChevronRight, FaCheckCircle, FaExclamationCircle, FaUserCog
 } from 'react-icons/fa';
 import { AppContext, usePermissions } from '../AppContext';
-import Loader from '../components/Loader';
+import { PageHeader, Button, Badge, Modal, Tabs, LoadingBlock, ErrorState, EmptyState } from '../components/ui';
 import './UsuariosPage.css';
 
 // ==========================================
@@ -23,12 +23,19 @@ const ToastNotification = ({ notification }) => {
   );
 };
 
+const roleTone = (role) => {
+  const r = (role || '').toLowerCase();
+  if (r === 'administrador') return 'accent';
+  if (r === 'vendedor') return 'info';
+  if (r === 'auxiliar') return 'warning';
+  return 'neutral';
+};
+
 // ==========================================
 // SECCIÓN: MODAL DE EDICIÓN DE USUARIOS
 // ==========================================
 const UserModal = ({ isOpen, onClose, user, isEditing }) => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("accessToken");
   const [formData, setFormData] = useState({
     username: '', first_name: '', last_name: '', role: 'vendedor', is_active: true, password: ''
   });
@@ -48,10 +55,9 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
   const mutation = useMutation({
     mutationFn: async (dataToSubmit) => {
       const url = isEditing ? `/usuarios/${user.id}/` : `/usuarios/`;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
       let payload = { ...dataToSubmit };
       if (isEditing && !payload.password) delete payload.password;
-      return isEditing ? (await API.put(url, payload, config)).data : (await API.post(url, payload, config)).data;
+      return isEditing ? (await API.put(url, payload)).data : (await API.post(url, payload)).data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["usuarios-list"]);
@@ -65,81 +71,73 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
-        
-        <div className="modal-header">
-          <h3>
-            {isEditing ? <><FaEdit style={{ marginRight: '8px', color: 'var(--color-primary)' }}/> Editar Usuario</> : <><FaUserPlus style={{ marginRight: '8px', color: 'var(--color-primary)' }}/> Nuevo Usuario</>}
-          </h3>
-          <button onClick={() => onClose(false)} className="modal-close">
-            <FaTimes />
-          </button>
+    <Modal
+      open={isOpen}
+      onClose={() => onClose(false)}
+      title={isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
+      size="md"
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => onClose(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="usuario-form" loading={mutation.isPending}>
+            Guardar Datos
+          </Button>
+        </>
+      }
+    >
+      {errorObj && (
+        <div className="ds-error-box" style={{ marginBottom: '1rem', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+          {typeof errorObj === 'object' ? Object.keys(errorObj).map(k => <div key={k}><b>{k}:</b> {errorObj[k]}</div>) : errorObj}
+        </div>
+      )}
+
+      <form id="usuario-form" onSubmit={(e) => { e.preventDefault(); mutation.mutate(formData); }} autoComplete="off">
+        <div className="usuarios-form-grid">
+          <div className="ds-field">
+            <label className="ds-label">Nombres</label>
+            <input className="ds-input" type="text" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} required autoComplete="off" />
+          </div>
+          <div className="ds-field">
+            <label className="ds-label">Apellidos</label>
+            <input className="ds-input" type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} required autoComplete="off" />
+          </div>
         </div>
 
-        <div>
-          {errorObj && (
-            <div style={{ backgroundColor: '#fce8e8', color: 'var(--color-destructive)', padding: '1rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem', border: '1px solid #f8d7da' }}>
-              {typeof errorObj === 'object' ? Object.keys(errorObj).map(k => <div key={k}><b>{k}:</b> {errorObj[k]}</div>) : errorObj}
-            </div>
-          )}
-          
-          <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(formData); }} autoComplete="off">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label>Nombres</label>
-                <input type="text" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} required autoComplete="off" />
-              </div>
-              <div className="form-group">
-                <label>Apellidos</label>
-                <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} required autoComplete="off" />
-              </div>
-            </div>
-            
-            <div className="form-group">
-              <label>Nombre de Usuario (Login)</label>
-              <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required autoComplete="new-username" />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label>Rol Interno</label>
-                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                  <option value="vendedor">Vendedor</option>
-                  <option value="auxiliar">Auxiliar</option>
-                  <option value="transportador">Transportador</option>
-                  <option value="administrador">Administrador</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  Contraseña 
-                  {isEditing && <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--color-text-placeholder)' }}>Dejar vacío para no cambiar</span>}
-                </label>
-                <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!isEditing} placeholder={isEditing ? "••••••••" : "Introduce contraseña"} autoComplete="new-password" />
-              </div>
-            </div>
-
-            <div className="checkbox-card">
-              <input type="checkbox" id="is_active" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
-              <label htmlFor="is_active" style={{ cursor: 'pointer', margin: 0, width: '100%' }}>
-                <span style={{ display: 'block', fontWeight: 600, color: 'var(--color-text-primary)' }}>Cuenta habilitada (Activa)</span>
-                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.2rem' }}>Si se desmarca, el usuario perderá el acceso inmediatamente sin eliminar sus registros.</span>
-              </label>
-            </div>
-
-            <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn-secondary" onClick={() => onClose(false)}>
-                Cancelar
-              </button>
-              <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={mutation.isLoading}>
-                {mutation.isLoading ? <FaSpinner className="loader" style={{ width: '1rem', height: '1rem', marginBottom: 0, borderWidth: '2px' }}/> : 'Guardar Datos'}
-              </button>
-            </div>
-          </form>
+        <div className="ds-field">
+          <label className="ds-label">Nombre de Usuario (Login)</label>
+          <input className="ds-input" type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required autoComplete="new-username" />
         </div>
-      </div>
-    </div>
+
+        <div className="usuarios-form-grid">
+          <div className="ds-field">
+            <label className="ds-label">Rol Interno</label>
+            <select className="ds-select" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+              <option value="vendedor">Vendedor</option>
+              <option value="auxiliar">Auxiliar</option>
+              <option value="transportador">Transportador</option>
+              <option value="administrador">Administrador</option>
+            </select>
+          </div>
+          <div className="ds-field">
+            <label className="ds-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              Contraseña
+              {isEditing && <span className="ds-field__hint" style={{ marginTop: 0 }}>Dejar vacío para no cambiar</span>}
+            </label>
+            <input className="ds-input" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!isEditing} placeholder={isEditing ? "••••••••" : "Introduce contraseña"} autoComplete="new-password" />
+          </div>
+        </div>
+
+        <div className="checkbox-card">
+          <input type="checkbox" id="is_active" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
+          <label htmlFor="is_active" style={{ cursor: 'pointer', margin: 0, width: '100%' }}>
+            <span style={{ display: 'block', fontWeight: 600, color: 'var(--text)' }}>Cuenta habilitada (Activa)</span>
+            <span style={{ display: 'block', fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Si se desmarca, el usuario perderá el acceso inmediatamente sin eliminar sus registros.</span>
+          </label>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
@@ -212,7 +210,8 @@ const FEATURES_CATALOG = [
       { code: "CREAR_RECIBO", label: "Crear Recibo de Caja" },
       { code: "APROBAR_RECIBO", label: "Confirmar Recibo de Caja" },
       { code: "ACCESO_EGRESOS", label: "Acceso a Comprobantes de Egreso" },
-      { code: "CREAR_COMPROBANTE_EGRESO", label: "Crear Comprobante de Egreso" }
+      { code: "CREAR_COMPROBANTE_EGRESO", label: "Crear Comprobante de Egreso" },
+      { code: "APROBAR_EGRESO", label: "Confirmar Transferencia de Egreso" }
     ] 
   },
   { module: "Bases de Datos", features: [
@@ -284,13 +283,13 @@ const RolePermissionsTab = ({ notify }) => {
 
   const handleSave = () => mutation.mutate(selectedRp);
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <LoadingBlock message="Cargando permisos..." />;
 
   return (
     <div className="roles-container">
       
       {/* Roles Menu */}
-      <div className="roles-sidebar">
+      <div className="roles-sidebar ds-card">
         <div className="roles-sidebar-header">
           Roles Disponibles
         </div>
@@ -312,31 +311,26 @@ const RolePermissionsTab = ({ notify }) => {
       </div>
 
       {/* Permissions Editor */}
-      <div className="permissions-editor">
+      <div className="permissions-editor ds-card">
         {!selectedRp ? (
-          <div className="permissions-empty">
-            <FaUserShield size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-            <p style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--color-text-secondary)', margin: 0 }}>Selecciona un Rol de la izquierda</p>
-            <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Para visualizar y editar sus permisos dinámicos.</p>
-          </div>
+          <EmptyState
+            icon={FaUserShield}
+            title="Selecciona un Rol de la izquierda"
+            message="Para visualizar y editar sus permisos dinámicos."
+          />
         ) : (
           <div className="permissions-content">
             <div className="permissions-header">
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--color-text-primary)' }}>
+                <h3 style={{ margin: 0, fontSize: 'var(--fs-lg)', color: 'var(--text)' }}>
                   Permisos para: <span className="role-highlight">{selectedRp.role.toUpperCase()}</span>
                 </h3>
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Activa o desactiva módulos para controlar el acceso a la plataforma.</p>
+                <p className="ds-muted" style={{ margin: '0.5rem 0 0 0', fontSize: 'var(--fs-sm)' }}>Activa o desactiva módulos para controlar el acceso a la plataforma.</p>
               </div>
               {hasPermission('EDITAR_PERMISOS_SISTEMA') && (
-                <button 
-                  className="o-btn-primary-glow" 
-                  style={{ width: 'auto', padding: '0.5rem 1rem' }}
-                  onClick={handleSave} 
-                  disabled={mutation.isLoading}
-                >
-                  {mutation.isLoading ? <FaSpinner className="loader" style={{ width: '1rem', height: '1rem', marginBottom: 0, borderWidth: '2px' }}/> : 'Guardar Reglas'}
-                </button>
+                <Button onClick={handleSave} loading={mutation.isPending}>
+                  Guardar Reglas
+                </Button>
               )}
             </div>
 
@@ -404,7 +398,7 @@ const UsuariosPage = () => {
     }
   }, [notif.message]);
 
-  const { data: pagedData, isLoading, isError, error } = useQuery({
+  const { data: pagedData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['usuarios-list', currentPage],
     queryFn: async () => {
       const resp = await API.get(`/usuarios/?page=${currentPage}`);
@@ -424,133 +418,128 @@ const UsuariosPage = () => {
   };
 
   if (isError) return (
-    <div className="page-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <div style={{ textAlign: 'center', backgroundColor: 'var(--color-surface)', padding: '3rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-        <FaExclamationCircle style={{ color: 'var(--color-destructive)', fontSize: '3rem', marginBottom: '1rem' }} />
-        <h2>Error al cargar usuarios</h2>
-        <p style={{ color: 'var(--color-text-secondary)' }}>{error?.message || "Error desconocido"}</p>
-        <p style={{ color: 'var(--color-text-placeholder)', fontSize: '0.85rem', marginTop: '0.5rem' }}>{error?.response?.data?.detail || JSON.stringify(error?.response?.data)}</p>
-      </div>
+    <div className="ds-page">
+      <ErrorState
+        message={`Error al cargar usuarios. ${error?.response?.data?.detail || error?.message || ''}`}
+        onRetry={refetch}
+      />
     </div>
   );
 
   return (
-    <div className="page-container">
+    <div className="ds-page usuarios-page ds-fade-in">
       <ToastNotification notification={notif} />
 
-      {/* Tabs */}
-      <div className="usuarios-tabs-container">
-        <button 
-          className={`usuarios-tab ${activeTab === 'cuentas' ? 'active' : ''}`}
-          onClick={() => setActiveTab('cuentas')}
-        >
-          <FaUsers /> Cuentas de Usuario
-        </button>
-        <button 
-          className={`usuarios-tab ${activeTab === 'permisos' ? 'active' : ''}`}
-          onClick={() => setActiveTab('permisos')}
-        >
-          <FaUserCog /> Reglas y Permisos de Roles
-        </button>
-      </div>
+      <PageHeader
+        icon={FaUsers}
+        title="Usuarios y Permisos"
+        subtitle="Gestiona las cuentas de acceso y las reglas de roles"
+        actions={
+          activeTab === 'cuentas' && hasPermission('ADMINISTRAR_USUARIOS') ? (
+            <Button icon={FaPlus} onClick={handleCreate}>
+              Crear Usuario
+            </Button>
+          ) : null
+        }
+      />
+
+      <Tabs
+        tabs={[
+          { id: 'cuentas', label: <><FaUsers /> Cuentas de Usuario</> },
+          { id: 'permisos', label: <><FaUserCog /> Reglas y Permisos de Roles</> },
+        ]}
+        active={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* TAB: CUENTAS */}
       {activeTab === 'cuentas' && (
         <div>
-          {hasPermission('ADMINISTRAR_USUARIOS') && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-              <button className="v-btn-primary-glow" onClick={handleCreate}>
-                <FaPlus /> Crear Usuario
-              </button>
-            </div>
-          )}
-
           {isLoading ? (
-            <Loader />
+            <LoadingBlock message="Cargando usuarios..." />
           ) : (
-            <div className="table-container">
-              <table className="standard-table">
-                <thead>
-                  <tr>
-                    <th>Usuario</th>
-                    <th>Nombres</th>
-                    <th>Rol de Sistema</th>
-                    <th>Estado</th>
-                    <th style={{ textAlign: 'right' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuarios.length === 0 ? (
+            <div className="ds-table-wrap">
+              <div className="ds-table-scroll">
+                <table className="ds-table">
+                  <thead>
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-placeholder)' }}>
-                        No se encontraron usuarios en esta página.
-                      </td>
+                      <th>Usuario</th>
+                      <th>Nombres</th>
+                      <th>Rol de Sistema</th>
+                      <th>Estado</th>
+                      <th style={{ textAlign: 'right' }}>Acciones</th>
                     </tr>
-                  ) : (
-                    usuarios.map(u => (
-                      <tr key={u.id}>
-                        <td>
-                          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>@{u.username}</span>
-                        </td>
-                        <td style={{ color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-                          {u.first_name} {u.last_name}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${u.role}`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td>
-                          {u.is_active ? (
-                            <span className="badge status-active">
-                              <span className="status-dot"></span> Activo
-                            </span>
-                          ) : (
-                            <span className="badge status-inactive">
-                              <span className="status-dot"></span> Bloqueado
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button 
-                            onClick={() => handleEdit(u)} 
-                            className="action-btn"
-                            title="Editar Usuario"
-                          >
-                            <FaEdit size={18} />
-                          </button>
+                  </thead>
+                  <tbody>
+                    {usuarios.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                          No se encontraron usuarios en esta página.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      usuarios.map(u => (
+                        <tr key={u.id}>
+                          <td>
+                            <span style={{ fontWeight: 600, color: 'var(--text)' }}>@{u.username}</span>
+                          </td>
+                          <td className="ds-muted" style={{ fontWeight: 500 }}>
+                            {u.first_name} {u.last_name}
+                          </td>
+                          <td>
+                            <Badge tone={roleTone(u.role)}>{u.role}</Badge>
+                          </td>
+                          <td>
+                            <Badge tone={u.is_active ? 'success' : 'danger'}>
+                              {u.is_active ? 'Activo' : 'Bloqueado'}
+                            </Badge>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={FaEdit}
+                              onClick={() => handleEdit(u)}
+                              title="Editar Usuario"
+                              aria-label="Editar Usuario"
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Controles de Paginación */}
               {totalCount > 0 && (
                 <div className="pagination-controls">
-                  <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-                    Mostrando <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{Math.min((currentPage - 1) * PAGE_SIZE + 1, totalCount)}</span> a <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{Math.min(currentPage * PAGE_SIZE, totalCount)}</span> de <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{totalCount}</span>
+                  <div className="ds-muted" style={{ fontSize: 'var(--fs-sm)' }}>
+                    Mostrando <span style={{ fontWeight: 600, color: 'var(--text)' }}>{Math.min((currentPage - 1) * PAGE_SIZE + 1, totalCount)}</span> a <span style={{ fontWeight: 600, color: 'var(--text)' }}>{Math.min(currentPage * PAGE_SIZE, totalCount)}</span> de <span style={{ fontWeight: 600, color: 'var(--text)' }}>{totalCount}</span>
                   </div>
                   
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <button 
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={FaChevronLeft}
                       onClick={() => setCurrentPage(old => Math.max(old - 1, 1))}
                       disabled={currentPage === 1 || pagedData?.previous === null}
                       title="Página anterior"
-                    >
-                      <FaChevronLeft />
-                    </button>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-primary)', padding: '0 0.5rem' }}>
+                      aria-label="Página anterior"
+                    />
+                    <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 500, color: 'var(--text)', padding: '0 0.5rem' }}>
                       Página {currentPage} de {totalPages}
                     </div>
-                    <button 
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={FaChevronRight}
                       onClick={() => setCurrentPage(old => (currentPage < totalPages ? old + 1 : old))}
                       disabled={currentPage >= totalPages || pagedData?.next === null}
                       title="Página siguiente"
-                    >
-                      <FaChevronRight />
-                    </button>
+                      aria-label="Página siguiente"
+                    />
                   </div>
                 </div>
               )}

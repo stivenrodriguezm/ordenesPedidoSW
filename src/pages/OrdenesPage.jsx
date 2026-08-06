@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx';
-import { FaChevronDown, FaFileExport, FaPlus, FaEdit } from 'react-icons/fa';
+import { FaChevronDown, FaFileExport, FaPlus, FaEdit, FaClipboardList } from 'react-icons/fa';
 import './OrdenesPage.css';
 import './VentasImprovements.css';
 import { AppContext, usePermissions } from '../AppContext';
 import AppNotification from '../components/AppNotification';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
+import { Button, PageHeader, Badge, Modal, LoadingBlock, ErrorState, EmptyState } from '../components/ui';
 import API from '../services/api';
-import logoFinal from '../assets/logoFinal.png';
+import { formatCOP } from '../utils/formatCOP';
+import { formatDateCorta } from '../utils/dates';
+import useDebounce from '../hooks/useDebounce';
+import { FaSearch } from 'react-icons/fa';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
 const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading, userRole }) => {
@@ -46,71 +49,71 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
     onSave(orden.id, payload);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay">
-      <div className="modal-content edit-order-modal">
-        <div className="modal-header">
-          <h3>Actualizar Pedido O.P. #{orden.id}</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <form onSubmit={handleSubmit} className="edit-order-form">
-          {canEditCosto && (
-            <div className="form-group">
-              <label>COSTO DEL PEDIDO</label>
-              <input
-                type="number"
-                name="costo"
-                value={formState.costo}
-                onChange={handleChange}
-                placeholder="0"
-                step="any"
-              />
-            </div>
-          )}
-          {canEditEstado && (
-            <div className="form-group">
-              <label>Estado del Pedido</label>
-              <select name="estado" value={formState.estado} onChange={handleChange}>
-                {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-              </select>
-            </div>
-          )}
-          {canEditTela && (
-            <div className="form-group full-width">
-              <label>Estado de Tela</label>
-              <select
-                name="tela"
-                value={formState.tela}
-                onChange={handleChange}
-                disabled={telaLockedForVendedor}
-                style={telaLockedForVendedor ? { backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', opacity: 0.7 } : {}}
-              >
-                {telas.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {telaLockedForVendedor && (
-                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem', fontStyle: 'italic' }}>
-                  🔒 No se puede modificar el estado de tela cuando ya está "En fabrica".
-                </p>
-              )}
-            </div>
-          )}
-          <div className="edit-order-modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={isLoading || (canEditTela && !canEditEstado && telaLockedForVendedor)}
-            >
-              {isLoading ? 'Guardando...' : 'Actualizar Pedido'}
-            </button>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={`Actualizar Pedido O.P. #${orden.id}`}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            type="submit"
+            form="edit-orden-form"
+            loading={isLoading}
+            disabled={canEditTela && !canEditEstado && telaLockedForVendedor}
+          >
+            Actualizar Pedido
+          </Button>
+        </>
+      }
+    >
+      <form id="edit-orden-form" onSubmit={handleSubmit} className="edit-order-form">
+        {canEditCosto && (
+          <div className="ds-field">
+            <label className="ds-label">Costo del pedido</label>
+            <input
+              type="number"
+              name="costo"
+              className="ds-input"
+              value={formState.costo}
+              onChange={handleChange}
+              placeholder="0"
+              step="any"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+        {canEditEstado && (
+          <div className="ds-field">
+            <label className="ds-label">Estado del pedido</label>
+            <select name="estado" className="ds-select" value={formState.estado} onChange={handleChange}>
+              {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+            </select>
+          </div>
+        )}
+        {canEditTela && (
+          <div className="ds-field">
+            <label className="ds-label">Estado de tela</label>
+            <select
+              name="tela"
+              className="ds-select"
+              value={formState.tela}
+              onChange={handleChange}
+              disabled={telaLockedForVendedor}
+            >
+              {telas.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {telaLockedForVendedor && (
+              <p className="ds-field__hint">🔒 No se puede modificar el estado de tela cuando ya está "En fabrica".</p>
+            )}
+          </div>
+        )}
+      </form>
+    </Modal>
   );
 };
 
@@ -142,6 +145,9 @@ const OrdenesPage = () => {
   const [selectedExhibiciones, setSelectedExhibiciones] = useState(['true', 'false']);
   const [isExhibicionesOpen, setIsExhibicionesOpen] = useState(false);
   const exhibicionesRef = useRef(null);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
@@ -181,27 +187,32 @@ const OrdenesPage = () => {
   ];
   const telas = ['Por pedir', 'Pedida', 'En fabrica', 'Sin tela'];
 
-  // ... (el resto de funciones como formatDate, formatNumber, etc., no cambian)
+  const displayedOrdenes = useMemo(() => {
+    if (!debouncedSearchTerm) return filteredOrdenes;
+    const term = debouncedSearchTerm.toLowerCase();
+    return filteredOrdenes.filter(orden =>
+      orden.id?.toString().includes(term) ||
+      orden.proveedor_nombre?.toLowerCase().includes(term) ||
+      orden.vendedor?.toLowerCase().includes(term) ||
+      orden.venta?.toString().includes(term) ||
+      orden.orden_venta?.toLowerCase().includes(term)
+    );
+  }, [filteredOrdenes, debouncedSearchTerm]);
+
+  // Formato visible histórico: 'dd-mmm-yyyy' (ej. '05-ene-2026'), montado sobre formatDateCorta.
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
-    // Parsear la cadena YYYY-MM-DD como fecha local
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day); // month - 1 porque los meses son 0-indexados
-
-    const formattedDay = String(date.getDate()).padStart(2, '0');
-    const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    const formattedMonth = monthNames[date.getMonth()];
-    const formattedYear = date.getFullYear();
-    return `${formattedDay}-${formattedMonth}-${formattedYear}`;
+    const corta = formatDateCorta(dateStr); // '5 ene 2026'
+    if (!corta) return '-';
+    const [d, m, y] = corta.split(' ');
+    return `${String(d).padStart(2, '0')}-${m}-${y}`;
   };
 
+  // Montado sobre formatCOP: mismo formato '1.234' sin prefijo '$' (el '$' se pone en el punto de uso).
   const formatNumber = (value) => {
     if (value === null || value === undefined) return '$0';
-    const num = parseFloat(String(value).replace(/[^0-9.]/g, '')); // Permite decimales y limpia no-números
-    if (isNaN(num)) {
-      return '$0';
-    }
-    return `${num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    const s = formatCOP(value);
+    return s ? s.slice(1) : '$0';
   };
 
   const capitalizeEstado = (estado) => {
@@ -406,8 +417,9 @@ const OrdenesPage = () => {
     return isNaN(num) ? null : num;
   };
 
-  const exportOrdenes = () => {
-    const dataToExport = filteredOrdenes.map(orden => {
+  const exportOrdenes = async () => {
+    const XLSX = await import('xlsx');
+    const dataToExport = displayedOrdenes.map(orden => {
       const data = {
         'O.P.': orden.id,
         'Proveedor': orden.proveedor_nombre,
@@ -460,12 +472,59 @@ const OrdenesPage = () => {
   };
   const getTelaClass = (tela) => tela?.toLowerCase().replace(/ /g, '-') || 'default';
 
+  // Tono del Badge según la clase de estado calculada por getEstadoClass
+  const estadoTone = (estadoClass) => {
+    if (estadoClass === 'recibido') return 'success';
+    if (estadoClass === 'anulado' || estadoClass === 'atrasado') return 'danger';
+    if (estadoClass === 'en-proceso' || estadoClass === 'pendiente') return 'info';
+    return 'neutral';
+  };
+
+  // Tono del Badge para estados de tela (pedido y PedidoTela)
+  const telaTone = (tela) => {
+    const t = (tela || '').toLowerCase();
+    if (t === 'en fabrica') return 'success';
+    if (t === 'pedida' || t === 'pendiente') return 'warning';
+    if (t === 'por pedir') return 'danger';
+    if (t === 'en lottus') return 'info';
+    return 'neutral';
+  };
+
 
   return (
-    <div className="page-container">
-      {/* ... (código JSX sin cambios hasta el modal) ... */}
-      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
-        <div className="o-filters-bar" style={{ margin: 0, flex: 1, gap: '0.75rem', display: 'flex', alignItems: 'center' }}>
+    <div className="ds-page ordenes-page ds-fade-in">
+      <PageHeader
+        icon={FaClipboardList}
+        title="Órdenes de Pedido"
+        subtitle="Gestiona y filtra los pedidos a proveedores"
+        actions={
+          <>
+            {hasPermission('VER_COSTOS_ORDEN') && (
+              <Button variant="ghost" icon={FaFileExport} onClick={exportOrdenes} title="Exportar Excel" />
+            )}
+            <Button variant="primary" icon={FaPlus} onClick={() => navigate('/ordenes/nuevo')}>
+              <span className="long-text">Crear Pedido</span>
+              <span className="short-text">Crear</span>
+            </Button>
+          </>
+        }
+      />
+
+      {/* Barra de filtros multi-select */}
+      <div className="ds-card ordenes-filters">
+        <div className="o-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
+          
+          {/* Nuevo Buscador */}
+          <div className="v-search-pill">
+            <FaSearch />
+            <input
+              type="text"
+              placeholder="Buscar OP, Cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
           <div className="v-multi-select-container" ref={proveedoresRef}>
             <button type="button" className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`} onClick={() => setIsProveedoresOpen(prev => !prev)}>
               <span>{selectedProveedores.length === 0 ? 'Proveedor: Ninguno' : selectedProveedores.length === proveedores.length ? 'Proveedor: Todos' : `Proveedores (${selectedProveedores.length})`}</span>
@@ -553,22 +612,9 @@ const OrdenesPage = () => {
             )}
           </div>
         </div>
-
-        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {hasPermission('VER_COSTOS_ORDEN') && (
-            <button className="o-btn-ghost" onClick={exportOrdenes} title="Exportar Excel">
-              <FaFileExport />
-            </button>
-          )}
-          <button className="o-btn-primary-glow" onClick={() => navigate('/ordenes/nuevo')}>
-            <FaPlus />
-            <span className="long-text">Crear Pedido</span>
-            <span className="short-text">Crear</span>
-          </button>
-        </div>
       </div>
 
-      <div className="ordenes-container">
+      <div className="ordenes-container ds-card">
         {/* Desktop Table View */}
         <div className="desktop-view">
           <table className="premium-table">
@@ -606,41 +652,35 @@ const OrdenesPage = () => {
                     <td className="td-accion"><div className="skeleton skeleton-text" style={{ width: '20px' }}></div></td>
                   </tr>
                 ))
-              ) : filteredOrdenes.length > 0 ? (
-                filteredOrdenes.map((orden) => (
+              ) : displayedOrdenes.length > 0 ? (
+                displayedOrdenes.map((orden) => (
                   <React.Fragment key={`orden-${orden.id}`}>
-                    <tr className={`table-row-clickable ${expandedOrderId === orden.id ? 'expanded-row-highlight' : ''}`} onClick={() => handleExpandOrder(orden.id)} style={{ cursor: 'pointer' }}>
+                    <tr className={`table-row-clickable ${expandedOrderId === orden.id ? 'expanded-row-highlight' : ''}`} onClick={() => handleExpandOrder(orden.id)}>
                       <td className="td-op"><strong>#{orden.id}</strong></td>
                       <td className="td-proveedor">{orden.proveedor_nombre}</td>
                       <td className="td-vendedor">{orden.vendedor}</td>
                       <td className="td-venta">{orden.venta || orden.orden_venta}</td>
                       <td className="td-fecha-pedido">{formatDate(orden.fecha_pedido)}</td>
                       <td className="td-fecha-llegada">{formatDate(orden.fecha_esperada)}</td>
-                      <td className="td-tela"><span className={`status-badge ${getTelaClass(orden.tela)}`}>{orden.tela}</span></td>
-                      <td className="td-estado"><span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>{getEstadoText(orden.estado, orden.fecha_esperada)}</span></td>
+                      <td className="td-tela"><Badge tone={telaTone(orden.tela)}>{orden.tela}</Badge></td>
+                      <td className="td-estado"><Badge tone={estadoTone(getEstadoClass(orden.estado, orden.fecha_esperada))}>{getEstadoText(orden.estado, orden.fecha_esperada)}</Badge></td>
                       <td className="td-observacion"><div className="truncate-text" title={orden.observacion}>{orden.observacion}</div></td>
-                      <td className="td-exh">{orden.es_exhibicion ? <span className="exh-badge exh-si">Sí</span> : <span className="exh-badge exh-no">No</span>}</td>
+                      <td className="td-exh"><Badge tone={orden.es_exhibicion ? 'success' : 'neutral'}>{orden.es_exhibicion ? 'Sí' : 'No'}</Badge></td>
                       {hasPermission('VER_COSTOS_ORDEN') && <td className="td-costo font-mono">${formatNumber(orden.costo)}</td>}
                       <td className="td-accion">
-                        <button className="btn-icon action-btn" onClick={(e) => { e.stopPropagation(); handleExpandOrder(orden.id); }}>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleExpandOrder(orden.id); }}>
                           <FaChevronDown style={{ transform: expandedOrderId === orden.id ? 'rotate(180deg)' : 'none' }} />
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                     {expandedOrderId === orden.id && (
                       <tr className="expanded-row">
                         <td colSpan={hasPermission('VER_COSTOS_ORDEN') ? 12 : 11}>
                           {loadingDetails ? (
-                            <div className="orden-expanded-loader">
-                              <div className="orden-loader-spinner"></div>
-                              <p className="loader-text">Cargando detalles de la orden...</p>
-                            </div>
+                            <LoadingBlock message="Cargando detalles de la orden..." />
                           ) : errorMessage ? (
-                            <div className="error-message-container" style={{ padding: '2rem', textAlign: 'center' }}>
-                              <p className="error-text">{errorMessage}</p>
-                              <button className="btn-secondary" onClick={() => handleExpandOrder(orden.id)}>
-                                Reintentar Carga
-                              </button>
+                            <div className="ordenes-expanded-error">
+                              <ErrorState message={errorMessage} onRetry={() => handleExpandOrder(orden.id)} />
                             </div>
                           ) : (
                             <div className="orden-details-view">
@@ -649,18 +689,20 @@ const OrdenesPage = () => {
                                 <div className="orden-card-header">
                                   <h4>Información de la Orden</h4>
                                   {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
-                                    <button
-                                      className="btn-editar-pedido btn-editar-pedido--disabled"
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      icon={FaEdit}
                                       disabled
                                       title="Solo el administrador puede editar órdenes anuladas"
                                     >
-                                      <FaEdit /> Editar
-                                    </button>
+                                      Editar
+                                    </Button>
                                   ) : (
                                     (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
-                                      <button className="btn-editar-pedido" onClick={() => openEditModal(orden)} title="Editar pedido">
-                                        <FaEdit /> Editar
-                                      </button>
+                                      <Button variant="secondary" size="sm" icon={FaEdit} onClick={() => openEditModal(orden)} title="Editar pedido">
+                                        Editar
+                                      </Button>
                                     )
                                   )}
                                 </div>
@@ -744,14 +786,13 @@ const OrdenesPage = () => {
                                     <span className="icon">🧵</span>
                                     <h4>Pedidos de Tela</h4>
                                   </div>
-                                  <button
-                                    type="button"
-                                    className="card-header-action"
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon={FaPlus}
                                     onClick={() => setIsTelaModalOpen(true)}
                                     title="Crear Nuevo Pedido de Tela"
-                                  >
-                                    <FaPlus />
-                                  </button>
+                                  />
                                 </div>
                                 {orderTelas.length === 0 ? (
                                   <p className="text-muted text-center" style={{ padding: '1.5rem 0' }}>No hay pedidos de tela asociados.</p>
@@ -762,12 +803,11 @@ const OrdenesPage = () => {
                                         <div className="tela-card-top">
                                           <span className="tela-card-id">PT #{pt.id}</span>
                                           <span
-                                            className={`status-badge tela-estado-badge ${pt.estado?.toLowerCase().replace(/ /g, '-')}`}
+                                            className="tela-estado-click"
                                             onClick={() => setTelaEstadoModal({ open: true, pedidoId: pt.id, currentEstado: pt.estado, newEstado: pt.estado })}
-                                            style={{ cursor: 'pointer' }}
                                             title="Clic para editar estado"
                                           >
-                                            {pt.estado} ✏️
+                                            <Badge tone={telaTone(pt.estado)}>{pt.estado} ✏️</Badge>
                                           </span>
                                         </div>
                                         <p className="tela-card-proveedor"><strong>Proveedor:</strong> {pt.proveedor}</p>
@@ -797,7 +837,7 @@ const OrdenesPage = () => {
                   </React.Fragment>
                 ))
               ) : (
-                <tr><td colSpan={12} className="empty-cell">No hay órdenes para mostrar.</td></tr>
+                <tr><td colSpan={12}><EmptyState title="Sin órdenes" message="No hay órdenes para mostrar con los filtros actuales." /></td></tr>
               )}
             </tbody>
           </table>
@@ -817,15 +857,15 @@ const OrdenesPage = () => {
                 <div className="skeleton skeleton-text" style={{ width: '80px' }}></div>
               </div>
             ))
-          ) : filteredOrdenes.length > 0 ? (
-            filteredOrdenes.map((orden) => (
+          ) : displayedOrdenes.length > 0 ? (
+            displayedOrdenes.map((orden) => (
               <div className="mobile-card" key={orden.id}>
                 <div className="mobile-card-header" onClick={() => handleExpandOrder(orden.id)}>
                   <div className="header-top">
                     <span className="card-id">#{orden.id}</span>
-                    <span className={`status-badge ${getEstadoClass(orden.estado, orden.fecha_esperada)}`}>
+                    <Badge tone={estadoTone(getEstadoClass(orden.estado, orden.fecha_esperada))}>
                       {getEstadoText(orden.estado, orden.fecha_esperada)}
-                    </span>
+                    </Badge>
                   </div>
                   <div className="header-date">{formatDate(orden.fecha_pedido)}</div>
                 </div>
@@ -839,7 +879,7 @@ const OrdenesPage = () => {
                     </div>
                     <div>
                       <span className="label">Tela:</span>
-                      <span className={`status-badge small ${getTelaClass(orden.tela)}`}>{orden.tela}</span>
+                      <Badge tone={telaTone(orden.tela)}>{orden.tela}</Badge>
                     </div>
                   </div>
                 </div>
@@ -852,12 +892,11 @@ const OrdenesPage = () => {
                 {expandedOrderId === orden.id && (
                   <div className="mobile-details-container">
                     {loadingDetails ? (
-                      <div className="orden-expanded-loader" style={{ padding: '2rem' }}>
-                        <div className="orden-loader-spinner"></div>
-                        <p className="loader-text">Cargando detalles...</p>
-                      </div>
+                      <LoadingBlock message="Cargando detalles..." />
                     ) : errorMessage ? (
-                      <div className="error-message">{errorMessage}</div>
+                      <div className="mobile-details-error">
+                        <ErrorState message={errorMessage} onRetry={() => handleExpandOrder(orden.id)} />
+                      </div>
                     ) : (
                       <div className="mobile-expanded-content">
                         <div className="orden-card">
@@ -883,18 +922,20 @@ const OrdenesPage = () => {
                         </div>
 
                         {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
-                          <button
-                            className="btn-editar-pedido btn-editar-pedido--disabled btn-full-width"
+                          <Button
+                            variant="secondary"
+                            icon={FaEdit}
+                            block
                             disabled
                             title="Solo el administrador puede editar órdenes anuladas"
                           >
-                            <FaEdit /> Editar
-                          </button>
+                            Editar
+                          </Button>
                         ) : (
                           (hasPermission('EDITAR_ESTADO_ORDEN') || hasPermission('EDITAR_ESTADO_TELA_ORDEN')) && (
-                            <button className="btn-editar-pedido btn-full-width" onClick={() => openEditModal(orden)}>
-                              <FaEdit /> Editar Orden
-                            </button>
+                            <Button variant="secondary" icon={FaEdit} block onClick={() => openEditModal(orden)}>
+                              Editar Orden
+                            </Button>
                           )
                         )}
                       </div>
@@ -904,7 +945,7 @@ const OrdenesPage = () => {
               </div>
             ))
           ) : (
-            <div className="empty-state">No hay órdenes para mostrar.</div>
+            <EmptyState title="Sin órdenes" message="No hay órdenes para mostrar con los filtros actuales." />
           )}
         </div>
       </div>
@@ -923,40 +964,35 @@ const OrdenesPage = () => {
       )}
 
       {/* Modal editar estado de Pedido Tela (desde /ordenes) */}
-      {telaEstadoModal.open && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <div className="modal-header">
-              <h3>Editar Estado de Tela</h3>
-              <button className="modal-close" type="button" onClick={() => setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>×</button>
-            </div>
-            <div className="form-group">
-              <label>PT #{telaEstadoModal.pedidoId} &mdash; Estado actual: <strong>{telaEstadoModal.currentEstado}</strong></label>
-              <select
-                value={telaEstadoModal.newEstado}
-                onChange={(e) => setTelaEstadoModal(prev => ({ ...prev, newEstado: e.target.value }))}
-                disabled={!canEditTelaEstado(telaEstadoModal.currentEstado)}
-                style={!canEditTelaEstado(telaEstadoModal.currentEstado) ? { backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', opacity: 0.7 } : {}}
-              >
-                <option value="Pendiente">Pendiente</option>
-                <option value="En fabrica">En fabrica</option>
-                <option value="En Lottus">En Lottus</option>
-              </select>
-              {!canEditTelaEstado(telaEstadoModal.currentEstado) && (
-                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem', fontStyle: 'italic' }}>🔒 No se puede editar un pedido en estado "En fabrica".</p>
-              )}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button className="btn-secondary" onClick={() => setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>Cancelar</button>
-              <button
-                className="btn-primary"
-                onClick={handleSaveTelaEstado}
-                disabled={!canEditTelaEstado(telaEstadoModal.currentEstado)}
-              >Guardar</button>
-            </div>
-          </div>
+      <Modal
+        open={telaEstadoModal.open}
+        onClose={() => setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}
+        title="Editar Estado de Tela"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setTelaEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>Cancelar</Button>
+            <Button variant="primary" onClick={handleSaveTelaEstado} disabled={!canEditTelaEstado(telaEstadoModal.currentEstado)}>Guardar</Button>
+          </>
+        }
+      >
+        <div className="ds-field">
+          <label className="ds-label">PT #{telaEstadoModal.pedidoId} &mdash; Estado actual: <strong>{telaEstadoModal.currentEstado}</strong></label>
+          <select
+            className="ds-select"
+            value={telaEstadoModal.newEstado}
+            onChange={(e) => setTelaEstadoModal(prev => ({ ...prev, newEstado: e.target.value }))}
+            disabled={!canEditTelaEstado(telaEstadoModal.currentEstado)}
+          >
+            <option value="Pendiente">Pendiente</option>
+            <option value="En fabrica">En fabrica</option>
+            <option value="En Lottus">En Lottus</option>
+          </select>
+          {!canEditTelaEstado(telaEstadoModal.currentEstado) && (
+            <p className="ds-field__hint">🔒 No se puede editar un pedido en estado "En fabrica".</p>
+          )}
         </div>
-      )}
+      </Modal>
       <CrearPedidoTelaModal 
         isOpen={isTelaModalOpen}
         onClose={() => setIsTelaModalOpen(false)}

@@ -1,0 +1,331 @@
+/* Paginaweb.css - Estilos nativos integrados al Design System de ordenesPedidoSW */
+
+.pw-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.pw-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.pw-tabs-bar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.pw-main-card {
+  background-color: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--r-lg, 12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  padding: 1.5rem;
+}
+
+.pw-tools-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pw-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 320px;
+  max-width: 450px;
+  width: 100%;
+}
+
+.pw-search-input-wrapper .pw-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--gray-400, #94a3b8);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.pw-search-input-field {
+  width: 100%;
+  padding: 0.6rem 0.85rem 0.6rem 2.4rem;
+  background-color: var(--gray-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--r-md, 8px);
+  font-size: 0.875rem;
+  color: var(--gray-800, #1e293b);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pw-search-input-field:focus {
+  border-color: var(--accent, #d4af37);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+  background-color: #ffffff;
+}
+
+.pw-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--r-md, 8px);
+}
+
+.pw-native-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.pw-native-table th {
+  background-color: var(--gray-50, #f8fafc);
+  color: var(--gray-600, #475569);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  white-space: nowrap;
+}
+
+.pw-native-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  color: var(--gray-800, #1e293b);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.pw-native-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pw-native-table tbody tr:hover {
+  background-color: var(--gray-50, #f8fafc);
+}
+
+.pw-table-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  background-color: #f1f5f9;
+}
+
+.pw-table-noimage {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background-color: var(--gray-100, #f1f5f9);
+  border: 1px dashed var(--border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400, #94a3b8);
+}
+
+.pw-product-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pw-product-name {
+  font-weight: 600;
+  color: var(--gray-900, #0f172a);
+}
+
+.pw-price-main {
+  font-weight: 700;
+  color: var(--gray-900, #0f172a);
+}
+
+.pw-price-old {
+  font-size: 0.75rem;
+  color: var(--gray-400, #94a3b8);
+  text-decoration: line-through;
+}
+
+.pw-table-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Ajustes Form Panel */
+.pw-settings-form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 650px;
+}
+
+.pw-form-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-800, #1e293b);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.pw-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+  margin-bottom: 0.5rem;
+}
+
+.pw-modal-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.pw-form-sub-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500, #64748b);
+  margin: 0.25rem 0 0 0;
+}
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ds-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700, #334155);
+}
+
+.ds-input,
+.ds-select,
+.ds-textarea {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  background-color: #ffffff;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: var(--r-md, 8px);
+  font-size: 0.875rem;
+  color: var(--gray-800, #1e293b);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ds-input:focus,
+.ds-select:focus,
+.ds-textarea:focus {
+  border-color: var(--accent, #d4af37);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.pw-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.pw-form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .pw-form-grid-2,
+  .pw-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pw-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.pw-image-previews-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.pw-img-preview-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--gray-100, #f1f5f9);
+}
+
+.pw-img-preview-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pw-img-remove-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: rgba(220, 38, 38, 0.9);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+}
+
+.pw-img-remove-badge:hover {
+  transform: scale(1.1);
+}
+
+.pw-checkbox-row {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.5rem;
+}
+
+.pw-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700, #334155);
+  cursor: pointer;
+}
+
+.pw-empty-state-panel {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--gray-500, #64748b);
+}

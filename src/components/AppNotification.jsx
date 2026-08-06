@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
 import './AppNotification.css';
 
@@ -16,12 +17,13 @@ const AppNotification = ({ message, type, onClose }) => {
     return null;
   }
 
-  return (
+  return createPortal(
     <div className={`app-toast app-toast--visible app-toast--${type}`}>
       {type === 'success' ? <FaCheckCircle className="app-toast-icon" /> : <FaTimes className="app-toast-icon" />}
       <span className="app-toast-msg">{message}</span>
       <button onClick={onClose} className="app-toast-close"><FaTimes /></button>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -7,6 +7,7 @@ const LottusLoader = () => {
       <h1 className="lottus-loader-text" data-text="LOTTUS">
         LOTTUS
       </h1>
+      <div className="lottus-loader-bar" />
     </div>
   );
 };

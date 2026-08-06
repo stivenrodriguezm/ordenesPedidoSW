@@ -1,8 +1,8 @@
 .edit-sale-form {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    padding: 1rem 0;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
 }
 
 .edit-sale-form .form-group {
@@ -12,20 +12,20 @@
 }
 
 .edit-sale-form .form-group label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--ventas-text-light);
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.2rem;
 }
 
 .edit-sale-form .form-group input:not([type="checkbox"]),
 .edit-sale-form .form-group select {
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     border: 1px solid var(--ventas-border);
-    border-radius: 8px;
-    font-size: 0.9rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
     color: var(--ventas-text-dark);
-    background-color: #f8fafc;
+    background-color: var(--gray-50);
     transition: all 0.2s;
 }
 
@@ -34,12 +34,12 @@
     outline: none;
     border-color: var(--ventas-primary);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-    background-color: #fff;
+    background-color: var(--surface);
 }
 
 .edit-sale-form .form-group input:disabled,
 .edit-sale-form .form-group select:disabled {
-    background-color: #e2e8f0;
+    background-color: var(--gray-200);
     cursor: not-allowed;
     opacity: 0.7;
 }
@@ -65,7 +65,7 @@
     gap: 0.75rem;
     flex-wrap: wrap;
     padding: 0.75rem;
-    background: #f1f5f9;
+    background: var(--gray-100);
     border-radius: 8px;
     border: 1px solid var(--ventas-border);
 }
@@ -74,7 +74,7 @@
     grid-column: 1 / -1;
     display: flex;
     justify-content: flex-end;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--ventas-border);
 }

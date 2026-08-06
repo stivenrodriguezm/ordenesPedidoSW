@@ -18,8 +18,9 @@ function Header({ onMenuClick, isCollapsed }) {
     if (path === "/") return "Inicio";
     if (path === "/perfil") return "Mi Perfil";
     if (path === "/gestion-usuarios") return "Gestión de Usuarios";
-    if (path === "/nuevaVenta") return "Ventas";
-    if (path === "/nuevaRemision") return "Nueva remisión";
+    if (path === "/ventas/nueva") return "Nueva Venta";
+    if (path === "/suministros/remisiones/nueva") return "Nueva Remisión";
+    if (/^\/ventas\/\d+\/editar/.test(path)) return "Editar Venta";
     // Handle nested suministros routes
     const nestedTitles = {
       '/suministros/remisiones': 'Remisiones',
@@ -37,6 +38,7 @@ function Header({ onMenuClick, isCollapsed }) {
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     setUsuario(null);
     queryClient.clear(); // Limpiar la caché de React Query
     setMenuOpen(false);

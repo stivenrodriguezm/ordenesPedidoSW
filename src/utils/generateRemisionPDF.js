@@ -1,8 +1,8 @@
 /**
  * generateRemisionPDF — LOTTUS
  * PDF membretado de remisión. Tamaño carta, colores corporativos negro.
+ * jspdf se carga bajo demanda dentro de generateRemisionPDF.
  */
-import { jsPDF } from 'jspdf';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const PAGE_W = 215.9;
@@ -505,6 +505,7 @@ function drawFooter(doc, remision) {
 
 // ─── FUNCIÓN PRINCIPAL ────────────────────────────────────────────────────────
 export async function generateRemisionPDF(remision, inventarioItems = []) {
+    const { jsPDF } = await import('jspdf');
     try { await document.fonts.load('16px "Audiowide"'); } catch (_) { }
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });

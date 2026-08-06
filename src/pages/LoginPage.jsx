@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaUser, FaLock, FaArrowRight } from 'react-icons/fa';
+import { FaUser, FaLock, FaArrowRight, FaExclamationCircle } from 'react-icons/fa';
 import { AppContext } from '../AppContext';
 import API_BASE_URL from '../apiConfig';
 import './LoginPage.css';
@@ -48,9 +48,11 @@ const LoginPage = () => {
         <div className="login-page-container">
             <div className="login-panel-left">
                 <div className="login-brand-content">
+                    <div className="login-logo-mark">L</div>
                     <h1 className="login-brand-title">LOTTUS</h1>
                     <p className="login-brand-subtitle">Plataforma Administrativa</p>
                     <div className="login-decorative-line"></div>
+                    <p className="login-brand-tagline">Pedidos · Ventas · Caja · Inventario</p>
                 </div>
             </div>
             <div className="login-panel-right">
@@ -90,7 +92,7 @@ const LoginPage = () => {
                                 />
                             </div>
                         </div>
-                        {error && <div className="error-message"><span>⚠️</span> {error}</div>}
+                        {error && <div className="error-message"><FaExclamationCircle /> {error}</div>}
                         <button type="submit" className="login-submit-button" disabled={isLoading}>
                             {isLoading ? (
                                 <>

@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FaShoppingCart, FaUser, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaFileInvoiceDollar, FaCheckCircle } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import '../components/AppNotification.css';
+import { PageHeader, Button } from '../components/ui';
 import './NuevaVenta.css';
 import API from '../services/api';
+import { getTodayStr } from '../utils/dates';
+import { useVendedores } from '../hooks/useSharedData';
 
 const NuevaVenta = () => {
   const navigate = useNavigate();
@@ -46,29 +50,23 @@ const NuevaVenta = () => {
   });
 
   const [observacion, setObservacion] = useState('');
-  const [vendedores, setVendedores] = useState([]);
+  const { data: vendedores = [], isError: vendedoresError } = useVendedores();
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // Cargar vendedores y fecha por defecto al montar el componente
+  // Cargar fecha por defecto al montar el componente
   useEffect(() => {
-    const fetchVendedores = async () => {
-      try {
-        const response = await API.get(`/vendedores/`);
-        setVendedores(response.data || []);
-      } catch (error) {
-        console.error('Error cargando vendedores:', error);
-        setNotification({ message: 'Error al cargar los vendedores.', type: 'error' });
-      }
-    };
-    fetchVendedores();
-
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    setVentaData(prev => ({ ...prev, fecha_venta: `${yyyy}-${mm}-${dd}` }));
+    setVentaData(prev => ({ ...prev, fecha_venta: getTodayStr() }));
   }, []);
+
+  // Notificación cuando falla la carga de vendedores
+  useEffect(() => {
+    if (vendedoresError) {
+      console.error('Error cargando vendedores');
+      setNotification({ message: 'Error al cargar los vendedores.', type: 'error' });
+    }
+  }, [vendedoresError]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -225,15 +223,15 @@ const NuevaVenta = () => {
     };
 
     try {
-
       await API.post(`/ventas/crear/`, payload);
-
+      setIsSuccess(true);
       setNotification({ message: 'Venta creada exitosamente.', type: 'success' });
       setTimeout(() => {
         navigate('/ventas');
-      }, 2000);
-
+      }, 1800);
+      return; // Evitar que el finally limpie el loading/success
     } catch (error) {
+      setIsLoading(false);
       let friendlyError = 'Error al crear la venta.';
       if (error.response && error.response.data) {
         const errorData = error.response.data;
@@ -256,8 +254,6 @@ const NuevaVenta = () => {
         }
       }
       setNotification({ message: friendlyError, type: 'error' });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -267,38 +263,40 @@ const NuevaVenta = () => {
   };
 
   return (
-    <div className="nueva-venta-container">
+    <div className="ds-page nueva-venta-container ds-fade-in">
       <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      {isLoading && (
-        <div className="nv-loader-container">
-          <div className="nv-loader"></div>
-        </div>
+      {(isLoading || isSuccess) && createPortal(
+        <div className={`nv-loader-container ${isSuccess ? 'success-overlay' : ''}`}>
+          {isSuccess ? (
+            <div className="nv-success-content">
+              <FaCheckCircle className="nv-success-icon" />
+              <h2>¡Venta Creada!</h2>
+            </div>
+          ) : (
+            <div className="nv-loader"></div>
+          )}
+        </div>,
+        document.body
       )}
 
-      {/* --- HEADER PRINCIPAL PREMIUM --- */}
-      <div className="nv-title-header premium-v2">
-        <div className="title-wrapper">
-          <div className="title-icon-badge">
-            <FaShoppingCart />
-          </div>
-          <div className="title-text-group">
-            <h1>Nueva Venta</h1>
-            <p className="title-subtitle">Registra la información del cliente y los datos de la transacción en el sistema.</p>
-          </div>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="nv-cancel-button" onClick={handleCancel} disabled={isLoading}>
-            Cancelar
-          </button>
-          <button type="button" className="nv-submit-button" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Creando..." : "Crear Venta"}
-          </button>
-        </div>
-      </div>
+      {/* --- HEADER PRINCIPAL --- */}
+      <PageHeader
+        icon={FaShoppingCart}
+        title="Nueva Venta"
+        subtitle="Registra la información del cliente y los datos de la transacción en el sistema."
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleCancel} disabled={isLoading}>Cancelar</Button>
+            <Button variant="primary" onClick={handleSubmit} loading={isLoading}>
+              {isLoading ? "Creando..." : "Crear Venta"}
+            </Button>
+          </>
+        }
+      />
 
       <div className="nv-form-sections">
         {/* ── Sección de búsqueda de cliente ── */}

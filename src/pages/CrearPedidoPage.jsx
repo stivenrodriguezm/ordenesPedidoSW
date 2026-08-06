@@ -4,11 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
 import { AppContext, usePermissions } from "../AppContext";
 import "./CrearPedidoPage.css";
-import html2canvas from "html2canvas";
+import { getTodayStr, formatDateCorta } from "../utils/dates";
 import logoFinal from "../assets/logoFinal.png";
 import { FaPlus, FaTrashAlt, FaFileSignature, FaClipboardList, FaBoxOpen, FaStickyNote } from "react-icons/fa";
 import AppNotification from "../components/AppNotification";
 import "../components/AppNotification.css";
+import { PageHeader, Button, LoadingBlock } from "../components/ui";
+import { useVendedores, usePendientesIds } from "../hooks/useSharedData";
 
 function CrearPedidoPage() {
   const { proveedores, usuario: user, isLoading: contextLoading } = useContext(AppContext);
@@ -25,11 +27,7 @@ function CrearPedidoPage() {
 
   const showError = (msg) => setNotification({ message: msg, type: 'error' });
 
-  const { data: vendedores = [] } = useQuery({
-    queryKey: ["vendedores"],
-    queryFn: async () => (await API.get("vendedores/")).data,
-    enabled: true,
-  });
+  const { data: vendedores = [] } = useVendedores();
 
   const [proveedorId, setProveedorId] = useState("");
   const { data: referencias = [], isLoading: referenciasLoading } = useQuery({
@@ -42,14 +40,7 @@ function CrearPedidoPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: ventasPendientes = [], isLoading: ventasLoading, error: ventasError } = useQuery({
-    queryKey: ["ventasPendientes"],
-    queryFn: () =>
-      API.get("get-pendientes-ids/", {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => {
-        return res.data;
-      }),
+  const { data: ventasPendientes = [], isLoading: ventasLoading, error: ventasError } = usePendientesIds(undefined, {
     enabled: !!token,
     staleTime: 0,
   });
@@ -97,32 +88,21 @@ function CrearPedidoPage() {
     },
   });
 
-  const getTodayString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const getTodayString = () => getTodayStr();
+
+  // Formato visible histórico: 'dd-mmm-yyyy' (ej. '05-ene-2026'), montado sobre formatDateCorta.
+  const formatFechaGuiones = (dateStr) => {
+    const corta = formatDateCorta(dateStr); // '5 ene 2026'
+    if (!corta) return "";
+    const [d, m, y] = corta.split(" ");
+    return `${String(d).padStart(2, "0")}-${m}-${y}`;
   };
 
-  const getFormattedDate = () => {
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, "0");
-    const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    const month = monthNames[today.getMonth()];
-    const year = today.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
+  const getFormattedDate = () => formatFechaGuiones(getTodayStr());
 
   const formatDate = (date) => {
     if (!date) return "";
-    const [year, month, day] = date.split("-").map(Number);
-    const localDate = new Date(year, month - 1, day);
-    const formattedDay = String(localDate.getDate()).padStart(2, "0");
-    const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-    const formattedMonth = monthNames[localDate.getMonth()];
-    const formattedYear = localDate.getFullYear();
-    return `${formattedDay}-${formattedMonth}-${formattedYear}`;
+    return formatFechaGuiones(date);
   };
 
   const handleProveedorChange = (e) => {
@@ -196,26 +176,49 @@ function CrearPedidoPage() {
     });
   };
 
+  const [isGenerating, setIsGenerating] = useState(false);
+
   useEffect(() => {
     if (numeroOP) {
       const renderImage = async () => {
+        setIsGenerating(true);
         const pedidoPreview = document.getElementById("pedido-preview-offscreen");
         if (pedidoPreview) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          const canvas = await html2canvas(pedidoPreview, {
-            backgroundColor: "#ffffff",
-            scale: 2,
-            useCORS: true,
-            logging: false,
-          });
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            const { default: html2canvas } = await import("html2canvas");
+            const canvas = await html2canvas(pedidoPreview, {
+              backgroundColor: "#ffffff",
+              scale: 2,
+              useCORS: true,
+              logging: false,
+            });
 
-          const image = canvas.toDataURL("image/png");
-          const link = document.createElement("a");
-          link.href = image;
-          link.download = `pedido_${numeroOP}.png`;
-          link.click();
-
-          navigate("/ordenes");
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = image;
+            link.download = `pedido_${numeroOP}.png`;
+            link.click();
+            
+            setNotification({ message: 'Pedido creado exitosamente.', type: 'success' });
+            setTimeout(() => {
+              navigate("/ordenes");
+            }, 1800);
+          } catch (error) {
+            console.error("Error al generar imagen:", error);
+            showError("Pedido creado, pero hubo un error al generar la imagen.");
+            setTimeout(() => {
+              navigate("/ordenes");
+            }, 2000);
+          } finally {
+            setIsGenerating(false);
+          }
+        } else {
+          setNotification({ message: 'Pedido creado exitosamente.', type: 'success' });
+          setTimeout(() => {
+            navigate("/ordenes");
+          }, 1800);
+          setIsGenerating(false);
         }
       };
       renderImage();
@@ -223,44 +226,37 @@ function CrearPedidoPage() {
   }, [numeroOP, navigate]);
 
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] });
+    queryClient.invalidateQueries({ queryKey: ['pendientes-ids'] });
   }, [queryClient]);
 
   if (contextLoading || ventasLoading) {
     return (
-      <div className="loading-container">
-        <div className="loader"></div>
-        <p>Cargando datos iniciales...</p>
+      <div className="ds-page">
+        <LoadingBlock message="Cargando datos iniciales..." />
       </div>
     );
   }
 
   return (
-    <div className="page-container crear-pedido-container">
+    <div className="ds-page crear-pedido-container ds-fade-in">
       <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      <div className="form-title-header premium-v2">
-        <div className="title-wrapper">
-          <div className="title-icon-badge">
-            <FaFileSignature />
-          </div>
-          <div className="title-text-group">
-            <h1>Crear Nuevo Pedido</h1>
-            <p className="title-subtitle">Completa la información requerida para registrar la orden en el sistema.</p>
-          </div>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="btn-cancel-action" onClick={() => navigate(-1)}>
-            Cancelar
-          </button>
-          <button type="submit" form="main-form" className="btn-submit-action" disabled={createOrderMutation.isLoading}>
-            {createOrderMutation.isLoading ? "Creando..." : "Crear Pedido"}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={FaFileSignature}
+        title="Crear Nuevo Pedido"
+        subtitle="Completa la información requerida para registrar la orden en el sistema."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => navigate(-1)} disabled={createOrderMutation.isPending || isGenerating}>Cancelar</Button>
+            <Button variant="primary" type="submit" form="main-form" loading={createOrderMutation.isPending || isGenerating}>
+              {createOrderMutation.isPending || isGenerating ? "Creando..." : "Crear Pedido"}
+            </Button>
+          </>
+        }
+      />
 
       <form id="main-form" className="form-main-layout" onSubmit={handleSubmit}>
         {/* --- COLUMNA IZQUIERDA: CONFIGURACIÓN --- */}
@@ -444,11 +440,9 @@ function CrearPedidoPage() {
           <div className="preview-nota">
             <h3>Observación:</h3>
             <div className="preview-nota-box">
-              <p
-                dangerouslySetInnerHTML={{
-                  __html: pedido.nota ? pedido.nota.replace(/\n/g, "<br />") : "Sin observaciones",
-                }}
-              />
+              <p style={{ whiteSpace: 'pre-line' }}>
+                {pedido.nota || "Sin observaciones"}
+              </p>
             </div>
           </div>
         </div>

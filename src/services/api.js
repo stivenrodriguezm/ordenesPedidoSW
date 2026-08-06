@@ -21,20 +21,83 @@ API.interceptors.request.use(
   }
 );
 
+// Cierra la sesión y redirige al login
+const forceLogout = () => {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  if (!window.location.hash.includes("/login")) {
+    window.location.href = "/#/login"; // Forzar recarga para limpiar estado
+  }
+};
+
+// Cola para no lanzar múltiples refreshes de token en paralelo
+let isRefreshing = false;
+let pendingQueue = [];
+
+const processQueue = (error, token = null) => {
+  pendingQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  pendingQueue = [];
+};
+
 // Interceptor para manejar errores en las respuestas
 API.interceptors.response.use(
   (response) => response, // Retorna la respuesta si es exitosa
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config || {};
+
+    // En 401 intenta renovar el access token con el refresh token (una sola vez por request)
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/token/")
+    ) {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        forceLogout();
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Otro refresh en curso: encolar y reintentar cuando termine
+        return new Promise((resolve, reject) => {
+          pendingQueue.push({ resolve, reject });
+        }).then((newToken) => {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return API(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+      try {
+        const { data } = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+          refresh: refreshToken,
+        });
+        localStorage.setItem("accessToken", data.access);
+        if (data.refresh) localStorage.setItem("refreshToken", data.refresh);
+        processQueue(null, data.access);
+        originalRequest.headers.Authorization = `Bearer ${data.access}`;
+        return API(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        forceLogout();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     if (error.response) {
       // El servidor respondió con un código de estado fuera del rango 2xx
       const { status, data } = error.response;
 
       if (status === 401) {
-        // Error de autenticación: token inválido o expirado
-        console.error("Error 401: No autorizado. Redirigiendo al login.");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        window.location.href = "/#/login"; // Forzar recarga para limpiar estado
+        // Sin refresh posible (o ya reintentado): cerrar sesión
+        forceLogout();
 
       } else if (status === 400) {
         // Error de validación (Bad Request)
@@ -58,25 +121,5 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Funciones de API existentes (pueden ser eliminadas o refactorizadas más adelante)
-export const fetchReferencias = (proveedorId) =>
-  API.get(`/referencias/?proveedor=${proveedorId}`).then((res) => res.data);
-
-export const fetchOrdenes = (filtros = {}, userId) => {
-  let endpoint = "/listar-pedidos/";
-  const params = new URLSearchParams();
-  if (userId) params.append('usuario_id', userId);
-  if (filtros.proveedor) params.append('id_proveedor', filtros.proveedor);
-  if (filtros.vendedor) params.append('id_vendedor', filtros.vendedor);
-  if (filtros.estado) params.append('estado', filtros.estado);
-
-  const queryString = params.toString();
-  if (queryString) {
-    endpoint += `?${queryString}`;
-  }
-
-  return API.get(endpoint).then((res) => res.data);
-};
 
 export default API;

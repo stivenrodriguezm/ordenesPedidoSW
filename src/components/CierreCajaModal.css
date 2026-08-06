@@ -4,7 +4,7 @@
    ========================================================================== */
 
 .lottus-form-modal {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 14px;
   width: 100%;
   max-width: 460px;
@@ -20,7 +20,7 @@
   align-items: flex-start;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e8edf3;
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
 }
 
 .lottus-modal-title-wrap {
@@ -33,7 +33,7 @@
   width: 38px;
   height: 38px;
   background: #dbeafe;
-  color: #2563eb;
+  color: var(--info);
   border-radius: 9px;
   display: flex;
   align-items: center;
@@ -63,32 +63,32 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--info);
 }
 
 .lottus-modal-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--gray-900);
   letter-spacing: -0.01em;
 }
 
 .lottus-modal-subtitle {
   margin: 0.1rem 0 0;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--gray-500);
 }
 
 .lottus-close-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  border: 1px solid var(--gray-300);
   width: 28px;
   height: 28px;
   border-radius: 7px;
   font-size: 1.2rem;
   line-height: 1;
-  color: #64748b;
+  color: var(--gray-500);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -97,9 +97,9 @@
 }
 
 .lottus-close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: var(--gray-100);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
 }
 
 .lottus-modal-form {
@@ -124,7 +124,7 @@
 .lottus-form-group label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--gray-700);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   display: flex;
@@ -133,7 +133,7 @@
 }
 
 .lottus-req {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .lottus-label-flex {
@@ -145,7 +145,7 @@
 .lottus-val-preview {
   font-size: 0.78rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--info);
   background: #eff6ff;
   padding: 0.1rem 0.45rem;
   border-radius: 5px;
@@ -156,11 +156,11 @@
 .lottus-select {
   width: 100%;
   padding: 0.45rem 0.65rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--gray-300);
   border-radius: 8px;
   font-size: 0.82rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--gray-800);
+  background: var(--surface);
   outline: none;
   transition: all 0.15s ease;
   font-family: inherit;
@@ -169,7 +169,7 @@
 
 .lottus-input:focus,
 .lottus-select:focus {
-  border-color: #2563eb;
+  border-color: var(--info);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
@@ -184,23 +184,23 @@
   left: 0.65rem;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--gray-500);
   pointer-events: none;
 }
 
 .lottus-input-pl {
   padding-left: 1.6rem !important;
   font-weight: 700;
-  color: #2563eb !important;
+  color: var(--info) !important;
 }
 
 .lottus-toggle-row {
   display: flex;
   gap: 0.35rem;
-  background: #f1f5f9;
+  background: var(--gray-100);
   border-radius: 8px;
   padding: 3px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--gray-200);
 }
 
 .lottus-toggle-btn {
@@ -212,13 +212,13 @@
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  color: #64748b;
+  color: var(--gray-500);
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .lottus-toggle-btn.active {
-  background: #ffffff;
+  background: var(--surface);
   color: #1d4ed8;
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -231,13 +231,13 @@
   gap: 0.5rem;
   margin-top: 0.35rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--gray-100);
 }
 
 .lottus-btn-cancel {
-  background: #ffffff;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  color: var(--gray-600);
+  border: 1px solid var(--gray-300);
   padding: 0.45rem 0.95rem;
   border-radius: 8px;
   font-weight: 600;
@@ -247,14 +247,14 @@
 }
 
 .lottus-btn-cancel:hover:not(:disabled) {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
 }
 
 .lottus-btn-submit {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--info) 0%, #1d4ed8 100%);
+  color: var(--surface);
   border: none;
   padding: 0.45rem 1.1rem;
   border-radius: 8px;

@@ -1,10 +1,12 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
-import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner } from 'react-icons/fa';
+import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner, FaFileInvoiceDollar } from 'react-icons/fa';
+import { PageHeader, Button } from '../components/ui';
 import './FacturasProveedorPage.css';
 import './VentasImprovements.css';
 
@@ -78,7 +80,7 @@ const ESTADOS_FACTURA = [
 function FacturasProveedorPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { proveedores, usuario } = useContext(AppContext);
+    const { proveedores, usuario, notify } = useContext(AppContext);
     const hasPermission = usePermissions();
     const canEditFechas = hasPermission('EDITAR_FECHAS_FACTURA');
     const [facturas, setFacturas] = useState([]);
@@ -109,14 +111,9 @@ function FacturasProveedorPage() {
     const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
 
-    // Toast
-    const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
-    const toastTimerRef = useRef(null);
-
+    // Toast (Global)
     const showToast = (message, type = 'success') => {
-        setToast({ visible: true, message, type });
-        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 4000);
+        notify(message, type);
     };
 
     useEffect(() => {
@@ -554,6 +551,7 @@ function FacturasProveedorPage() {
     };
 
     const [loadingDetailsId, setLoadingDetailsId] = useState(null);
+    const [loadingEditId, setLoadingEditId] = useState(null);
 
     const toggleExpand = async (id) => {
         if (expandedId === id) {
@@ -770,7 +768,7 @@ function FacturasProveedorPage() {
 
     // Abrir modal de edición de factura cargando referencias y telas
     const openEditModal = async (f) => {
-        setLoadingDetailsId(f.id);
+        setLoadingEditId(f.id);
         try {
             const res = await API.get(`/suministros/facturas/${f.id}/`);
             const fData = res.data;
@@ -830,7 +828,7 @@ function FacturasProveedorPage() {
             console.error("Error al cargar datos para edición", err);
             showToast("Error al abrir edición de factura", "error");
         } finally {
-            setLoadingDetailsId(null);
+            setLoadingEditId(null);
         }
     };
 
@@ -891,9 +889,25 @@ function FacturasProveedorPage() {
     };
 
     return (
-        <div className="page-container">
-            <div className="v-glass-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflow: 'visible' }}>
-                <div className="v-filters-bar" style={{ margin: 0, flex: 1 }}>
+        <div className="ds-page facturas-page ds-fade-in">
+            <PageHeader
+                icon={FaFileInvoiceDollar}
+                title="Facturas de Proveedor"
+                subtitle="Gestiona y filtra las facturas de proveedores"
+                actions={
+                    <>
+                        {hasPermission('CREAR_FACTURA') && (
+                            <Button variant="primary" icon={FaPlus} onClick={() => navigate('/suministros/facturas/nueva')}>
+                                <span className="long-text">Nueva Factura</span>
+                                <span className="short-text">Nueva</span>
+                            </Button>
+                        )}
+                    </>
+                }
+            />
+
+            <div className="ds-card facturas-filters" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
                     <div className="v-search-pill">
                         <FaSearch />
                         <input
@@ -1005,17 +1019,9 @@ function FacturasProveedorPage() {
                         </button>
                     )}
                 </div>
-                <div style={{ flexShrink: 0 }}>
-                    {hasPermission('CREAR_FACTURA') && (
-                        <button className="v-btn-primary-glow" onClick={() => navigate('/suministros/facturas/nueva')}>
-                            <FaPlus />
-                            <span>Nueva Factura</span>
-                        </button>
-                    )}
-                </div>
             </div>
 
-            <div className="ordenes-container">
+            <div className="ordenes-container ds-card">
                 <div className="desktop-view">
                     <table className="premium-table">
                         <thead>
@@ -1128,8 +1134,9 @@ function FacturasProveedorPage() {
                                                                         <button
                                                                             className="btn-edit-obs"
                                                                             onClick={() => openEditModal(f)}
+                                                                            disabled={loadingEditId === f.id}
                                                                         >
-                                                                            <FaEdit /> Editar
+                                                                            {loadingEditId === f.id ? <FaSpinner className="fa-spin" /> : <FaEdit />} Editar
                                                                         </button>
                                                                     )}
                                                                 </div>
@@ -1444,7 +1451,7 @@ function FacturasProveedorPage() {
             </div>
 
             {/* ===== MODAL EDITAR FACTURA Y COSTOS DE TELA ===== */}
-            {editModal && (
+            {editModal && createPortal(
                 <div className="fact-modal-overlay edit-factura-overlay" onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
                     <div className="edit-factura-modal" style={{ maxWidth: '850px', width: '90%' }}>
                         <div className="edit-factura-header">
@@ -1535,6 +1542,7 @@ function FacturasProveedorPage() {
                             <div className="edit-factura-field" style={{ marginBottom: '1.25rem' }}>
                                 <label>Observaciones Generales</label>
                                 <textarea
+                                    className="ifg-textarea"
                                     rows="2"
                                     placeholder="Escribe la observación de la factura..."
                                     value={editModal.observaciones || ''}
@@ -1702,11 +1710,12 @@ function FacturasProveedorPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ===== MODAL NUEVA FACTURA ===== */}
-            {showModal && (
+            {showModal && createPortal(
                 <div className="fct-overlay">
                     <div className="fct-modal">
                         <div className="fct-header">
@@ -2213,19 +2222,9 @@ function FacturasProveedorPage() {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
-            {/* Toast Notification */}
-            <div className={`fct-toast fct-toast--${toast.type}${toast.visible ? ' fct-toast--visible' : ''}`}>
-                {toast.type === 'success'
-                    ? <FaCheckCircle className="fct-toast-icon" />
-                    : <FaExclamationCircle className="fct-toast-icon" />
-                }
-                <span className="fct-toast-msg">{toast.message}</span>
-                <button className="fct-toast-close" onClick={() => setToast(t => ({ ...t, visible: false }))}>
-                    <FaTimes />
-                </button>
-            </div>
         </div>
     );
 }

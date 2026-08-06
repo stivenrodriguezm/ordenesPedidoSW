@@ -8,9 +8,9 @@ import { Navigate } from 'react-router-dom';
 const HomePage = () => {
     const { usuario } = useContext(AppContext);
 
-    if (usuario?.role.toLowerCase() === 'vendedor') {
+    if (usuario?.role?.toLowerCase() === 'vendedor') {
         return <VendedorHomePage />;
-    } else if (usuario?.role.toLowerCase() === 'transportador') {
+    } else if (usuario?.role?.toLowerCase() === 'transportador') {
         return <Navigate to="/suministros/remisiones" replace />;
     } else {
         return <AdminHomePage />;

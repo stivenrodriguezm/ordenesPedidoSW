@@ -2,34 +2,12 @@
    Extreme Redesign: Expense Dashboard Theme (Comprobantes Egreso)
    ========================================================================== */
 :root {
-  --rose-50: #fff1f2;
-  --rose-100: #ffe4e6;
-  --rose-500: #f43f5e;
-  --rose-600: #e11d48;
-  --rose-900: #881337;
-
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-400: #94a3b8;
-  --slate-600: #475569;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
-
-  --bg-app: #f0f2f5;
-  --surface: #ffffff;
-  --primary-glow: rgba(244, 63, 94, 0.4);
-  /* Rose glow for expenses */
-}
-
-.comprobantes-page-container {
-  background-color: var(--bg-app);
-  min-height: 100vh;
-  padding: 1.5rem;
-  font-family: 'Inter', sans-serif;
-  color: var(--slate-800);
-  max-width: 1600px;
-  margin: 0 auto;
+  --rose-50: var(--accent-soft);
+  --rose-100: #d3efe2;
+  --rose-500: var(--accent);
+  --rose-600: var(--accent-hover);
+  --rose-900: var(--accent-active);
+  --primary-glow: var(--accent-ring);
 }
 
 /* ==========================================================================
@@ -44,7 +22,7 @@
   padding: 0.65rem 1.1rem;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--slate-100);
+  border: 1px solid var(--gray-100);
   width: fit-content;
 }
 
@@ -67,8 +45,8 @@
 }
 
 .stat-icon.secondary {
-  background: var(--slate-100);
-  color: var(--slate-600);
+  background: var(--gray-100);
+  color: var(--gray-600);
 }
 
 .stat-info {
@@ -80,86 +58,26 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--slate-600);
+  color: var(--gray-600);
   font-weight: 600;
 }
 
 .stat-value {
   font-size: 1.0rem;
   font-weight: 700;
-  color: var(--slate-900);
+  color: var(--gray-900);
 }
 
 .stat-divider {
   width: 1px;
   height: 40px;
-  background: var(--slate-200);
-}
-
-/* ==========================================================================
-   Glass Header & Filters
-   ========================================================================== */
-.glass-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 1rem;
-  z-index: 50;
-}
-
-.header-top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.page-title {
-  font-size: 1.8rem;
-  font-weight: 800;
-  margin: 0;
-  background: linear-gradient(135deg, var(--slate-900) 0%, #141a74 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.header-actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.btn-primary-glow {
-  background: #274385;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  box-shadow: 0 0 15px var(--danger-glow);
-  transition: all 0.2s;
-}
-
-.btn-primary-glow:hover {
-  background: #1a2d59;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px #192b54;
+  background: var(--gray-200);
 }
 
 .btn-ghost {
   background: transparent;
-  border: 1px solid var(--slate-200);
-  color: var(--slate-600);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-600);
   padding: 0.75rem;
   border-radius: 12px;
   cursor: pointer;
@@ -167,8 +85,8 @@
 }
 
 .btn-ghost:hover {
-  background: var(--slate-50);
-  color: var(--slate-900);
+  background: var(--gray-50);
+  color: var(--gray-900);
 }
 
 .filters-bar {
@@ -177,11 +95,9 @@
   flex-wrap: wrap;
 }
 
-.search-pill,
-.date-range-pill,
 .select-pill {
   background: var(--surface);
-  border: 1px solid var(--slate-200);
+  border: 1px solid var(--gray-200);
   border-radius: 9999px;
   padding: 0.5rem 1rem;
   display: flex;
@@ -190,43 +106,17 @@
   transition: border-color 0.2s;
 }
 
-.search-pill:focus-within,
-.date-range-pill:focus-within,
 .select-pill:focus-within {
   border-color: var(--rose-500);
   box-shadow: 0 0 0 2px var(--rose-100);
 }
 
-.search-pill input,
-.date-range-pill input,
 .select-pill select {
   border: none;
   outline: none;
   font-size: 0.9rem;
-  color: var(--slate-600);
+  color: var(--gray-600);
   background: transparent;
-}
-
-.search-pill input {
-  width: 200px;
-}
-
-.date-range-pill span {
-  color: var(--slate-400);
-  font-size: 0.8rem;
-}
-
-.btn-reset {
-  background: var(--slate-100);
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--slate-600);
-  cursor: pointer;
 }
 
 /* ==========================================================================
@@ -237,7 +127,7 @@
   border-radius: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  border: 1px solid var(--slate-100);
+  border: 1px solid var(--gray-100);
 }
 
 .modern-table {
@@ -246,21 +136,21 @@
 }
 
 .modern-table th {
-  background: var(--slate-50);
+  background: var(--gray-50);
   padding: 0.6rem 1rem;
   text-align: left;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--slate-600);
+  color: var(--gray-600);
   font-weight: 700;
-  border-bottom: 1px solid var(--slate-200);
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .modern-table td {
   padding: 0.55rem 1rem;
-  border-bottom: 1px solid var(--slate-100);
-  color: var(--slate-600);
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-600);
   font-size: 0.85rem;
   vertical-align: middle;
 }
@@ -272,11 +162,11 @@
 
 .font-bold {
   font-weight: 700;
-  color: var(--slate-900);
+  color: var(--gray-900);
 }
 
 .text-muted {
-  color: var(--slate-400);
+  color: var(--gray-400);
   font-size: 0.85rem;
 }
 
@@ -299,7 +189,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
-  color: var(--slate-800);
+  color: var(--gray-800);
 }
 
 .note-cell {
@@ -308,7 +198,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-style: italic;
-  color: var(--slate-400);
+  color: var(--gray-400);
 }
 
 .method-cell {
@@ -334,12 +224,12 @@
 
 .payment-icon-wrapper.bank {
   background: #eff6ff;
-  color: #3b82f6;
+  color: var(--info);
 }
 
 .payment-icon-wrapper.other {
-  background: var(--slate-100);
-  color: var(--slate-500);
+  background: var(--gray-100);
+  color: var(--gray-500);
 }
 
 /* ==========================================================================
@@ -359,7 +249,7 @@
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--slate-100);
+  border: 1px solid var(--gray-100);
 }
 
 .card-left {
@@ -376,13 +266,13 @@
 
 .card-concept {
   font-weight: 600;
-  color: var(--slate-900);
+  color: var(--gray-900);
   font-size: 0.95rem;
 }
 
 .card-meta {
   font-size: 0.75rem;
-  color: var(--slate-400);
+  color: var(--gray-400);
 }
 
 .card-right {
@@ -400,8 +290,8 @@
 
 .card-id {
   font-size: 0.75rem;
-  color: var(--slate-400);
-  background: var(--slate-100);
+  color: var(--gray-400);
+  background: var(--gray-100);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -420,25 +310,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1050;
   /* Ensure it's on top */
   padding: 1rem;
   /* Prevent touching edges on small screens */
-}
-
-.modal-content.premium-modal {
-  background: var(--surface);
-  border-radius: 24px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  max-height: 90vh;
-  /* Prevent overflow */
-  overflow-y: auto;
-  /* Enable scrolling */
-  display: flex;
-  flex-direction: column;
 }
 
 .modal-header {
@@ -452,21 +327,7 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--slate-900);
-}
-
-.modal-close {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--slate-400);
-  cursor: pointer;
-}
-
-.premium-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  color: var(--gray-900);
 }
 
 .form-row {
@@ -487,58 +348,7 @@
 .form-group label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--slate-600);
-}
-
-.premium-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--slate-200);
-  border-radius: 12px;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-}
-
-.premium-input:focus {
-  outline: none;
-  border-color: var(--rose-500);
-  box-shadow: 0 0 0 3px var(--rose-100);
-}
-
-.input-with-icon {
-  position: relative;
-}
-
-.currency-symbol {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--slate-400);
-  font-weight: 600;
-}
-
-.input-with-icon input {
-  padding-left: 2rem;
-}
-
-.btn-primary.full-width {
-  width: 100%;
-  justify-content: center;
-  margin-top: 1rem;
-  padding: 1rem;
-  font-size: 1rem;
-  background: var(--rose-600);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.btn-primary.full-width:hover {
-  background: var(--rose-500);
+  color: var(--gray-600);
 }
 
 /* ==========================================================================
@@ -557,28 +367,13 @@
     display: inline;
   }
 
-  .page-title {
-    font-size: 1.4rem;
-  }
-
-  .glass-header {
-    padding: 1rem;
-  }
-
   .filters-bar {
     gap: 0.5rem;
   }
 
-  .search-pill,
-  .date-range-pill,
   .select-pill {
     padding: 0.4rem 0.75rem;
     font-size: 0.85rem;
-  }
-
-  .btn-primary-glow {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
   }
 }
 
@@ -602,29 +397,11 @@
     display: none;
   }
 
-  .glass-header {
-    padding: 1rem;
-    position: relative;
-    top: 0;
-  }
-
-  .header-top-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
   .filters-bar {
     flex-direction: column;
   }
 
-  .search-pill,
-  .date-range-pill,
   .select-pill {
-    width: 100%;
-  }
-
-  .search-pill input {
     width: 100%;
   }
 
@@ -636,18 +413,9 @@
     display: none;
   }
 
-  .btn-primary-glow {
-    width: 100%;
-    justify-content: center;
-  }
-
   .form-row {
     flex-direction: column;
     gap: 1rem;
-  }
-
-  .modal-content.premium-modal {
-    padding: 1.5rem;
   }
 }
 
@@ -665,8 +433,8 @@
 
 .ce-pagination-btn {
   background: var(--surface);
-  border: 1px solid var(--slate-200);
-  color: var(--slate-600);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-600);
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -690,17 +458,17 @@
 .ce-pagination-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: var(--slate-50);
+  background: var(--gray-50);
 }
 
 .ce-pagination-info {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--slate-600);
+  color: var(--gray-600);
   background: var(--surface);
   padding: 0.5rem 1rem;
   border-radius: 9999px;
-  border: 1px solid var(--slate-200);
+  border: 1px solid var(--gray-200);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -720,7 +488,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid transparent;
-  border-top-color: #274385;
+  border-top-color: var(--accent);
   /* Dark Blue */
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -733,40 +501,14 @@
 }
 
 /* ==========================================================================
-   NEW CE Modal — Compact Redesign
-   ========================================================================== */
-
-.modal-content.premium-modal {
-  padding: 0;
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-/* Header */
-.ce-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-  color: white;
-}
-
-.ce-modal-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-/* ==========================================================================
    Lottus Corporate Unified Form Modals (Recibos de Caja & Comprobantes de Egreso)
    ========================================================================== */
 
 .lottus-form-modal {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 14px;
   width: 100%;
-  max-width: 530px;
+  max-width: 720px;
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   display: flex;
@@ -779,7 +521,7 @@
   align-items: flex-start;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e8edf3;
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
 }
 
 .lottus-modal-title-wrap {
@@ -792,7 +534,7 @@
   width: 38px;
   height: 38px;
   background: #dbeafe;
-  color: #2563eb;
+  color: var(--info);
   border-radius: 9px;
   display: flex;
   align-items: center;
@@ -822,32 +564,32 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--info);
 }
 
 .lottus-modal-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--gray-900);
   letter-spacing: -0.01em;
 }
 
 .lottus-modal-subtitle {
   margin: 0.1rem 0 0;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--gray-500);
 }
 
 .lottus-close-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  border: 1px solid var(--gray-300);
   width: 28px;
   height: 28px;
   border-radius: 7px;
   font-size: 1.2rem;
   line-height: 1;
-  color: #64748b;
+  color: var(--gray-500);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -856,9 +598,9 @@
 }
 
 .lottus-close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: var(--gray-100);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
 }
 
 .lottus-modal-form {
@@ -889,7 +631,7 @@
 .lottus-form-group label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--gray-700);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   display: flex;
@@ -898,13 +640,13 @@
 }
 
 .lottus-req {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .lottus-hint {
   font-weight: 400;
   text-transform: none;
-  color: #94a3b8;
+  color: var(--gray-400);
 }
 
 .lottus-label-flex {
@@ -916,7 +658,7 @@
 .lottus-val-preview {
   font-size: 0.78rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--info);
   background: #eff6ff;
   padding: 0.1rem 0.45rem;
   border-radius: 5px;
@@ -927,11 +669,11 @@
 .lottus-select {
   width: 100%;
   padding: 0.45rem 0.65rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--gray-300);
   border-radius: 8px;
   font-size: 0.82rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--gray-800);
+  background: var(--surface);
   outline: none;
   transition: all 0.15s ease;
   font-family: inherit;
@@ -940,7 +682,7 @@
 
 .lottus-input:focus,
 .lottus-select:focus {
-  border-color: #2563eb;
+  border-color: var(--info);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
@@ -955,24 +697,24 @@
   left: 0.65rem;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--gray-500);
   pointer-events: none;
 }
 
 .lottus-input-pl {
   padding-left: 1.6rem !important;
   font-weight: 700;
-  color: #2563eb !important;
+  color: var(--info) !important;
 }
 
 /* Segmented Toggle Control (Comprobantes de Egreso) */
 .lottus-toggle-row {
   display: flex;
   gap: 0.35rem;
-  background: #f1f5f9;
+  background: var(--gray-100);
   border-radius: 8px;
   padding: 3px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--gray-200);
 }
 
 .lottus-toggle-btn {
@@ -984,13 +726,13 @@
   font-weight: 600;
   cursor: pointer;
   background: transparent;
-  color: #64748b;
+  color: var(--gray-500);
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .lottus-toggle-btn.active {
-  background: #ffffff;
+  background: var(--surface);
   color: #1d4ed8;
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -1001,23 +743,23 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-height: 160px;
+  max-height: 280px;
   overflow-y: auto;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--gray-300);
   border-radius: 8px;
   padding: 0.35rem;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .lottus-facturas-empty {
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: var(--gray-400);
   font-style: italic;
   padding: 0.65rem;
   text-align: center;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--gray-300);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--gray-50);
 }
 
 .lottus-factura-item {
@@ -1027,8 +769,8 @@
   padding: 0.38rem 0.6rem;
   border-radius: 6px;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
   transition: all 0.15s ease;
   user-select: none;
 }
@@ -1040,11 +782,11 @@
 
 .lottus-factura-item.selected {
   background: #eff6ff;
-  border-color: #3b82f6;
+  border-color: var(--info);
 }
 
 .lottus-factura-item input[type="checkbox"] {
-  accent-color: #2563eb;
+  accent-color: var(--info);
   width: 14px;
   height: 14px;
   flex-shrink: 0;
@@ -1060,13 +802,13 @@
 .lottus-factura-id {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--gray-900);
 }
 
 .lottus-factura-valor {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--info);
 }
 
 .lottus-factura-estado {
@@ -1091,15 +833,15 @@
 .lottus-concepto-preview {
   margin-top: 0.35rem;
   padding: 0.4rem 0.65rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
   border-radius: 6px;
   font-size: 0.75rem;
-  color: #475569;
+  color: var(--gray-600);
 }
 
 .lottus-concepto-preview strong {
-  color: #0f172a;
+  color: var(--gray-900);
 }
 
 /* Actions Footer */
@@ -1110,13 +852,13 @@
   gap: 0.5rem;
   margin-top: 0.35rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--gray-100);
 }
 
 .lottus-btn-cancel {
-  background: #ffffff;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  color: var(--gray-600);
+  border: 1px solid var(--gray-300);
   padding: 0.45rem 0.95rem;
   border-radius: 8px;
   font-weight: 600;
@@ -1126,14 +868,14 @@
 }
 
 .lottus-btn-cancel:hover:not(:disabled) {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
 }
 
 .lottus-btn-submit {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--info) 0%, #1d4ed8 100%);
+  color: var(--surface);
   border: none;
   padding: 0.45rem 1.1rem;
   border-radius: 8px;
@@ -1154,3 +896,210 @@
   cursor: not-allowed;
   transform: none;
 }
+
+.comprobantes-filters {
+  padding: 0.75rem 1rem;
+}
+
+/* Factura meta info (dates + obs) */
+.lottus-factura-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.lottus-factura-meta span {
+  font-size: 0.7rem;
+  color: var(--gray-500);
+  font-weight: 500;
+  background: var(--gray-100);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.lottus-factura-obs {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Discount summary */
+.lottus-descuento-summary {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.lottus-descuento-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+}
+
+.lottus-descuento-row.descuento span:last-child {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.lottus-descuento-row.total {
+  border-top: 1px solid var(--gray-200);
+  padding-top: 0.3rem;
+  margin-top: 0.1rem;
+  color: var(--gray-900);
+  font-size: 0.85rem;
+}
+
+/* Readonly Input for Automatic Valor Bruto */
+.lottus-input-readonly {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  font-weight: 700 !important;
+  cursor: not-allowed !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Factura Card and Actions */
+.lottus-factura-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  margin-bottom: 0.55rem;
+  background: var(--gray-50);
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.lottus-factura-card.selected {
+  border-color: var(--info);
+  background: #eff6ff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+}
+
+.lottus-factura-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.lottus-factura-main-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lottus-factura-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.lottus-dcto-btn {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.lottus-dcto-btn.active {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.lottus-dcto-btn.active:hover {
+  background: #bbf7d0;
+}
+
+.lottus-dcto-btn.disabled {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.lottus-dcto-btn.disabled:hover {
+  background: #fca5a5;
+  color: #991b1b;
+}
+
+.lottus-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--gray-300);
+  background: #ffffff;
+  color: var(--gray-700);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.lottus-expand-btn:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+/* Expanded Products Summary */
+.lottus-factura-items-summary {
+  padding: 0.65rem 0.85rem;
+  border-top: 1px dashed #bfdbfe;
+  background: #ffffff;
+}
+
+.lottus-items-summary-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.lottus-items-empty {
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  font-style: italic;
+  padding: 0.3rem 0;
+}
+
+.lottus-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.lottus-items-table th {
+  text-align: left;
+  padding: 0.3rem 0.45rem;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.lottus-items-table td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.lottus-items-table tr:last-child td {
+  border-bottom: none;
+}
+

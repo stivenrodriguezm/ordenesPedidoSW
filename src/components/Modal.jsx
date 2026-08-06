@@ -1,12 +1,14 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import './Modal.css';
 
-const Modal = ({ children, show, onClose, title }) => {
-  if (!show) {
+const Modal = ({ children, show, open, onClose, title, footer }) => {
+  const isVisible = show !== undefined ? show : open;
+  if (!isVisible) {
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
@@ -16,8 +18,14 @@ const Modal = ({ children, show, onClose, title }) => {
         <div className="modal-body">
           {children}
         </div>
+        {footer && (
+          <div className="modal-footer">
+            {footer}
+          </div>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

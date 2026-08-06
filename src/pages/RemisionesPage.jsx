@@ -4,10 +4,13 @@ import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay, s
 import { es } from 'date-fns/locale';
 import API from '../services/api';
 import { usePageRefresh } from '../hooks/usePageRefresh';
+import { useVendedores, usePendientesIds } from '../hooks/useSharedData';
 import { formatCOP } from '../utils/formatCOP';
+import { formatDate as formatDateShared } from '../utils/dates';
 import { generateRemisionPDF } from '../utils/generateRemisionPDF';
-import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaTruck } from 'react-icons/fa';
 import { AppContext, usePermissions } from '../AppContext';
+import { PageHeader, Button, Badge, Modal } from '../components/ui';
 import './RemisionesPage.css';
 
 const ESTADO_LABELS = {
@@ -18,6 +21,12 @@ const ESTADO_LABELS = {
     devuelta: 'Devuelta',
 };
 
+// Tono del Badge del design system según el estado de la remisión
+const estadoTone = (estado) => {
+    const map = { creada: 'info', despachada: 'warning', finalizada: 'success', anulada: 'danger', devuelta: 'neutral' };
+    return map[estado] || 'neutral';
+};
+
 const METODOS_PAGO = [
     { value: 'efectivo', label: 'Efectivo' },
     { value: 'transferencia', label: 'Transferencia' },
@@ -26,8 +35,8 @@ const METODOS_PAGO = [
     { value: 'otro', label: 'Otro' },
 ];
 
-// Transportadores y Vendedores se cargan dinámicamente desde la API
-// en el estado `transportadores` y `vendedores` del componente.
+// Transportadores y Vendedores se cargan dinámicamente desde la API:
+// `transportadores` en el estado del componente y `vendedores` vía useVendedores().
 
 function generateId(list) {
     let id;
@@ -37,13 +46,7 @@ function generateId(list) {
 }
 
 function formatDate(dtStr) {
-    if (!dtStr) return '—';
-    const parts = dtStr.split('T')[0].split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    const d = new Date(dtStr);
-    if (isNaN(d)) return dtStr;
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    return formatDateShared(dtStr) || '—';
 }
 
 // Helper functions will be bound inside the component scope
@@ -134,9 +137,11 @@ function RemisionesPage() {
     const [grupos, setGrupos] = useState([]);
     
     // Adicional: state for dropdowns
-    const [ordenesPendientes, setOrdenesPendientes] = useState([]);
-    const [vendedores, setVendedores] = useState([]);
     const [transportadores, setTransportadores] = useState([]);
+
+    // Datos compartidos con otras páginas (dedupe/caché con React Query)
+    const { data: ordenesPendientes = [], refetch: refetchPendientesIds } = usePendientesIds();
+    const { data: vendedores = [], refetch: refetchVendedores } = useVendedores();
 
     const [showModal, setShowModal] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
@@ -198,11 +203,11 @@ function RemisionesPage() {
                     return { data: { results: [], data: [] } };
                 });
 
-                const [remRes, ordRes, vendRes, transpRes] = await Promise.all([
+                const [remRes, transpRes] = await Promise.all([
                     API.get('/suministros/remisiones/'),
-                    safeGet('/get-pendientes-ids/'),
-                    safeGet('/vendedores/'),
                     safeGet('/transportadores/'),
+                    refetchPendientesIds(),
+                    refetchVendedores(),
                 ]);
                 
                 const rawRemisiones = remRes.data.results || remRes.data;
@@ -224,8 +229,6 @@ function RemisionesPage() {
                 }));
 
                 setRemisiones(formattedRem);
-                setOrdenesPendientes(Array.isArray(ordRes.data) ? ordRes.data : []);
-                setVendedores(Array.isArray(vendRes.data) ? vendRes.data : []);
                 setTransportadores(Array.isArray(transpRes.data) ? transpRes.data : []);
             } catch (error) {
                 console.error("Error fetching remisiones:", error);
@@ -645,7 +648,7 @@ function RemisionesPage() {
         e.preventDefault();
         if (!qrInput.trim()) return;
         try {
-            const res = await API.get(`/suministros/inventario/por-qr/?qr=${qrInput.trim()}`);
+            const res = await API.get(`/suministros/inventario/por-qr/?qr=${encodeURIComponent(qrInput.trim())}`);
             const item = res.data;
             if (item && item.id) {
                 setForm(prev => {
@@ -668,7 +671,7 @@ function RemisionesPage() {
     };
 
     return (
-        <div className="page-container remisiones-page-container">
+        <div className="ds-page remisiones-page ds-fade-in">
 
             {/* ===== TOAST NOTIFICATION ===== */}
             <div className={`rem-toast rem-toast--${toast.type}${toast.visible ? ' rem-toast--visible' : ''}`}>
@@ -682,25 +685,69 @@ function RemisionesPage() {
                 </button>
             </div>
 
-            {/* ===== HEADER: premium glass style ===== */}
-            <div className="v-glass-header">
-                <div className="v-filters-bar">
+            {/* ===== HEADER ===== */}
+            <PageHeader
+                icon={FaTruck}
+                title="Remisiones"
+                subtitle="Gestiona y programa las remisiones de entrega"
+                actions={(
+                    <>
+                        <div className="view-mode-toggle">
+                            <button
+                                className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                                onClick={() => setViewMode('table')}
+                                title="Vista de Tabla"
+                            >
+                                <FaList />
+                            </button>
+                            <button
+                                className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+                                onClick={() => setViewMode('calendar')}
+                                title="Vista de Calendario"
+                            >
+                                <FaCalendarAlt />
+                            </button>
+                        </div>
+                        {hasPermission('CREAR_REMISION') && (
+                            <Button icon={FaPlus} onClick={() => navigate('/suministros/remisiones/nueva')}>
+                                Nueva Remisión
+                            </Button>
+                        )}
+                    </>
+                )}
+            />
+
+            {/* ===== FILTROS ===== */}
+            <div className="ds-card rem-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
                     <div className="v-search-pill">
                         <FaSearch />
                         <input
                             type="text"
-                            placeholder="Buscar..."
+                            placeholder="Buscar por ID u O.C..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="v-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0 0.8rem', height: '34px' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Desde</span>
-                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
+                    <div className="v-select-pill">
+                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Desde:</span>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={e => setDateFrom(e.target.value)}
+                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
+                        />
                     </div>
-                    <div className="v-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0 0.8rem', height: '34px' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Hasta</span>
-                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#475569' }} />
+                    <div className="v-select-pill">
+                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Hasta:</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={e => setDateTo(e.target.value)}
+                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
+                        />
                     </div>
                     <div className="v-select-pill">
                         <select value={estadoFilter} onChange={e => setEstadoFilter(e.target.value)}>
@@ -723,43 +770,18 @@ function RemisionesPage() {
                         </select>
                     </div>
                     {hasFilters && (
-                        <button className="v-btn-ghost" onClick={clearFilters} title="Limpiar filtros" style={{ color: '#ef4444' }}>
+                        <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
                             <FaTimes />
-                        </button>
-                    )}
-                    
-                    <div style={{ flexGrow: 1 }}></div>
-
-                    <div className="view-mode-toggle">
-                        <button 
-                            className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
-                            onClick={() => setViewMode('table')}
-                            title="Vista de Tabla"
-                        >
-                            <FaList />
-                        </button>
-                        <button 
-                            className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
-                            onClick={() => setViewMode('calendar')}
-                            title="Vista de Calendario"
-                        >
-                            <FaCalendarAlt />
-                        </button>
-                    </div>
-                    {hasPermission('CREAR_REMISION') && (
-                        <button className="v-btn-primary-glow" onClick={() => navigate('/nuevaRemision')}>
-                            <FaPlus />
-                            <span>Nueva Remisión</span>
                         </button>
                     )}
                 </div>
             </div>
 
             {/* ===== MAIN CONTENT ===== */}
-            <div className="ordenes-container">
-                {viewMode === 'table' ? (
-                    <div className="desktop-view">
-                    <table className="rem-tabla-ppal">
+            {viewMode === 'table' ? (
+                <div className="ds-table-wrap">
+                    <div className="ds-table-scroll">
+                    <table className="ds-table rem-tabla-ppal">
                         <thead>
                             <tr>
                                 <th><span className="rem-th-truncate" title="ID">ID</span></th>
@@ -799,7 +821,7 @@ function RemisionesPage() {
                                         <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                                         <td><div className="skeleton skeleton-badge"></div></td>
                                         <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                                        <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-text" style={{ width: '20px', margin: '0 auto' }}></div></td>
+                                        <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '4px', margin: '0 auto' }}></div></td>
                                     </tr>
                                 ))
                             ) : filteredRemisiones.length === 0 ? (
@@ -835,9 +857,9 @@ function RemisionesPage() {
                                                     : <span className="empty-val">—</span>}
                                             </td>
                                             <td>
-                                                <span className={`status-badge ${getEstadoClass(rem.estado)}`}>
+                                                <Badge tone={estadoTone(rem.estado)}>
                                                     {ESTADO_LABELS[rem.estado] || rem.estado}
-                                                </span>
+                                                </Badge>
                                             </td>
                                             <td className="obs-cell-col">
                                                 <ObsCell text={rem.observacion} />
@@ -903,7 +925,7 @@ function RemisionesPage() {
 
                                                         <div className="rem-det-panel rem-det-panel-wide">
                                                             <h4 className="rem-det-titulo">Productos Entregados</h4>
-                                                            <p className="rem-det-subtitle" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1rem', lineHeight: '1.4' }}>
+                                                            <p className="rem-det-subtitle">
                                                                 A continuación se listan los productos despachados en esta remisión, incluyendo su variación y observación particular.
                                                             </p>
                                                             {rem.inventarioIds.length === 0 ? (
@@ -990,6 +1012,7 @@ function RemisionesPage() {
                             })}
                         </tbody>
                     </table>
+                    </div>
                     {/* Pagination Controls */}
                     {filteredRemisiones.length > 0 && (
                         <div className="rem-pagination-controls">
@@ -997,196 +1020,185 @@ function RemisionesPage() {
                                 Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredRemisiones.length)} de {filteredRemisiones.length} remisiones
                             </span>
                             <div className="rem-pagination-buttons">
-                                <button 
-                                    className="btn-secondary rem-page-btn" 
-                                    disabled={currentPage === 1} 
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    icon={FaChevronLeft}
+                                    disabled={currentPage === 1}
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 >
-                                    <FaChevronLeft /> Anterior
-                                </button>
+                                    Anterior
+                                </Button>
                                 <span className="rem-pagination-page">
                                     Página {currentPage} de {totalPages || 1}
                                 </span>
-                                <button 
-                                    className="btn-secondary rem-page-btn" 
-                                    disabled={currentPage === totalPages || totalPages === 0} 
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    disabled={currentPage === totalPages || totalPages === 0}
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 >
                                     Siguiente <FaChevronRight />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     )}
                 </div>
                 ) : (
-                    <CalendarView 
-                        remisiones={remisiones}
-                        currentWeekStart={currentWeekStart}
-                        focusedDate={focusedDate}
-                        viewType={calendarViewType}
-                        setViewType={setCalendarViewType}
-                        nextScope={nextScope}
-                        prevScope={prevScope}
-                        goToday={goToday}
-                        openEditModal={openEditModal}
-                        ESTADO_LABELS={ESTADO_LABELS}
-                    />
+                    <div className="ds-card rem-calendar-card">
+                        <CalendarView 
+                            remisiones={remisiones}
+                            currentWeekStart={currentWeekStart}
+                            focusedDate={focusedDate}
+                            viewType={calendarViewType}
+                            setViewType={setCalendarViewType}
+                            nextScope={nextScope}
+                            prevScope={prevScope}
+                            goToday={goToday}
+                            openEditModal={openEditModal}
+                            ESTADO_LABELS={ESTADO_LABELS}
+                        />
+                    </div>
                 )}
-            </div>
 
-            {/* ===== MODAL ACTUALIZAR REMI SIÓN ===== */}
+            {/* ===== MODAL ACTUALIZAR REMISIÓN ===== */}
             {editModal.open && (() => {
                 const rem    = editModal.remision;
                 const locked = isFinished(rem?.estado);
                 const onlyEstado = isAuxiliar && !isAdmin;
 
                 return (
-                    <div
-                        className={`rem-overlay${editModalVisible ? ' rem-overlay-visible' : ''}`}
-                        onClick={e => { if (e.target === e.currentTarget) closeEditModal(); }}
+                    <Modal
+                        open={editModal.open}
+                        onClose={closeEditModal}
+                        size="lg"
+                        title={(
+                            <>
+                                Actualizar Remisión{' '}
+                                <span className="rem-edit-subtitle">N° <strong>{String(rem?.id).padStart(5,'0')}</strong></span>
+                            </>
+                        )}
+                        footer={(
+                            <>
+                                <Button variant="secondary" onClick={closeEditModal}>
+                                    Cancelar
+                                </Button>
+                                {!locked && (
+                                    <Button
+                                        type="submit"
+                                        form="rem-edit-form"
+                                        icon={FaCheckCircle}
+                                        loading={editSaving}
+                                    >
+                                        Guardar Cambios
+                                    </Button>
+                                )}
+                            </>
+                        )}
                     >
-                        <div
-                            className={`rem-modal rem-edit-modal${editModalVisible ? ' rem-modal-visible' : ''}`}
-                        >
-                            {/* ── Header ── */}
-                            <div className="rem-edit-header">
-                                <div className="rem-edit-header-left">
-                                    <div className="rem-edit-icon-wrap">
-                                        <FaEdit />
-                                    </div>
-                                    <div>
-                                        <h3 className="rem-edit-title">Actualizar Remisión</h3>
-                                        <span className="rem-edit-subtitle">N° <strong>{String(rem?.id).padStart(5,'0')}</strong></span>
-                                    </div>
+                        {/* ── Info Card ── */}
+                        <div className="rem-edit-infocard">
+                            <div className="rem-edit-infocard-grid">
+                                <div className="ric-item">
+                                    <span className="ric-label">Cliente</span>
+                                    <span className="ric-value">{rem?.clienteNombre || '—'}</span>
                                 </div>
-                                <button className="rem-edit-close" onClick={closeEditModal} aria-label="Cerrar">
-                                    <FaTimes />
-                                </button>
-                            </div>
-
-                            {/* ── Info Card ── */}
-                            <div className="rem-edit-infocard">
-                                <div className="rem-edit-infocard-grid">
-                                    <div className="ric-item">
-                                        <span className="ric-label">Cliente</span>
-                                        <span className="ric-value">{rem?.clienteNombre || '—'}</span>
-                                    </div>
-                                    <div className="ric-item">
-                                        <span className="ric-label">Orden de Compra</span>
-                                        <span className="ric-value">{rem?.ordenAsociadaId || '—'}</span>
-                                    </div>
-                                    <div className="ric-item">
-                                        <span className="ric-label">Fecha de Entrega</span>
-                                        <span className="ric-value">{rem?.fechaEntrega ? formatDate(rem.fechaEntrega) : '—'}</span>
-                                    </div>
-                                    <div className="ric-item">
-                                        <span className="ric-label">Horario</span>
-                                        <span className="ric-value">
-                                            {rem?.horaDesde && rem?.horaHasta
-                                                ? <><FaClock style={{ fontSize: '0.65rem', opacity: 0.7, marginRight: 3 }} />{rem.horaDesde} – {rem.horaHasta}</>
-                                                : '—'}
-                                        </span>
-                                    </div>
-                                    <div className="ric-item ric-item-wide">
-                                        <span className="ric-label">Dirección</span>
-                                        <span className="ric-value">{rem?.direccionEntrega || '—'}{rem?.ciudad ? `, ${rem.ciudad}` : ''}</span>
-                                    </div>
-                                    <div className="ric-item">
-                                        <span className="ric-label">Transportador</span>
-                                        <span className="ric-value">{rem?.transportador_display || '—'}</span>
-                                    </div>
+                                <div className="ric-item">
+                                    <span className="ric-label">Orden de Compra</span>
+                                    <span className="ric-value">{rem?.ordenAsociadaId || '—'}</span>
                                 </div>
-                                {/* Estado badge actual */}
-                                <div className="ric-estado-row">
-                                    <span className="ric-label">Estado actual</span>
-                                    <span className={`status-badge ${getEstadoClass(rem?.estado)} ric-estado-badge`}>
-                                        {ESTADO_LABELS[rem?.estado] || rem?.estado}
+                                <div className="ric-item">
+                                    <span className="ric-label">Fecha de Entrega</span>
+                                    <span className="ric-value">{rem?.fechaEntrega ? formatDate(rem.fechaEntrega) : '—'}</span>
+                                </div>
+                                <div className="ric-item">
+                                    <span className="ric-label">Horario</span>
+                                    <span className="ric-value">
+                                        {rem?.horaDesde && rem?.horaHasta
+                                            ? <><FaClock style={{ fontSize: '0.65rem', opacity: 0.7, marginRight: 3 }} />{rem.horaDesde} – {rem.horaHasta}</>
+                                            : '—'}
                                     </span>
                                 </div>
+                                <div className="ric-item ric-item-wide">
+                                    <span className="ric-label">Dirección</span>
+                                    <span className="ric-value">{rem?.direccionEntrega || '—'}{rem?.ciudad ? `, ${rem.ciudad}` : ''}</span>
+                                </div>
+                                <div className="ric-item">
+                                    <span className="ric-label">Transportador</span>
+                                    <span className="ric-value">{rem?.transportador_display || '—'}</span>
+                                </div>
+                            </div>
+                            {/* Estado badge actual */}
+                            <div className="ric-estado-row">
+                                <span className="ric-label">Estado actual</span>
+                                <Badge tone={estadoTone(rem?.estado)}>
+                                    {ESTADO_LABELS[rem?.estado] || rem?.estado}
+                                </Badge>
+                            </div>
+                        </div>
+
+                        {/* ── Form ── */}
+                        <form id="rem-edit-form" onSubmit={handleEditSubmit} className="rem-edit-form">
+
+                            {locked && (
+                                <div className="rem-edit-alert rem-edit-alert--warn">
+                                    ⚠️ Esta remisión está <strong>{ESTADO_LABELS[rem?.estado]}</strong> y no puede modificarse.
+                                </div>
+                            )}
+
+                            {/* Estado */}
+                            <div className="rem-edit-field-group">
+                                <label className="rem-edit-label">Nuevo Estado</label>
+                                <div className="rem-edit-estado-grid">
+                                    {['creada','despachada','finalizada','devuelta'].map(est => (
+                                        <button
+                                            key={est}
+                                            type="button"
+                                            disabled={locked}
+                                            className={`rem-edit-estado-btn est-${est}${editForm.estado === est ? ' selected' : ''}`}
+                                            onClick={() => !locked && setEditForm(prev => ({ ...prev, estado: est }))}
+                                        >
+                                            {ESTADO_LABELS[est]}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* ── Form ── */}
-                            <form onSubmit={handleEditSubmit} className="rem-edit-form">
-
-                                {locked && (
-                                    <div className="rem-edit-alert rem-edit-alert--warn">
-                                        ⚠️ Esta remisión está <strong>{ESTADO_LABELS[rem?.estado]}</strong> y no puede modificarse.
-                                    </div>
-                                )}
-
-                                {/* Estado */}
-                                <div className="rem-edit-field-group">
-                                    <label className="rem-edit-label">Nuevo Estado</label>
-                                    <div className="rem-edit-estado-grid">
-                                        {['creada','despachada','finalizada','devuelta'].map(est => (
-                                            <button
-                                                key={est}
-                                                type="button"
-                                                disabled={locked}
-                                                className={`rem-edit-estado-btn est-${est}${editForm.estado === est ? ' selected' : ''}`}
-                                                onClick={() => !locked && setEditForm(prev => ({ ...prev, estado: est }))}
-                                            >
-                                                {ESTADO_LABELS[est]}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Costo + Nota → solo si no es auxiliar puro */}
-                                {!onlyEstado && (
-                                    <>
-                                        <div className="rem-edit-row">
-                                            <div className="rem-edit-field-group">
-                                                <label className="rem-edit-label">Costo del Flete</label>
-                                                <div className="rem-edit-prefix-wrap">
-                                                    <span className="rem-edit-prefix">$</span>
-                                                    <input
-                                                        type="text"
-                                                        className="rem-edit-input"
-                                                        placeholder="0"
-                                                        value={editForm.costo_display}
-                                                        onChange={handleEditCostoChange}
-                                                        disabled={locked}
-                                                    />
-                                                </div>
+                            {/* Costo + Nota → solo si no es auxiliar puro */}
+                            {!onlyEstado && (
+                                <>
+                                    <div className="rem-edit-row">
+                                        <div className="rem-edit-field-group">
+                                            <label className="rem-edit-label">Costo del Flete</label>
+                                            <div className="rem-edit-prefix-wrap">
+                                                <span className="rem-edit-prefix">$</span>
+                                                <input
+                                                    type="text"
+                                                    className="rem-edit-input"
+                                                    placeholder="0"
+                                                    value={editForm.costo_display}
+                                                    onChange={handleEditCostoChange}
+                                                    disabled={locked}
+                                                />
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="rem-edit-field-group">
-                                            <label className="rem-edit-label">Nota del Transportador</label>
-                                            <textarea
-                                                className="rem-edit-textarea"
-                                                rows={3}
-                                                placeholder="Ej: El cliente no estaba, se dejó en recepción..."
-                                                value={editForm.nota_transportador}
-                                                onChange={e => setEditForm(prev => ({ ...prev, nota_transportador: e.target.value }))}
-                                                disabled={locked}
-                                            />
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* Footer */}
-                                <div className="rem-edit-footer">
-                                    <button type="button" className="rem-edit-btn-cancel" onClick={closeEditModal}>
-                                        Cancelar
-                                    </button>
-                                    {!locked && (
-                                        <button
-                                            type="submit"
-                                            className={`rem-edit-btn-save${editSaving ? ' loading' : ''}`}
-                                            disabled={editSaving}
-                                        >
-                                            {editSaving
-                                                ? <><FaSpinner className="spin-icon" /> Guardando...</>
-                                                : <><FaCheckCircle /> Guardar Cambios</>
-                                            }
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                                    <div className="rem-edit-field-group">
+                                        <label className="rem-edit-label">Nota del Transportador</label>
+                                        <textarea
+                                            className="rem-edit-textarea"
+                                            rows={3}
+                                            placeholder="Ej: El cliente no estaba, se dejó en recepción..."
+                                            value={editForm.nota_transportador}
+                                            onChange={e => setEditForm(prev => ({ ...prev, nota_transportador: e.target.value }))}
+                                            disabled={locked}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </form>
+                    </Modal>
                 );
             })()}
         </div>

@@ -1,47 +1,52 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useContext, useCallback, lazy, Suspense } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { AppContext } from '../AppContext';
 import { usePageRefresh } from '../hooks/usePageRefresh';
-import { Bar } from 'react-chartjs-2';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
+import { formatCOP } from '../utils/formatCOP';
+import { formatDateCorta, formatDateLarga, getTodayStr } from '../utils/dates';
+import { StatCard, Badge, LoadingBlock, ErrorState } from '../components/ui';
 import {
     FaChartLine,
     FaTrophy,
     FaHourglassHalf,
     FaClock,
-    FaMoneyBillWave,
+    FaCashRegister,
     FaPlus,
     FaShoppingCart,
-    FaCashRegister,
     FaFileInvoiceDollar,
     FaUsers,
     FaBox,
-    FaArrowUp,
-    FaArrowDown
+    FaArrowRight
 } from 'react-icons/fa';
-import Loader from '../components/Loader';
 import './AdminHomePage.css';
 
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend
-);
+// chart.js + react-chartjs-2 se cargan bajo demanda (ver components/charts.js)
+const Bar = lazy(() => import('../components/charts').then(m => ({ default: m.Bar })));
+
+// Paleta del design system para la gráfica (año anterior / año actual)
+const CHART_COLORS = ['#cbd5e1', '#0e9f6e'];
+
+const QUICK_ACTIONS = [
+    { to: '/ventas/nueva', icon: FaPlus, label: 'Nueva Venta', hint: 'Registrar venta', primary: true },
+    { to: '/ordenes/nuevo', icon: FaShoppingCart, label: 'Nueva Orden', hint: 'Crear pedido' },
+    { to: '/caja', icon: FaCashRegister, label: 'Mov. Caja', hint: 'Gestionar caja', state: { openForm: true } },
+    { to: '/recibos-caja', icon: FaFileInvoiceDollar, label: 'Nuevo RC', hint: 'Recibo de caja', state: { openForm: true } },
+    { to: '/clientes', icon: FaUsers, label: 'Clientes', hint: 'Gestionar clientes' },
+    { to: '/referencias', icon: FaBox, label: 'Productos', hint: 'Ver catálogo' },
+];
+
+const estadoTone = (estado) => {
+    const e = (estado || '').toLowerCase();
+    if (['pagada', 'completada', 'entregada'].includes(e)) return 'success';
+    if (['pendiente'].includes(e)) return 'warning';
+    if (['anulada', 'cancelada'].includes(e)) return 'danger';
+    return 'neutral';
+};
 
 const AdminHomePage = () => {
     const { usuario } = useContext(AppContext);
+    const navigate = useNavigate();
     const [greeting, setGreeting] = useState('');
     const [stats, setStats] = useState(null);
     const [chartData, setChartData] = useState(null);
@@ -59,6 +64,7 @@ const AdminHomePage = () => {
         };
         setGreeting(getGreeting());
         setLoading(true);
+        setError(null);
         try {
             const [statsResponse, chartResponse] = await Promise.all([
                 api.get('/dashboard-stats/'),
@@ -78,31 +84,19 @@ const AdminHomePage = () => {
 
     const formatCurrency = (value) => {
         if (value === null || value === undefined) return '$0';
-        return new Intl.NumberFormat('es-CO', {
-            style: 'currency',
-            currency: 'COP',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(value);
+        return formatCOP(value);
     };
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('es-CO', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-    };
-
-    const getTimeBasedGradient = () => {
-        const now = new Date();
-        const hour = now.getHours();
-
-        if (hour < 12) return 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'; // Morning - Deep Blue
-        if (hour < 18) return 'linear-gradient(135deg, #1e40af 0%, #0ea5e9 100%)'; // Afternoon - Bright Blue
-        return 'linear-gradient(135deg, #0c4a6e 0%, #0891b2 100%)'; // Evening - Ocean Blue
+    // Aplica la paleta del design system a los datasets que vienen del backend
+    const styledChartData = chartData && {
+        ...chartData,
+        datasets: chartData.datasets.map((ds, i) => ({
+            ...ds,
+            backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+            hoverBackgroundColor: i === 1 ? '#B5952F' : '#94a3b8',
+            borderRadius: 6,
+            maxBarThickness: 26,
+        })),
     };
 
     const chartOptions = {
@@ -111,212 +105,159 @@ const AdminHomePage = () => {
         plugins: {
             legend: {
                 position: 'top',
+                align: 'end',
                 labels: {
-                    font: {
-                        size: 12,
-                        family: "'Inter', sans-serif",
-                        weight: 600
-                    },
-                    padding: 15,
+                    font: { size: 12, family: "'Inter', sans-serif", weight: 600 },
+                    padding: 16,
                     usePointStyle: true,
-                    pointStyle: 'circle'
+                    pointStyle: 'circle',
+                    color: '#475569',
                 }
             },
-            title: {
-                display: true,
-                text: 'Comparativa de Ventas',
-                font: {
-                    size: 18,
-                    family: "'Inter', sans-serif",
-                    weight: 700
-                },
-                padding: 20,
-                color: '#1f2937'
-            },
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => ` ${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`,
+                }
+            }
         },
         scales: {
             y: {
                 beginAtZero: true,
                 ticks: {
-                    callback: function (value) {
-                        return formatCurrency(value);
-                    },
-                    font: {
-                        size: 11,
-                        family: "'Inter', sans-serif"
-                    }
+                    callback: (value) => formatCurrency(value),
+                    font: { size: 11, family: "'Inter', sans-serif" },
+                    color: '#94a3b8',
                 },
-                grid: {
-                    color: '#f1f5f9',
-                    drawBorder: false
-                }
+                grid: { color: '#f1f5f9', drawBorder: false }
             },
             x: {
-                ticks: {
-                    font: {
-                        size: 11,
-                        family: "'Inter', sans-serif"
-                    }
-                },
-                grid: {
-                    display: false
-                }
+                ticks: { font: { size: 11, family: "'Inter', sans-serif" }, color: '#94a3b8' },
+                grid: { display: false }
             }
         }
     };
 
     if (loading) {
-        return <Loader text="Cargando dashboard..." />;
+        return (
+            <div className="ds-page">
+                <LoadingBlock message="Cargando dashboard..." />
+            </div>
+        );
     }
 
     if (error) {
         return (
-            <div className="admin-home-container">
-                <div className="error-message-box">{error}</div>
+            <div className="ds-page">
+                <ErrorState message={error} onRetry={fetchData} />
             </div>
         );
     }
 
     return (
-        <div className="admin-home-container">
-            {/* Hero Section */}
-            <header className="admin-hero" style={{ background: getTimeBasedGradient() }}>
-                <div className="user-avatar-large">
+        <div className="ds-page admin-home ds-fade-in">
+            {/* Hero */}
+            <header className="admin-hero ds-card">
+                <div className="admin-hero__avatar">
                     {usuario?.first_name?.charAt(0)?.toUpperCase() || 'A'}
                 </div>
-                <div className="hero-content">
-                    <div>
-                        <h1 className="admin-greeting">
-                            {greeting}, <span className="user-name">{usuario?.first_name || 'Admin'}</span>!
-                        </h1>
-                        <p className="admin-subtitle">Panel de Control &middot; Muebles Lottus</p>
-                    </div>
+                <div className="admin-hero__text">
+                    <h1 className="admin-hero__greeting">
+                        {greeting}, {usuario?.first_name || 'Admin'}
+                    </h1>
+                    <p className="admin-hero__date">{formatDateLarga(getTodayStr())} · Panel de Control</p>
                 </div>
             </header>
 
-            {/* Statistics Grid */}
-            <section className="stats-section">
-                <div className="stats-grid-enhanced">
-
-                    <div className="stat-card-enhanced stat-ventas-mes">
-                        <div className="stat-icon-wrapper">
-                            <FaTrophy className="stat-icon" />
-                        </div>
-                        <div className="stat-details">
-                            <p className="stat-label">Ventas del Mes</p>
-                            <h3 className="stat-value">{formatCurrency(stats?.ventas_mes || 0)}</h3>
-                            <span className="stat-trend positive">
-                                <FaArrowUp /> En progreso
-                            </span>
-                        </div>
-                        <div className="stat-sparkle"></div>
-                    </div>
-
-                    <div className="stat-card-enhanced stat-pedidos-pendientes">
-                        <div className="stat-icon-wrapper">
-                            <FaHourglassHalf className="stat-icon" />
-                        </div>
-                        <div className="stat-details">
-                            <p className="stat-label">Ventas con pedidos pendientes</p>
-                            <h3 className="stat-value">{stats?.pedidos_pendientes || 0}</h3>
-                            <span className="stat-trend neutral">
-                                <FaHourglassHalf /> Pendientes
-                            </span>
-                        </div>
-                        <div className="stat-sparkle"></div>
-                    </div>
-
-                    <div className="stat-card-enhanced stat-ordenes-atrasadas">
-                        <div className="stat-icon-wrapper">
-                            <FaClock className="stat-icon" />
-                        </div>
-                        <div className="stat-details">
-                            <p className="stat-label">Órdenes de pedido atrasadas</p>
-                            <h3 className="stat-value">{stats?.ordenes_atrasadas || 0}</h3>
-                            <span className="stat-trend warning">
-                                <FaClock /> Atrasadas
-                            </span>
-                        </div>
-                        <div className="stat-sparkle"></div>
-                    </div>
-                </div>
+            {/* KPIs */}
+            <section className="admin-kpis">
+                <StatCard
+                    icon={FaTrophy}
+                    label="Ventas del mes"
+                    value={formatCurrency(stats?.ventas_mes)}
+                    onClick={() => navigate('/ventas')}
+                />
+                <StatCard
+                    icon={FaChartLine}
+                    label="Ventas de hoy"
+                    value={formatCurrency(stats?.ventas_dia)}
+                    tone="info"
+                    onClick={() => navigate('/ventas')}
+                />
+                <StatCard
+                    icon={FaCashRegister}
+                    label="Saldo en caja"
+                    value={formatCurrency(stats?.saldo_caja)}
+                    tone="success"
+                    onClick={() => navigate('/caja')}
+                />
+                <StatCard
+                    icon={FaHourglassHalf}
+                    label="Pedidos pendientes"
+                    value={stats?.pedidos_pendientes ?? 0}
+                    tone="warning"
+                    onClick={() => navigate('/ordenes')}
+                />
+                <StatCard
+                    icon={FaClock}
+                    label="Órdenes atrasadas"
+                    value={stats?.ordenes_atrasadas ?? 0}
+                    tone="danger"
+                    onClick={() => navigate('/ordenes')}
+                />
             </section>
 
-            {/* Main Content Grid */}
-            <div className="main-content-grid">
-                {/* Quick Actions */}
-                <section className="quick-actions-section">
-                    <div className="section-header"><h2>Acciones Rápidas</h2></div>
-                    <div className="actions-grid-admin">
-                        <Link to="/nuevaVenta" className="action-card-admin action-primary">
-                            <div className="action-icon-bg">
-                                <FaPlus />
-                            </div>
-                            <h3>Nueva Venta</h3>
-                            <p>Registrar venta</p>
-                        </Link>
-
-                        <Link to="/ordenes/nuevo" className="action-card-admin">
-                            <div className="action-icon-bg">
-                                <FaShoppingCart />
-                            </div>
-                            <h3>Nueva Orden</h3>
-                            <p>Crear pedido</p>
-                        </Link>
-
-                        <Link to="/caja" state={{ openForm: true }} className="action-card-admin">
-                            <div className="action-icon-bg">
-                                <FaCashRegister />
-                            </div>
-                            <h3>Mov. Caja</h3>
-                            <p>Gestionar caja</p>
-                        </Link>
-
-                        <Link to="/recibos-caja" state={{ openForm: true }} className="action-card-admin">
-                            <div className="action-icon-bg">
-                                <FaFileInvoiceDollar />
-                            </div>
-                            <h3>Nuevo RC</h3>
-                            <p>Recibo de caja</p>
-                        </Link>
-
-                        <Link to="/clientes" className="action-card-admin">
-                            <div className="action-icon-bg">
-                                <FaUsers />
-                            </div>
-                            <h3>Clientes</h3>
-                            <p>Gestionar clientes</p>
-                        </Link>
-
-                        <Link to="/referencias" className="action-card-admin">
-                            <div className="action-icon-bg">
-                                <FaBox />
-                            </div>
-                            <h3>Productos</h3>
-                            <p>Ver catálogo</p>
-                        </Link>
+            {/* Gráfica + acciones rápidas */}
+            <div className="admin-grid">
+                <section className="ds-card admin-chart">
+                    <div className="admin-section-head">
+                        <div>
+                            <h2>Análisis de Ventas</h2>
+                            <p className="ds-muted">Comparativa año anterior vs año actual</p>
+                        </div>
+                    </div>
+                    <div className="admin-chart__canvas">
+                        {styledChartData && (
+                            <Suspense fallback={<LoadingBlock message="Cargando gráfico..." />}>
+                                <Bar options={chartOptions} data={styledChartData} />
+                            </Suspense>
+                        )}
                     </div>
                 </section>
 
-                {/* Sales Chart */}
-                <section className="chart-section">
-                    <div className="section-header"><h2>Análisis de Ventas</h2></div>
-                    <div className="chart-wrapper">
-                        {chartData && <Bar options={chartOptions} data={chartData} />}
+                <aside className="ds-card admin-actions">
+                    <div className="admin-section-head">
+                        <h2>Acciones Rápidas</h2>
                     </div>
-                </section>
+                    <div className="admin-actions__list">
+                        {QUICK_ACTIONS.map(({ to, icon: Icon, label, hint, state, primary }) => (
+                            <Link
+                                key={to}
+                                to={to}
+                                state={state}
+                                className={`admin-action ${primary ? 'admin-action--primary' : ''}`}
+                            >
+                                <span className="admin-action__icon"><Icon /></span>
+                                <span className="admin-action__body">
+                                    <span className="admin-action__label">{label}</span>
+                                    <span className="admin-action__hint">{hint}</span>
+                                </span>
+                                <FaArrowRight className="admin-action__arrow" />
+                            </Link>
+                        ))}
+                    </div>
+                </aside>
             </div>
 
-            {/* Recent Sales Table */}
-            <section className="recent-sales-section">
-                <div className="section-header">
+            {/* Últimas ventas */}
+            <section className="ds-card admin-recent">
+                <div className="admin-section-head">
                     <h2>Últimas Ventas Registradas</h2>
-                    <Link to="/ventas" className="view-all-link">
-                        Ver todas →
+                    <Link to="/ventas" className="admin-view-all">
+                        Ver todas <FaArrowRight />
                     </Link>
                 </div>
-                <div className="table-wrapper">
-                    <table className="sales-table-enhanced">
+                <div className="ds-table-scroll">
+                    <table className="ds-table">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -327,25 +268,19 @@ const AdminHomePage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {stats?.ultimas_ventas && stats.ultimas_ventas.length > 0 ? (
+                            {stats?.ultimas_ventas?.length > 0 ? (
                                 stats.ultimas_ventas.map(venta => (
                                     <tr key={venta.id}>
-                                        <td>
-                                            <span className="sale-id">#{venta.id}</span>
-                                        </td>
-                                        <td className="cliente-cell">{venta.cliente_nombre}</td>
-                                        <td className="valor-cell">{formatCurrency(venta.valor_total)}</td>
-                                        <td className="fecha-cell">{formatDate(venta.fecha_venta)}</td>
-                                        <td>
-                                            <span className={`status-badge ${venta.estado?.toLowerCase()}`}>
-                                                {venta.estado}
-                                            </span>
-                                        </td>
+                                        <td><strong>#{venta.id}</strong></td>
+                                        <td>{venta.cliente_nombre}</td>
+                                        <td>{formatCurrency(venta.valor_total)}</td>
+                                        <td>{formatDateCorta(venta.fecha_venta)}</td>
+                                        <td><Badge tone={estadoTone(venta.estado)}>{venta.estado}</Badge></td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="empty-state">
+                                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
                                         No hay ventas recientes para mostrar.
                                     </td>
                                 </tr>

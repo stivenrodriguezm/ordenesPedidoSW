@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
 import './Caja.css';
 import API from '../services/api';
-import * as XLSX from 'xlsx';
 import {
   FaFileExport,
   FaPlus,
@@ -12,27 +11,33 @@ import {
   FaSearch,
   FaArrowUp,
   FaArrowDown,
-  FaExchangeAlt,
+  FaCashRegister,
   FaWallet,
-  FaCalendarDay,
-  FaChartLine,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaTimes
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import CierreCajaModal from '../components/CierreCajaModal';
+import { PageHeader, Button, Badge, StatCard, Skeleton, LoadingBlock, EmptyState, Modal } from '../components/ui';
 
 import { formatCOP } from '../utils/formatCOP';
 
 // --- Helper Components ---
 
-const TransactionIcon = ({ type }) => {
-  if (type === 'ingreso') return <div className="icon-wrapper income"><FaArrowUp /></div>;
-  if (type === 'egreso') return <div className="icon-wrapper expense"><FaArrowDown /></div>;
-  return <div className="icon-wrapper closure"><FaLock /></div>;
+const tipoTone = (tipo) => {
+  if (tipo === 'ingreso') return 'success';
+  if (tipo === 'egreso') return 'danger';
+  return 'neutral';
 };
 
-const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
+const TransactionIcon = ({ type }) => {
+  if (type === 'ingreso') return <div className="caja-txn-icon caja-txn-icon--income"><FaArrowUp /></div>;
+  if (type === 'egreso') return <div className="caja-txn-icon caja-txn-icon--expense"><FaArrowDown /></div>;
+  return <div className="caja-txn-icon caja-txn-icon--closure"><FaLock /></div>;
+};
+
+const CreateCajaModal = ({ isOpen, onClose, onSave, saldoActual, isLoading }) => {
   const hasPermission = usePermissions();
   const initialType = hasPermission('CREAR_EGRESO_CAJA') ? 'egreso' : 'ingreso';
   const [formState, setFormState] = useState({ tipo: initialType, concepto: '', valor: '' });
@@ -58,105 +63,101 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
     onSave(formState);
   };
 
-  if (!isOpen) return null;
-
   const numericVal = parseInt(formState.valor) || 0;
+  const isExcedingBalance = formState.tipo === 'egreso' && numericVal > (saldoActual || 0);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="lottus-modal-header">
-          <div className="lottus-modal-title-wrap">
-            <div className="lottus-modal-icon-badge">
-              <FaExchangeAlt />
-            </div>
-            <div>
-              <div className="lottus-modal-type-badge">
-                <span className="lottus-badge-dot"></span> Movimiento de Caja
-              </div>
-              <h3 className="lottus-modal-title">Nuevo Movimiento</h3>
-              <p className="lottus-modal-subtitle">Registra un egreso o ingreso directo en caja general.</p>
-            </div>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="Nuevo Movimiento"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form="caja-create-form"
+            loading={isLoading}
+            disabled={!formState.concepto || numericVal <= 0 || isExcedingBalance}
+          >
+            Registrar Movimiento
+          </Button>
+        </>
+      }
+    >
+      <p className="caja-form-subtitle ds-muted">Registra un egreso o ingreso directo en caja general.</p>
+      {formState.tipo === 'egreso' && isExcedingBalance && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span>⚠️</span>
+          <span>Saldo insuficiente en caja. Saldo disponible en efectivo: {formatCOP(saldoActual || 0)}.</span>
+        </div>
+      )}
+      <form id="caja-create-form" onSubmit={handleSubmit} className="caja-form">
+        {/* Tipo de Movimiento Toggle */}
+        <div className="ds-field">
+          <label className="ds-label">Tipo de Movimiento <span className="caja-req">*</span></label>
+          <div className="caja-toggle-row">
+            {hasPermission('CREAR_EGRESO_CAJA') && (
+              <button
+                type="button"
+                className={`caja-toggle-btn ${formState.tipo === 'egreso' ? 'active' : ''}`}
+                onClick={() => setFormState(prev => ({ ...prev, tipo: 'egreso' }))}
+              >
+                <FaArrowDown /> Egreso
+              </button>
+            )}
+            {hasPermission('CREAR_INGRESO_CAJA') && (
+              <button
+                type="button"
+                className={`caja-toggle-btn ${formState.tipo === 'ingreso' ? 'active' : ''}`}
+                onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
+              >
+                <FaArrowUp /> Ingreso
+              </button>
+            )}
           </div>
-          <button type="button" className="lottus-close-btn" onClick={onClose} title="Cerrar">×</button>
+          <input type="hidden" name="tipo" value={formState.tipo} />
         </div>
 
-        <form onSubmit={handleSubmit} className="lottus-modal-form">
-          {/* Tipo de Movimiento Toggle */}
-          <div className="lottus-form-group full">
-            <label>Tipo de Movimiento <span className="lottus-req">*</span></label>
-            <div className="lottus-toggle-row">
-              {hasPermission('CREAR_EGRESO_CAJA') && (
-                <button 
-                  type="button"
-                  className={`lottus-toggle-btn ${formState.tipo === 'egreso' ? 'active' : ''}`}
-                  onClick={() => setFormState(prev => ({ ...prev, tipo: 'egreso' }))}
-                >
-                  <FaArrowDown style={{ fontSize: '0.75rem', marginRight: '0.25rem' }} /> Egreso
-                </button>
-              )}
-              {hasPermission('CREAR_INGRESO_CAJA') && (
-                <button 
-                  type="button"
-                  className={`lottus-toggle-btn ${formState.tipo === 'ingreso' ? 'active' : ''}`}
-                  onClick={() => setFormState(prev => ({ ...prev, tipo: 'ingreso' }))}
-                >
-                  <FaArrowUp style={{ fontSize: '0.75rem', marginRight: '0.25rem' }} /> Ingreso
-                </button>
-              )}
-            </div>
-            <input type="hidden" name="tipo" value={formState.tipo} />
-          </div>
+        {/* Concepto */}
+        <div className="ds-field">
+          <label className="ds-label">Concepto <span className="caja-req">*</span></label>
+          <input
+            type="text"
+            name="concepto"
+            value={formState.concepto}
+            onChange={handleChange}
+            required
+            placeholder="Ej: Pago de servicios públicos, compra insumos..."
+            className="ds-input"
+          />
+        </div>
 
-          {/* Concepto */}
-          <div className="lottus-form-group full">
-            <label>Concepto <span className="lottus-req">*</span></label>
+        {/* Valor */}
+        <div className="ds-field">
+          <div className="caja-label-flex">
+            <label className="ds-label">Valor Movimiento <span className="caja-req">*</span></label>
+            {numericVal > 0 && (
+              <span className="caja-val-preview">{formatCOP(numericVal)}</span>
+            )}
+          </div>
+          <div className="caja-money">
+            <span className="caja-money__prefix">$</span>
             <input
               type="text"
-              name="concepto"
-              value={formState.concepto}
-              onChange={handleChange}
+              name="valor"
+              value={formState.valor ? formatCOP(numericVal).replace('$', '').trim() : ''}
+              onChange={handleValorChange}
               required
-              placeholder="Ej: Pago de servicios públicos, compra insumos..."
-              className="lottus-input"
+              placeholder="0"
+              className="ds-input caja-money__input"
             />
           </div>
-
-          {/* Valor */}
-          <div className="lottus-form-group full">
-            <div className="lottus-label-flex">
-              <label>Valor Movimiento <span className="lottus-req">*</span></label>
-              {numericVal > 0 && (
-                <span className="lottus-val-preview">{formatCOP(numericVal)}</span>
-              )}
-            </div>
-            <div className="lottus-input-icon">
-              <span className="lottus-prefix">$</span>
-              <input
-                type="text"
-                name="valor"
-                value={formState.valor ? formatCOP(numericVal).replace('$', '').trim() : ''}
-                onChange={handleValorChange}
-                required
-                placeholder="0"
-                className="lottus-input lottus-input-pl"
-              />
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="lottus-modal-actions">
-            <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
-              Cancelar
-            </button>
-            <button type="submit" className="lottus-btn-submit" disabled={isLoading || !formState.concepto || numericVal <= 0}>
-              {isLoading ? 'Registrando...' : 'Registrar Movimiento'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
@@ -265,6 +266,7 @@ const Caja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
+      const XLSX = await import('xlsx');
       const response = await API.get(`/caja/`, { params });
       const dataToExport = (response.data.movimientos.results || []).map(item => ({
         ID: item.id,
@@ -287,187 +289,185 @@ const Caja = () => {
   };
 
   return (
-    <div className="caja-page-container">
+    <div className="ds-page caja-page ds-fade-in">
       <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
 
-      {/* --- Live Stats Bar --- */}
-      <div className="stats-dashboard">
-        <div className="stat-card income">
-          <div className="stat-icon"><FaArrowUp /></div>
-          <div className="stat-content">
-            <span className="stat-label">Ingresos Hoy</span>
-            <span className="stat-value">{formatCurrency(stats.ingresos_hoy)}</span>
-          </div>
-        </div>
-        <div className="stat-card expense">
-          <div className="stat-icon"><FaArrowDown /></div>
-          <div className="stat-content">
-            <span className="stat-label">Egresos Hoy</span>
-            <span className="stat-value">{formatCurrency(stats.egresos_hoy)}</span>
-          </div>
-        </div>
-        <div className="stat-card balance">
-          <div className="stat-icon"><FaWallet /></div>
-          <div className="stat-content">
-            <span className="stat-label">Saldo Actual</span>
-            <span className="stat-value">{formatCurrency(stats.saldo_actual)}</span>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={FaCashRegister}
+        title="Movimientos de Caja"
+        subtitle="Ingresos, egresos y cierres de la caja general"
+        actions={
+          <>
+            {usuario?.role === 'administrador' && (
+              <Button variant="secondary" icon={FaFileExport} onClick={exportData}>
+                Exportar
+              </Button>
+            )}
+            <Button variant="secondary" icon={FaLock} onClick={() => setIsCierreModalOpen(true)}>
+              Cierre de Caja
+            </Button>
+            {(hasPermission('CREAR_INGRESO_CAJA') || hasPermission('CREAR_EGRESO_CAJA')) && (
+              <Button icon={FaPlus} onClick={() => setIsCreateModalOpen(true)}>
+                Nuevo Movimiento
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
-          <div className="search-pill o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem' }} />
+      {/* --- Live Stats --- */}
+      <section className="caja-stats">
+        <StatCard icon={FaArrowUp} label="Ingresos Hoy" value={formatCurrency(stats.ingresos_hoy)} tone="success" />
+        <StatCard icon={FaArrowDown} label="Egresos Hoy" value={formatCurrency(stats.egresos_hoy)} tone="danger" />
+        <StatCard icon={FaWallet} label="Saldo Actual" value={formatCurrency(stats.saldo_actual)} tone="info" />
+      </section>
+
+      {/* --- Filtros --- */}
+      <div className="ds-card caja-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
+        <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
+          <div className="v-search-pill">
+            <FaSearch />
             <input
               type="text"
               name="query"
               placeholder="Buscar..."
               value={filters.query}
               onChange={handleFilterChange}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '120px' }}
             />
           </div>
-          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Desde</label>
-            <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
+          <div className="v-select-pill">
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Desde:</span>
+            <input
+              type="date"
+              name="fecha_inicio"
+              value={filters.fecha_inicio}
+              onChange={handleFilterChange}
+              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
+            />
           </div>
-          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Hasta</label>
-            <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
+          <div className="v-select-pill">
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Hasta:</span>
+            <input
+              type="date"
+              name="fecha_fin"
+              value={filters.fecha_fin}
+              onChange={handleFilterChange}
+              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
+            />
           </div>
-          {(filters.query || filters.fecha_inicio) && (
-            <button className="o-btn-ghost" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
-          )}
-        </div>
-
-        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {usuario?.role === 'administrador' && (
-            <button className="o-btn-ghost" onClick={exportData} title="Exportar">
-              <FaFileExport />
-            </button>
-          )}
-          <button className="o-btn-secondary-glow" onClick={() => setIsCierreModalOpen(true)}>
-            <FaLock />
-            <span className="long-text">Cierre Caja</span>
-            <span className="short-text">Cierre</span>
-          </button>
-          {(hasPermission('CREAR_INGRESO_CAJA') || hasPermission('CREAR_EGRESO_CAJA')) && (
-            <button className="o-btn-primary-glow" onClick={() => setIsCreateModalOpen(true)}>
-              <FaPlus />
-              <span className="long-text">Nuevo Movimiento</span>
-              <span className="short-text">Nuevo</span>
+          {(filters.query || filters.fecha_inicio || filters.fecha_fin) && (
+            <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+              <FaTimes />
             </button>
           )}
         </div>
       </div>
 
-      <div className="content-area">
+      <div className="caja-content">
         {/* Desktop Table View */}
-        <div className="desktop-table-wrapper">
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Usuario</th>
-                <th>Concepto</th>
-                <th>Tipo</th>
-                <th className="text-right">Valor</th>
-                <th className="text-right">Acumulado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="skeleton-row">
-                    <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '120px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
-                    <td><div className="skeleton skeleton-badge"></div></td>
-                    <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }}></div></td>
-                    <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '100px', marginLeft: 'auto' }}></div></td>
-                  </tr>
-                ))
-              ) : cajaData.length > 0 ? (
-                cajaData.map((item) => (
-                  <tr key={item.id} className="table-row-hover">
-                    <td className="font-bold">#{item.id}</td>
-                    <td className="text-muted">{formatDateTime(item.fecha_hora)}</td>
-                    <td>{item.usuario_nombre}</td>
-                    <td className="concept-cell">{item.concepto}</td>
-                    <td>
-                      <span className={`type-badge ${item.tipo}`}>
-                        {item.tipo === 'ingreso' ? <FaArrowUp /> : item.tipo === 'egreso' ? <FaArrowDown /> : <FaLock />}
-                        {item.tipo}
-                      </span>
-                    </td>
-                    <td className={`text-right font-mono value-${item.tipo}`}>
-                      {item.tipo === 'egreso' || parseFloat(item.valor) < 0 ? '-' : (parseFloat(item.valor) > 0 || item.tipo === 'ingreso' ? '+' : '')}{formatCurrency(Math.abs(parseFloat(item.valor) || 0))}
-                    </td>
-                    <td className="text-right font-mono text-muted">{formatCurrency(item.total_acumulado)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr><td colSpan="7" className="empty-state">No hay movimientos registrados.</td></tr>
-              )}
-            </tbody>
-          </table>
+        <div className="caja-table-desktop ds-table-wrap">
+          <div className="ds-table-scroll">
+            <table className="ds-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Usuario</th>
+                  <th>Concepto</th>
+                  <th>Tipo</th>
+                  <th className="caja-num">Valor</th>
+                  <th className="caja-num">Acumulado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      <td><Skeleton width={40} /></td>
+                      <td><Skeleton width={120} /></td>
+                      <td><Skeleton width={80} /></td>
+                      <td><Skeleton width={150} /></td>
+                      <td><Skeleton width={70} height={22} /></td>
+                      <td className="caja-num"><Skeleton width={80} style={{ marginLeft: 'auto' }} /></td>
+                      <td className="caja-num"><Skeleton width={100} style={{ marginLeft: 'auto' }} /></td>
+                    </tr>
+                  ))
+                ) : cajaData.length > 0 ? (
+                  cajaData.map((item) => (
+                    <tr key={item.id}>
+                      <td><strong>#{item.id}</strong></td>
+                      <td className="ds-muted">{formatDateTime(item.fecha_hora)}</td>
+                      <td>{item.usuario_nombre}</td>
+                      <td className="caja-concept-cell">{item.concepto}</td>
+                      <td>
+                        <Badge tone={tipoTone(item.tipo)}>
+                          {item.tipo === 'ingreso' ? <FaArrowUp /> : item.tipo === 'egreso' ? <FaArrowDown /> : <FaLock />}
+                          {item.tipo}
+                        </Badge>
+                      </td>
+                      <td className={`caja-num caja-amount caja-amount--${item.tipo}`}>
+                        {item.tipo === 'egreso' || parseFloat(item.valor) < 0 ? '-' : (parseFloat(item.valor) > 0 || item.tipo === 'ingreso' ? '+' : '')}{formatCurrency(Math.abs(parseFloat(item.valor) || 0))}
+                      </td>
+                      <td className="caja-num caja-amount ds-muted">{formatCurrency(item.total_acumulado)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan="7" className="caja-empty-cell">No hay movimientos registrados.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Mobile Transaction Feed */}
-        <div className="mobile-transaction-feed">
+        <div className="caja-mobile-feed">
           {isLoading ? (
-            <div className="loading-spinner"></div>
+            <LoadingBlock message="Cargando movimientos..." />
           ) : cajaData.length > 0 ? (
             cajaData.map((item) => (
-              <div className="transaction-card" key={item.id}>
-                <div className="card-left">
+              <div className="caja-txn-card" key={item.id}>
+                <div className="caja-txn-card__left">
                   <TransactionIcon type={item.tipo} />
-                  <div className="card-info">
-                    <div className="card-concept">{item.concepto}</div>
-                    <div className="card-meta">
+                  <div className="caja-txn-card__info">
+                    <div className="caja-txn-card__concept">{item.concepto}</div>
+                    <div className="caja-txn-card__meta">
                       {formatDateTime(item.fecha_hora)} • {item.usuario_nombre}
                     </div>
                   </div>
                 </div>
-                <div className="card-right">
-                  <div className={`card-amount value-${item.tipo}`}>
+                <div className="caja-txn-card__right">
+                  <div className={`caja-txn-card__amount caja-amount--${item.tipo}`}>
                     {item.tipo === 'egreso' || parseFloat(item.valor) < 0 ? '-' : (parseFloat(item.valor) > 0 || item.tipo === 'ingreso' ? '+' : '')}{formatCurrency(Math.abs(parseFloat(item.valor) || 0))}
                   </div>
-                  <div className="card-balance">
+                  <div className="caja-txn-card__balance">
                     Saldo: {formatCurrency(item.total_acumulado)}
                   </div>
                 </div>
               </div>
             ))
           ) : (
-            <div className="empty-state-mobile">Sin movimientos.</div>
+            <EmptyState title="Sin movimientos" message="No hay movimientos registrados con los filtros actuales." />
           )}
         </div>
       </div>
 
-      <div className="caja-pagination-bar">
-        <button className="caja-pagination-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)}>
-          <FaChevronLeft />
-        </button>
-        <span className="caja-pagination-info">Página {currentPage} de {totalPages}</span>
-        <button className="caja-pagination-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)}>
-          <FaChevronRight />
-        </button>
+      <div className="caja-pagination">
+        <Button variant="secondary" size="sm" icon={FaChevronLeft} disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)} aria-label="Página anterior" />
+        <span className="caja-pagination__info">Página {currentPage} de {totalPages}</span>
+        <Button variant="secondary" size="sm" icon={FaChevronRight} disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)} aria-label="Página siguiente" />
       </div>
 
       <CreateCajaModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleCreateMovimiento}
+        saldoActual={stats.saldo_actual}
         isLoading={isSubmitting}
       />
 

@@ -39,6 +39,12 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
         { to: "/suministros/remisiones", icon: <FaTruck />, label: "Remisiones", feature: "VER_REMISIONES" },
         { to: "/suministros/inventario", icon: <FaLayerGroup />, label: "Inventario", feature: "VER_INVENTARIO" },
       ]
+    },
+    {
+      title: "Página Web",
+      items: [
+        { to: "/paginaweb/gestion", icon: <FaBoxes />, label: "Gestión Web" },
+      ]
     }
   ];
 
@@ -47,7 +53,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
       <aside className={`sidebar ${isOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}>
         <div className="sidebar-header">
           <NavLink to="/" className="logo-link">
-            {isCollapsed ? "L" : "LOTTUS"}
+            <span className="logo-text">{isCollapsed ? "L" : "LOTTUS"}</span>
           </NavLink>
           <button className="sidebar-close" onClick={onClose}>
             <FaTimes />

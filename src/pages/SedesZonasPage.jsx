@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import API from "../services/api";
 import "./SedesZonasPage.css";
-import { FaEdit, FaPlus, FaTrash, FaMapMarkerAlt, FaBuilding } from "react-icons/fa";
+import { FaEdit, FaPlus, FaTrash, FaMapMarkerAlt, FaBuilding, FaBoxOpen } from "react-icons/fa";
 import AppNotification from '../components/AppNotification';
+import { Button, Modal, Badge, Skeleton, EmptyState } from '../components/ui';
 
 const SedeModal = ({ isOpen, onClose, onSave, sede, isLoading }) => {
   const [nombre, setNombre] = useState('');
@@ -21,32 +22,29 @@ const SedeModal = ({ isOpen, onClose, onSave, sede, isLoading }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="sz-modal-overlay">
-      <div className="sz-modal-content">
-        <div className="sz-modal-header">
-          <h3>{sede ? 'Editar Sede' : 'Nueva Sede'}</h3>
-          <button className="sz-modal-close" onClick={onClose}>×</button>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={sede ? 'Editar Sede' : 'Nueva Sede'}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>Cancelar</Button>
+          <Button type="submit" form="sede-form" loading={isLoading}>Guardar</Button>
+        </>
+      }
+    >
+      <form id="sede-form" onSubmit={(e) => { e.preventDefault(); onSave({ id: sede?.id, nombre, descripcion }); }}>
+        <div className="ds-field">
+          <label className="ds-label">Nombre de Sede:</label>
+          <input className="ds-input" type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Lottus 1" />
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onSave({ id: sede?.id, nombre, descripcion }); }}>
-          <div className="sz-modal-body">
-            <div className="form-group">
-              <label>Nombre de Sede:</label>
-              <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Lottus 1" />
-            </div>
-            <div className="form-group">
-              <label>Descripción:</label>
-              <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Opcional..." rows="3" />
-            </div>
-          </div>
-          <div className="sz-modal-footer">
-            <button type="button" className="sz-btn-cancel" onClick={onClose} disabled={isLoading}>Cancelar</button>
-            <button type="submit" className="sz-btn-save" disabled={isLoading}>
-              {isLoading ? 'Guardando...' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="ds-field" style={{ marginBottom: 0 }}>
+          <label className="ds-label">Descripción:</label>
+          <textarea className="ds-textarea" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Opcional..." rows="3" />
+        </div>
+      </form>
+    </Modal>
   );
 };
 
@@ -70,39 +68,36 @@ const ZonaModal = ({ isOpen, onClose, onSave, zona, sedes, isLoading }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="sz-modal-overlay">
-      <div className="sz-modal-content">
-        <div className="sz-modal-header">
-          <h3>{zona ? 'Editar Zona' : 'Nueva Zona'}</h3>
-          <button className="sz-modal-close" onClick={onClose}>×</button>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={zona ? 'Editar Zona' : 'Nueva Zona'}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>Cancelar</Button>
+          <Button type="submit" form="zona-form" loading={isLoading}>Guardar</Button>
+        </>
+      }
+    >
+      <form id="zona-form" onSubmit={(e) => { e.preventDefault(); onSave({ id: zona?.id, sede: sedeId, nombre, descripcion }); }}>
+        <div className="ds-field">
+          <label className="ds-label">Sede a la que pertenece:</label>
+          <select className="ds-select" value={sedeId} onChange={(e) => setSedeId(e.target.value)} required>
+            <option value="">Seleccione una sede...</option>
+            {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          </select>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onSave({ id: zona?.id, sede: sedeId, nombre, descripcion }); }}>
-          <div className="sz-modal-body">
-            <div className="form-group">
-              <label>Sede a la que pertenece:</label>
-              <select value={sedeId} onChange={(e) => setSedeId(e.target.value)} required>
-                <option value="">Seleccione una sede...</option>
-                {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Nombre de Zona:</label>
-              <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Bodega Principal" />
-            </div>
-            <div className="form-group">
-              <label>Descripción:</label>
-              <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Opcional..." rows="3" />
-            </div>
-          </div>
-          <div className="sz-modal-footer">
-            <button type="button" className="sz-btn-cancel" onClick={onClose} disabled={isLoading}>Cancelar</button>
-            <button type="submit" className="sz-btn-save" disabled={isLoading}>
-              {isLoading ? 'Guardando...' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="ds-field">
+          <label className="ds-label">Nombre de Zona:</label>
+          <input className="ds-input" type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Bodega Principal" />
+        </div>
+        <div className="ds-field" style={{ marginBottom: 0 }}>
+          <label className="ds-label">Descripción:</label>
+          <textarea className="ds-textarea" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Opcional..." rows="3" />
+        </div>
+      </form>
+    </Modal>
   );
 };
 
@@ -196,6 +191,15 @@ export default function SedesZonasPage() {
 
   const getSedeName = (sedeId) => sedes.find(s => s.id === sedeId)?.nombre || 'Desconocida';
 
+  const renderSkeletonRows = (cols) =>
+    Array.from({ length: 3 }).map((_, index) => (
+      <tr key={index}>
+        {Array.from({ length: cols }).map((__, i) => (
+          <td key={i}><Skeleton height={14} width={i === 0 ? '60%' : '80%'} /></td>
+        ))}
+      </tr>
+    ));
+
   return (
     <div className="sz-container">
       <AppNotification 
@@ -205,15 +209,15 @@ export default function SedesZonasPage() {
       />
 
       {/* Sedes Section */}
-      <section className="sz-section">
+      <section className="ds-card sz-section">
         <div className="sz-section-header">
-          <h2><FaBuilding style={{ color: '#3b82f6' }} /> Sedes</h2>
-          <button className="o-btn-primary-glow" onClick={() => setSedeModal({ isOpen: true, data: null, isLoading: false })}>
-            <FaPlus /> <span>Nueva Sede</span>
-          </button>
+          <h2><FaBuilding style={{ color: 'var(--info)' }} /> Sedes</h2>
+          <Button size="sm" icon={FaPlus} onClick={() => setSedeModal({ isOpen: true, data: null, isLoading: false })}>
+            Nueva Sede
+          </Button>
         </div>
-        <div className="sz-table-wrapper">
-          <table className="sz-table">
+        <div className="ds-table-scroll">
+          <table className="ds-table" style={{ minWidth: '500px' }}>
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -224,32 +228,29 @@ export default function SedesZonasPage() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <tr key={index} className="skeleton-row">
-                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '200px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                  </tr>
-                ))
+                renderSkeletonRows(4)
               ) : sedes.length === 0 ? (
-                <tr><td colSpan="4" style={{ textAlign: 'center', color: '#64748b' }}>No hay sedes registradas.</td></tr>
+                <tr>
+                  <td colSpan="4" style={{ padding: 0 }}>
+                    <EmptyState
+                      icon={FaBoxOpen}
+                      title="Sin sedes"
+                      message="No hay sedes registradas."
+                    />
+                  </td>
+                </tr>
               ) : (
                 sedes.map(sede => {
                   const numZonas = zonas.filter(z => z.sede === sede.id).length;
                   return (
                     <tr key={sede.id}>
-                      <td style={{ fontWeight: 500, color: '#0f172a' }}>{sede.nombre}</td>
-                      <td style={{ color: '#475569' }}>{sede.descripcion || '—'}</td>
-                      <td><span className="sz-badge">{numZonas}</span></td>
+                      <td style={{ fontWeight: 500, color: 'var(--text)' }}>{sede.nombre}</td>
+                      <td className="ds-muted">{sede.descripcion || '—'}</td>
+                      <td><Badge tone="info">{numZonas}</Badge></td>
                       <td>
                         <div className="sz-actions">
-                          <button className="sz-btn-edit" title="Editar Sede" onClick={() => setSedeModal({ isOpen: true, data: sede, isLoading: false })}>
-                            <FaEdit />
-                          </button>
-                          <button className="sz-btn-delete" title="Eliminar Sede" onClick={() => handleDeleteSede(sede.id)}>
-                            <FaTrash />
-                          </button>
+                          <Button variant="ghost" size="sm" icon={FaEdit} title="Editar Sede" aria-label="Editar Sede" onClick={() => setSedeModal({ isOpen: true, data: sede, isLoading: false })} />
+                          <Button variant="danger-soft" size="sm" icon={FaTrash} title="Eliminar Sede" aria-label="Eliminar Sede" onClick={() => handleDeleteSede(sede.id)} />
                         </div>
                       </td>
                     </tr>
@@ -262,11 +263,12 @@ export default function SedesZonasPage() {
       </section>
 
       {/* Zonas Section */}
-      <section className="sz-section">
+      <section className="ds-card sz-section">
         <div className="sz-section-header">
-          <h2><FaMapMarkerAlt style={{ color: '#ef4444' }} /> Zonas de Inventario</h2>
-          <button 
-            className="o-btn-primary-glow" 
+          <h2><FaMapMarkerAlt style={{ color: 'var(--danger)' }} /> Zonas de Inventario</h2>
+          <Button
+            size="sm"
+            icon={FaPlus}
             onClick={() => {
               if(sedes.length === 0) {
                 setNotification({ message: 'Debes crear al menos una sede primero.', type: 'error' });
@@ -275,11 +277,11 @@ export default function SedesZonasPage() {
               setZonaModal({ isOpen: true, data: null, isLoading: false });
             }}
           >
-            <FaPlus /> <span>Nueva Zona</span>
-          </button>
+            Nueva Zona
+          </Button>
         </div>
-        <div className="sz-table-wrapper">
-          <table className="sz-table">
+        <div className="ds-table-scroll">
+          <table className="ds-table" style={{ minWidth: '500px' }}>
             <thead>
               <tr>
                 <th>Sede</th>
@@ -290,30 +292,27 @@ export default function SedesZonasPage() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <tr key={index} className="skeleton-row">
-                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '200px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                  </tr>
-                ))
+                renderSkeletonRows(4)
               ) : zonas.length === 0 ? (
-                <tr><td colSpan="4" style={{ textAlign: 'center', color: '#64748b' }}>No hay zonas registradas.</td></tr>
+                <tr>
+                  <td colSpan="4" style={{ padding: 0 }}>
+                    <EmptyState
+                      icon={FaBoxOpen}
+                      title="Sin zonas"
+                      message="No hay zonas registradas."
+                    />
+                  </td>
+                </tr>
               ) : (
                 zonas.map(zona => (
                   <tr key={zona.id}>
-                    <td><span className="sz-badge" style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1' }}>{getSedeName(zona.sede)}</span></td>
-                    <td style={{ fontWeight: 500, color: '#0f172a' }}>{zona.nombre}</td>
-                    <td style={{ color: '#475569' }}>{zona.descripcion || '—'}</td>
+                    <td><Badge tone="neutral">{getSedeName(zona.sede)}</Badge></td>
+                    <td style={{ fontWeight: 500, color: 'var(--text)' }}>{zona.nombre}</td>
+                    <td className="ds-muted">{zona.descripcion || '—'}</td>
                     <td>
                       <div className="sz-actions">
-                        <button className="sz-btn-edit" title="Editar Zona" onClick={() => setZonaModal({ isOpen: true, data: zona, isLoading: false })}>
-                          <FaEdit />
-                        </button>
-                        <button className="sz-btn-delete" title="Eliminar Zona" onClick={() => handleDeleteZona(zona.id)}>
-                          <FaTrash />
-                        </button>
+                        <Button variant="ghost" size="sm" icon={FaEdit} title="Editar Zona" aria-label="Editar Zona" onClick={() => setZonaModal({ isOpen: true, data: zona, isLoading: false })} />
+                        <Button variant="danger-soft" size="sm" icon={FaTrash} title="Eliminar Zona" aria-label="Eliminar Zona" onClick={() => handleDeleteZona(zona.id)} />
                       </div>
                     </td>
                   </tr>

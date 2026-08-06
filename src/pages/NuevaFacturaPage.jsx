@@ -2,8 +2,10 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import API from '../services/api';
+import { usePendientesIds } from '../hooks/useSharedData';
 import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
+import { getTodayStr } from '../utils/dates';
 import { 
     FaPlus, FaTrashAlt, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, 
     FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaFileInvoiceDollar, 
@@ -12,14 +14,8 @@ import {
     FaChevronDown, FaSearch
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
+import { PageHeader, Button } from '../components/ui';
 import './NuevaFacturaPage.css';
-
-const getTodayStr = () => {
-    const d = new Date();
-    const offset = d.getTimezoneOffset();
-    const local = new Date(d.getTime() - offset * 60000);
-    return local.toISOString().split('T')[0];
-};
 
 const emptyRef = () => ({ 
     referenciaId: '', 
@@ -57,22 +53,19 @@ let _grupoCounter = 0;
 const newGrupoLocalId = () => `g_${++_grupoCounter}_${Date.now()}`;
 const isExistingGrupoId = (localId) => localId && !String(localId).startsWith('g_') && !isNaN(parseInt(localId));
 
-const formatCOPInt = (value) => {
-    const n = parseInt(value) || 0;
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-};
+const formatCOPInt = (value) => formatCOP(parseInt(value) || 0);
 
 export default function NuevaFacturaPage() {
-    const { proveedores, usuario } = useContext(AppContext);
+    const { proveedores, usuario, notify } = useContext(AppContext);
     const hasPermission = usePermissions();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
     const [isCreating, setIsCreating] = useState(false);
-    const [notification, setNotification] = useState({ message: '', type: '' });
 
+    // Use global notification
     const showToast = (message, type = 'success') => {
-        setNotification({ message, type });
+        notify(message, type);
     };
 
     // Queries
@@ -92,13 +85,7 @@ export default function NuevaFacturaPage() {
         }
     });
 
-    const { data: ordenesPendientes = [] } = useQuery({
-        queryKey: ['ordenes-pendientes-ids'],
-        queryFn: async () => {
-            const res = await API.get('/get-pendientes-ids/');
-            return res.data || [];
-        }
-    });
+    const { data: ordenesPendientes = [] } = usePendientesIds();
 
     const { data: gruposActivosRaw = [] } = useQuery({
         queryKey: ['suministros-grupos'],
@@ -517,27 +504,31 @@ export default function NuevaFacturaPage() {
     };
 
     return (
-        <div className="nf-page-container">
-            {/* Header / Top Navigation */}
-            <div className="nf-page-header">
-                <div className="nf-header-left">
-                    <div className="nf-header-titles">
-                        <div className="nf-header-badge">
-                            <FaFileInvoiceDollar /> Nueva Factura
+        <div className="ds-page nueva-factura-page ds-fade-in">
+            <PageHeader
+                icon={FaFileInvoiceDollar}
+                title="Registrar Factura de Proveedor"
+                subtitle="Ingresa los datos generales, grupos y referencias de mercancía recibida."
+                actions={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div className="nf-footer-summary" style={{ background: 'transparent', padding: 0, border: 'none', boxShadow: 'none' }}>
+                            <span className="nf-summary-label">Suma Productos:</span>
+                            <span className={`nf-summary-total ${isTotalMatching ? 'total-match' : valorFactura > 0 ? 'total-mismatch' : ''}`}>
+                                {formatCOPInt(totalCostos)}
+                            </span>
+                            <span className="nf-summary-sep">/</span>
+                            <span className="nf-summary-label">Valor Factura:</span>
+                            <span className="nf-summary-factura">{formatCOPInt(valorFactura)}</span>
                         </div>
-                        <h1 className="nf-page-title">Registrar Factura de Proveedor</h1>
-                        <p className="nf-page-subtitle">Ingresa los datos generales, grupos y referencias de mercancía recibida.</p>
+                        <Button variant="secondary" onClick={() => navigate('/suministros/facturas')} disabled={isCreating}>
+                            Cancelar
+                        </Button>
+                        <Button variant="primary" type="submit" form="nueva-factura-form" loading={isCreating} disabled={!isTotalMatching || isCreating}>
+                            {isCreating ? 'Registrando...' : 'Registrar Factura'}
+                        </Button>
                     </div>
-                </div>
-                <div className="nf-header-actions">
-                    <button type="button" className="nf-btn-secondary" onClick={() => navigate('/suministros/facturas')} disabled={isCreating}>
-                        Cancelar
-                    </button>
-                    <button type="submit" form="nueva-factura-form" className="nf-btn-primary" disabled={isCreating}>
-                        {isCreating ? 'Registrando...' : 'Registrar Factura'}
-                    </button>
-                </div>
-            </div>
+                }
+            />
 
             <form id="nueva-factura-form" onSubmit={handleSubmit} className="nf-form-layout">
                 {/* COLUMNA IZQUIERDA: Info General y Grupos */}
@@ -1213,34 +1204,8 @@ export default function NuevaFacturaPage() {
                     </div>
                 </div>
 
-                {/* Footer Bar Sticky */}
-                <div className="nf-footer-sticky">
-                    <div className="nf-footer-summary">
-                        <span className="nf-summary-label">Suma Productos:</span>
-                        <span className={`nf-summary-total ${isTotalMatching ? 'total-match' : valorFactura > 0 ? 'total-mismatch' : ''}`}>
-                            {formatCOPInt(totalCostos)}
-                        </span>
-                        <span className="nf-summary-sep">/</span>
-                        <span className="nf-summary-label">Valor Factura:</span>
-                        <span className="nf-summary-factura">{formatCOPInt(valorFactura)}</span>
-                    </div>
 
-                    <div className="nf-footer-actions">
-                        <button type="button" className="nf-btn-secondary" onClick={() => navigate('/suministros/facturas')} disabled={isCreating}>
-                            Cancelar
-                        </button>
-                        <button type="submit" className="nf-btn-primary" disabled={isCreating}>
-                            {isCreating ? 'Registrando...' : 'Registrar Factura'}
-                        </button>
-                    </div>
-                </div>
             </form>
-
-            <AppNotification 
-                message={notification.message} 
-                type={notification.type} 
-                onClose={() => setNotification({ message: '', type: '' })} 
-            />
         </div>
     );
 }

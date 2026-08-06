@@ -1,11 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useContext } from "react";
-import { AppContext } from "./AppContext";
+import { AppContext, usePermissions } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 
 function PrivateRoute({ children, roles, feature }) {
   const token = localStorage.getItem("accessToken");
   const { usuario, isLoading } = useContext(AppContext);
+  const hasPermission = usePermissions();
 
   // Show loader while verifying session
   if (isLoading) {
@@ -22,8 +23,6 @@ function PrivateRoute({ children, roles, feature }) {
     return <LottusLoader />;
   }
 
-  const userPerms = usuario?.permissions || [];
-
   // Legacy role check (backward compat, only used if no feature is set)
   if (roles && !feature) {
     const userRole = usuario.role ? usuario.role.toLowerCase() : '';
@@ -32,10 +31,9 @@ function PrivateRoute({ children, roles, feature }) {
     }
   }
 
-  // Feature-based permission check
+  // Feature-based permission check (misma lógica de aliases que usePermissions)
   if (feature) {
-    const hasAccess = userPerms.includes('ALL') || userPerms.includes(feature);
-    if (!hasAccess) {
+    if (!hasPermission(feature)) {
       return <Navigate to="/" />;
     }
   }

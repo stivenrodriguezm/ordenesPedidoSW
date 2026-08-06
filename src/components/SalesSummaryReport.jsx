@@ -1,19 +1,5 @@
-import React, { useMemo, useContext } from 'react';
+import React, { useMemo, useContext, lazy, Suspense } from 'react';
 import { AppContext } from '../AppContext';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-} from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
     FaMoneyBillWave,
     FaShoppingCart,
@@ -29,18 +15,10 @@ import {
 } from 'react-icons/fa';
 import './SalesSummaryReport.css';
 
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-);
+// chart.js + react-chartjs-2 se cargan bajo demanda (ver components/charts.js)
+const Line = lazy(() => import('./charts').then(m => ({ default: m.Line })));
+const Doughnut = lazy(() => import('./charts').then(m => ({ default: m.Doughnut })));
+const Bar = lazy(() => import('./charts').then(m => ({ default: m.Bar })));
 
 const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurrency }) => {
     const { usuario } = useContext(AppContext);
@@ -73,6 +51,8 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             });
         }
 
+        const isVendorRole = usuario?.role === 'vendedor';
+
         ventas.forEach(venta => {
             const statusRaw = venta.estado ? venta.estado.toLowerCase() : 'pendiente';
             const isAnulado = statusRaw.includes('anulad');
@@ -94,28 +74,34 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             const numSellers = 1 + (venta.vendedores_compartidos ? venta.vendedores_compartidos.length : 0);
             const valorFull = parseFloat(venta.valor_total) || 0;
             const valorPerSeller = valorFull / numSellers;
-            const abono = parseFloat(venta.abono) || 0;
-            const saldo = parseFloat(venta.saldo) || 0;
+            const abonoFull = parseFloat(venta.abono) || 0;
+            const abonoPerSeller = abonoFull / numSellers;
+            const saldoFull = parseFloat(venta.saldo) || 0;
+            const saldoPerSeller = saldoFull / numSellers;
 
-            totalSales += valorFull;
-            totalRecaudo += abono;
-            totalSaldo += saldo;
+            const valToAdd = isVendorRole ? valorPerSeller : valorFull;
+            const abonoToAdd = isVendorRole ? abonoPerSeller : abonoFull;
+            const saldoToAdd = isVendorRole ? saldoPerSeller : saldoFull;
+
+            totalSales += valToAdd;
+            totalRecaudo += abonoToAdd;
+            totalSaldo += saldoToAdd;
 
             if (venta.fecha_venta === todayStr) {
-                salesToday += valorFull;
+                salesToday += valToAdd;
             }
 
             const date = venta.fecha_venta;
             if (date) {
-                salesByDate[date] = (salesByDate[date] || 0) + valorFull;
+                salesByDate[date] = (salesByDate[date] || 0) + valToAdd;
                 
                 const dayIndex = new Date(`${date}T12:00:00`).getDay();
-                salesByDayOfWeek[dayIndex] += valorFull;
+                salesByDayOfWeek[dayIndex] += valToAdd;
             }
 
             const sedeName = venta.sede || 'Sin Sede';
-            salesBySede[sedeName] = (salesBySede[sedeName] || 0) + valorFull;
-            salesCountBySede[sedeName] = (salesCountBySede[sedeName] || 0) + 1;
+            salesBySede[sedeName] = (salesBySede[sedeName] || 0) + valToAdd;
+            salesCountBySede[sedeName] = (salesCountBySede[sedeName] || 0) + (isVendorRole ? (1 / numSellers) : 1);
 
             let primaryVendorId = null;
             if (venta.vendedor_nombre && Array.isArray(vendedores)) {
@@ -266,14 +252,14 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {
                     label: 'Ventas Diarias',
                     data: sortedDates.map(d => salesByDate[d]),
-                    borderColor: '#274385',
+                    borderColor: '#0e9f6e',
                     backgroundColor: 'rgba(39, 67, 133, 0.08)',
                     tension: 0.35,
                     fill: true,
-                    pointBackgroundColor: '#274385',
+                    pointBackgroundColor: '#0e9f6e',
                     pointBorderColor: '#fff',
                     pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#274385',
+                    pointHoverBorderColor: '#0e9f6e',
                 }
             ]
         };
@@ -497,6 +483,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             </div>
 
             {/* === CHARTS GRID (Restored Bar Charts) === */}
+            <Suspense fallback={null}>
             <div className="charts-grid">
                 <div className="chart-card large">
                     <div className="chart-header">
@@ -538,6 +525,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                     </>
                 )}
             </div>
+            </Suspense>
 
             {/* === COMPACT MINIMALIST VENDOR LEADERBOARD === */}
             {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && allVendorsList.length > 0 && (

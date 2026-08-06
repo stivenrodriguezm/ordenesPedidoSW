@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import React, { useContext, useEffect, useState, Suspense, lazy } from "react";
 import PrivateRoute from "./PrivateRoute";
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -28,9 +28,12 @@ const RemisionesPage = lazy(() => import("./pages/RemisionesPage"));
 const NuevaRemisionPage = lazy(() => import("./pages/NuevaRemisionPage"));
 const InventarioPage = lazy(() => import("./pages/InventarioPage"));
 const BasesDatosPage = lazy(() => import("./pages/BasesDatosPage"));
-import { AppContext } from "./AppContext";
+const PaginawebAdminPage = lazy(() => import("./pages/paginaweb/PaginawebAdminPage"));
+import { AppContext, NotificationContext } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
 import Loader from "./components/Loader";
+import AppNotification from "./components/AppNotification";
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const MainLayout = ({ children }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false); // Mobile toggle
@@ -68,6 +71,7 @@ const MainLayout = ({ children }) => {
 
 function App() {
   const { isLoggingIn, setIsLoggingIn } = useContext(AppContext);
+  const { notification, clearNotification } = useContext(NotificationContext);
 
   useEffect(() => {
     if (isLoggingIn) {
@@ -82,6 +86,11 @@ function App() {
   return (
     <Router>
       {isLoggingIn && <LottusLoader />}
+      <AppNotification
+        message={notification?.message}
+        type={notification?.type}
+        onClose={clearNotification}
+      />
       <Suspense fallback={<Loader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -104,8 +113,11 @@ function App() {
                   <Route path="/clientes" element={<PrivateRoute feature="VER_CLIENTES"><Clientes /></PrivateRoute>} />
 
                   <Route path="/ventas" element={<PrivateRoute feature="VER_VENTAS"><Ventas /></PrivateRoute>} />
-                  <Route path="/nuevaVenta" element={<PrivateRoute feature="CREAR_VENTA"><NuevaVenta /></PrivateRoute>} />
-                  <Route path="/EditarVenta/:id/" element={<PrivateRoute feature="EDITAR_VENTA"><EditarVenta /></PrivateRoute>} />
+                  <Route path="/ventas/nueva" element={<PrivateRoute feature="CREAR_VENTA"><NuevaVenta /></PrivateRoute>} />
+                  <Route path="/ventas/:id/editar" element={<PrivateRoute feature="EDITAR_VENTA"><EditarVenta /></PrivateRoute>} />
+                  {/* Redirects de rutas antiguas */}
+                  <Route path="/nuevaVenta" element={<Navigate to="/ventas/nueva" replace />} />
+                  <Route path="/EditarVenta/:id/" element={<Navigate to="/ventas/:id/editar" replace />} />
                   <Route path="/caja" element={<PrivateRoute feature="ACCESO_CAJA"><Caja /></PrivateRoute>} />
                   <Route path="/recibos-caja" element={<PrivateRoute feature="ACCESO_RECIBOS"><RecibosCaja /></PrivateRoute>} />
                   <Route path="/comprobantes-egreso" element={<PrivateRoute feature="ACCESO_EGRESOS"><ComprobantesEgreso /></PrivateRoute>} />
@@ -113,8 +125,12 @@ function App() {
                   <Route path="/suministros/facturas" element={<PrivateRoute feature="VER_FACTURAS"><FacturasProveedorPage /></PrivateRoute>} />
                   <Route path="/suministros/facturas/nueva" element={<PrivateRoute feature="CREAR_FACTURA"><NuevaFacturaPage /></PrivateRoute>} />
                   <Route path="/suministros/remisiones" element={<PrivateRoute feature="VER_REMISIONES"><RemisionesPage /></PrivateRoute>} />
-                  <Route path="/nuevaRemision" element={<PrivateRoute feature="CREAR_REMISION"><NuevaRemisionPage /></PrivateRoute>} />
+                  <Route path="/suministros/remisiones/nueva" element={<PrivateRoute feature="CREAR_REMISION"><NuevaRemisionPage /></PrivateRoute>} />
+                  {/* Redirect de ruta antigua */}
+                  <Route path="/nuevaRemision" element={<Navigate to="/suministros/remisiones/nueva" replace />} />
                   <Route path="/suministros/inventario" element={<PrivateRoute feature="VER_INVENTARIO"><InventarioPage /></PrivateRoute>} />
+                  <Route path="/paginaweb/gestion" element={<PrivateRoute><PaginawebAdminPage /></PrivateRoute>} />
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
       </Suspense>
               </MainLayout>

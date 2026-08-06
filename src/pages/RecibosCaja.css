@@ -2,31 +2,12 @@
    Extreme Redesign: Financial Dashboard Theme
    ========================================================================== */
 :root {
-  --emerald-50: #ecfdf5;
-  --emerald-100: #d1fae5;
-  --emerald-500: #10b981;
-  --emerald-600: #059669;
-  --emerald-900: #064e3b;
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-600: #475569;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
-
-  --bg-app: #f0f2f5;
-  --surface: #ffffff;
-  --primary-glow: rgba(16, 185, 129, 0.4);
-}
-
-.caja-page-container {
-  background-color: var(--bg-app);
-  min-height: 100vh;
-  padding: 1.5rem;
-  font-family: 'Inter', sans-serif;
-  color: var(--slate-800);
-  max-width: 1600px;
-  margin: 0 auto;
+  --emerald-50: var(--accent-soft);
+  --emerald-100: #d3efe2;
+  --emerald-500: var(--accent);
+  --emerald-600: var(--accent-hover);
+  --emerald-900: var(--accent-active);
+  --primary-glow: var(--accent-ring);
 }
 
 /* ==========================================================================
@@ -41,7 +22,7 @@
   border-radius: 12px;
   margin-bottom: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--slate-100);
+  border: 1px solid var(--gray-100);
 }
 
 .stat-item {
@@ -64,7 +45,7 @@
 
 .stat-icon.warning {
   background: #fffbeb;
-  color: #d97706;
+  color: var(--warning);
 }
 
 .stat-info {
@@ -76,145 +57,26 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--slate-600);
+  color: var(--gray-600);
   font-weight: 600;
 }
 
 .stat-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--slate-900);
+  color: var(--gray-900);
   line-height: 1.2;
 }
 
-.stat-divider {
-  width: 1px;
-  height: 40px;
-  background: var(--slate-200);
-}
-
-/* ==========================================================================
-   Glass Header & Filters
-   ========================================================================== */
-.glass-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 1rem;
-  z-index: 50;
-}
-
-.header-top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.page-title {
-  font-size: 1.8rem;
-  font-weight: 800;
-  margin: 0;
-  background: linear-gradient(135deg, var(--slate-900) 0%, #141a74 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.header-actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.btn-primary-glow {
-  background: #274385;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  box-shadow: 0 0 15px var(--danger-glow);
-  transition: all 0.2s;
-}
-
-/* Column Widths */
-.rc-th-rc {
-  width: 8%;
-}
-
-.rc-th-fecha {
-  width: 14%;
-  white-space: nowrap;
-}
-
-/* Increased width & nowrap */
-
-.rc-th-venta {
-  width: 8%;
-}
-
-.rc-th-metodo {
-  width: 12%;
-}
-
-.rc-th-valor {
-  width: 12%;
-}
-
-.rc-th-nota {
-  width: 33%;
-}
-
-/* Slightly reduced to accommodate date */
-
-/* Increased width */
-.rc-th-estado {
-  width: 8%;
-}
-
-.rc-th-acciones {
-  width: 5%;
-  text-align: center;
-}
-
 @media (max-width: 768px) {
-  /* ... existing mobile styles ... */
-
-  .glass-header {
-    padding: 1rem;
-    position: relative;
-    /* Disable sticky on mobile */
-    top: 0;
-  }
 
   /* ... */
 }
 
-.td-valor {
-  font-family: 'Monaco', 'Consolas', monospace;
-  font-weight: 600;
-  color: var(--caja-text-dark);
-}
-
-.btn-primary-glow:hover {
-  background: #1a2d59;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px #192b54;
-}
-
 .btn-ghost {
   background: transparent;
-  border: 1px solid var(--slate-200);
-  color: var(--slate-600);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-600);
   padding: 0.75rem;
   border-radius: 12px;
   cursor: pointer;
@@ -222,8 +84,8 @@
 }
 
 .btn-ghost:hover {
-  background: var(--slate-50);
-  color: var(--slate-900);
+  background: var(--gray-50);
+  color: var(--gray-900);
 }
 
 .filters-bar {
@@ -232,11 +94,9 @@
   flex-wrap: wrap;
 }
 
-.search-pill,
-.date-range-pill,
 .select-pill {
   background: var(--surface);
-  border: 1px solid var(--slate-200);
+  border: 1px solid var(--gray-200);
   border-radius: 9999px;
   padding: 0.5rem 1rem;
   display: flex;
@@ -245,43 +105,17 @@
   transition: border-color 0.2s;
 }
 
-.search-pill:focus-within,
-.date-range-pill:focus-within,
 .select-pill:focus-within {
   border-color: var(--emerald-500);
   box-shadow: 0 0 0 2px var(--emerald-100);
 }
 
-.search-pill input,
-.date-range-pill input,
 .select-pill select {
   border: none;
   outline: none;
   font-size: 0.9rem;
-  color: var(--slate-600);
+  color: var(--gray-600);
   background: transparent;
-}
-
-.search-pill input {
-  width: 200px;
-}
-
-.date-range-pill span {
-  color: var(--slate-400);
-  font-size: 0.8rem;
-}
-
-.btn-reset {
-  background: var(--slate-100);
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--slate-600);
-  cursor: pointer;
 }
 
 /* ==========================================================================
@@ -292,7 +126,7 @@
   border-radius: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  border: 1px solid var(--slate-100);
+  border: 1px solid var(--gray-100);
 }
 
 .modern-table {
@@ -301,36 +135,36 @@
 }
 
 .modern-table th {
-  background: var(--slate-50);
+  background: var(--gray-50);
   padding: 0.6rem 1rem;
   text-align: left;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--slate-600);
+  color: var(--gray-600);
   font-weight: 700;
-  border-bottom: 1px solid var(--slate-200);
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .modern-table td {
   padding: 0.55rem 1rem;
-  border-bottom: 1px solid var(--slate-100);
-  color: var(--slate-600);
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-600);
   font-size: 0.85rem;
   vertical-align: middle;
 }
 
 .table-row-hover:hover {
-  background-color: #f8fafc;
+  background-color: var(--gray-50);
 }
 
 .font-bold {
   font-weight: 700;
-  color: var(--slate-900);
+  color: var(--gray-900);
 }
 
 .text-muted {
-  color: var(--slate-400);
+  color: var(--gray-400);
   font-size: 0.85rem;
 }
 
@@ -341,11 +175,11 @@
 .font-mono {
   font-family: 'Monaco', monospace;
   font-weight: 600;
-  color: var(--slate-800);
+  color: var(--gray-800);
 }
 
 .venta-tag {
-  background: var(--slate-100);
+  background: var(--gray-100);
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -375,7 +209,7 @@
 
 .payment-icon-wrapper.bank {
   background: #eff6ff;
-  color: #3b82f6;
+  color: var(--info);
 }
 
 .payment-icon-wrapper.card {
@@ -395,27 +229,9 @@
   overflow: visible;
   text-overflow: clip;
   font-style: italic;
-  color: var(--slate-600);
+  color: var(--gray-600);
   /* Darker for readability */
   line-height: 1.4;
-}
-
-.status-pill {
-  padding: 0.35rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.status-pill.pendiente {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.status-pill.confirmado {
-  background: #d1fae5;
-  color: #059669;
 }
 
 .action-btn {
@@ -471,13 +287,13 @@
 
 .card-title {
   font-weight: 700;
-  color: var(--slate-900);
+  color: var(--gray-900);
   font-size: 0.95rem;
 }
 
 .card-subtitle {
   font-size: 0.8rem;
-  color: var(--slate-400);
+  color: var(--gray-400);
 }
 
 .card-right {
@@ -501,7 +317,7 @@
 }
 
 .status-dot.pendiente {
-  background: #f59e0b;
+  background: var(--warning);
 }
 
 .status-dot.confirmado {
@@ -522,26 +338,11 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* ==========================================================================
-   Modals & Forms
-   ========================================================================== */
-.premium-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
 .form-group label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--slate-600);
+  color: var(--gray-600);
   margin-bottom: 0.5rem;
 }
 
@@ -550,7 +351,7 @@
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--slate-200);
+  border: 1px solid var(--gray-200);
   border-radius: 10px;
   font-size: 0.95rem;
   transition: all 0.2s;
@@ -560,58 +361,6 @@
   border-color: var(--emerald-500);
   box-shadow: 0 0 0 3px var(--emerald-100);
   outline: none;
-}
-
-.payment-methods-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-
-.payment-method-btn {
-  padding: 0.5rem;
-  border: 1px solid var(--slate-200);
-  background: var(--surface);
-  border-radius: 8px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.payment-method-btn.active {
-  background: var(--emerald-50);
-  border-color: var(--emerald-500);
-  color: var(--emerald-700);
-  font-weight: 600;
-}
-
-.input-with-icon {
-  position: relative;
-}
-
-.input-with-icon svg {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--slate-400);
-}
-
-.input-with-icon input {
-  padding-left: 2.5rem;
-}
-
-.btn-primary.full-width {
-  width: 100%;
-  justify-content: center;
-  margin-top: 1rem;
-  padding: 1rem;
-  font-size: 1rem;
-  background: var(--emerald-600);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
 }
 
 /* ==========================================================================
@@ -630,41 +379,17 @@
     display: inline;
   }
 
-  .page-title {
-    font-size: 1.4rem;
-  }
-
-  .glass-header {
-    padding: 1rem;
-  }
-
   .filters-bar {
     gap: 0.5rem;
   }
 
-  .search-pill,
-  .date-range-pill,
   .select-pill {
     padding: 0.4rem 0.75rem;
     font-size: 0.85rem;
   }
 
-  .search-pill input {
-    width: 140px;
-    font-size: 0.85rem;
-  }
-
-  .date-range-pill input {
-    font-size: 0.85rem;
-  }
-
   .select-pill select {
     font-size: 0.85rem;
-  }
-
-  .btn-primary-glow {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
   }
 }
 
@@ -683,34 +408,11 @@
     align-items: flex-start;
   }
 
-  .stat-divider {
-    display: none;
-  }
-
-  .glass-header {
-    padding: 1rem;
-    position: relative;
-    /* Disable sticky on mobile */
-    top: 0;
-  }
-
-  .header-top-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
   .filters-bar {
     flex-direction: column;
   }
 
-  .search-pill,
-  .date-range-pill,
   .select-pill {
-    width: 100%;
-  }
-
-  .search-pill input {
     width: 100%;
   }
 
@@ -721,11 +423,6 @@
 
   .short-text {
     display: none;
-  }
-
-  .btn-primary-glow {
-    width: 100%;
-    justify-content: center;
   }
 }
 
@@ -755,23 +452,11 @@
 }
 
 /* ==========================================================================
-   NEW RC Modal — Compact Redesign
-   ========================================================================== */
-
-/* Custom header injected inside Modal component */
-.rc-modal-box {
-  padding: 0;
-  border-radius: 20px;
-  overflow: hidden;
-  max-width: 480px;
-}
-
-/* ==========================================================================
    Lottus Corporate Unified Form Modals (Recibos de Caja & Comprobantes de Egreso)
    ========================================================================== */
 
 .lottus-form-modal {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 14px;
   width: 100%;
   max-width: 530px;
@@ -787,7 +472,7 @@
   align-items: flex-start;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e8edf3;
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
 }
 
 .lottus-modal-title-wrap {
@@ -800,7 +485,7 @@
   width: 38px;
   height: 38px;
   background: #dbeafe;
-  color: #2563eb;
+  color: var(--info);
   border-radius: 9px;
   display: flex;
   align-items: center;
@@ -830,32 +515,32 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--info);
 }
 
 .lottus-modal-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--gray-900);
   letter-spacing: -0.01em;
 }
 
 .lottus-modal-subtitle {
   margin: 0.1rem 0 0;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--gray-500);
 }
 
 .lottus-close-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  border: 1px solid var(--gray-300);
   width: 28px;
   height: 28px;
   border-radius: 7px;
   font-size: 1.2rem;
   line-height: 1;
-  color: #64748b;
+  color: var(--gray-500);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -864,9 +549,9 @@
 }
 
 .lottus-close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: var(--gray-100);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
 }
 
 .lottus-modal-form {
@@ -897,7 +582,7 @@
 .lottus-form-group label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--gray-700);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   display: flex;
@@ -906,13 +591,13 @@
 }
 
 .lottus-req {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .lottus-hint {
   font-weight: 400;
   text-transform: none;
-  color: #94a3b8;
+  color: var(--gray-400);
 }
 
 .lottus-label-flex {
@@ -924,7 +609,7 @@
 .lottus-val-preview {
   font-size: 0.78rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--info);
   background: #eff6ff;
   padding: 0.1rem 0.45rem;
   border-radius: 5px;
@@ -935,11 +620,11 @@
 .lottus-select {
   width: 100%;
   padding: 0.45rem 0.65rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--gray-300);
   border-radius: 8px;
   font-size: 0.82rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--gray-800);
+  background: var(--surface);
   outline: none;
   transition: all 0.15s ease;
   font-family: inherit;
@@ -948,7 +633,7 @@
 
 .lottus-input:focus,
 .lottus-select:focus {
-  border-color: #2563eb;
+  border-color: var(--info);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
@@ -963,14 +648,14 @@
   left: 0.65rem;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--gray-500);
   pointer-events: none;
 }
 
 .lottus-input-pl {
   padding-left: 1.6rem !important;
   font-weight: 700;
-  color: #2563eb !important;
+  color: var(--info) !important;
 }
 
 /* Payment Pills (Recibos de Caja) */
@@ -985,25 +670,25 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--gray-300);
   border-radius: 7px;
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--gray-50);
+  color: var(--gray-600);
   transition: all 0.15s ease;
 }
 
 .lottus-payment-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: var(--gray-100);
+  border-color: var(--gray-400);
+  color: var(--gray-900);
 }
 
 .lottus-payment-btn.active {
   background: #eff6ff;
-  border-color: #3b82f6;
+  border-color: var(--info);
   color: #1d4ed8;
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);
@@ -1023,13 +708,13 @@
   gap: 0.5rem;
   margin-top: 0.35rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--gray-100);
 }
 
 .lottus-btn-cancel {
-  background: #ffffff;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  color: var(--gray-600);
+  border: 1px solid var(--gray-300);
   padding: 0.45rem 0.95rem;
   border-radius: 8px;
   font-weight: 600;
@@ -1039,14 +724,14 @@
 }
 
 .lottus-btn-cancel:hover:not(:disabled) {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
 }
 
 .lottus-btn-submit {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--info) 0%, #1d4ed8 100%);
+  color: var(--surface);
   border: none;
   padding: 0.45rem 1.1rem;
   border-radius: 8px;
@@ -1081,9 +766,9 @@
 }
 
 .rc-pagination-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: var(--surface);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -1107,20 +792,20 @@
 .rc-pagination-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  color: #94a3b8;
+  background: var(--gray-50);
+  border-color: var(--gray-200);
+  color: var(--gray-400);
   box-shadow: none;
 }
 
 .rc-pagination-info {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #475569;
-  background: #ffffff;
+  color: var(--gray-600);
+  background: var(--surface);
   padding: 0.5rem 1rem;
   border-radius: 9999px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--gray-200);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -1128,8 +813,8 @@
    Confirm Modal Corporate Layout
    ========================================================================== */
 .rc-confirm-container {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
   border-radius: 12px;
   padding: 0.75rem 1.25rem;
   margin-top: 0.5rem;
@@ -1142,7 +827,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .rc-confirm-row:last-child {
@@ -1151,20 +836,20 @@
 
 .rc-confirm-label {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--gray-500);
   font-weight: 500;
 }
 
 .rc-confirm-val {
   font-size: 0.925rem;
-  color: #1e293b;
+  color: var(--gray-800);
   font-weight: 600;
 }
 
 .rc-confirm-val.amount {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #274385;
+  color: var(--accent);
 }
 
 .rc-confirm-val.method {
@@ -1180,3 +865,8 @@
   margin-top: 1.5rem;
   padding-top: 0.5rem;
 }
+
+.recibos-filters {
+  padding: 0.75rem 1rem;
+}
+

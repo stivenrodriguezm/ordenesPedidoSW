@@ -1,7 +1,10 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from "react";
 import API from "./services/api"; // Usaremos la instancia de API centralizada
 
 export const AppContext = createContext();
+// Contexto separado para el toast global: evita que cada notificación
+// re-renderice todos los consumidores de AppContext
+export const NotificationContext = createContext();
 
 export const usePermissions = () => {
   const { usuario } = useContext(AppContext);
@@ -43,9 +46,15 @@ export function AppProvider({ children }) {
   const [proveedores, setProveedores] = useState([]);
   const [isLoadingProveedores, setIsLoadingProveedores] = useState(true);
   const [clientes, setClientes] = useState([]);
-  const [isLoadingClientes, setIsLoadingClientes] = useState(true);
-  // Used to re-run verifyUser on login
-  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
+  // Notificación global (toast) — una sola implementación para toda la app
+  const [notification, setNotification] = useState(null);
+
+  const notify = useCallback((message, type = 'success') => {
+    setNotification({ message, type });
+  }, []);
+
+  const clearNotification = useCallback(() => setNotification(null), []);
 
   // Read token at render time — when it changes, useEffect re-runs
   const token = localStorage.getItem("accessToken");
@@ -74,7 +83,7 @@ export function AppProvider({ children }) {
       }
     };
     verifyUser();
-  }, [token, reloadTrigger]); // re-runs on login/logout OR when reloadTrigger increments
+  }, [token]); // re-runs on login/logout
 
   // Called after admin saves role permissions — forces fresh user data silently
   const reloadUser = useCallback(async () => {
@@ -113,28 +122,52 @@ export function AppProvider({ children }) {
   }, [usuario, fetchProveedores]);
 
   const fetchClientes = useCallback(async () => {
-    setClientes([]);
-    setIsLoadingClientes(false);
-  }, []);
+    if (!token) {
+      setClientes([]);
+      return;
+    }
+    setIsLoadingClientes(true);
+    try {
+      const response = await API.get('/clientes/', { params: { page_size: 1000 } });
+      setClientes(response.data.results || response.data || []);
+    } catch {
+      // Silently ignore — usuarios sin permiso de clientes reciben 403
+      setClientes([]);
+    } finally {
+      setIsLoadingClientes(false);
+    }
+  }, [token]);
+
+  const value = useMemo(() => ({
+    usuario,
+    setUsuario,
+    isLoading,
+    isLoggingIn,
+    setIsLoggingIn,
+    reloadUser,
+    notify,
+    proveedores,
+    isLoadingProveedores,
+    fetchProveedores,
+    clientes,
+    isLoadingClientes,
+    fetchClientes,
+  }), [
+    usuario, isLoading, isLoggingIn, reloadUser, notify,
+    proveedores, isLoadingProveedores, fetchProveedores,
+    clientes, isLoadingClientes, fetchClientes,
+  ]);
+
+  const notificationValue = useMemo(
+    () => ({ notification, clearNotification }),
+    [notification, clearNotification]
+  );
 
   return (
-    <AppContext.Provider
-      value={{
-        usuario,
-        setUsuario,
-        isLoading,
-        isLoggingIn,
-        setIsLoggingIn,
-        reloadUser,
-        proveedores,
-        isLoadingProveedores,
-        fetchProveedores,
-        clientes,
-        isLoadingClientes,
-        fetchClientes,
-      }}
-    >
-      {children}
+    <AppContext.Provider value={value}>
+      <NotificationContext.Provider value={notificationValue}>
+        {children}
+      </NotificationContext.Provider>
     </AppContext.Provider>
   );
 }

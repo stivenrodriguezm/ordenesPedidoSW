@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
 import './RecibosCaja.css';
 import API from '../services/api';
-import * as XLSX from 'xlsx';
+import { getTodayStr } from '../utils/dates';
 import {
   FaFileExport,
   FaPlus,
   FaUndo,
+  FaTimes,
   FaCheckCircle,
   FaSearch,
   FaMoneyBillWave,
@@ -24,8 +26,10 @@ import {
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
+import { PageHeader, Button, Badge } from '../components/ui';
 
 import { formatCOP } from '../utils/formatCOP';
+import { usePendientesIds } from '../hooks/useSharedData';
 
 // --- Helper Components ---
 
@@ -47,8 +51,7 @@ const PAYMENT_METHODS = [
 ];
 
 const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading }) => {
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayStr = getTodayStr();
 
   const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
   const [ventaSearch, setVentaSearch] = useState('');
@@ -78,7 +81,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   const numericVal = parseInt(newRC.valor) || 0;
   const filteredVentas = ventas.filter(v => v.id_venta.toString().includes(ventaSearch));
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
@@ -222,7 +225,8 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -235,12 +239,12 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }
         {children}
       </div>
       <div className="rc-confirm-modal-actions">
-        <button className="o-btn-secondary-glow" onClick={onClose} disabled={isLoading}>
+        <Button variant="secondary" onClick={onClose} disabled={isLoading}>
           Cancelar
-        </button>
-        <button className="o-btn-primary-glow" onClick={onConfirm} disabled={isLoading}>
+        </Button>
+        <Button variant="primary" onClick={onConfirm} loading={isLoading}>
           {isLoading ? 'Confirmando...' : 'Confirmar Ingreso'}
-        </button>
+        </Button>
       </div>
     </Modal>
   );
@@ -258,7 +262,8 @@ const RecibosCaja = () => {
     query: ''
   });
   const [isCreatingRC, setIsCreatingRC] = useState(false);
-  const [ventas, setVentas] = useState([]);
+  const { data: pendientesIds = [], isError: pendientesIdsError, error: pendientesIdsErr } = usePendientesIds();
+  const ventas = useMemo(() => pendientesIds.map(id => ({ id_venta: id })), [pendientesIds]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedRecibo, setSelectedRecibo] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -332,16 +337,8 @@ const RecibosCaja = () => {
   }, [location]);
 
   useEffect(() => {
-    const fetchVentas = async () => {
-      try {
-        const response = await API.get(`/get-pendientes-ids/`);
-        setVentas(response.data.map(id => ({ id_venta: id })));
-      } catch (error) {
-        console.error('Error details:', error);
-      }
-    };
-    fetchVentas();
-  }, []);
+    if (pendientesIdsError) console.error('Error details:', pendientesIdsErr);
+  }, [pendientesIdsError, pendientesIdsErr]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -363,7 +360,8 @@ const RecibosCaja = () => {
       setIsCreatingRC(false);
       fetchData(filters, 1);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al crear el recibo.';
+      const data = error.response?.data;
+      const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al crear el recibo.'));
       setNotification({ message: errorMsg, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -379,7 +377,8 @@ const RecibosCaja = () => {
       setShowConfirmModal(false);
       fetchData(filters, currentPage);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al confirmar.';
+      const data = error.response?.data;
+      const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al confirmar.'));
       setNotification({ message: errorMsg, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -392,6 +391,7 @@ const RecibosCaja = () => {
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
+      const XLSX = await import('xlsx');
       const response = await API.get(`/recibos-caja/`, { params });
       const dataToExport = response.data.results.map(item => ({
         'RC': item.id,
@@ -414,11 +414,30 @@ const RecibosCaja = () => {
   };
 
   return (
-    <div className="caja-page-container">
+    <div className="ds-page recibos-page ds-fade-in">
       <AppNotification
         message={notification.message}
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
+      />
+
+      <PageHeader
+        icon={FaWallet}
+        title="Recibos de Caja"
+        subtitle="Registro y confirmación de ingresos"
+        actions={
+          <>
+            {usuario?.role === 'administrador' && (
+              <Button variant="ghost" icon={FaFileExport} onClick={exportData} title="Exportar Excel" />
+            )}
+            {hasPermission('CREAR_RECIBO') && (
+              <Button variant="primary" icon={FaPlus} onClick={() => setIsCreatingRC(true)}>
+                <span className="long-text">Nuevo Ingreso</span>
+                <span className="short-text">Nuevo</span>
+              </Button>
+            )}
+          </>
+        }
       />
 
       {/* --- Live Stats Bar --- */}
@@ -433,43 +452,49 @@ const RecibosCaja = () => {
         </div>
       </div>
 
-      <div className="o-glass-header" style={{ display: 'flex', flexWrap: 'nowrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', overflowX: 'auto' }}>
-        <div className="o-filters-bar" style={{ margin: 0, flex: 1 }}>
-          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FaSearch style={{ color: '#94a3b8', fontSize: '0.8rem' }} />
-            <input type="text" name="query" placeholder="Buscar RC o Venta..." value={filters.query} onChange={handleFilterChange}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', outline: 'none', minWidth: '120px' }} />
+      <div className="ds-card recibos-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
+        <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
+          <div className="v-search-pill">
+            <FaSearch />
+            <input
+              type="text"
+              name="query"
+              placeholder="Buscar RC o Venta..."
+              value={filters.query}
+              onChange={handleFilterChange}
+            />
           </div>
-          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Desde</label>
-            <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_inicio" value={filters.fecha_inicio} onChange={handleFilterChange}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
+          <div className="v-select-pill">
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Desde:</span>
+            <input
+              type="date"
+              name="fecha_inicio"
+              value={filters.fecha_inicio}
+              onChange={handleFilterChange}
+              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
+            />
           </div>
-          <div className="o-select-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.5rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Hasta</label>
-            <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_fin" value={filters.fecha_fin} onChange={handleFilterChange}
-              style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none' }} />
+          <div className="v-select-pill">
+            <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Hasta:</span>
+            <input
+              type="date"
+              name="fecha_fin"
+              value={filters.fecha_fin}
+              onChange={handleFilterChange}
+              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
+            />
           </div>
-          <div className="o-select-pill">
+          <div className="v-select-pill">
             <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
               <option value="">Medio: Todos</option>
               {mediosPago.map((medio) => (<option key={medio} value={medio}>{medio}</option>))}
             </select>
           </div>
-          {(filters.query || filters.fecha_inicio || filters.medio_pago) && (
-            <button className="o-btn-ghost" onClick={clearFilters} title="Limpiar filtros"><FaUndo /></button>
-          )}
-        </div>
-
-        <div className="header-actions" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {usuario?.role === 'administrador' && (
-            <button className="o-btn-ghost" onClick={exportData} title="Exportar Excel"><FaFileExport /></button>
-          )}
-          {hasPermission('CREAR_RECIBO') && (
-            <button className="o-btn-primary-glow" onClick={() => setIsCreatingRC(true)}>
-              <FaPlus />
-              <span className="long-text">Nuevo Ingreso</span>
-              <span className="short-text">Nuevo</span>
+          {(filters.query || filters.fecha_inicio || filters.fecha_fin || filters.medio_pago) && (
+            <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+              <FaTimes />
             </button>
           )}
         </div>
@@ -520,9 +545,9 @@ const RecibosCaja = () => {
                     <td className="text-right font-mono">{formatCurrency(item.valor)}</td>
                     <td className="note-cell" title={item.nota}>{item.nota || '—'}</td>
                     <td>
-                      <span className={`status-pill ${item.estado.toLowerCase()}`}>
+                      <Badge tone={item.estado.toLowerCase() === 'confirmado' ? 'success' : item.estado.toLowerCase() === 'anulado' ? 'danger' : 'warning'}>
                         {item.estado}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="actions-cell">
                       {item.estado === 'Pendiente' && hasPermission('APROBAR_RECIBO') && (

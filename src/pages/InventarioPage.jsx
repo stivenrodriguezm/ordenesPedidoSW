@@ -1,14 +1,17 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import API from '../services/api';
+import { usePendientesIds } from '../hooks/useSharedData';
 import { formatCOP } from '../utils/formatCOP';
-import * as XLSX from 'xlsx';
 import {
     FaSearch, FaFileExport, FaTimes, FaPlus, FaImage, FaCamera, FaUpload,
     FaLayerGroup, FaEdit, FaSave, FaChevronDown, FaChevronUp,
-    FaSort, FaSortUp, FaSortDown, FaTable, FaList, FaDollarSign, FaFilter, FaQrcode, FaExchangeAlt, FaCheckCircle
+    FaSort, FaSortUp, FaSortDown, FaTable, FaList, FaDollarSign, FaFilter, FaQrcode, FaExchangeAlt, FaCheckCircle,
+    FaTrashAlt, FaBoxOpen
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import { AppContext, usePermissions } from '../AppContext';
+import { Button, PageHeader, Badge, Modal, ErrorState } from '../components/ui';
 import './InventarioPage.css';
 
 const CATEGORY_COLORS = [
@@ -38,6 +41,22 @@ const DISPONIBILIDAD_OPTIONS = [
     { key: 'consignacion',  label: 'Consignación' },
     { key: 'no_venta',      label: 'No a la venta' },
 ];
+
+// Tono del Badge según disponibilidad (patrón estadoTone de AdminHomePage)
+const dispTone = (disp) => {
+    switch (disp) {
+        case 'venta':
+        case 'entregado':     return 'success';
+        case 'exhibicion':
+        case 'por_reparar':   return 'warning';
+        case 'cliente':
+        case 'por_despachar': return 'info';
+        case 'consignacion':
+        case 'despachado':    return 'accent';
+        case 'no_venta':      return 'danger';
+        default:              return 'neutral';
+    }
+};
 
 // ── Obs tooltip ──────────────────────────────────────────────────────────────
 function ObsCell({ text }) {
@@ -122,7 +141,7 @@ function InventarioPage() {
     const [categorias, setCategorias]           = useState([]);
     const [subcategorias, setSubcategorias]     = useState([]);
     const [productos, setProductos]             = useState([]);
-    const [ordenesPendientes, setOrdenesPendientes] = useState([]);
+    const { data: ordenesPendientes = [], refetch: refetchPendientes } = usePendientesIds();
     const [grupos, setGrupos]                   = useState([]);
     const [zonas, setZonas]                     = useState([]);
     const [isLoading, setIsLoading]             = useState(true);
@@ -191,34 +210,40 @@ function InventarioPage() {
     }, []);
 
     // ── Fetch ─────────────────────────────────────────────────────────────────
+    const [fetchError, setFetchError] = useState(null);
+
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        setFetchError(null);
+        try {
+            const pendientesPromise = refetchPendientes();
+            const [invRes, catRes, subcatRes, prodRes, grupoRes, zonasRes] = await Promise.all([
+                API.get('/suministros/inventario/'),
+                API.get('/suministros/categorias/'),
+                API.get('/suministros/subcategorias/'),
+                API.get('/referencias/'),
+                API.get('/suministros/grupos/'),
+                API.get('/suministros/zonas/')
+            ]);
+            const pendientesResult = await pendientesPromise;
+            if (pendientesResult.isError) throw pendientesResult.error;
+            setInventario(invRes.data.results || invRes.data);
+            setCategorias(catRes.data.results || catRes.data);
+            setSubcategorias(subcatRes.data.results || subcatRes.data);
+            setProductos(prodRes.data.results || prodRes.data);
+            setGrupos(grupoRes.data.results || grupoRes.data || []);
+            setZonas(zonasRes.data.results || zonasRes.data || []);
+        } catch (error) {
+            console.error('Error fetching inventario data:', error);
+            setFetchError('No se pudo cargar el inventario.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [refetchPendientes]);
+
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const [invRes, catRes, subcatRes, prodRes, ordRes, grupoRes, zonasRes] = await Promise.all([
-                    API.get('/suministros/inventario/'),
-                    API.get('/suministros/categorias/'),
-                    API.get('/suministros/subcategorias/'),
-                    API.get('/referencias/'),
-                    API.get('/get-pendientes-ids/'),
-                    API.get('/suministros/grupos/'),
-                    API.get('/suministros/zonas/')
-                ]);
-                setInventario(invRes.data.results || invRes.data);
-                setCategorias(catRes.data.results || catRes.data);
-                setSubcategorias(subcatRes.data.results || subcatRes.data);
-                setProductos(prodRes.data.results || prodRes.data);
-                setOrdenesPendientes(ordRes.data || []);
-                setGrupos(grupoRes.data.results || grupoRes.data || []);
-                setZonas(zonasRes.data.results || zonasRes.data || []);
-            } catch (error) {
-                console.error('Error fetching inventario data:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const CATEGORIAS    = categorias;
     const SUBCATEGORIAS = subcategorias;
@@ -931,7 +956,8 @@ function InventarioPage() {
         setFilterFechaInicio(''); setFilterFechaFin('');
     };
 
-    const handleExport = () => {
+    const handleExport = async () => {
+        const XLSX = await import('xlsx');
         const dataToExport = filtered.map(item => ({
             'ID Producto': item.id,
             'Proveedor': item.proveedorNombre,
@@ -955,9 +981,9 @@ function InventarioPage() {
     // ── Inline disponibilidad badge (C) ───────────────────────────────────────
     const renderDispBadge = (inv) => {
         return (
-            <span className={`disp-badge disp-${inv.disponibilidad}`}>
+            <Badge tone={dispTone(inv.disponibilidad)}>
                 {DISPONIBILIDAD_LABELS[inv.disponibilidad] || '—'}
-            </span>
+            </Badge>
         );
     };
 
@@ -970,7 +996,7 @@ function InventarioPage() {
 
     // ── Common row renderer ───────────────────────────────────────────────────
     const renderItemRow = (inv, key, extraClass = '', showGroupCol = false) => {
-        const color = inv.prod ? getCatColor(inv.prod.categoriaId) : '#94a3b8';
+        const color = inv.prod ? getCatColor(inv.prod.categoriaId) : 'var(--gray-400)';
         const grupoObj = inv.grupoId ? grupos.find(g => g.id === inv.grupoId) : null;
         return (
             <tr key={key} className={extraClass}>
@@ -1099,7 +1125,7 @@ function InventarioPage() {
             ));
         }
         if (filtered.length === 0) {
-            return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '2rem' }}>No se encontraron ítems con ese criterio.</td></tr>;
+            return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: 'var(--gray-400)', fontStyle: 'italic', padding: '2rem' }}>No se encontraron ítems con ese criterio.</td></tr>;
         }
 
         // ── PRODUCTS ONLY — flat list, all items with dedicated group column ──
@@ -1197,8 +1223,8 @@ function InventarioPage() {
                             {gProveedorIsShared
                                 ? (
                                     <span style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Compartido</span>
-                                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{gProveedorLabel || '—'}</span>
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--warning)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Compartido</span>
+                                        <span style={{ fontSize: '0.72rem', color: 'var(--gray-500)' }}>{gProveedorLabel || '—'}</span>
                                     </span>
                                 )
                                 : (gProveedorLabel || <span className="empty-val">—</span>)
@@ -1207,7 +1233,7 @@ function InventarioPage() {
                         <td className="inv-factura-col" title={gFactura || ''}>{gFactura || <span className="empty-val">—</span>}</td>
                         <td className="inv-numeric" title={grupoObj.venta_id}>{grupoObj.venta_id || <span className="empty-val">—</span>}</td>
                         <td>
-                            <span className={`disp-badge disp-${dispUni}`}>{DISPONIBILIDAD_LABELS[dispUni] || dispUni}</span>
+                            <Badge tone={dispTone(dispUni)}>{DISPONIBILIDAD_LABELS[dispUni] || dispUni}</Badge>
                         </td>
                         <td title={gFecha || ''}>{gFecha || <span className="empty-val">—</span>}</td>
                         <td title={grupoObj.nombre}>
@@ -1217,7 +1243,7 @@ function InventarioPage() {
                         </td>
                         <td>
                             {grupoObj.categoria_nombre && (
-                                <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': getCatColor(grupoObj.categoria_id) || '#94a3b8' }}>
+                                <span className="cat-badge cat-badge--standalone" style={{ '--cat-color': getCatColor(grupoObj.categoria_id) || 'var(--gray-400)' }}>
                                     {grupoObj.categoria_nombre}
                                 </span>
                             )}
@@ -1233,7 +1259,7 @@ function InventarioPage() {
                         <td title={gZona || ''}>{gZona || <span className="empty-val">—</span>}</td>
                         <td className="inv-obs-col" title={grupoObj.observacion || ''}>{grupoObj.observacion || <span className="empty-val">—</span>}</td>
                         {hasPermission('VER_COSTOS_INVENTARIO') && showCostoCol && (
-                            <td className="inv-costo-col" style={{ fontWeight: 700, color: '#1e293b' }}>
+                            <td className="inv-costo-col" style={{ fontWeight: 700, color: 'var(--gray-800)' }}>
                                 {formatCOP(parseFloat(grupoObj.costo_total) || 0)}
                             </td>
                         )}
@@ -1267,7 +1293,7 @@ function InventarioPage() {
         });
 
         if (viewMode === 'groups_only' && rows.length === 0) {
-            return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '2rem' }}>No hay grupos con los filtros actuales.</td></tr>;
+            return <tr><td colSpan={colSpan} style={{ textAlign: 'center', color: 'var(--gray-400)', fontStyle: 'italic', padding: '2rem' }}>No hay grupos con los filtros actuales.</td></tr>;
         }
 
         return rows;
@@ -1316,51 +1342,97 @@ function InventarioPage() {
     };
 
     // ════════════════════════════════════════════════════════════════════════
+    if (fetchError) {
+        return (
+            <div className="ds-page">
+                <ErrorState message={fetchError} onRetry={fetchData} />
+            </div>
+        );
+    }
+
     return (
-        <div className="page-container">
+        <div className="ds-page inventario-page ds-fade-in">
 
             {/* ── HEADER ──────────────────────────────────────────────────── */}
-            <div className="v-glass-header inv-header-wrap">
-                <div className="inv-filters-wrapper">
-                    <div className="v-search-pill" style={{ flex: 1, maxWidth: '400px' }}>
+            <PageHeader
+                icon={FaBoxOpen}
+                title="Inventario"
+                subtitle={`${stats.total} ítems registrados · ${grupos.length} grupos activos`}
+                actions={
+                    <>
+                        <Button variant="secondary" icon={FaLayerGroup}
+                            onClick={() => setNuevoGrupoModal({ open: true, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>
+                            Nuevo Grupo
+                        </Button>
+                        <Button variant="primary" icon={FaPlus} onClick={openModal}>
+                            Agregar
+                        </Button>
+                    </>
+                }
+            />
+
+            {/* ── TOOLBAR: búsqueda, filtros y vistas ─────────────────────── */}
+            <div className="ds-card inv-toolbar ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'nowrap' }}>
+                    <div className="v-search-pill" style={{ width: '320px', maxWidth: '100%' }}>
                         <FaSearch />
                         <input type="text" placeholder="Buscar por referencia, nombre, ID..."
-                            value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
+                            value={filterSearch} onChange={e => setFilterSearch(e.target.value)} style={{ width: '100%' }} />
                     </div>
-                    <div style={{ position: 'relative' }}>
-                        <button className={`v-btn-ghost ${showFiltersMenu ? 'active' : ''}`} onClick={() => setShowFiltersMenu(!showFiltersMenu)} style={{ position: 'relative', paddingRight: (hasFilters && !filterSearch) ? '1.5rem' : '' }}>
-                            <FaFilter /> Filtros
+                    
+                    <div className="inv-filters-btn-wrap" style={{ position: 'relative' }}>
+                        <button
+                            type="button"
+                            className="v-select-pill"
+                            style={{ 
+                                height: '34px', cursor: 'pointer', padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', 
+                                background: showFiltersMenu ? 'var(--accent)' : '#fff', 
+                                color: showFiltersMenu ? '#fff' : 'var(--gray-700)', 
+                                fontWeight: 600, border: '1px solid var(--gray-200)', flexShrink: 0
+                            }}
+                            onClick={() => setShowFiltersMenu(!showFiltersMenu)}
+                        >
+                            <FaFilter style={{ fontSize: '0.8rem', color: showFiltersMenu ? '#fff' : 'var(--accent)' }} />
+                            <span>Filtros</span>
                             {(hasFilters && !filterSearch) && (
-                                <span style={{ position: 'absolute', top: '25%', right: '8px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', boxShadow: '0 0 4px rgba(239, 68, 68, 0.5)' }}></span>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: showFiltersMenu ? '#fff' : 'var(--accent)', marginLeft: '0.2rem' }}></span>
                             )}
+                            <FaChevronDown style={{ fontSize: '0.65rem', marginLeft: '0.3rem', opacity: 0.7 }} />
                         </button>
+                        
                         {showFiltersMenu && (
-                            <div className="inv-filters-dropdown">
-                                <div className="inv-filters-grid">
-                                    <div className="inv-filter-group">
-                                        <label>Proveedor</label>
-                                        <select value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
+                            <div className="inv-filters-dropdown ds-fade-in" style={{ 
+                                position: 'absolute', top: 'calc(100% + 0.5rem)', left: 0, zIndex: 100, 
+                                background: '#fff', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', 
+                                border: '1px solid var(--gray-200)', padding: '1.25rem', width: 'max-content', maxWidth: '85vw'
+                            }}>
+                                <div className="inv-filters-grid" style={{
+                                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', width: '100%', minWidth: '400px'
+                                }}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Proveedor</label>
+                                        <select className="ds-select" value={filterProveedor} onChange={e => setFilterProveedor(e.target.value)}>
                                             <option value="">Todos</option>
                                             {(proveedores || []).map(p => <option key={p.id} value={p.id}>{p.nombre_empresa}</option>)}
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Categoría</label>
-                                        <select value={filterCategoria} onChange={e => { setFilterCategoria(e.target.value); setFilterSubcategoria(''); }}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Categoría</label>
+                                        <select className="ds-select" value={filterCategoria} onChange={e => { setFilterCategoria(e.target.value); setFilterSubcategoria(''); }}>
                                             <option value="">Todas</option>
                                             {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Subcategoría</label>
-                                        <select value={filterSubcategoria} onChange={e => setFilterSubcategoria(e.target.value)}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Subcategoría</label>
+                                        <select className="ds-select" value={filterSubcategoria} onChange={e => setFilterSubcategoria(e.target.value)}>
                                             <option value="">Todas</option>
                                             {subcatsDropdown.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Disponibilidad</label>
-                                        <select value={filterDisponibilidad} onChange={e => setFilterDisponibilidad(e.target.value)}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Disponibilidad</label>
+                                        <select className="ds-select" value={filterDisponibilidad} onChange={e => setFilterDisponibilidad(e.target.value)}>
                                             <option value="">Todas</option>
                                             <option value="venta">Venta</option>
                                             <option value="exhibicion">Exhibición</option>
@@ -1369,87 +1441,79 @@ function InventarioPage() {
                                             <option value="no_venta">No a la venta</option>
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Sede</label>
-                                        <select value={filterSede} onChange={e => { setFilterSede(e.target.value); setFilterZona(''); }}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Sede</label>
+                                        <select className="ds-select" value={filterSede} onChange={e => { setFilterSede(e.target.value); setFilterZona(''); }}>
                                             <option value="">Todas</option>
                                             {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Zona</label>
-                                        <select value={filterZona} onChange={e => setFilterZona(e.target.value)}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Zona</label>
+                                        <select className="ds-select" value={filterZona} onChange={e => setFilterZona(e.target.value)}>
                                             <option value="">Todas</option>
                                             {(filterSede ? zonas.filter(z => String(z.sede) === filterSede) : zonas).map(z => (
                                                 <option key={z.id} value={z.id}>{z.sede_nombre} - {z.nombre}</option>
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Estado Físico</label>
-                                        <select value={filterEstadoFisico} onChange={e => setFilterEstadoFisico(e.target.value)}>
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Estado Físico</label>
+                                        <select className="ds-select" value={filterEstadoFisico} onChange={e => setFilterEstadoFisico(e.target.value)}>
                                             <option value="">Todos</option>
                                             <option value="buen_estado">Buen estado</option>
                                             <option value="por_reparar">Por reparar</option>
                                             <option value="por_modificar">Por modificar</option>
                                         </select>
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Fecha Ingreso (Desde)</label>
-                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaInicio} onChange={e => setFilterFechaInicio(e.target.value)} />
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Fecha Ingreso (Desde)</label>
+                                        <input type="date" className="ds-input" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaInicio} onChange={e => setFilterFechaInicio(e.target.value)} />
                                     </div>
-                                    <div className="inv-filter-group">
-                                        <label>Fecha Ingreso (Hasta)</label>
-                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaFin} onChange={e => setFilterFechaFin(e.target.value)} />
+                                    <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Fecha Ingreso (Hasta)</label>
+                                        <input type="date" className="ds-input" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaFin} onChange={e => setFilterFechaFin(e.target.value)} />
                                     </div>
                                 </div>
-                                {hasFilters && (
-                                    <div className="inv-filters-actions">
-                                        <button className="inv-clear-pill w-full" onClick={clearFilters}><FaTimes /> Limpiar Filtros</button>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
+
+                    {hasFilters && (
+                        <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+                            <FaTimes />
+                        </button>
+                    )}
                 </div>
 
-                <div className="header-actions" style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="inv-toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap' }}>
                     {/* View mode toggle */}
-                    <div className="inv-view-mode-toggle">
+                    <div className="inv-view-mode-toggle" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-50)', padding: '0.15rem', borderRadius: '8px', border: '1px solid var(--gray-200)', gap: '0.15rem' }}>
                         <button className={`inv-view-btn ${viewMode === 'default' ? 'active' : ''}`}
-                            onClick={() => setViewMode('default')} title="Vista combinada (grupos + individuales)">
+                            onClick={() => setViewMode('default')} title="Vista combinada (grupos + individuales)" style={{ background: viewMode === 'default' ? '#fff' : 'transparent', border: 'none', padding: '0.4rem 0.6rem', borderRadius: '6px', color: viewMode === 'default' ? 'var(--accent)' : 'var(--gray-500)', cursor: 'pointer', boxShadow: viewMode === 'default' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none' }}>
                             <FaTable />
                         </button>
                         <button className={`inv-view-btn ${viewMode === 'groups_only' ? 'active' : ''}`}
-                            onClick={() => setViewMode('groups_only')} title="Solo grupos">
+                            onClick={() => setViewMode('groups_only')} title="Solo grupos" style={{ background: viewMode === 'groups_only' ? '#fff' : 'transparent', border: 'none', padding: '0.4rem 0.6rem', borderRadius: '6px', color: viewMode === 'groups_only' ? 'var(--accent)' : 'var(--gray-500)', cursor: 'pointer', boxShadow: viewMode === 'groups_only' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none' }}>
                             <FaLayerGroup />
                         </button>
                         <button className={`inv-view-btn ${viewMode === 'products_only' ? 'active' : ''}`}
-                            onClick={() => setViewMode('products_only')} title="Todos los productos (vista plana)">
+                            onClick={() => setViewMode('products_only')} title="Todos los productos (vista plana)" style={{ background: viewMode === 'products_only' ? '#fff' : 'transparent', border: 'none', padding: '0.4rem 0.6rem', borderRadius: '6px', color: viewMode === 'products_only' ? 'var(--accent)' : 'var(--gray-500)', cursor: 'pointer', boxShadow: viewMode === 'products_only' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none' }}>
                             <FaList />
                         </button>
                     </div>
 
                     {/* A: Toggle cost column */}
                     {hasPermission('VER_COSTOS_INVENTARIO') && (
-                        <button
-                            className={`v-btn-ghost${showCostoCol ? ' v-btn-ghost--active' : ''}`}
+                        <Button
+                            variant={showCostoCol ? 'secondary' : 'ghost'}
+                            icon={FaDollarSign}
                             onClick={() => setShowCostoCol(v => !v)}
                             title={showCostoCol ? 'Ocultar costos' : 'Mostrar costos'}
-                        >
-                            <FaDollarSign />
-                        </button>
+                        />
                     )}
 
-                    <button className="v-btn-ghost" onClick={handleExport} title="Exportar a CSV">
-                        <FaFileExport />
-                    </button>
-                    <button className="btn-ghost-inv" onClick={() => setNuevoGrupoModal({ open: true, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>
-                        <FaLayerGroup /><span>Nuevo Grupo</span>
-                    </button>
-                    <button className="v-btn-primary-glow" onClick={openModal}>
-                        <FaPlus /><span>Agregar</span>
-                    </button>
+                    <Button variant="ghost" icon={FaFileExport} onClick={handleExport} title="Exportar a Excel" />
                 </div>
             </div>
 
@@ -1460,23 +1524,23 @@ function InventarioPage() {
                     <div className="inv-sum-label">Total inventario</div>
                 </div>
                 <div className="inv-summary-card">
-                    <div className="inv-sum-value" style={{ color: '#15803d' }}>{stats.venta}</div>
+                    <div className="inv-sum-value inv-sum-value--success">{stats.venta}</div>
                     <div className="inv-sum-label">En venta</div>
                 </div>
                 <div className="inv-summary-card">
-                    <div className="inv-sum-value" style={{ color: '#92400e' }}>{stats.exhibicion}</div>
+                    <div className="inv-sum-value inv-sum-value--warning">{stats.exhibicion}</div>
                     <div className="inv-sum-label">En exhibición</div>
                 </div>
                 <div className="inv-summary-card">
-                    <div className="inv-sum-value" style={{ color: '#3b82f6' }}>{stats.grupos}</div>
+                    <div className="inv-sum-value inv-sum-value--info">{stats.grupos}</div>
                     <div className="inv-sum-label">Grupos activos</div>
                 </div>
                 <div className="inv-summary-card">
-                    <div className="inv-sum-value" style={{ color: '#6d28d9' }}>{stats.conGrupo}</div>
+                    <div className="inv-sum-value inv-sum-value--accent">{stats.conGrupo}</div>
                     <div className="inv-sum-label">En grupo</div>
                 </div>
                 <div className="inv-summary-card">
-                    <div className="inv-sum-value" style={{ color: '#64748b' }}>{stats.sinGrupo}</div>
+                    <div className="inv-sum-value inv-sum-value--muted">{stats.sinGrupo}</div>
                     <div className="inv-sum-label">Sin grupo</div>
                 </div>
             </div>
@@ -1520,7 +1584,7 @@ function InventarioPage() {
             />
 
             {/* ── MODAL: AGREGAR ENTRADA ──────────────────────────────────── */}
-            {showModal && (
+            {showModal && createPortal(
                 <div className={`inv-overlay${modalVisible ? ' inv-overlay-visible' : ''}`} onClick={closeModal}>
                     <div className={`inv-modal${modalVisible ? ' inv-modal-visible' : ''}`} onClick={e => e.stopPropagation()}>
                         <div className="inv-modal-header">
@@ -1569,9 +1633,9 @@ function InventarioPage() {
                                                     {(newGrupoCategoria ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(newGrupoCategoria)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                                 </select>
                                             </div>
-                                            <button type="button" className="v-btn-primary-glow" onClick={handleAddGrupo} style={{ padding: '0.35rem 0.75rem', height: '28px', fontSize: '0.75rem' }}>
+                                            <Button type="button" size="sm" onClick={handleAddGrupo}>
                                                 <FaPlus /> Crear
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -1579,8 +1643,8 @@ function InventarioPage() {
                                 {/* REFERENCIAS (PRODUCTOS) */}
                                 <div className="inv-section" style={{ padding: '0', background: 'transparent', border: 'none' }}>
                                     <div className="fct-section-label" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#94a3b8' }}>Referencias que Ingresan</span>
-                                        <button type="button" onClick={handleAddRow} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', color: '#0f172a', cursor: 'pointer', fontWeight: 600 }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gray-400)' }}>Referencias que Ingresan</span>
+                                        <button type="button" onClick={handleAddRow} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: 'white', border: '1px solid var(--gray-200)', borderRadius: '6px', color: 'var(--gray-900)', cursor: 'pointer', fontWeight: 600 }}>
                                             <FaPlus /> Añadir Fila
                                         </button>
                                     </div>
@@ -1597,9 +1661,9 @@ function InventarioPage() {
                                         const noRefsMsg = !form.proveedorId ? 'Elige proveedor' : providerRefs.length === 0 ? 'Sin referencias' : filteredRefs.length === 0 ? 'Sin resultados' : 'Seleccione...';
 
                                         return (
-                                            <div key={index} className="fct-ref-row" style={{ position: 'relative', background: 'white', borderRadius: '8px', padding: '1rem', border: '1px solid #e2e8f0', marginBottom: '1rem', opacity: row.visible ? 1 : 0, transition: 'opacity 0.3s' }}>
+                                            <div key={index} className="fct-ref-row" style={{ position: 'relative', background: 'white', borderRadius: '8px', padding: '1rem', border: '1px solid var(--gray-200)', marginBottom: '1rem', opacity: row.visible ? 1 : 0, transition: 'opacity 0.3s' }}>
                                                 {form.productos.length > 1 && (
-                                                    <button type="button" className="fct-trash-btn" onClick={() => removeRefRow(index)} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', zIndex: 10 }}>
+                                                    <button type="button" className="fct-trash-btn" onClick={() => removeRefRow(index)} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', zIndex: 10 }}>
                                                         <FaTrashAlt />
                                                     </button>
                                                 )}
@@ -1700,11 +1764,11 @@ function InventarioPage() {
                                                     </div>
 
                                                     {/* ROW 4: Telas y Cueros (Costos Adicionales) */}
-                                                    <div style={{ gridColumn: 'span 12', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.65rem', marginTop: '0.3rem' }}>
+                                                    <div style={{ gridColumn: 'span 12', background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: '8px', padding: '0.5rem 0.65rem', marginTop: '0.3rem' }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.3rem' }}>
-                                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--gray-700)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                                                 🧵 Telas y Cueros (Costos Adicionales)
-                                                                <span style={{ fontSize: '0.65rem', fontWeight: 400, color: '#64748b', fontStyle: 'italic', marginLeft: '0.2rem' }}>
+                                                                <span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--gray-500)', fontStyle: 'italic', marginLeft: '0.2rem' }}>
                                                                     — Usar punto (.) para decimales, ej: 2.5
                                                                 </span>
                                                             </span>
@@ -1722,7 +1786,7 @@ function InventarioPage() {
                                                             </button>
                                                         </div>
                                                         {(!row.telas_cueros || row.telas_cueros.length === 0) ? (
-                                                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin telas o cueros asignados.</div>
+                                                            <div style={{ fontSize: '0.68rem', color: 'var(--gray-400)', fontStyle: 'italic' }}>Sin telas o cueros asignados.</div>
                                                         ) : (
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                                                 {row.telas_cueros.map((tc, tcIdx) => {
@@ -1730,35 +1794,35 @@ function InventarioPage() {
                                                                     const unitLabel = isCuero ? 'dm' : 'm';
                                                                     const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
                                                                     return (
-                                                                        <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#fff', padding: '0.3rem', borderRadius: '5px', border: '1px solid #cbd5e1' }}>
+                                                                        <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#fff', padding: '0.3rem', borderRadius: '5px', border: '1px solid var(--gray-300)' }}>
                                                                             <select value={tc.tipo || 'tela'}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}>
+                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}>
                                                                                 <option value="tela">Tela (m)</option>
                                                                                 <option value="cuero">Cuero (dm)</option>
                                                                             </select>
                                                                             <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ flex: 1, minWidth: 0, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                                style={{ flex: 1, minWidth: 0, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
                                                                             <input type="text" placeholder="Color" value={tc.color || ''}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ flex: 1, minWidth: 0, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                                style={{ flex: 1, minWidth: 0, padding: '0.25rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
                                                                             <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-                                                                                <span style={{ position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
+                                                                                <span style={{ position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', fontSize: '0.68rem' }}>$</span>
                                                                                 <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
                                                                                     onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; }); }}
-                                                                                    style={{ width: '100%', padding: '0.25rem 0.25rem 0.25rem 0.9rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                                    style={{ width: '100%', padding: '0.25rem 0.25rem 0.25rem 0.9rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
                                                                             </div>
                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
                                                                                 <input type="number" step="0.1" min="0" placeholder={isCuero ? 'dm' : 'm'} value={tc.cantidad || ''}
                                                                                     onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], cantidad: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                    style={{ width: '58px', padding: '0.25rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                                                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                                                    style={{ width: '58px', padding: '0.25rem 0.3rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
+                                                                                <span style={{ fontSize: '0.68rem', color: 'var(--gray-500)', fontWeight: 600 }}>{unitLabel}</span>
                                                                             </div>
-                                                                            {tcSub > 0 && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>= {formatCOP(tcSub)}</span>}
+                                                                            {tcSub > 0 && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--gray-900)', whiteSpace: 'nowrap' }}>= {formatCOP(tcSub)}</span>}
                                                                             <button type="button"
                                                                                 onClick={() => setForm(prev => { const prods = [...prev.productos]; prods[index] = { ...prods[index], telas_cueros: (prods[index].telas_cueros || []).filter((_, i) => i !== tcIdx) }; return { ...prev, productos: prods }; })}
-                                                                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.15rem', fontSize: '0.75rem' }} title="Quitar">
+                                                                                style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.15rem', fontSize: '0.75rem' }} title="Quitar">
                                                                                 <FaTimes />
                                                                             </button>
                                                                         </div>
@@ -1774,18 +1838,19 @@ function InventarioPage() {
                                 </div>
                             </div>
                             <div className="inv-modal-footer">
-                                <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={closeModal}>Cancelar</button>
-                                <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={isLoading}>
+                                <Button type="button" variant="secondary" onClick={closeModal}>Cancelar</Button>
+                                <Button type="submit" disabled={isLoading}>
                                     <FaSave /> {isLoading ? 'Guardando...' : 'Crear Entrada'}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── MODAL: NUEVO GRUPO ──────────────────────────────────────── */}
-            {nuevoGrupoModal.open && (
+            {nuevoGrupoModal.open && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
                     onClick={e => { if (e.target === e.currentTarget) setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' }); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -1805,7 +1870,7 @@ function InventarioPage() {
                                     placeholder="Ej: Comedor Qatar..." autoFocus />
                             </div>
                             <div className="inv-grupo-field">
-                                <label className="ifg-label">Categoría <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <label className="ifg-label">Categoría <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>(opcional)</span></label>
                                 <select className="ifg-input"
                                     value={nuevoGrupoModal.categoriaId}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, categoriaId: e.target.value, subcategoriaId: '' }))}>
@@ -1814,7 +1879,7 @@ function InventarioPage() {
                                 </select>
                             </div>
                             <div className="inv-grupo-field">
-                                <label className="ifg-label">Subcategoría <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <label className="ifg-label">Subcategoría <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>(opcional)</span></label>
                                 <select className="ifg-input"
                                     value={nuevoGrupoModal.subcategoriaId}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, subcategoriaId: e.target.value }))}>
@@ -1824,14 +1889,14 @@ function InventarioPage() {
                             </div>
 
                             <div className="inv-grupo-field">
-                                <label className="ifg-label">Observación <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <label className="ifg-label">Observación <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>(opcional)</span></label>
                                 <textarea className="ifg-input ifg-textarea"
                                     value={nuevoGrupoModal.observacion}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, observacion: e.target.value }))}
                                     placeholder="Notas internas del grupo..." style={{ minHeight: '60px' }} />
                             </div>
                             <div className="inv-grupo-field">
-                                <label className="ifg-label">Venta asociada <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <label className="ifg-label">Venta asociada <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>(opcional)</span></label>
                                 <select className="ifg-input"
                                     value={nuevoGrupoModal.ventaId}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, ventaId: e.target.value }))}>
@@ -1841,18 +1906,19 @@ function InventarioPage() {
                             </div>
                         </div>
                         <div className="inv-modal-footer">
-                            <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>Cancelar</button>
-                            <button type="button" className="btn-general" style={{ width: 'auto' }}
+                            <Button variant="secondary" onClick={() => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>Cancelar</Button>
+                            <Button
                                 onClick={saveNuevoGrupo} disabled={nuevoGrupoSaving || !nuevoGrupoModal.nombre.trim()}>
                                 <FaPlus /> {nuevoGrupoSaving ? 'Creando...' : 'Crear Grupo'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── MODAL: EDITAR GRUPO ─────────────────────────────────────── */}
-            {grupoEditModal && (
+            {grupoEditModal && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
                     onClick={e => { if (e.target === e.currentTarget) closeGrupoEdit(); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()}>
@@ -1881,7 +1947,7 @@ function InventarioPage() {
                                     <option value="">Ninguna</option>
                                     {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                                 </select>
-                                <small style={{ color: '#f59e0b', display: 'block', marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
+                                <small style={{ color: 'var(--warning)', display: 'block', marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
                                     Al cambiar la categoría, se actualizarán todos los ítems del grupo.
                                 </small>
                             </div>
@@ -1897,14 +1963,14 @@ function InventarioPage() {
                             </div>
 
                             <div className="inv-grupo-field">
-                                <label className="ifg-label">Venta asociada <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></label>
+                                <label className="ifg-label">Venta asociada <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>(opcional)</span></label>
                                 <select className="ifg-input"
                                     value={grupoEditModal.ventaId || ''}
                                     onChange={e => setGrupoEditModal(prev => ({ ...prev, ventaId: e.target.value }))}>
                                     <option value="">Ninguna venta asociada</option>
                                     {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
                                 </select>
-                                <small style={{ color: '#f59e0b', display: 'block', marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
+                                <small style={{ color: 'var(--warning)', display: 'block', marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
                                     Al cambiar la venta del grupo, todos sus productos se actualizarán automáticamente.
                                 </small>
                             </div>
@@ -1917,8 +1983,8 @@ function InventarioPage() {
                                     placeholder="Notas del grupo..." style={{ minHeight: '60px' }} />
                             </div>
 
-                            <div className="inv-grupo-section-label" style={{ gridColumn: 'span 2', marginTop: '0.5rem', marginBottom: '0', borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.3rem' }}>
-                                Edición Masiva de Ítems <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 400 }}>(Sobreescribe todos los ítems)</span>
+                            <div className="inv-grupo-section-label" style={{ gridColumn: 'span 2', marginTop: '0.5rem', marginBottom: '0', borderBottom: '1.5px solid var(--gray-200)', paddingBottom: '0.3rem' }}>
+                                Edición Masiva de Ítems <span style={{ color: 'var(--gray-400)', fontSize: '0.8rem', fontWeight: 400 }}>(Sobreescribe todos los ítems)</span>
                             </div>
 
                             <div className="inv-grupo-field">
@@ -1956,7 +2022,7 @@ function InventarioPage() {
                             <div className="inv-grupo-section-label" style={{ gridColumn: 'span 2', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Ítems en el grupo ({grupoEditModal.items.length})</span>
                                 {showCostoCol && (
-                                    <span style={{ background: '#f1f5f9', color: '#334155', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                    <span style={{ background: 'var(--gray-100)', color: 'var(--gray-700)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
                                         Costo Total: {formatCOP(grupoEditModal.items.reduce((acc, curr) => acc + (parseFloat(curr.costo_especifico) || 0), 0))}
                                     </span>
                                 )}
@@ -1971,9 +2037,9 @@ function InventarioPage() {
                                             {item.prod?.nombre || '—'}
                                             {item.variacion ? <em> · {item.variacion}</em> : ''}
                                         </span>
-                                        <span className={`disp-badge disp-${item.disponibilidad}`} style={{ fontSize: '0.65rem' }}>
+                                        <Badge tone={dispTone(item.disponibilidad)}>
                                             {DISPONIBILIDAD_LABELS[item.disponibilidad] || '—'}
-                                        </span>
+                                        </Badge>
                                         <button className="inv-grupo-item-remove" title="Quitar del grupo"
                                             onClick={() => removeItemFromGrupoModal(item.dbId)}>
                                             <FaTimes />
@@ -1993,9 +2059,9 @@ function InventarioPage() {
                                                 <div key={item.dbId} className="inv-grupo-item-row inv-grupo-item-addable">
                                                     <span className="inv-id-badge" style={{ fontSize: '0.65rem' }}>{item.id}</span>
                                                     <span className="inv-grupo-item-name">{item.prod?.nombre || '—'}</span>
-                                                    <span className={`disp-badge disp-${item.disponibilidad}`} style={{ fontSize: '0.65rem' }}>
+                                                    <Badge tone={dispTone(item.disponibilidad)}>
                                                         {DISPONIBILIDAD_LABELS[item.disponibilidad] || '—'}
-                                                    </span>
+                                                    </Badge>
                                                     <button className="inv-grupo-item-add-btn" title="Agregar al grupo"
                                                         onClick={() => addItemToGrupoModal(item)}>
                                                         <FaPlus />
@@ -2008,19 +2074,20 @@ function InventarioPage() {
                         </div>
 
                         <div className="inv-modal-footer">
-                            <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={closeGrupoEdit}>Cancelar</button>
-                            <button type="button" className="btn-general" style={{ width: 'auto' }}
+                            <Button variant="secondary" onClick={closeGrupoEdit}>Cancelar</Button>
+                            <Button
                                 onClick={saveGrupoEdit}
                                 disabled={grupoEditSaving || !grupoEditModal.nombre.trim()}>
                                 <FaSave /> {grupoEditSaving ? 'Guardando...' : 'Guardar Cambios'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── MODAL: EDITAR ÍTEM INDIVIDUAL ────────────────────────────── */}
-            {itemEditModal.open && itemEditModal.item && (
+            {itemEditModal.open && itemEditModal.item && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
                     onClick={e => { if (e.target === e.currentTarget) closeItemEdit(); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
@@ -2071,7 +2138,7 @@ function InventarioPage() {
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 3' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>
-                                            Disponibilidad {!!itemEditModal.form.grupoId && <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 400 }}>(Del grupo)</span>}
+                                            Disponibilidad {!!itemEditModal.form.grupoId && <span style={{ color: 'var(--gray-400)', fontStyle: 'italic', fontWeight: 400 }}>(Del grupo)</span>}
                                         </label>
                                         <select className="ifg-input" value={itemEditModal.form.disponibilidad} disabled={!!itemEditModal.form.grupoId} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, disponibilidad: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                             {DISPONIBILIDAD_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
@@ -2145,7 +2212,7 @@ function InventarioPage() {
 
                                 {itemEditModal.form.grupoId && (
                                     <div style={{ marginTop: '0.8rem', padding: '0.6rem', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
-                                        <small style={{ color: '#d97706', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
+                                        <small style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
                                             <span style={{ fontSize: '1rem' }}>⚠️</span> 
                                             Al pertenecer a un grupo, este ítem hereda su categoría y venta automáticamente. Para cambiarlas, debes removerlo del grupo o editar el grupo entero.
                                         </small>
@@ -2153,11 +2220,11 @@ function InventarioPage() {
                                 )}
 
                                     {/* ── TELAS Y CUEROS ─────────────────────────────────── */}
-                                    <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
+                                    <div style={{ marginTop: '1rem', borderTop: '1px solid var(--gray-200)', paddingTop: '0.8rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.3rem' }}>
                                             <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                                 🧵 Telas y Cueros (Costos Adicionales)
-                                                <span style={{ fontSize: '0.65rem', fontWeight: '400', textTransform: 'none', color: '#64748b', fontStyle: 'italic' }}>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: '400', textTransform: 'none', color: 'var(--gray-500)', fontStyle: 'italic' }}>
                                                     — Usar punto (.) para decimales, ej: 2.5
                                                 </span>
                                             </span>
@@ -2171,7 +2238,7 @@ function InventarioPage() {
                                         </div>
 
                                         {(!itemEditModal.form.telas_cueros || itemEditModal.form.telas_cueros.length === 0) ? (
-                                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: '0.5rem' }}>Sin telas o cueros registrados.</div>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--gray-400)', fontStyle: 'italic', marginBottom: '0.5rem' }}>Sin telas o cueros registrados.</div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.5rem' }}>
                                                 {itemEditModal.form.telas_cueros.map((tc, tcIdx) => {
@@ -2179,36 +2246,36 @@ function InventarioPage() {
                                                     const unitLabel = isCuero ? 'dm' : 'm';
                                                     const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
                                                     return (
-                                                        <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f8fafc', padding: '0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                                        <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--gray-50)', padding: '0.35rem', borderRadius: '6px', border: '1px solid var(--gray-300)' }}>
                                                             <select
                                                                 value={tc.tipo || 'tela'}
                                                                 onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                                style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}
+                                                                style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}
                                                             >
                                                                 <option value="tela">Tela (m)</option>
                                                                 <option value="cuero">Cuero (dm)</option>
                                                             </select>
                                                             <input type="text" placeholder={isCuero ? 'Ref. Cuero' : 'Ref. Tela'} value={tc.referencia || ''}
                                                                 onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], referencia: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                                style={{ flex: '1 1 0%', minWidth: 0, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                style={{ flex: '1 1 0%', minWidth: 0, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
                                                             <input type="text" placeholder="Color" value={tc.color || ''}
                                                                 onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], color: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                                style={{ flex: '1 1 0%', minWidth: 0, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                style={{ flex: '1 1 0%', minWidth: 0, padding: '0.28rem 0.4rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
                                                             <div style={{ position: 'relative', flex: '1 1 0%', minWidth: 0 }}>
-                                                                <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.68rem' }}>$</span>
+                                                                <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', fontSize: '0.68rem' }}>$</span>
                                                                 <input type="text" placeholder={isCuero ? '$/dm' : '$/m'} value={tc.costo_unidad ? formatCOP(parseInt(tc.costo_unidad)) : ''}
                                                                     onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], costo_unidad: raw }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; }); }}
-                                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.28rem 0.28rem 0.28rem 1rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.28rem 0.28rem 0.28rem 1rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
                                                             </div>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', width: '68px', flexShrink: 0 }}>
                                                                 <input type="text" inputMode="decimal" placeholder={isCuero ? 'dm' : 'm'} title="Usar punto (.) para decimales, ej: 2.5" value={tc.cantidad || ''}
                                                                     onChange={e => { const val = e.target.value.replace(',', '.'); setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], cantidad: val }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; }); }}
-                                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.28rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                                                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.28rem 0.35rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)' }} />
+                                                                <span style={{ fontSize: '0.68rem', color: 'var(--gray-500)', fontWeight: 600 }}>{unitLabel}</span>
                                                             </div>
-                                                            {tcSub > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>= {formatCOP(tcSub)}</span>}
+                                                            {tcSub > 0 && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--gray-900)', whiteSpace: 'nowrap', flexShrink: 0 }}>= {formatCOP(tcSub)}</span>}
                                                             <button type="button" onClick={() => setItemEditModal(prev => { const tcs = prev.form.telas_cueros.filter((_, i) => i !== tcIdx); return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem', fontSize: '0.78rem', flexShrink: 0 }} title="Quitar">
+                                                                style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.2rem', fontSize: '0.78rem', flexShrink: 0 }} title="Quitar">
                                                                 <FaTimes />
                                                             </button>
                                                         </div>
@@ -2220,30 +2287,30 @@ function InventarioPage() {
 
                                 {/* ── COSTOS ADICIONALES (Mano de Obra, Herrajes, etc.) ── */}
 
-                                <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
+                                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--gray-200)', paddingTop: '0.8rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>Otros Costos Adicionales (Mano de Obra, Herrajes, etc.)</span>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gray-500)' }}>Otros Costos Adicionales (Mano de Obra, Herrajes, etc.)</span>
                                         {costosList.length > 0 && (
-                                            <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600' }}>
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--success)', fontWeight: '600' }}>
                                                 Total adicional: {formatCOP(costosList.reduce((s, c) => s + parseFloat(c.valor), 0))}
                                             </span>
                                         )}
                                     </div>
                                     {costosLoading ? (
-                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.3rem 0' }}>Cargando...</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)', margin: '0.3rem 0' }}>Cargando...</p>
                                     ) : costosList.length > 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.5rem' }}>
                                             {costosList.map(c => (
-                                                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', borderRadius: '6px', padding: '0.35rem 0.6rem', border: '1px solid #e2e8f0' }}>
-                                                    <span style={{ flex: 1, fontSize: '0.78rem', color: '#334155' }}>{c.descripcion}</span>
-                                                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#16a34a', whiteSpace: 'nowrap' }}>{formatCOP(c.valor)}</span>
-                                                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>{c.fecha}</span>
-                                                    <button type="button" onClick={() => handleDeleteCosto(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '0 0.2rem', lineHeight: 1, fontSize: '0.9rem' }} title="Eliminar">&#x00D7;</button>
+                                                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--gray-50)', borderRadius: '6px', padding: '0.35rem 0.6rem', border: '1px solid var(--gray-200)' }}>
+                                                    <span style={{ flex: 1, fontSize: '0.78rem', color: 'var(--gray-700)' }}>{c.descripcion}</span>
+                                                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--success)', whiteSpace: 'nowrap' }}>{formatCOP(c.valor)}</span>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--gray-400)', whiteSpace: 'nowrap' }}>{c.fecha}</span>
+                                                    <button type="button" onClick={() => handleDeleteCosto(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '0 0.2rem', lineHeight: 1, fontSize: '0.9rem' }} title="Eliminar">&#x00D7;</button>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0 0 0.5rem', fontStyle: 'italic' }}>Sin costos adicionales registrados.</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--gray-400)', margin: '0 0 0.5rem', fontStyle: 'italic' }}>Sin costos adicionales registrados.</p>
                                     )}
                                     {/* Formulario inline para agregar */}
                                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2252,20 +2319,20 @@ function InventarioPage() {
                                             placeholder="Descripción (ej: Tela microfibra)"
                                             value={newCosto.descripcion}
                                             onChange={e => setNewCosto(p => ({ ...p, descripcion: e.target.value }))}
-                                            style={{ flex: 2, minWidth: '140px', padding: '0.3rem 0.5rem', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontFamily: 'inherit' }}
+                                            style={{ flex: 2, minWidth: '140px', padding: '0.3rem 0.5rem', fontSize: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: '6px', fontFamily: 'inherit' }}
                                         />
                                         <input
                                             type="number"
                                             placeholder="Valor"
                                             value={newCosto.valor}
                                             onChange={e => setNewCosto(p => ({ ...p, valor: e.target.value }))}
-                                            style={{ width: '100px', padding: '0.3rem 0.5rem', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontFamily: 'inherit' }}
+                                            style={{ width: '100px', padding: '0.3rem 0.5rem', fontSize: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: '6px', fontFamily: 'inherit' }}
                                         />
                                         <button
                                             type="button"
                                             onClick={handleAddCosto}
                                             disabled={!newCosto.descripcion.trim() || !newCosto.valor}
-                                            style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '600', opacity: (!newCosto.descripcion.trim() || !newCosto.valor) ? 0.5 : 1 }}
+                                            style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '600', opacity: (!newCosto.descripcion.trim() || !newCosto.valor) ? 0.5 : 1 }}
                                         >+ Agregar</button>
                                     </div>
                                     {/* Resumen costo total */}
@@ -2281,22 +2348,23 @@ function InventarioPage() {
 
                             </div>{/* end form-body */}
                             <div className="inv-modal-footer">
-                                <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={closeItemEdit}>Cancelar</button>
-                                <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={itemEditModal.saving}>
+                                <Button type="button" variant="secondary" onClick={closeItemEdit}>Cancelar</Button>
+                                <Button type="submit" disabled={itemEditModal.saving}>
                                     <FaSave /> {itemEditModal.saving ? 'Guardando...' : 'Guardar Cambios'}
-                                </button>
+                                </Button>
                             </div>
                         </form>
 
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── MODAL: QR ──────────────────────────────────────────────────────── */}
-            {qrModal.open && qrModal.item && (
+            {qrModal.open && qrModal.item && createPortal(
                 <div className="inv-overlay inv-overlay-visible" onClick={() => setQrModal({ open: false, item: null })}>
                     <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem', color: '#1e293b', fontWeight: 800, fontSize: '1.5rem' }}>Código QR</h3>
+                        <h3 style={{ marginBottom: '1.5rem', color: 'var(--gray-800)', fontWeight: 800, fontSize: '1.5rem' }}>Código QR</h3>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                             <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                             <QRCodeSVG
@@ -2308,19 +2376,20 @@ function InventarioPage() {
                             />
                             </div>
                         </div>
-                        <p style={{ marginTop: '1rem', fontWeight: 'bold', color: '#334155' }}>
+                        <p style={{ marginTop: '1rem', fontWeight: 'bold', color: 'var(--gray-700)' }}>
                             {qrModal.item.prod?.nombre || 'Ítem'} (ID: {qrModal.item.id})
                         </p>
                         <div className="inv-modal-footer" style={{ justifyContent: 'center', marginTop: '2rem' }}>
-                            <button className="btn-secondary" onClick={() => setQrModal({ open: false, item: null })}>Cerrar</button>
-                            <button className="btn-primary" onClick={handlePrintQR}>Imprimir QR</button>
+                            <Button variant="secondary" onClick={() => setQrModal({ open: false, item: null })}>Cerrar</Button>
+                            <Button onClick={handlePrintQR}>Imprimir QR</Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* ── MODAL: TRASLADO ────────────────────────────────────────────────── */}
-            {trasladoModal.open && trasladoModal.item && (
+            {trasladoModal.open && trasladoModal.item && createPortal(
                 <div className="inv-overlay inv-overlay-visible" onClick={() => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false })}>
                     <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
                         <div className="inv-modal-header">
@@ -2329,14 +2398,14 @@ function InventarioPage() {
                         </div>
                         <form onSubmit={handleTrasladoSubmit} style={{ padding: '1.5rem' }}>
                             <div style={{ marginBottom: '1rem' }}>
-                                <strong style={{ color: '#475569' }}>Ítem:</strong> {trasladoModal.item.prod?.nombre} (ID: {trasladoModal.item.id})
+                                <strong style={{ color: 'var(--gray-600)' }}>Ítem:</strong> {trasladoModal.item.prod?.nombre} (ID: {trasladoModal.item.id})
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <strong style={{ color: '#475569' }}>Zona Actual:</strong> {trasladoModal.item.zona_nombre || 'No asignada'}
+                                <strong style={{ color: 'var(--gray-600)' }}>Zona Actual:</strong> {trasladoModal.item.zona_nombre || 'No asignada'}
                             </div>
 
                             <div className="inv-field-group">
-                                <label className="ifg-label" style={{ fontWeight: 600, color: '#334155', marginBottom: '0.4rem', display: 'block' }}>Zona Destino *</label>
+                                <label className="ifg-label" style={{ fontWeight: 600, color: 'var(--gray-700)', marginBottom: '0.4rem', display: 'block' }}>Zona Destino *</label>
                                 <select className="ifg-input" required value={trasladoModal.zonaId} onChange={e => setTrasladoModal(prev => ({ ...prev, zonaId: e.target.value }))}>
                                     <option value="">Seleccione Zona...</option>
                                     {zonas.map(z => (
@@ -2346,7 +2415,7 @@ function InventarioPage() {
                             </div>
 
                             <div className="inv-field-group" style={{ marginTop: '1rem' }}>
-                                <label className="ifg-label" style={{ fontWeight: 600, color: '#334155', marginBottom: '0.4rem', display: 'block' }}>Observación (Opcional)</label>
+                                <label className="ifg-label" style={{ fontWeight: 600, color: 'var(--gray-700)', marginBottom: '0.4rem', display: 'block' }}>Observación (Opcional)</label>
                                 <textarea className="ifg-input ifg-textarea" style={{ minHeight: '80px' }}
                                     value={trasladoModal.observacion}
                                     onChange={e => setTrasladoModal(prev => ({ ...prev, observacion: e.target.value }))}
@@ -2354,14 +2423,15 @@ function InventarioPage() {
                             </div>
 
                             <div className="inv-modal-footer" style={{ marginTop: '2rem' }}>
-                                <button type="button" className="btn-secondary" onClick={() => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false })}>Cancelar</button>
-                                <button type="submit" className="btn-primary" disabled={trasladoModal.saving}>
+                                <Button type="button" variant="secondary" onClick={() => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false })}>Cancelar</Button>
+                                <Button type="submit" disabled={trasladoModal.saving}>
                                     {trasladoModal.saving ? 'Trasladando...' : 'Confirmar Traslado'}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
             
             {/* ===== TOAST NOTIFICATION ===== */}

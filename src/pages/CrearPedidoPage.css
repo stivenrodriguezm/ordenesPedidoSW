@@ -11,58 +11,6 @@
   width: 100%;
 }
 
-/* Botones del Header */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-cancel-action {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  padding: 0.45rem 1rem;
-  border-radius: 8px;
-  font-size: 0.825rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-cancel-action:hover {
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-.btn-submit-action {
-  background: #274385;
-  border: none;
-  color: #ffffff;
-  padding: 0.45rem 1.15rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 0 15px rgba(39, 67, 133, 0.4);
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-}
-
-.btn-submit-action:hover:not(:disabled) {
-  background: #1a2d59;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px #192b54;
-}
-
-.btn-submit-action:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
 /* Grid Layout Principal */
 .form-main-layout {
   display: grid;
@@ -81,8 +29,8 @@
    Tarjetas de Sección (Compact Cards)
    ========================================================================== */
 .form-section-container {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
   border-radius: 12px;
   padding: 0.9rem 1.1rem;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
@@ -97,7 +45,7 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: 0.35rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--gray-100);
 }
 
 .form-section-title {
@@ -110,7 +58,7 @@
   margin: 0;
   font-size: 0.925rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--gray-900);
 }
 
 .section-icon-badge {
@@ -125,7 +73,7 @@
 
 .badge-blue { background: #e0f2fe; color: #0284c7; }
 .badge-indigo { background: #e0e7ff; color: #4338ca; }
-.badge-amber { background: #fef3c7; color: #d97706; }
+.badge-amber { background: #fef3c7; color: var(--warning); }
 
 /* ==========================================================================
    Campos de Formulario (Compact Controls)
@@ -139,7 +87,7 @@
 .form-group label {
   font-weight: 700;
   font-size: 0.7rem;
-  color: #475569;
+  color: var(--gray-600);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0;
@@ -155,34 +103,34 @@
 .form-group textarea {
   width: 100%;
   padding: 0 0.7rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--gray-300);
   border-radius: 8px;
   font-size: 0.825rem;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--gray-50);
+  color: var(--gray-900);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-group input:hover,
 .form-group select:hover,
 .form-group textarea:hover {
-  border-color: #94a3b8;
-  background-color: #ffffff;
+  border-color: var(--gray-400);
+  background-color: var(--surface);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #2563eb;
-  background-color: #ffffff;
+  border-color: var(--info);
+  background-color: var(--surface);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .form-group select:disabled {
-  background-color: #f1f5f9;
-  color: #475569;
-  border-color: #e2e8f0;
+  background-color: var(--gray-100);
+  color: var(--gray-600);
+  border-color: var(--gray-200);
   cursor: not-allowed;
   opacity: 0.9;
 }
@@ -200,8 +148,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.45rem 0.7rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -209,8 +157,8 @@
 }
 
 .custom-toggle-card:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--gray-100);
+  border-color: var(--gray-300);
 }
 
 .custom-toggle-card.active {
@@ -225,9 +173,9 @@
 .toggle-checkbox-custom {
   width: 16px;
   height: 16px;
-  border: 1.5px solid #94a3b8;
+  border: 1.5px solid var(--gray-400);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -236,13 +184,13 @@
 }
 
 .custom-toggle-card.active .toggle-checkbox-custom {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--info);
+  border-color: var(--info);
 }
 
 .custom-toggle-card.active .toggle-checkbox-custom::after {
   content: '✓';
-  color: #ffffff;
+  color: var(--surface);
   font-size: 0.7rem;
   font-weight: 900;
 }
@@ -250,7 +198,7 @@
 .toggle-text {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--gray-700);
 }
 
 .custom-toggle-card.active .toggle-text {
@@ -262,7 +210,7 @@
    ========================================================================== */
 .btn-add-product-pill {
   background: #eff6ff;
-  color: #2563eb;
+  color: var(--info);
   border: 1px solid #bfdbfe;
   padding: 0.3rem 0.75rem;
   border-radius: 6px;
@@ -293,7 +241,7 @@
   padding: 0 0.5rem;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--gray-500);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -314,21 +262,21 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
   transition: all 0.15s ease;
 }
 
 .product-compact-row:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
+  background: var(--surface);
+  border-color: var(--gray-300);
 }
 
 .product-row-badge {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--gray-200);
+  color: var(--gray-600);
   font-weight: 700;
   font-size: 0.7rem;
   width: 22px;
@@ -373,9 +321,9 @@
 }
 
 .btn-remove-row-v3 {
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid #fecaca;
-  color: #ef4444;
+  color: var(--danger);
   width: 26px;
   height: 26px;
   border-radius: 6px;
@@ -391,7 +339,7 @@
 .btn-remove-row-v3:hover {
   background: #fef2f2;
   border-color: #fca5a5;
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .action-placeholder {
@@ -417,13 +365,13 @@
   font-size: 0.78rem;
   padding: 0.45rem 0.65rem;
   border-radius: 6px;
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--gray-100);
+  color: var(--gray-600);
 }
 
 .error-text {
   background-color: #fef2f2;
-  color: #ef4444;
+  color: var(--danger);
   border: 1px solid #fecaca;
 }
 
@@ -451,17 +399,17 @@
   width: 850px;
   z-index: -9999;
   pointer-events: none;
-  background-color: #ffffff;
+  background-color: var(--surface);
 }
 
 .preview-container {
   width: 850px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  border: 1px solid var(--gray-300);
   border-radius: 12px;
   padding: 32px 36px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #0f172a;
+  color: var(--gray-900);
   box-sizing: border-box;
 }
 
@@ -469,7 +417,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid #0f172a;
+  border-bottom: 2px solid var(--gray-900);
   padding-bottom: 12px;
   margin-bottom: 24px;
 }
@@ -487,7 +435,7 @@
 .numPedido h2 {
   font-size: 22px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--gray-900);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -495,7 +443,7 @@
 .numPedido p.numeroOP {
   font-size: 20px;
   font-weight: 700;
-  color: #dc2626;
+  color: var(--danger);
   margin: 4px 0 0 0;
 }
 
@@ -509,13 +457,13 @@
 .preview-info .info-column p {
   margin: 0 0 10px 0;
   font-size: 15px;
-  color: #0f172a;
+  color: var(--gray-900);
   line-height: 1.4;
 }
 
 .preview-info .info-column strong {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--gray-900);
   display: inline-block;
   min-width: 140px;
 }
@@ -523,7 +471,7 @@
 .preview-productos-title {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--gray-900);
   margin: 0 0 12px 0;
 }
 
@@ -534,7 +482,7 @@
 }
 
 .preview-productos-table thead tr {
-  background-color: #f8fafc;
+  background-color: var(--gray-50);
 }
 
 .preview-productos-table th {
@@ -542,8 +490,8 @@
   padding: 12px 16px;
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--gray-900);
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .preview-productos-table th:nth-child(1) { width: 100px; }
@@ -553,20 +501,20 @@
   text-align: left;
   padding: 12px 16px;
   font-size: 15px;
-  color: #1e293b;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--gray-800);
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .preview-nota h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--gray-900);
   margin: 0 0 12px 0;
 }
 
 .preview-nota-box {
   background-color: #fafafa;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--gray-200);
   border-radius: 8px;
   padding: 14px 18px;
   min-height: 48px;
@@ -576,6 +524,6 @@
 .preview-nota-box p {
   margin: 0;
   font-size: 15px;
-  color: #334155;
+  color: var(--gray-700);
   line-height: 1.5;
 }

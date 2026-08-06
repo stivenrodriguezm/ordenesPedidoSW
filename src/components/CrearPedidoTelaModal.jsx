@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import API from '../services/api';
 import { AppContext } from '../AppContext';
 import { FaTrashAlt, FaPlus, FaBuilding, FaMapMarkerAlt, FaBoxes, FaLayerGroup } from 'react-icons/fa';
-import html2canvas from 'html2canvas';
 import AppNotification from './AppNotification';
 import './CrearPedidoTelaModal.css';
 
@@ -241,6 +241,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                         await document.fonts.ready;
                     }
                     await new Promise(resolve => setTimeout(resolve, 150));
+                    const { default: html2canvas } = await import('html2canvas');
                     const canvas = await html2canvas(previewRef.current, {
                         backgroundColor: '#ffffff',
                         scale: 2,
@@ -293,7 +294,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
 
     const unitSuffix = tipoMaterial === 'Cuero' ? 'dcm.' : 'mts.';
 
-    return (
+    return createPortal(
         <>
             <div className="pt-modal-overlay">
                 <div className="pt-modal-content">
@@ -327,8 +328,8 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                             <div className="pt-form-group">
                                 <label><FaBoxes /> Orden Asociada</label>
                                 <div className="pt-select-wrapper">
-                                    <select name="orden_asociada_id" value={newPedido.orden_asociada_id} onChange={handlePedidoChange}>
-                                        <option value="">(Opcional) Seleccione orden...</option>
+                                    <select required={usuario?.role?.toLowerCase() !== 'administrador'} name="orden_asociada_id" value={newPedido.orden_asociada_id} onChange={handlePedidoChange}>
+                                        <option value="">{usuario?.role?.toLowerCase() === 'administrador' ? '(Opcional) ' : ''}Seleccione orden...</option>
                                         {ordenes.map(o => (
                                             <option key={o.id} value={o.id}>Orden #{o.id} - {o.proveedor_nombre}</option>
                                         ))}
@@ -612,11 +613,11 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                             <span style={{ color: '#334155', fontWeight: '600' }}>{getFormattedDate()}</span>
                         </p>
                         <p style={{ margin: '0 0 8px 0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Orden Asociada:</strong>{' '}
+                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Orden de pedido:</strong>{' '}
                             <span style={{ color: '#0f172a', fontWeight: '700' }}>{pdfData?.orden_asociada_id ? `#${getOrdenId(pdfData.orden_asociada_id)}` : 'N/A'}</span>
                         </p>
                         <p style={{ margin: '0' }}>
-                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Venta Asociada:</strong>{' '}
+                            <strong style={{ color: '#0f172a', fontWeight: '700' }}>Orden de compra (Venta):</strong>{' '}
                             <span style={{ color: '#0f172a', fontWeight: '700' }}>{(() => {
                                 const vId = getVentaId(pdfData?.orden_asociada_id);
                                 return vId ? `#${vId}` : 'N/A';
@@ -630,12 +631,12 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     ESPECIFICACIÓN DE MATERIALES
                 </h3>
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                    <thead style={{ backgroundColor: '#000000', color: '#ffffff' }}>
+                    <thead style={{ backgroundColor: '#e2e8f0', color: '#000000' }}>
                         <tr>
-                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '12px', width: '40px', letterSpacing: '0.5px', color: '#ffffff' }}>#</th>
-                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '12px', letterSpacing: '0.5px', color: '#ffffff' }}>Referencia</th>
-                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '12px', width: '180px', letterSpacing: '0.5px', color: '#ffffff' }}>Color</th>
-                            <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', fontSize: '12px', width: '140px', letterSpacing: '0.5px', color: '#ffffff' }}>Cantidad</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', fontSize: '12px', width: '5%', letterSpacing: '0.5px', color: '#000000' }}>#</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', fontSize: '12px', width: '45%', letterSpacing: '0.5px', color: '#000000' }}>Referencia</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', fontSize: '12px', width: '25%', letterSpacing: '0.5px', color: '#000000' }}>Color</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800', fontSize: '12px', width: '25%', letterSpacing: '0.5px', color: '#000000' }}>Cantidad</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -683,7 +684,8 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 type={toast.type} 
                 onClose={() => setToast({ message: '', type: '' })} 
             />
-        </>
+        </>,
+        document.body
     );
 };
 
