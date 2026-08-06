@@ -510,7 +510,7 @@ export default function NuevaFacturaPage() {
                 title="Registrar Factura de Proveedor"
                 subtitle="Ingresa los datos generales, grupos y referencias de mercancía recibida."
                 actions={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                         <div className="nf-footer-summary" style={{ background: 'transparent', padding: 0, border: 'none', boxShadow: 'none' }}>
                             <span className="nf-summary-label">Suma Productos:</span>
                             <span className={`nf-summary-total ${isTotalMatching ? 'total-match' : valorFactura > 0 ? 'total-mismatch' : ''}`}>

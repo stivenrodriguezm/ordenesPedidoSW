@@ -1373,7 +1373,7 @@ function InventarioPage() {
 
             {/* ── TOOLBAR: búsqueda, filtros y vistas ─────────────────────── */}
             <div className="ds-card inv-toolbar ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between' }}>
-                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'nowrap' }}>
+                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible' }}>
                     <div className="v-search-pill" style={{ width: '320px', maxWidth: '100%' }}>
                         <FaSearch />
                         <input type="text" placeholder="Buscar por referencia, nombre, ID..."

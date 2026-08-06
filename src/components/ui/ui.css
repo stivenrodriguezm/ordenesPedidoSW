@@ -561,12 +561,28 @@
 
 .ds-table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ds-table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-base);
+}
+
+/* En pantallas angostas, forzamos un ancho mínimo razonable para que la
+   tabla haga scroll horizontal dentro de .ds-table-scroll en vez de
+   apretar las columnas hasta volverlas ilegibles. */
+@media (max-width: 640px) {
+  .ds-table {
+    min-width: 640px;
+  }
+
+  .ds-table thead th,
+  .ds-table tbody td {
+    padding: 0.6rem 0.75rem;
+    font-size: var(--fs-sm, 0.85rem);
+  }
 }
 
 .ds-table thead th {

@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaUser, FaLock, FaArrowRight, FaExclamationCircle } from 'react-icons/fa';
+import { FaUser, FaLock, FaArrowRight, FaExclamationCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { AppContext } from '../AppContext';
 import API_BASE_URL from '../apiConfig';
 import './LoginPage.css';
@@ -9,9 +9,10 @@ import './LoginPage.css';
 const LoginPage = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { setUsuario, setIsLoggingIn } = useContext(AppContext);
+    const { setUsuario, setIsLoggingIn, reloadUser } = useContext(AppContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -25,86 +26,118 @@ const LoginPage = () => {
                 password,
             });
 
-            localStorage.setItem('accessToken', response.data.access);
-            localStorage.setItem('refreshToken', response.data.refresh);
+            const accessToken = response.data.access;
+            const refreshToken = response.data.refresh;
 
-            // Activar el loader de Lottus
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+
+            // Actualizar inmediatamente el perfil del usuario en el contexto
+            if (reloadUser) {
+                await reloadUser();
+            } else {
+                const userRes = await axios.get(`${API_BASE_URL}/user/`, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                if (setUsuario) {
+                    setUsuario(userRes.data);
+                }
+            }
+
             setIsLoggingIn(true);
 
-            // Simular una carga y luego navegar
             setTimeout(() => {
-                // La verificación del usuario se hará en AppContext
                 navigate('/');
-                // No es necesario desactivar el loader aquí, se hará en App.jsx
-            }, 2500); // Duración de la animación del loader
+            }, 800);
 
         } catch (err) {
-            setError('Usuario o contraseña incorrectos. Inténtalo de nuevo.');
+            console.error("Login failed:", err);
+            setError('Usuario o contraseña incorrectos. Por favor, inténtalo de nuevo.');
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="login-page-container">
-            <div className="login-panel-left">
-                <div className="login-brand-content">
-                    <div className="login-logo-mark">L</div>
-                    <h1 className="login-brand-title">LOTTUS</h1>
-                    <p className="login-brand-subtitle">Plataforma Administrativa</p>
-                    <div className="login-decorative-line"></div>
-                    <p className="login-brand-tagline">Pedidos · Ventas · Caja · Inventario</p>
-                </div>
-            </div>
-            <div className="login-panel-right">
-                <div className="login-form-wrapper">
-                    <div className="login-form-header">
-                        <h2>¡Bienvenido!</h2>
-                        <p className="login-form-intro">Inicia sesión para continuar</p>
+        <div className="login-minimal-container">
+            {/* Fondo con luces de malla ambiental */}
+            <div className="ambient-mesh mesh-1"></div>
+            <div className="ambient-mesh mesh-2"></div>
+            <div className="ambient-mesh mesh-3"></div>
+
+            {/* Tarjeta Glassmorphic Centrada */}
+            <div className="login-glass-card">
+                <div className="login-card-header">
+                    <div className="login-brand-logo">
+                        <span>L</span>
                     </div>
-                    <form onSubmit={handleSubmit} className="login-form">
-                        <div className="form-group">
-                            <label htmlFor="username">Usuario</label>
-                            <div className="input-wrapper">
-                                <FaUser className="input-icon" />
-                                <input
-                                    type="text"
-                                    id="username"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Ingresa tu usuario"
-                                    required
-                                    disabled={isLoading}
-                                />
-                            </div>
+                    <h1 className="login-title">LOTTUS</h1>
+                    <p className="login-subtitle">Plataforma Administrativa</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="login-minimal-form">
+                    <div className="minimal-input-group">
+                        <label htmlFor="username">Usuario</label>
+                        <div className="minimal-input-wrapper">
+                            <FaUser className="input-field-icon" />
+                            <input
+                                type="text"
+                                id="username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Tu usuario"
+                                required
+                                autoComplete="username"
+                                disabled={isLoading}
+                            />
                         </div>
-                        <div className="form-group">
-                            <label htmlFor="password">Contraseña</label>
-                            <div className="input-wrapper">
-                                <FaLock className="input-icon" />
-                                <input
-                                    type="password"
-                                    id="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Ingresa tu contraseña"
-                                    required
-                                    disabled={isLoading}
-                                />
-                            </div>
+                    </div>
+
+                    <div className="minimal-input-group">
+                        <label htmlFor="password">Contraseña</label>
+                        <div className="minimal-input-wrapper">
+                            <FaLock className="input-field-icon" />
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                id="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Tu contraseña"
+                                required
+                                autoComplete="current-password"
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="button"
+                                className="password-eye-btn"
+                                onClick={() => setShowPassword(!showPassword)}
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </button>
                         </div>
-                        {error && <div className="error-message"><FaExclamationCircle /> {error}</div>}
-                        <button type="submit" className="login-submit-button" disabled={isLoading}>
-                            {isLoading ? (
-                                <>
-                                    Verificando...
-                                </>
-                            ) : (
-                                <>
-                                    Iniciar Sesión <FaArrowRight className="button-icon" />
-                                </>
-                            )}
-                        </button>
-                    </form>
+                    </div>
+
+                    {error && (
+                        <div className="minimal-error-badge">
+                            <FaExclamationCircle className="error-icon" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    <button type="submit" className="login-primary-btn" disabled={isLoading}>
+                        {isLoading ? (
+                            <div className="btn-spinner-loader"></div>
+                        ) : (
+                            <>
+                                <span>Ingresar</span>
+                                <FaArrowRight className="btn-arrow-icon" />
+                            </>
+                        )}
+                    </button>
+                </form>
+
+                <div className="login-card-footer">
+                    <span>Lottus ERP &copy; 2026</span>
                 </div>
             </div>
         </div>

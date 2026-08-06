@@ -2,7 +2,9 @@ import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } 
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
+import useDebounce from '../hooks/useDebounce';
 import './ComprobantesEgreso.css';
+import './VentasImprovements.css';
 import API from '../services/api';
 import { getTodayStr } from '../utils/dates';
 import {
@@ -815,7 +817,23 @@ const ComprobantesEgreso = () => {
   const location = useLocation();
   const hasPermission = usePermissions();
   const [comprobantesData, setComprobantesData] = useState([]);
-  const [filters, setFilters] = useState({ fecha_inicio: '', fecha_fin: '', medio_pago: '', proveedor: '', query: '' });
+
+  // Multi-select checklists state
+  const [selectedProveedores, setSelectedProveedores] = useState([]);
+  const [selectedEstados, setSelectedEstados] = useState([]);
+  const [selectedMedios, setSelectedMedios] = useState([]);
+
+  // Popover visibility
+  const [isProveedoresOpen, setIsProveedoresOpen] = useState(false);
+  const [isEstadosOpen, setIsEstadosOpen] = useState(false);
+  const [isMediosOpen, setIsMediosOpen] = useState(false);
+
+  // Search & date filters
+  const [filters, setFilters] = useState({ fecha_inicio: '', fecha_fin: '', query: '' });
+  const debouncedQuery = useDebounce(filters.query, 350);
+
+  const filterBarRef = useRef(null);
+
   const [isCreatingCE, setIsCreatingCE] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -829,6 +847,57 @@ const ComprobantesEgreso = () => {
     { value: 'Transferencia', label: 'Transferencia' },
     { value: 'Otro', label: 'Otro' }
   ];
+
+  // Click outside listener for popovers
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterBarRef.current && !filterBarRef.current.contains(event.target)) {
+        setIsProveedoresOpen(false);
+        setIsEstadosOpen(false);
+        setIsMediosOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleProveedor = (id) => {
+    setSelectedProveedores(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    setCurrentPage(1);
+  };
+  const selectAllProveedores = () => {
+    const allIds = (proveedores || []).map(p => p.id);
+    setSelectedProveedores(prev => prev.length === allIds.length ? [] : allIds);
+    setCurrentPage(1);
+  };
+
+  const toggleEstado = (val) => {
+    setSelectedEstados(prev => prev.includes(val) ? prev.filter(e => e !== val) : [...prev, val]);
+    setCurrentPage(1);
+  };
+  const selectAllEstados = () => {
+    const all = ['Pagado', 'Por Confirmar Pago'];
+    setSelectedEstados(prev => prev.length === all.length ? [] : all);
+    setCurrentPage(1);
+  };
+
+  const toggleMedio = (val) => {
+    setSelectedMedios(prev => prev.includes(val) ? prev.filter(m => m !== val) : [...prev, val]);
+    setCurrentPage(1);
+  };
+  const selectAllMedios = () => {
+    const all = mediosPago.map(m => m.value);
+    setSelectedMedios(prev => prev.length === all.length ? [] : all);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({ fecha_inicio: '', fecha_fin: '', query: '' });
+    setSelectedProveedores([]);
+    setSelectedEstados([]);
+    setSelectedMedios([]);
+    setCurrentPage(1);
+  };
 
   const formatCurrency = (value) => {
     if (value === null || isNaN(value)) return '$0';
@@ -845,10 +914,25 @@ const ComprobantesEgreso = () => {
     return `${dayStr}-${monthStr}-${yearStr}`;
   };
 
-  const fetchData = useCallback(async (filters, page) => {
+  const fetchData = useCallback(async (page) => {
     setIsLoading(true);
-    const params = { page, page_size: pageSize, ...filters };
-    Object.keys(params).forEach(key => !params[key] && delete params[key]);
+    const params = {
+      page,
+      page_size: pageSize,
+      fecha_inicio: filters.fecha_inicio || undefined,
+      fecha_fin: filters.fecha_fin || undefined,
+      query: debouncedQuery || undefined,
+    };
+
+    if (selectedProveedores.length > 0) {
+      params.proveedores = selectedProveedores.join(',');
+    }
+    if (selectedEstados.length > 0) {
+      params.estados = selectedEstados.join(',');
+    }
+    if (selectedMedios.length > 0) {
+      params.medio_pago = selectedMedios.join(',');
+    }
 
     try {
       const response = await API.get(`/comprobantes-egreso/`, { params });
@@ -859,11 +943,11 @@ const ComprobantesEgreso = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [pageSize]);
+  }, [pageSize, filters.fecha_inicio, filters.fecha_fin, debouncedQuery, selectedProveedores, selectedEstados, selectedMedios]);
 
   useEffect(() => {
-    fetchData(filters, currentPage);
-  }, [filters, currentPage, fetchData]);
+    fetchData(currentPage);
+  }, [currentPage, fetchData]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -872,11 +956,6 @@ const ComprobantesEgreso = () => {
 
   const handleFilterChange = (e) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    setCurrentPage(1);
-  };
-
-  const clearFilters = () => {
-    setFilters({ fecha_inicio: '', fecha_fin: '', medio_pago: '', proveedor: '', query: '' });
     setCurrentPage(1);
   };
 
@@ -920,12 +999,23 @@ const ComprobantesEgreso = () => {
   const exportData = async () => {
     try {
       const XLSX = await import('xlsx');
-      const response = await API.get(`/comprobantes-egreso/`, { params: { ...filters, page_size: 9999 } });
+      const params = {
+        page_size: 9999,
+        fecha_inicio: filters.fecha_inicio || undefined,
+        fecha_fin: filters.fecha_fin || undefined,
+        query: filters.query || undefined,
+      };
+      if (selectedProveedores.length > 0) params.proveedores = selectedProveedores.join(',');
+      if (selectedEstados.length > 0) params.estados = selectedEstados.join(',');
+      if (selectedMedios.length > 0) params.medio_pago = selectedMedios.join(',');
+
+      const response = await API.get(`/comprobantes-egreso/`, { params });
       const dataToExport = (response.data.results || []).map(item => ({
         ID: item.id,
         Fecha: formatDate(item.fecha),
         Proveedor: item.proveedor_nombre || '-',
         'Medio de Pago': item.medio_pago,
+        Estado: item.estado || '-',
         Valor: item.valor,
         Concepto: item.concepto || '-',
         Descripción: item.descripcion || '-'
@@ -940,10 +1030,12 @@ const ComprobantesEgreso = () => {
     }
   };
 
-  // Calculate stats for current view
+  // Calculate stats for current view (unconfirmed transfer vouchers)
   const stats = useMemo(() => {
-    const total = comprobantesData.reduce((acc, curr) => acc + parseFloat(curr.valor || 0), 0);
-    return { total, count: comprobantesData.length };
+    const porConfirmarCount = comprobantesData.filter(
+      item => item.estado && item.estado !== 'Pagado'
+    ).length;
+    return { porConfirmarCount };
   }, [comprobantesData]);
 
   return (
@@ -976,24 +1068,16 @@ const ComprobantesEgreso = () => {
       {/* --- Live Stats Bar --- */}
       <div className="stats-bar">
         <div className="stat-item">
-          <div className="stat-icon"><FaMoneyBillWave /></div>
+          <div className="stat-icon warning"><FaCalendarDay /></div>
           <div className="stat-info">
-            <span className="stat-label">Total en Pantalla</span>
-            <span className="stat-value">{formatCurrency(stats.total)}</span>
-          </div>
-        </div>
-        <div className="stat-divider"></div>
-        <div className="stat-item">
-          <div className="stat-icon secondary"><FaReceipt /></div>
-          <div className="stat-info">
-            <span className="stat-label">Registros</span>
-            <span className="stat-value">{stats.count}</span>
+            <span className="stat-label">Por Confirmar</span>
+            <span className="stat-value">{stats.porConfirmarCount}</span>
           </div>
         </div>
       </div>
 
       <div className="ds-card comprobantes-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
-        <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
+        <div className="v-filters-bar" ref={filterBarRef} style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
           <div className="v-search-pill">
             <FaSearch />
             <input
@@ -1026,14 +1110,147 @@ const ComprobantesEgreso = () => {
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
-          <div className="v-select-pill">
-            <select name="medio_pago" value={filters.medio_pago} onChange={handleFilterChange}>
-              <option value="">Medio: Todos</option>
-              {mediosPago.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
-            </select>
+
+          {/* Multi-select Proveedores */}
+          <div className="v-multi-select-container">
+            <button
+              type="button"
+              className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`}
+              onClick={() => {
+                setIsProveedoresOpen(prev => !prev);
+                setIsEstadosOpen(false);
+                setIsMediosOpen(false);
+              }}
+            >
+              <span>
+                {selectedProveedores.length === 0
+                  ? 'Proveedor: Todos'
+                  : selectedProveedores.length === (proveedores || []).length
+                  ? 'Proveedor: Todos'
+                  : `Proveedores (${selectedProveedores.length})`}
+              </span>
+              <FaChevronDown className="v-chevron-icon" />
+            </button>
+            {isProveedoresOpen && (
+              <div className="v-multi-select-popover">
+                <div className="v-popover-header">
+                  <span>Filtrar por Proveedor</span>
+                  <button type="button" className="v-popover-action-btn" onClick={selectAllProveedores}>
+                    {selectedProveedores.length === (proveedores || []).length ? 'Ninguno' : 'Todos'}
+                  </button>
+                </div>
+                <div className="v-popover-list">
+                  {(proveedores || []).map(p => (
+                    <label key={p.id} className="v-popover-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedProveedores.includes(p.id)}
+                        onChange={() => toggleProveedor(p.id)}
+                      />
+                      <span>{p.nombre_empresa}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          {(filters.query || filters.fecha_inicio || filters.fecha_fin || filters.medio_pago) && (
-            <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
+
+          {/* Multi-select Estado */}
+          <div className="v-multi-select-container">
+            <button
+              type="button"
+              className={`v-multi-select-btn ${selectedEstados.length > 0 ? 'active-filter' : ''} ${isEstadosOpen ? 'open' : ''}`}
+              onClick={() => {
+                setIsEstadosOpen(prev => !prev);
+                setIsProveedoresOpen(false);
+                setIsMediosOpen(false);
+              }}
+            >
+              <span>
+                {selectedEstados.length === 0
+                  ? 'Estado: Todos'
+                  : selectedEstados.length === 2
+                  ? 'Estado: Todos'
+                  : `Estado: ${selectedEstados[0] === 'Pagado' ? 'Pagados' : 'Por Confirmar'}`}
+              </span>
+              <FaChevronDown className="v-chevron-icon" />
+            </button>
+            {isEstadosOpen && (
+              <div className="v-multi-select-popover">
+                <div className="v-popover-header">
+                  <span>Filtrar por Estado</span>
+                  <button type="button" className="v-popover-action-btn" onClick={selectAllEstados}>
+                    {selectedEstados.length === 2 ? 'Ninguno' : 'Todos'}
+                  </button>
+                </div>
+                <div className="v-popover-list">
+                  <label className="v-popover-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedEstados.includes('Pagado')}
+                      onChange={() => toggleEstado('Pagado')}
+                    />
+                    <span>✓ Pagado</span>
+                  </label>
+                  <label className="v-popover-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedEstados.includes('Por Confirmar Pago')}
+                      onChange={() => toggleEstado('Por Confirmar Pago')}
+                    />
+                    <span>⏳ Por Confirmar</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Multi-select Medio de Pago */}
+          <div className="v-multi-select-container">
+            <button
+              type="button"
+              className={`v-multi-select-btn ${selectedMedios.length > 0 ? 'active-filter' : ''} ${isMediosOpen ? 'open' : ''}`}
+              onClick={() => {
+                setIsMediosOpen(prev => !prev);
+                setIsProveedoresOpen(false);
+                setIsEstadosOpen(false);
+              }}
+            >
+              <span>
+                {selectedMedios.length === 0
+                  ? 'Medio: Todos'
+                  : selectedMedios.length === mediosPago.length
+                  ? 'Medio: Todos'
+                  : `Medios (${selectedMedios.length})`}
+              </span>
+              <FaChevronDown className="v-chevron-icon" />
+            </button>
+            {isMediosOpen && (
+              <div className="v-multi-select-popover">
+                <div className="v-popover-header">
+                  <span>Filtrar por Medio de Pago</span>
+                  <button type="button" className="v-popover-action-btn" onClick={selectAllMedios}>
+                    {selectedMedios.length === mediosPago.length ? 'Ninguno' : 'Todos'}
+                  </button>
+                </div>
+                <div className="v-popover-list">
+                  {mediosPago.map(m => (
+                    <label key={m.value} className="v-popover-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedMedios.includes(m.value)}
+                        onChange={() => toggleMedio(m.value)}
+                      />
+                      <span>{m.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(filters.query || filters.fecha_inicio || filters.fecha_fin || selectedProveedores.length > 0 || selectedEstados.length > 0 || selectedMedios.length > 0) && (
+            <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar todos los filtros">
               <FaTimes />
             </button>
           )}

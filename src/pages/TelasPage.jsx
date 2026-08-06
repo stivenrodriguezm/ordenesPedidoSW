@@ -8,7 +8,7 @@ import './TelasPage.css';
 import './VentasImprovements.css';
 import { usePageRefresh } from '../hooks/usePageRefresh';
 import useDebounce from '../hooks/useDebounce';
-import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport, FaSearch, FaLayerGroup } from 'react-icons/fa';
+import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport, FaSearch, FaLayerGroup, FaEdit } from 'react-icons/fa';
 import logoFinal from '../assets/logoFinal.png';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
 import AppNotification from '../components/AppNotification';
@@ -609,65 +609,88 @@ const TelasPage = () => {
                                             </td>
                                         </tr>
                                         {expandedPedidoId === pedido.id && (
-                                            <tr className="expanded-row">
-                                                <td colSpan="9">
-                                                    <div className="details-view-wrapper telas-details-wrapper">
-                                                        <div className="tela-expanded-wrapper">
-                                                            <div className="tela-expanded-header">
-                                                                <div className="tela-expanded-meta">
-                                                                    <span className="tela-meta-id">PT #{pedido.id}</span>
-                                                                    <span className="tela-meta-sep">·</span>
-                                                                    <span className="tela-meta-sep">·</span>
-                                                                    <span className="tela-meta-sep">·</span>
-                                                                </div>
-                                                                <div className="tela-expanded-actions">
-                                                                    {hasPermission('EDITAR_ESTADO_TELA_ORDEN') ? (
-                                                                        <span
-                                                                            className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}
-                                                                            onClick={() => setEditEstadoModal({
-                                                                                open: true,
-                                                                                pedidoId: pedido.id,
-                                                                                currentEstado: pedido.estado,
-                                                                                newEstado: pedido.estado
-                                                                            })}
-                                                                            title="Clic para editar estado"
-                                                                            style={{ cursor: 'pointer' }}
-                                                                        >
-                                                                            {pedido.estado} ✏️
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
-                                                                            {pedido.estado}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="tela-expanded-body">
-                                                                <table className="details-table">
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th>Tela / Descripción</th>
-                                                                            <th>Cantidad</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {pedido.detalles && pedido.detalles.length > 0
-                                                                            ? pedido.detalles.map(detalle => (
-                                                                                <tr key={detalle.id}>
-                                                                                    <td>{detalle.tela}</td>
-                                                                                    <td>{detalle.cantidad}</td>
-                                                                                </tr>
-                                                                            ))
-                                                                            : <tr><td colSpan="2" style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles registrados.</td></tr>
-                                                                        }
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
+                                             <tr className="expanded-row">
+                                                 <td colSpan="9">
+                                                     <div className="details-view-wrapper telas-details-wrapper">
+                                                         <div className="tela-expanded-wrapper">
+                                                             <div className="tela-expanded-header">
+                                                                 <div className="tela-expanded-title-box">
+                                                                     <span className="tela-meta-badge">PT #{pedido.id}</span>
+                                                                     <span className="tela-meta-prov">{pedido.proveedor_nombre || 'Proveedor de Tela'}</span>
+                                                                 </div>
+                                                                 <div className="tela-expanded-actions">
+                                                                     {hasPermission('EDITAR_ESTADO_TELA_ORDEN') ? (
+                                                                         <button
+                                                                             type="button"
+                                                                             className="btn-edit-estado-badge"
+                                                                             onClick={() => setEditEstadoModal({
+                                                                                 open: true,
+                                                                                 pedidoId: pedido.id,
+                                                                                 currentEstado: pedido.estado,
+                                                                                 newEstado: pedido.estado
+                                                                             })}
+                                                                             title="Clic para editar estado del pedido de tela"
+                                                                         >
+                                                                             <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
+                                                                                 {pedido.estado}
+                                                                             </span>
+                                                                             <FaEdit className="edit-icon-badge" />
+                                                                         </button>
+                                                                     ) : (
+                                                                         <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
+                                                                             {pedido.estado}
+                                                                         </span>
+                                                                     )}
+                                                                 </div>
+                                                             </div>
+
+                                                             {/* Metadata Grid */}
+                                                             <div className="tela-expanded-info-grid">
+                                                                 <div className="tela-info-item">
+                                                                     <span className="tela-info-label">Usuario Solicitante</span>
+                                                                     <span className="tela-info-value">{pedido.usuario_nombre || '—'}</span>
+                                                                 </div>
+                                                                 <div className="tela-info-item">
+                                                                     <span className="tela-info-label">Dirección de Entrega</span>
+                                                                     <span className="tela-info-value">{pedido.direccion_entrega || 'No especificada'}</span>
+                                                                 </div>
+                                                                 <div className="tela-info-item">
+                                                                     <span className="tela-info-label">Fecha Pedido</span>
+                                                                     <span className="tela-info-value">{pedido.fecha_pedido ? pedido.fecha_pedido.split('-').reverse().join('/') : '—'}</span>
+                                                                 </div>
+                                                                 <div className="tela-info-item">
+                                                                     <span className="tela-info-label">Fecha Esperada</span>
+                                                                     <span className="tela-info-value">{pedido.fecha_esperada ? pedido.fecha_esperada.split('-').reverse().join('/') : '—'}</span>
+                                                                 </div>
+                                                             </div>
+
+                                                             <div className="tela-expanded-body">
+                                                                 <h4 className="tela-section-subtitle">Detalles del Pedido de Tela</h4>
+                                                                 <table className="details-table">
+                                                                     <thead>
+                                                                         <tr>
+                                                                             <th>Tela / Descripción</th>
+                                                                             <th style={{ textAlign: 'right' }}>Cantidad</th>
+                                                                         </tr>
+                                                                     </thead>
+                                                                     <tbody>
+                                                                         {pedido.detalles && pedido.detalles.length > 0
+                                                                             ? pedido.detalles.map(detalle => (
+                                                                                 <tr key={detalle.id}>
+                                                                                     <td style={{ fontWeight: '500' }}>{detalle.tela}</td>
+                                                                                     <td style={{ textAlign: 'right', fontWeight: '600' }}>{detalle.cantidad}</td>
+                                                                                 </tr>
+                                                                             ))
+                                                                             : <tr><td colSpan="2" style={{ color: 'var(--text-muted, #94a3b8)', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles registrados.</td></tr>
+                                                                         }
+                                                                     </tbody>
+                                                                 </table>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                 </td>
+                                             </tr>
+                                         )}
                                     </React.Fragment>
                                     ))
                                 )}
@@ -732,9 +755,11 @@ const TelasPage = () => {
                                         </div>
 
                                         {hasPermission('EDITAR_ESTADO_TELA_ORDEN') && (
-                                            <button 
-                                                className="btn-edit-estado" 
-                                                style={{ width: '100%', justifyContent: 'center', padding: '0.5rem', marginBottom: '1rem' }}
+                                            <Button 
+                                                variant="secondary" 
+                                                size="sm" 
+                                                icon={FaEdit}
+                                                style={{ width: '100%', justifyContent: 'center', marginBottom: '1rem' }}
                                                 onClick={() => setEditEstadoModal({
                                                     open: true,
                                                     pedidoId: pedido.id,
@@ -742,8 +767,8 @@ const TelasPage = () => {
                                                     newEstado: pedido.estado
                                                 })}
                                             >
-                                                Editar Estado ✏️
-                                            </button>
+                                                Editar Estado
+                                            </Button>
                                         )}
 
                                         <div className="tela-expanded-body" style={{ padding: '0' }}>
@@ -780,44 +805,51 @@ const TelasPage = () => {
                 </div>
             </div>
 
-            {/* Pagination Controls */}
-
             {/* Modal Editar Estado de Pedido Tela */}
-            {editEstadoModal.open && createPortal(
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '400px' }}>
-                        <div className="modal-header">
-                            <h3>Editar Estado</h3>
-                            <button className="modal-close" type="button" onClick={() => setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>×</button>
-                        </div>
-                        <div className="form-group">
-                            <label>PT #{editEstadoModal.pedidoId} &mdash; Estado actual: <strong>{editEstadoModal.currentEstado}</strong></label>
-                            <select
-                                value={editEstadoModal.newEstado}
-                                onChange={(e) => setEditEstadoModal(prev => ({ ...prev, newEstado: e.target.value }))}
-                                disabled={!canEditEstado(editEstadoModal.currentEstado)}
-                            >
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="En fabrica">En fabrica</option>
-                                <option value="En Lottus">En Lottus</option>
-                            </select>
-                            {!canEditEstado(editEstadoModal.currentEstado) && (
-                                <p className="estado-locked-note">🔒 No se puede editar un pedido en estado "En fabrica".</p>
-                            )}
-                        </div>
-                        <div className="modal-actions">
-                            <button type="button" className="btn-secondary" onClick={() => setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}>Cancelar</button>
-                            <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={handleSaveEstado}
-                                disabled={!canEditEstado(editEstadoModal.currentEstado)}
-                            >Guardar</button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
+            <Modal
+                open={editEstadoModal.open}
+                onClose={() => setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}
+                title="Editar Estado de Tela"
+                size="sm"
+                footer={
+                    <>
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button 
+                            variant="primary" 
+                            onClick={handleSaveEstado} 
+                            disabled={!canEditEstado(editEstadoModal.currentEstado)}
+                        >
+                            Guardar Cambios
+                        </Button>
+                    </>
+                }
+            >
+                <div className="ds-field">
+                    <label className="ds-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                        PT #{editEstadoModal.pedidoId} &mdash; Estado actual: <strong style={{ color: 'var(--accent, #1e3a8a)' }}>{editEstadoModal.currentEstado}</strong>
+                    </label>
+                    <select
+                        className="ds-select"
+                        value={editEstadoModal.newEstado}
+                        onChange={(e) => setEditEstadoModal(prev => ({ ...prev, newEstado: e.target.value }))}
+                        disabled={!canEditEstado(editEstadoModal.currentEstado)}
+                    >
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En fabrica">En fabrica</option>
+                        <option value="En Lottus">En Lottus</option>
+                    </select>
+                    {!canEditEstado(editEstadoModal.currentEstado) && (
+                        <p className="ds-field__hint" style={{ color: 'var(--danger, #ef4444)', marginTop: '0.5rem' }}>
+                            🔒 No se puede editar un pedido en estado "En fabrica".
+                        </p>
+                    )}
+                </div>
+            </Modal>
 
             {/* Modal Crear Proveedor */}
             {showProveedorModal && createPortal(

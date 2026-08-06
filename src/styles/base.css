@@ -90,6 +90,20 @@ img {
   }
 }
 
+/* Monitores grandes (24"-32"): aprovechar mejor el ancho disponible en vez
+   de dejar el contenido angosto con márgenes enormes a los lados. */
+@media (min-width: 1800px) {
+  .ds-page {
+    max-width: 1800px;
+  }
+}
+
+@media (min-width: 2200px) {
+  .ds-page {
+    max-width: 2150px;
+  }
+}
+
 .ds-card {
   background: var(--surface);
   border: 1px solid var(--border);

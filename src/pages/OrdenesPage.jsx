@@ -17,21 +17,40 @@ import { FaSearch } from 'react-icons/fa';
 const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading, userRole }) => {
   const hasPermission = usePermissions();
   const [formState, setFormState] = useState({ costo: '', estado: '', tela: '' });
+  const [costoDisplay, setCostoDisplay] = useState('');
 
   const canEditEstado = hasPermission('EDITAR_ESTADO_ORDEN') || userRole === 'administrador' || userRole === 'auxiliar';
   const canEditTela = hasPermission('EDITAR_ESTADO_TELA_ORDEN') || userRole === 'vendedor' || userRole === 'administrador' || userRole === 'auxiliar';
   const canEditCosto = hasPermission('VER_COSTOS_ORDEN') && (userRole === 'administrador' || userRole === 'auxiliar');
+  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || userRole === 'administrador';
+
+  const modalEstados = estados.filter(e => {
+    if (!e.value) return false;
+    if (e.value === 'anulado') {
+      return canAnularOrden || (orden?.estado === 'anulado');
+    }
+    return true;
+  });
 
   const telaLockedForVendedor = userRole === 'vendedor' && orden?.tela === 'En fabrica';
 
+  const formatCOP = (val) => {
+    if (!val) return '';
+    const num = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
+    if (isNaN(num) || num === 0) return '';
+    return '$ ' + num.toLocaleString('es-CO');
+  };
+
   useEffect(() => {
-    if (orden) {
-      const cleanedCosto = parseFloat(orden.costo);
+    if (orden && isOpen) {
+      const parsedNum = Math.round(parseFloat(orden.costo) || 0);
+      const rawVal = parsedNum > 0 ? String(parsedNum) : '';
       setFormState({
-        costo: isNaN(cleanedCosto) ? '' : cleanedCosto,
+        costo: rawVal,
         estado: orden.estado || '',
         tela: orden.tela || ''
       });
+      setCostoDisplay(rawVal ? formatCOP(rawVal) : '');
     }
   }, [orden, isOpen]);
 
@@ -40,10 +59,22 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
     setFormState(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleCostoChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    if (!raw || parseInt(raw, 10) === 0) {
+      setFormState(prev => ({ ...prev, costo: '' }));
+      setCostoDisplay('');
+    } else {
+      const num = parseInt(raw, 10);
+      setFormState(prev => ({ ...prev, costo: String(num) }));
+      setCostoDisplay('$ ' + num.toLocaleString('es-CO'));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const payload = {};
-    if (canEditCosto) payload.costo = formState.costo;
+    if (canEditCosto) payload.costo = formState.costo ? parseFloat(formState.costo) : 0;
     if (canEditEstado) payload.estado = formState.estado;
     if (canEditTela) payload.tela = formState.tela;
     onSave(orden.id, payload);
@@ -75,15 +106,15 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
       <form id="edit-orden-form" onSubmit={handleSubmit} className="edit-order-form">
         {canEditCosto && (
           <div className="ds-field">
-            <label className="ds-label">Costo del pedido</label>
+            <label className="ds-label">Costo del pedido (COP)</label>
             <input
-              type="number"
+              type="text"
               name="costo"
               className="ds-input"
-              value={formState.costo}
-              onChange={handleChange}
-              placeholder="0"
-              step="any"
+              style={{ fontWeight: '600', letterSpacing: '0.02em' }}
+              value={costoDisplay}
+              onChange={handleCostoChange}
+              placeholder="$ 0"
             />
           </div>
         )}
@@ -91,7 +122,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
           <div className="ds-field">
             <label className="ds-label">Estado del pedido</label>
             <select name="estado" className="ds-select" value={formState.estado} onChange={handleChange}>
-              {estados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+              {modalEstados.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
             </select>
           </div>
         )}

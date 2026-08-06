@@ -25,3 +25,4 @@ dist-ssr
 
 # Entorno virtual Python (scripts de mantenimiento legacy)
 venv/
+node_modules/

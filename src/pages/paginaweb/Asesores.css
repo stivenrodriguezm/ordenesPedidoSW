@@ -1,0 +1,181 @@
+/* Asesores.css - "Paleta de Vendedores": extiende los patrones de Paginaweb.css */
+
+.pw-avatar-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border, #e2e8f0);
+  background-color: #f1f5f9;
+}
+
+.pw-avatar-noimage {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--gray-100, #f1f5f9);
+  border: 1px dashed var(--border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400, #94a3b8);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.pw-advisor-name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pw-advisor-username {
+  font-size: 0.75rem;
+  color: var(--gray-400, #94a3b8);
+}
+
+.pw-whatsapp-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--gray-700, #334155);
+}
+
+.pw-whatsapp-missing {
+  color: var(--gray-400, #94a3b8);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* ---- Switch de visibilidad (mismo patrón que UsuariosPage.css) ---- */
+.pw-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.pw-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pw-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-strong, #cbd5e1);
+  transition: var(--t-base, 0.2s ease);
+  border-radius: var(--r-full, 999px);
+}
+.pw-slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--surface, #ffffff);
+  transition: var(--t-base, 0.2s ease);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+}
+.pw-switch input:checked + .pw-slider {
+  background-color: var(--success, #16a34a);
+}
+.pw-switch input:checked + .pw-slider:before {
+  transform: translateX(20px);
+}
+.pw-switch input:disabled + .pw-slider {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---- Foto de perfil en el modal de edición ---- */
+.pw-photo-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.pw-photo-preview {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: var(--gray-100, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400, #94a3b8);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.pw-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pw-photo-upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.pw-field-hint {
+  font-size: 0.75rem;
+  color: var(--gray-400, #94a3b8);
+}
+
+.pw-char-counter {
+  align-self: flex-end;
+  font-size: 0.72rem;
+  color: var(--gray-400, #94a3b8);
+}
+
+.pw-modal-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background-color: var(--gray-50, #f8fafc);
+  border-radius: var(--r-md, 8px);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.pw-modal-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pw-modal-toggle-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-800, #1e293b);
+}
+
+.pw-modal-toggle-sub {
+  font-size: 0.75rem;
+  color: var(--gray-500, #64748b);
+}
+
+.pw-profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--accent, #1e3a8a);
+  text-decoration: none;
+}
+.pw-profile-link:hover {
+  text-decoration: underline;
+}

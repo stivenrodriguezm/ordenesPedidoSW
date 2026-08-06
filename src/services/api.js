@@ -25,8 +25,8 @@ API.interceptors.request.use(
 const forceLogout = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
-  if (!window.location.hash.includes("/login")) {
-    window.location.href = "/#/login"; // Forzar recarga para limpiar estado
+  if (!window.location.pathname.includes("/login")) {
+    window.location.href = "/login"; // Forzar recarga para limpiar estado
   }
 };
 

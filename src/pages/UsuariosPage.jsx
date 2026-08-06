@@ -181,6 +181,7 @@ const FEATURES_CATALOG = [
       { code: "CREAR_ORDENES_OTROS", label: "Crear pedidos a nombre de otro usuario" },
       { code: "EDITAR_ESTADO_ORDEN", label: "Editar estado del pedido" },
       { code: "EDITAR_ESTADO_TELA_ORDEN", label: "Editar estado de tela en pedido" },
+      { code: "ANULAR_ORDEN_PEDIDO", label: "Anular órdenes de pedido" },
       { code: "VER_COSTOS_ORDEN", label: "Ver costo del proveedor en pedidos" }
     ] 
   },
@@ -202,16 +203,22 @@ const FEATURES_CATALOG = [
       { code: "DESCARGAR_REMISION", label: "Habilitar descarga de PDF" }
     ]
   },
+  { module: "Comprobantes de Egreso", features: [
+      { code: "ACCESO_EGRESOS", label: "Acceso a Comprobantes de Egreso" },
+      { code: "VER_TODOS_EGRESOS", label: "Ver comprobantes de todos los usuarios" },
+      { code: "VER_PROPIOS_EGRESOS", label: "Ver solo comprobantes propios" },
+      { code: "CREAR_COMPROBANTE_EGRESO", label: "Crear nuevos comprobantes de egreso" },
+      { code: "APROBAR_EGRESO", label: "Confirmar transferencias de egreso (Pago)" },
+      { code: "EXPORTAR_EGRESOS", label: "Exportar comprobantes de egreso a Excel" }
+    ] 
+  },
   { module: "Finanzas", features: [
       { code: "ACCESO_CAJA", label: "Acceso a Caja Principal" },
       { code: "CREAR_INGRESO_CAJA", label: "Registrar ingresos manuales" },
       { code: "CREAR_EGRESO_CAJA", label: "Registrar egresos manuales" },
       { code: "ACCESO_RECIBOS", label: "Acceso a Recibos de Caja" },
       { code: "CREAR_RECIBO", label: "Crear Recibo de Caja" },
-      { code: "APROBAR_RECIBO", label: "Confirmar Recibo de Caja" },
-      { code: "ACCESO_EGRESOS", label: "Acceso a Comprobantes de Egreso" },
-      { code: "CREAR_COMPROBANTE_EGRESO", label: "Crear Comprobante de Egreso" },
-      { code: "APROBAR_EGRESO", label: "Confirmar Transferencia de Egreso" }
+      { code: "APROBAR_RECIBO", label: "Confirmar Recibo de Caja" }
     ] 
   },
   { module: "Bases de Datos", features: [

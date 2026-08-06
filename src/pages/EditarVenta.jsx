@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaFileInvoiceDollar } from 'react-icons/fa';
 import API from '../services/api';
 import { useVendedores } from '../hooks/useSharedData';
 import AppNotification from '../components/AppNotification';
 import { PageHeader, Button, LoadingBlock, ErrorState } from '../components/ui';
+import { AppContext, usePermissions } from '../AppContext';
 import './EditarVenta.css';
 
 const EditarVenta = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // Get the venta ID from the URL
+  const { usuario } = useContext(AppContext);
+  const hasPermission = usePermissions();
+  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
 
   const [notification, setNotification] = useState({ message: '', type: '' });
   const showNotification = (message, type = 'success') => {
@@ -82,7 +86,9 @@ const EditarVenta = () => {
           id_vendedor: ventaDetails.vendedor_id || '',
           fecha_venta: ventaDetails.fecha_venta || '',
           fecha_entrega: ventaDetails.fecha_entrega || '',
-          valor_total: ventaDetails.valor || ''
+          valor_total: ventaDetails.valor || '',
+          estado: ventaDetails.estado || 'pendiente',
+          estado_pedidos: ventaDetails.estado_pedidos || false
         });
 
         // Set observaciones if any
@@ -134,7 +140,9 @@ const EditarVenta = () => {
         id_vendedor: ventaData.id_vendedor,
         fecha_venta: ventaData.fecha_venta,
         fecha_entrega: ventaData.fecha_entrega || null,
-        valor_total: parseFloat(ventaData.valor_total)
+        valor_total: parseFloat(ventaData.valor_total),
+        estado: ventaData.estado,
+        estado_pedidos: ventaData.estado_pedidos
       }
     };
 
@@ -321,6 +329,31 @@ const EditarVenta = () => {
                 onChange={handleVentaChange}
                 required
               />
+            </div>
+            <div className="form-group">
+              <label>Estado de Pedidos:</label>
+              <select
+                name="estado_pedidos"
+                value={ventaData.estado_pedidos ? 'true' : 'false'}
+                onChange={(e) => setVentaData(prev => ({ ...prev, estado_pedidos: e.target.value === 'true' }))}
+              >
+                <option value="false">Pendiente</option>
+                <option value="true">Pedido</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Estado de Venta:</label>
+              <select
+                name="estado"
+                value={ventaData.estado || 'pendiente'}
+                onChange={handleVentaChange}
+              >
+                <option value="pendiente">Pendiente</option>
+                <option value="entregado">Entregado</option>
+                {(canAnularOrden || (ventaData.estado || '').toLowerCase() === 'anulado') && (
+                  <option value="anulado">Anulado</option>
+                )}
+              </select>
             </div>
           </div>
 

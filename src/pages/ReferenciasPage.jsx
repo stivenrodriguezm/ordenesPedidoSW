@@ -733,8 +733,8 @@ function ReferenciasPage() {
           </>
         }
       />
-      <div className="ds-card ref-filters" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap' }}>
-        <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'nowrap' }}>
+      <div className="ds-card ref-filters" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible' }}>
           <div className="v-search-pill" style={{ width: '320px', maxWidth: '100%' }}>
             <FaSearch />
             <input

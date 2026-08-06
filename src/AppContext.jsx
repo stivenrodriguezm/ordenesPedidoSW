@@ -12,7 +12,8 @@ export const usePermissions = () => {
   
   const hasPermission = (feature) => {
     if (!usuario) return false;
-    if (usuario.role?.toLowerCase() === 'administrador') return true;
+    // 'ALL' solo llega desde el backend cuando el rol (p.ej. administrador
+    // recién creado) todavía no tiene una configuración explícita guardada.
     if (permissions.includes('ALL')) return true;
 
     if (feature === 'ACCESO_CAJA') {
@@ -85,12 +86,14 @@ export function AppProvider({ children }) {
     verifyUser();
   }, [token]); // re-runs on login/logout
 
-  // Called after admin saves role permissions — forces fresh user data silently
+  // Called after login or when user data needs updating
   const reloadUser = useCallback(async () => {
-    if (!token) return;
+    const currentToken = localStorage.getItem("accessToken");
+    if (!currentToken) return;
     try {
       const userRes = await API.get("/user/");
       setUsuario(userRes.data);
+      return userRes.data;
     } catch (error) {
       if (error?.response?.status === 401) {
         setUsuario(null);
@@ -98,7 +101,7 @@ export function AppProvider({ children }) {
         localStorage.removeItem("refreshToken");
       }
     }
-  }, [token]);
+  }, []);
 
   const fetchProveedores = useCallback(async () => {
     if (!token) {

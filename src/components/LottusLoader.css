@@ -32,7 +32,7 @@
   left: 0;
   width: 0%;
   height: 100%;
-  color: var(--accent);
+  color: #0f172a;
   overflow: hidden;
   animation: lottus-fill-text 2s ease-in-out forwards;
 }
@@ -51,7 +51,7 @@
   height: 100%;
   width: 0%;
   border-radius: var(--r-full);
-  background: var(--accent);
+  background: #0f172a;
   animation: lottus-fill-bar 2s ease-in-out forwards;
 }
 

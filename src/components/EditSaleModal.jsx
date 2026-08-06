@@ -52,7 +52,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   const isEstadoDisabled = !canEditEstadoVenta || (usuario?.role?.toLowerCase() === 'auxiliar' && (formData.estado || '').trim().toLowerCase() === 'entregado');
   const isEstadoPedidosDisabled = !canEditEstadoPedidos || (usuario?.role?.toLowerCase() === 'auxiliar' && formData.estado_pedidos);
 
-  const availableEstados = (usuario?.role?.toLowerCase() === 'auxiliar' || !canEditEverything)
+  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+
+  const availableEstados = (!canAnularOrden && (formData.estado || '').toLowerCase() !== 'anulado')
     ? (estados || []).filter(e => e !== 'anulado')
     : estados;
 
@@ -193,9 +195,17 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isFieldsDisabled} />
           <label htmlFor="traslado">¿Incluye Traslado?</label>
         </div>
-        <div className="form-group checkbox-inline">
-          <input type="checkbox" id="estado_pedidos" name="estado_pedidos" checked={formData.estado_pedidos} onChange={handleChange} disabled={isEstadoPedidosDisabled} />
-          <label htmlFor="estado_pedidos">¿Estado de Pedidos?</label>
+        <div className="form-group">
+          <label>Estado de Pedidos:</label>
+          <select
+            name="estado_pedidos"
+            value={formData.estado_pedidos ? 'true' : 'false'}
+            onChange={(e) => setFormData(prev => ({ ...prev, estado_pedidos: e.target.value === 'true' }))}
+            disabled={isEstadoPedidosDisabled}
+          >
+            <option value="false">Pendiente</option>
+            <option value="true">Pedido</option>
+          </select>
         </div>
 
         <div className="form-group">

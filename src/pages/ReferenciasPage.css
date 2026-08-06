@@ -151,6 +151,40 @@
     text-align: left;
 }
 
+/* ── Responsive (tablet / móvil) ──────────────────────────────────────────
+   Esta página no tiene una vista de tarjetas para móvil, así que en vez de
+   ocultar la tabla la mantenemos visible con scroll horizontal propio.
+   Los selectores se anclan a .referencias-page para que su especificidad
+   (0,2,0) gane siempre sobre reglas ".desktop-view { display: none }" de
+   otras páginas que comparten el mismo nombre de clase genérico. */
+@media (max-width: 1024px) {
+    .referencias-page .desktop-view {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .referencias-page .premium-table {
+        min-width: 640px;
+    }
+}
+
+@media (max-width: 768px) {
+    .referencias-page .ref-filters {
+        flex-wrap: wrap !important;
+    }
+
+    .referencias-page .v-search-pill {
+        width: 100% !important;
+    }
+
+    .referencias-page .premium-table th,
+    .referencias-page .premium-table td {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
 .premium-table th {
     background-color: var(--gray-50);
     color: var(--gray-500);
