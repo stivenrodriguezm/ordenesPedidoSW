@@ -239,6 +239,10 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_PERMISOS_SISTEMA", label: "Editar Roles y Permisos" }
     ]
   },
+  { module: "Página Web", features: [
+      { code: "GESTION_WEB", label: "Acceso a Gestión Web (Productos, Banner, Asesores)" }
+    ]
+  },
   { module: "Catálogos Adicionales", features: [
       { code: "ADMINISTRAR_TELAS", label: "Administrar Telas" }
     ]

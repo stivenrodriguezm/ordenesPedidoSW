@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaScroll, FaBoxOpen, FaTruck, FaLayerGroup } from 'react-icons/fa';
+import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaUsers, FaWarehouse, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaScroll, FaBoxOpen, FaTruck, FaLayerGroup, FaGlobe } from 'react-icons/fa';
 import { AppContext, usePermissions } from "../AppContext";
 import "./Sidebar.css";
 
@@ -21,15 +21,15 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
     {
       title: "Finanzas",
       items: [
-        { to: "/caja", icon: <FaCashRegister />, label: "Caja", feature: "ACCESO_CAJA" },
+        { to: "/caja", icon: <FaCashRegister />, label: "Caja Principal", feature: "ACCESO_CAJA" },
         { to: "/recibos-caja", icon: <FaReceipt />, label: "Recibos de Caja", feature: "ACCESO_RECIBOS" },
-        { to: "/comprobantes-egreso", icon: <FaFileInvoice />, label: "Egresos", feature: "ACCESO_EGRESOS" },
+        { to: "/comprobantes-egreso", icon: <FaReceipt />, label: "Comprobantes Egreso", feature: "ACCESO_EGRESOS" },
       ]
     },
     {
       title: "Bases de Datos",
       items: [
-        { to: "/bases-de-datos", icon: <FaLayerGroup />, label: "Bases de Datos", feature: "BASES_DATOS" },
+        { to: "/bases-datos", icon: <FaBoxes />, label: "Bases de Datos", feature: "BASES_DATOS" },
       ]
     },
     {
@@ -43,7 +43,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
     {
       title: "Página Web",
       items: [
-        { to: "/paginaweb/gestion", icon: <FaBoxes />, label: "Gestión Web" },
+        { to: "/paginaweb/gestion", icon: <FaGlobe />, label: "Gestión Web", feature: "GESTION_WEB" },
       ]
     }
   ];
@@ -62,7 +62,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
 
         <nav className="sidebar-nav">
           {navSections.map(section => {
-            const allowedItems = section.items.filter(item => hasPermission(item.feature));
+            const allowedItems = section.items.filter(item => !item.feature || hasPermission(item.feature));
 
             if (allowedItems.length === 0) return null;
 

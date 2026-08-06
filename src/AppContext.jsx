@@ -32,8 +32,8 @@ export const usePermissions = () => {
     if (feature === 'VER_TELAS') {
       return permissions.includes('VER_PEDIDOS_TELAS');
     }
-    if (feature === 'CREAR_ORDEN') {
-      return permissions.includes('CREAR_ORDEN') || permissions.includes('CREAR_PROPIAS_ORDENES') || permissions.includes('CREAR_ORDENES_OTROS');
+    if (feature === 'GESTION_WEB') {
+      return usuario.role?.toLowerCase() === 'administrador' || permissions.includes('GESTION_WEB') || permissions.includes('ADMINISTRAR_PAGINA_WEB');
     }
     return permissions.includes(feature);
   };
