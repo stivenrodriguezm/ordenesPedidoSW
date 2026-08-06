@@ -38,7 +38,7 @@ const PerfilPage = () => {
         setNotification({ message: '', type: '' });
 
         try {
-            await API.post('/change-password/', {
+            await API.post('/user/cambiar-contrasena/', {
                 old_password: oldPassword,
                 new_password: newPassword,
             });
