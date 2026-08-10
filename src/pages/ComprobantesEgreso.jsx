@@ -325,12 +325,13 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
                 </select>
               </div>
               <div className="lottus-form-group">
-                <label>Recibido por (Persona que recibe) <span className="lottus-hint">(opcional)</span></label>
+                <label>Recibido por (Persona que recibe) <span className="lottus-req">*</span></label>
                 <input
                   type="text"
                   name="recibido_por"
                   value={newCE.recibido_por}
                   onChange={handleChange}
+                  required
                   placeholder="Nombre de quien recibe el dinero..."
                   className="lottus-input"
                 />
@@ -660,7 +661,7 @@ const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoa
                   const isEfectivo = newCE.medio_pago?.toLowerCase() === 'efectivo';
                   const numericVal = parseFloat(newCE.valor) || 0;
                   const isExceedingCash = isEfectivo && saldoCaja !== null && numericVal > saldoCaja;
-                  return isLoading || !newCE.id || !newCE.proveedor || !newCE.medio_pago || numericVal <= 0 || isExceedingCash;
+                  return isLoading || !newCE.id || !newCE.proveedor || !newCE.medio_pago || numericVal <= 0 || isExceedingCash || !newCE.recibido_por?.trim();
                 })()}
               >
                 {isLoading ? 'Guardando...' : 'Crear Comprobante'}
@@ -817,6 +818,11 @@ const ComprobantesEgreso = () => {
   const location = useLocation();
   const hasPermission = usePermissions();
   const [comprobantesData, setComprobantesData] = useState([]);
+  const [expandedCEIds, setExpandedCEIds] = useState([]);
+
+  const toggleExpandCE = (id) => {
+    setExpandedCEIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
 
   // Multi-select checklists state
   const [selectedProveedores, setSelectedProveedores] = useState([]);
@@ -1263,6 +1269,7 @@ const ComprobantesEgreso = () => {
           <table className="modern-table">
             <thead>
               <tr>
+                <th className="th-ce-expand" style={{ width: '36px' }}></th>
                 <th className="th-ce-id">CE</th>
                 <th className="th-ce-fecha">Fecha</th>
                 <th className="th-ce-proveedor">Proveedor</th>
@@ -1288,57 +1295,129 @@ const ComprobantesEgreso = () => {
                   </tr>
                 ))
               ) : comprobantesData.length > 0 ? (
-                comprobantesData.map((item) => (
-                  <tr key={item.id} className="table-row-hover">
-                    <td className="font-bold">#{item.id}</td>
-                    <td className="text-muted">{formatDate(item.fecha)}</td>
-                    <td>{item.proveedor_nombre || '—'}</td>
-                    <td className="concept-cell">{item.concepto}</td>
-                    <td>
-                      <div className="method-cell">
-                        <PaymentIcon method={item.medio_pago} />
-                        <span>{item.medio_pago}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`}>
-                          {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
-                        </span>
-                        {item.estado !== 'Pagado' && hasPermission('APROBAR_EGRESO') && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
-                            style={{
-                              background: '#2563eb',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '0.25rem 0.6rem',
-                              fontSize: '0.72rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              boxShadow: '0 1px 3px rgba(37,99,235,0.2)',
-                              transition: 'all 0.15s ease'
-                            }}
-                            title="Confirmar transferencia de egreso realizada"
-                          >
-                            <FaCheckCircle size={11} /> Confirmar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-right font-mono value-expense">
-                      -{formatCurrency(item.valor)}
-                    </td>
-                    <td className="note-cell">{item.descripcion || '—'}</td>
-                  </tr>
-                ))
+                comprobantesData.map((item) => {
+                  const isExpanded = expandedCEIds.includes(item.id);
+                  const facturas = item.facturas_detalle || [];
+                  const hasFacturas = facturas.length > 0;
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr className={`table-row-hover ${isExpanded ? 'ce-row-expanded' : ''}`} onClick={() => hasFacturas && toggleExpandCE(item.id)} style={{ cursor: hasFacturas ? 'pointer' : 'default' }}>
+                        <td className="ce-expand-cell">
+                          {hasFacturas ? (
+                            <button type="button" className={`ce-expand-btn ${isExpanded ? 'open' : ''}`} onClick={(e) => { e.stopPropagation(); toggleExpandCE(item.id); }}>
+                              <FaChevronDown />
+                            </button>
+                          ) : (
+                            <span className="ce-expand-placeholder">—</span>
+                          )}
+                        </td>
+                        <td className="font-bold">#{item.id}</td>
+                        <td className="text-muted">{formatDate(item.fecha)}</td>
+                        <td>{item.proveedor_nombre || '—'}</td>
+                        <td className="concept-cell">{item.concepto}</td>
+                        <td>
+                          <div className="method-cell">
+                            <PaymentIcon method={item.medio_pago} />
+                            <span>{item.medio_pago}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`}>
+                              {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
+                            </span>
+                            {item.estado !== 'Pagado' && hasPermission('APROBAR_EGRESO') && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
+                                style={{
+                                  background: '#2563eb',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '0.25rem 0.6rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  boxShadow: '0 1px 3px rgba(37,99,235,0.2)',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Confirmar transferencia de egreso realizada"
+                              >
+                                <FaCheckCircle size={11} /> Confirmar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="text-right font-mono value-expense">
+                          -{formatCurrency(item.valor)}
+                        </td>
+                        <td className="note-cell">{item.descripcion || '—'}</td>
+                      </tr>
+                      {isExpanded && hasFacturas && (
+                        <tr className="ce-expanded-row">
+                          <td colSpan="9" style={{ padding: 0 }}>
+                            <div className="ce-expanded-panel">
+                              <div className="ce-expanded-header">
+                                <span className="ce-expanded-title">📄 Facturas asociadas ({facturas.length})</span>
+                                {item.recibido_por && <span className="ce-expanded-recibido">Recibido por: <strong>{item.recibido_por}</strong></span>}
+                              </div>
+                              <table className="ce-facturas-table">
+                                <thead>
+                                  <tr>
+                                    <th>No. Factura</th>
+                                    <th>Fecha Emisión</th>
+                                    <th>Fecha Pago</th>
+                                    <th>Estado</th>
+                                    <th className="text-right">Valor</th>
+                                    <th>Observaciones</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {facturas.map((f) => (
+                                    <React.Fragment key={f.id}>
+                                      <tr className="ce-factura-row">
+                                        <td className="font-bold">#{f.id_manual}</td>
+                                        <td>{formatDate(f.fecha_factura)}</td>
+                                        <td>{f.fecha_pago ? formatDate(f.fecha_pago) : '—'}</td>
+                                        <td>
+                                          <span className={`ce-factura-estado ${f.estado === 'pagada' ? 'pagada' : f.estado === 'pago_en_proceso' ? 'en-proceso' : 'pendiente'}`}>
+                                            {f.estado === 'pagada' ? '✓ Pagada' : f.estado === 'pago_en_proceso' ? '⏳ Pago en proceso' : 'Pendiente'}
+                                          </span>
+                                        </td>
+                                        <td className="text-right font-mono">{formatCurrency(f.valor)}</td>
+                                        <td className="note-cell">{f.observaciones || '—'}</td>
+                                      </tr>
+                                      {f.productos && f.productos.length > 0 && (
+                                        <tr className="ce-productos-row">
+                                          <td colSpan="6" style={{ padding: '0 0 0 2rem' }}>
+                                            <div className="ce-productos-list">
+                                              {f.productos.map((p) => (
+                                                <div key={p.id} className="ce-producto-item">
+                                                  <span className="ce-producto-nombre">{p.referencia_nombre}{p.variacion ? ` (${p.variacion})` : ''}</span>
+                                                  <span className="ce-producto-costo">{formatCurrency(p.costo)}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               ) : (
-                <tr><td colSpan="7" className="empty-state">No se encontraron comprobantes.</td></tr>
+                <tr><td colSpan="9" className="empty-state">No se encontraron comprobantes.</td></tr>
               )}
             </tbody>
           </table>
@@ -1349,51 +1428,91 @@ const ComprobantesEgreso = () => {
           {isLoading ? (
             <div className="loading-spinner"></div>
           ) : comprobantesData.length > 0 ? (
-            comprobantesData.map((item) => (
-              <div className="transaction-card" key={item.id}>
-                <div className="card-left">
-                  <PaymentIcon method={item.medio_pago} />
-                  <div className="card-info">
-                    <div className="card-concept">{item.concepto}</div>
-                    <div className="card-meta">
-                      {formatDate(item.fecha)} • {item.proveedor_nombre}
+            comprobantesData.map((item) => {
+              const isExpanded = expandedCEIds.includes(item.id);
+              const facturas = item.facturas_detalle || [];
+              const hasFacturas = facturas.length > 0;
+              return (
+                <div className="transaction-card" key={item.id}>
+                  <div className="card-left">
+                    <PaymentIcon method={item.medio_pago} />
+                    <div className="card-info">
+                      <div className="card-concept">{item.concepto}</div>
+                      <div className="card-meta">
+                        {formatDate(item.fecha)} • {item.proveedor_nombre}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="card-right">
-                  <div className="card-amount value-expense" style={{ marginBottom: '4px' }}>
-                    -{formatCurrency(item.valor)}
+                  <div className="card-right">
+                    <div className="card-amount value-expense" style={{ marginBottom: '4px' }}>
+                      -{formatCurrency(item.valor)}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                      <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`} style={{ fontSize: '0.7rem' }}>
+                        {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
+                      </span>
+                      {item.estado !== 'Pagado' && hasPermission('APROBAR_EGRESO') && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
+                          style={{
+                            background: '#2563eb',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0.2rem 0.5rem',
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <FaCheckCircle size={10} /> Confirmar
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="card-id">#{item.id}</div>
+                      {hasFacturas && (
+                        <button type="button" className={`ce-mobile-expand-btn ${isExpanded ? 'open' : ''}`} onClick={() => toggleExpandCE(item.id)}>
+                          <FaChevronDown /> {isExpanded ? 'Ocultar' : `Facturas (${facturas.length})`}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end', marginBottom: '4px' }}>
-                    <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`} style={{ fontSize: '0.7rem' }}>
-                      {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
-                    </span>
-                    {item.estado !== 'Pagado' && hasPermission('APROBAR_EGRESO') && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
-                        style={{
-                          background: '#2563eb',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '0.2rem 0.5rem',
-                          fontSize: '0.7rem',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                      >
-                        <FaCheckCircle size={10} /> Confirmar
-                      </button>
-                    )}
-                  </div>
-                  <div className="card-id">#{item.id}</div>
+                  {isExpanded && hasFacturas && (
+                    <div className="ce-mobile-expanded">
+                      {facturas.map(f => (
+                        <div key={f.id} className="ce-mobile-factura">
+                          <div className="ce-mobile-factura-header">
+                            <span className="font-bold">Fact. #{f.id_manual}</span>
+                            <span className="font-mono">{formatCurrency(f.valor)}</span>
+                          </div>
+                          <div className="ce-mobile-factura-meta">
+                            <span className={`ce-factura-estado ${f.estado === 'pagada' ? 'pagada' : f.estado === 'pago_en_proceso' ? 'en-proceso' : 'pendiente'}`}>
+                              {f.estado === 'pagada' ? '✓ Pagada' : f.estado === 'pago_en_proceso' ? '⏳ En proceso' : 'Pendiente'}
+                            </span>
+                            {f.observaciones && <span className="text-muted">{f.observaciones}</span>}
+                          </div>
+                          {f.productos && f.productos.length > 0 && (
+                            <div className="ce-mobile-productos">
+                              {f.productos.map(p => (
+                                <div key={p.id} className="ce-producto-item">
+                                  <span className="ce-producto-nombre">{p.referencia_nombre}{p.variacion ? ` (${p.variacion})` : ''}</span>
+                                  <span className="ce-producto-costo">{formatCurrency(p.costo)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="empty-state-mobile">Sin registros.</div>
           )}

@@ -15,6 +15,13 @@
     }
   </script>
   <body>
+    <script>
+      var path = window.location.pathname;
+      if (path !== '/' && path !== '/index.html') {
+        if (path.startsWith('/')) path = path.substring(1);
+        window.location.replace("/#/" + path + window.location.search);
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

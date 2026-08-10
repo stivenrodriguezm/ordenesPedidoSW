@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
-import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner, FaFileInvoiceDollar, FaLock } from 'react-icons/fa';
 import { PageHeader, Button } from '../components/ui';
 import './FacturasProveedorPage.css';
 import './VentasImprovements.css';
@@ -74,6 +74,7 @@ const ESTADOS_FACTURA = [
     { value: 'pendiente', label: 'Pendiente' },
     { value: 'por_pagar', label: 'Por pagar' },
     { value: 'atrasado', label: 'Atrasado' },
+    { value: 'pago_en_proceso', label: 'Pago en proceso' },
     { value: 'pagado', label: 'Pagado' },
 ];
 
@@ -124,7 +125,7 @@ function FacturasProveedorPage() {
     }, [location.state]);
 
     // Filtros & Ordenamiento
-    const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'por_pagar', 'atrasado']);
+    const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
     const [selectedProveedores, setSelectedProveedores] = useState([]);
     const [filterFechaDesde, setFilterFechaDesde] = useState('');
     const [filterFechaHasta, setFilterFechaHasta] = useState('');
@@ -602,6 +603,7 @@ function FacturasProveedorPage() {
         const estado = (f.estado || 'pendiente').toLowerCase();
         if (estado === 'pagada' || estado === 'pagado') return 'pagado';
         if (estado === 'anulada') return 'anulada';
+        if (estado === 'pago_en_proceso') return 'pago_en_proceso';
 
         const todayStr = getTodayStr();
         const fechaPagoStr = f.fechaPago ? String(f.fechaPago).split('T')[0] : '';
@@ -617,6 +619,7 @@ function FacturasProveedorPage() {
         if (e === 'pagado' || e === 'pagada') return 'status-badge status-pagado';
         if (e === 'por_pagar') return 'status-badge status-por-pagar';
         if (e === 'atrasado' || e === 'atrasada') return 'status-badge status-atrasado';
+        if (e === 'pago_en_proceso') return 'status-badge status-pago-en-proceso';
         if (e === 'anulada') return 'status-badge status-anulada';
         return 'status-badge status-pendiente';
     };
@@ -626,9 +629,14 @@ function FacturasProveedorPage() {
         if (e === 'pagado' || e === 'pagada') return 'Pagado';
         if (e === 'por_pagar') return 'Por pagar';
         if (e === 'atrasado' || e === 'atrasada') return 'Atrasado';
+        if (e === 'pago_en_proceso') return '⏳ Pago en proceso';
         if (e === 'anulada') return 'Anulada';
         return 'Pendiente';
     };
+
+    // Una factura vinculada a un comprobante de egreso ya no se puede editar:
+    // su estado lo gestiona el flujo de comprobantes (crear/confirmar), no el formulario de facturas.
+    const isFacturaLocked = (f) => Boolean(f && f.comprobante_egreso);
 
     const allProveedorOptions = React.useMemo(() => {
         return [...new Set(facturas.map(f => f.proveedorNombre))].filter(Boolean);
@@ -755,11 +763,11 @@ function FacturasProveedorPage() {
         return result;
     }, [facturas, filterSearch, selectedEstados, selectedProveedores, filterFechaDesde, filterFechaHasta, sortConfig]);
 
-    const defaultEstados = ['pendiente', 'por_pagar', 'atrasado'];
+    const defaultEstados = ['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso'];
     const estadosModified = selectedEstados.length !== defaultEstados.length || !selectedEstados.every(e => defaultEstados.includes(e));
     const hasFilters = estadosModified || selectedProveedores.length > 0 || filterFechaDesde || filterFechaHasta || filterSearch;
     const handleClearFilters = () => {
-        setSelectedEstados(['pendiente', 'por_pagar', 'atrasado']);
+        setSelectedEstados(['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
         setSelectedProveedores([]);
         setFilterFechaDesde('');
         setFilterFechaHasta('');
@@ -823,6 +831,7 @@ function FacturasProveedorPage() {
                 fecha_pago: cleanDate(fData.fecha_pago || f.fecha_pago || f.fechaPago),
                 observaciones: fData.observaciones || f.observaciones || '',
                 productos: prods,
+                comprobante_egreso: fData.comprobante_egreso ?? f.comprobante_egreso ?? null,
             });
         } catch (err) {
             console.error("Error al cargar datos para edición", err);
@@ -1132,11 +1141,13 @@ function FacturasProveedorPage() {
                                                                     </div>
                                                                     {hasPermission('EDITAR_FACTURA') && (
                                                                         <button
-                                                                            className="btn-edit-obs"
-                                                                            onClick={() => openEditModal(f)}
-                                                                            disabled={loadingEditId === f.id}
+                                                                            className={`btn-edit-obs${isFacturaLocked(f) ? ' btn-edit-obs-locked' : ''}`}
+                                                                            onClick={() => !isFacturaLocked(f) && openEditModal(f)}
+                                                                            disabled={loadingEditId === f.id || isFacturaLocked(f)}
+                                                                            title={isFacturaLocked(f) ? `Vinculada al Comprobante de Egreso #${f.comprobante_egreso} — no editable` : ''}
                                                                         >
-                                                                            {loadingEditId === f.id ? <FaSpinner className="fa-spin" /> : <FaEdit />} Editar
+                                                                            {loadingEditId === f.id ? <FaSpinner className="fa-spin" /> : isFacturaLocked(f) ? <FaLock /> : <FaEdit />}
+                                                                            {isFacturaLocked(f) ? ' Bloqueada' : ' Editar'}
                                                                         </button>
                                                                     )}
                                                                 </div>
@@ -1472,12 +1483,20 @@ function FacturasProveedorPage() {
                                 </div>
                                 <div className="edit-factura-field">
                                     <label>Estado de la Factura</label>
+                                    {editModal.comprobante_egreso ? (
+                                        <div className="edit-estado-locked">
+                                            <FaLock />
+                                            <span>
+                                                <strong>{getEstadoLabel(getEfectiveEstado(editModal))}</strong> — vinculada al Comprobante de Egreso #{editModal.comprobante_egreso}. El estado se actualiza automáticamente al confirmar el pago del comprobante.
+                                            </span>
+                                        </div>
+                                    ) : (
                                     <div className="edit-estado-options" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
                                         {(() => {
                                             const todayStr = getTodayStr();
                                             const fechaPagoStr = editModal.fecha_pago || '';
                                             let dynamicOption = { value: 'pendiente', label: 'Pendiente', badgeClass: 'status-pendiente' };
-                                            
+
                                             if (fechaPagoStr) {
                                                 if (fechaPagoStr > todayStr) {
                                                     dynamicOption = { value: 'pendiente', label: 'Pendiente', badgeClass: 'status-pendiente' };
@@ -1511,6 +1530,7 @@ function FacturasProveedorPage() {
                                             );
                                         })()}
                                     </div>
+                                    )}
                                 </div>
                             </div>
 

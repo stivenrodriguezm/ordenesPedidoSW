@@ -1103,3 +1103,273 @@
   border-bottom: none;
 }
 
+/* ==========================================================================
+   Expandable CE Rows — Desktop
+   ========================================================================== */
+.ce-expand-cell {
+  width: 36px;
+  text-align: center;
+  padding: 0 !important;
+}
+
+.ce-expand-btn {
+  background: transparent;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.ce-expand-btn:hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.ce-expand-btn.open {
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+
+.ce-expand-placeholder {
+  color: var(--gray-300);
+  font-size: 0.7rem;
+}
+
+.ce-row-expanded {
+  background: var(--gray-50) !important;
+}
+
+.ce-row-expanded td {
+  border-bottom-color: transparent !important;
+}
+
+.ce-expanded-row td {
+  background: transparent !important;
+  border-bottom: 1px solid var(--gray-200) !important;
+}
+
+.ce-expanded-panel {
+  background: var(--gray-50);
+  border-top: 1px dashed var(--gray-200);
+  padding: 0.75rem 1.25rem 1rem;
+  animation: ceSlideDown 0.2s ease-out;
+}
+
+@keyframes ceSlideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    max-height: 600px;
+    transform: translateY(0);
+  }
+}
+
+.ce-expanded-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ce-expanded-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gray-700);
+}
+
+.ce-expanded-recibido {
+  font-size: 0.78rem;
+  color: var(--gray-500);
+}
+
+.ce-expanded-recibido strong {
+  color: var(--gray-700);
+}
+
+/* Sub-table: facturas inside expanded CE */
+.ce-facturas-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ce-facturas-table thead tr {
+  background: var(--gray-100);
+}
+
+.ce-facturas-table thead th {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gray-600);
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.ce-facturas-table tbody td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-800);
+}
+
+.ce-factura-row:hover td {
+  background: rgba(37, 99, 235, 0.03);
+}
+
+.ce-factura-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ce-factura-estado.pagada {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.ce-factura-estado.en-proceso {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.ce-factura-estado.pendiente {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+/* Products row inside factura */
+.ce-productos-row td {
+  border-bottom: 1px solid var(--gray-100) !important;
+  background: var(--surface) !important;
+}
+
+.ce-productos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.35rem 0;
+}
+
+.ce-producto-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+.ce-producto-item:hover {
+  background: var(--gray-50);
+}
+
+.ce-producto-nombre {
+  color: var(--gray-700);
+  font-weight: 500;
+}
+
+.ce-producto-costo {
+  color: var(--gray-500);
+  font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.73rem;
+}
+
+/* ==========================================================================
+   Expandable CE — Mobile
+   ========================================================================== */
+.ce-mobile-expand-btn {
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  color: var(--accent);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.ce-mobile-expand-btn:hover {
+  background: var(--accent-soft);
+}
+
+.ce-mobile-expand-btn.open {
+  background: var(--accent-soft);
+}
+
+.ce-mobile-expand-btn.open svg {
+  transform: rotate(180deg);
+}
+
+.ce-mobile-expand-btn svg {
+  transition: transform 0.2s ease;
+  font-size: 0.6rem;
+}
+
+.ce-mobile-expanded {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: ceSlideDown 0.2s ease-out;
+}
+
+.ce-mobile-factura {
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.ce-mobile-factura-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.ce-mobile-factura-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+}
+
+.ce-mobile-productos {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

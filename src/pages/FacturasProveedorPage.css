@@ -288,6 +288,14 @@
     color: white;
 }
 
+.btn-edit-obs-locked,
+.btn-edit-obs-locked:hover {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+}
+
 /* --- Responsive Items List inside expanded row --- */
 .expanded-items-section {
     margin-top: 1.5rem;
@@ -752,6 +760,26 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+}
+
+.edit-estado-locked {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    margin-top: 0.2rem;
+    padding: 0.55rem 0.75rem;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    color: #9a3412;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.edit-estado-locked svg {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    color: #c2410c;
 }
 
 .estado-option-btn {
@@ -1674,6 +1702,18 @@
     background: #dcfce7 !important;
     color: #15803d !important;
     border: 1px solid #86efac !important;
+}
+
+.status-pago-en-proceso {
+    background: #ffedd5 !important;
+    color: #c2410c !important;
+    border: 1px solid #fdba74 !important;
+}
+
+.status-anulada {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border: 1px solid #cbd5e1 !important;
 }
 
 /* Sortable Table Header */
