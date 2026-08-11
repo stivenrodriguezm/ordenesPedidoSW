@@ -1,0 +1,318 @@
+/* Comprobante de Egreso — plantilla imprimible/vista previa.
+   Diseño corporativo simple: negro/blanco, tipografía clara, pensado
+   tanto para pantalla (dentro del modal de vista previa) como para
+   impresión directa (ver src/styles/print.css). */
+
+.cer-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: "Segoe UI", Arial, sans-serif;
+  padding: 2.5rem 2.75rem;
+  box-sizing: border-box;
+}
+
+.cer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cer-logo {
+  background: #000000;
+  padding: 0.65rem 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cer-logo span {
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: 0.25rem;
+  font-family: "Audiowide", cursive, sans-serif;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.cer-doc-title {
+  text-align: right;
+}
+
+.cer-doc-kicker {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12rem;
+  margin-bottom: 0.15rem;
+}
+
+.cer-doc-number {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 0.02rem;
+}
+
+.cer-doc-date {
+  font-size: 0.68rem;
+  color: #475569;
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
+.cer-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 1.25rem;
+}
+
+.cer-meta-box {
+  padding: 0.75rem 1rem;
+}
+
+.cer-meta-box:first-child {
+  border-right: 1px solid #cbd5e1;
+}
+
+.cer-meta-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.06rem;
+  margin-bottom: 0.25rem;
+}
+
+.cer-meta-value {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cer-meta-sub {
+  font-size: 0.68rem;
+  color: #475569;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.cer-concepto {
+  font-size: 0.78rem;
+  color: #334155;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border-left: 3px solid #0f172a;
+}
+
+.cer-concepto-label {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cer-section {
+  margin-bottom: 1.25rem;
+}
+
+.cer-section-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06rem;
+  color: #475569;
+  margin-bottom: 0.4rem;
+}
+
+.cer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  border: 1px solid #cbd5e1;
+}
+
+.cer-table thead tr {
+  background: #0f172a;
+}
+
+.cer-table thead th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.05rem;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.cer-right {
+  text-align: right;
+}
+
+.cer-bold {
+  font-weight: 700;
+}
+
+.cer-factura-row td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.cer-productos-row td {
+  padding: 0 0.75rem 0.55rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.cer-productos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-top: 0.3rem;
+}
+
+.cer-producto-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.cer-producto-dot {
+  color: #94a3b8;
+}
+
+.cer-producto-nombre {
+  flex: 1;
+}
+
+.cer-producto-cat {
+  color: #94a3b8;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cer-producto-costo {
+  font-weight: 600;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+
+.cer-notas {
+  margin-bottom: 1.25rem;
+}
+
+.cer-notas-text {
+  font-size: 0.78rem;
+  color: #334155;
+  font-style: italic;
+  margin-top: 0.2rem;
+}
+
+.cer-total-card {
+  margin-left: auto;
+  width: 300px;
+  border: 1px solid #cbd5e1;
+  border-top: 3px solid #0f172a;
+  border-radius: 3px;
+  background: #ffffff;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.cer-total-breakdown {
+  padding: 0.75rem 1rem 0.6rem;
+}
+
+.cer-total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.74rem;
+  color: #475569;
+  font-weight: 600;
+  padding: 0.18rem 0;
+}
+
+.cer-total-row span:last-child {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cer-total-final {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.65rem 1rem;
+}
+
+.cer-total-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04rem;
+  text-transform: uppercase;
+}
+
+.cer-total-value {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.cer-firma-box {
+  border: 1px solid #cbd5e1;
+  padding: 1rem 1.1rem;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cer-firma-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.05rem;
+}
+
+.cer-firma-line {
+  border-top: 1.5px solid #0f172a;
+  padding-top: 0.45rem;
+}
+
+.cer-firma-sub {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cer-firma-nombre {
+  font-size: 0.62rem;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
+
+.cer-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+  font-size: 0.56rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+}

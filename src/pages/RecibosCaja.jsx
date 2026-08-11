@@ -82,7 +82,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   const filteredVentas = ventas.filter(v => v.id_venta.toString().includes(ventaSearch));
 
   return createPortal(
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="lottus-modal-header">

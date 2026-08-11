@@ -66,6 +66,11 @@ const Ventas = () => {
     const sedesRef = useRef(null);
     const sedesOptions = ['Lottus 1', 'Lottus 2'];
 
+    // El check "Feria del Hogar" vive dentro del propio filtro de Sede (las ventas de
+    // feria no tienen sede, así que no son un valor más de selectedSedes, sino un
+    // interruptor aparte que se muestra/oculta junto a las opciones de sede).
+    const [includeFeria, setIncludeFeria] = useState(true);
+
     const [selectedVendedores, setSelectedVendedores] = useState([]);
     const [isVendedoresOpen, setIsVendedoresOpen] = useState(false);
     const [hasInitializedVendedores, setHasInitializedVendedores] = useState(false);
@@ -88,10 +93,58 @@ const Ventas = () => {
         return vendedores.filter(v => sellersMap.has(v.id));
     }, [reportSales, vendedores]);
 
+    const hasFeriaInPeriod = React.useMemo(() => {
+        return reportSales.some(venta => venta.es_feria_hogar);
+    }, [reportSales]);
+
     useEffect(() => {
-        if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
+        if (!hasFeriaInPeriod) {
+            setIncludeFeria(true);
+        }
+    }, [hasFeriaInPeriod]);
+
+    // El informe (SalesSummaryReport) debe reflejar los mismos filtros aplicados a la tabla
+    // (vendedor, sede, estado, feria) — reportSales trae todo el periodo sin esos filtros
+    // (solo fecha + visibilidad por rol) para poder construir las opciones del selector de
+    // vendedores; el filtrado por los demás criterios se hace aquí, en cliente.
+    const filteredReportSales = React.useMemo(() => {
+        return reportSales.filter(venta => {
+            const statusRaw = (venta.estado || 'pendiente').toLowerCase();
+            if (!selectedEstados.includes(statusRaw)) return false;
+
+            const isFeria = !!venta.es_feria_hogar;
+
+            // Las ventas de Feria del Hogar no tienen sede (venta.sede === null) — el filtro
+            // de Sede nunca debe ocultarlas, solo el check "Feria del Hogar" las controla.
+            if (!isFeria && !selectedSedes.includes(venta.sede)) return false;
+            if (isFeria && !includeFeria) return false;
+
+            if (hasInitializedVendedores) {
+                const vendId = typeof venta.vendedor === 'object' ? venta.vendedor?.id : venta.vendedor;
+                const compartidosIds = (venta.vendedores_compartidos || []).map(vc => typeof vc === 'object' ? vc.id : vc);
+                const matchesVendedor = selectedVendedores.includes(vendId) || compartidosIds.some(id => selectedVendedores.includes(id));
+                if (!matchesVendedor) return false;
+            }
+
+            return true;
+        });
+    }, [reportSales, selectedEstados, selectedSedes, includeFeria, selectedVendedores, hasInitializedVendedores]);
+
+    useEffect(() => {
+        if (vendedoresActivos.length === 0) return;
+        if (!hasInitializedVendedores) {
             setSelectedVendedores(vendedoresActivos.map(v => v.id));
             setHasInitializedVendedores(true);
+        } else {
+            // Depura ids que ya no están activos (p. ej. al cambiar de mes y que un
+            // vendedor deje de tener ventas ese periodo) — si no, el botón Todos/Ninguno
+            // queda desincronizado porque selectedVendedores sigue siendo más grande que
+            // la lista de checkboxes realmente mostrada.
+            setSelectedVendedores(prev => {
+                const activeIds = new Set(vendedoresActivos.map(v => v.id));
+                const pruned = prev.filter(id => activeIds.has(id));
+                return pruned.length === prev.length ? prev : pruned;
+            });
         }
     }, [vendedoresActivos, hasInitializedVendedores]);
 
@@ -249,6 +302,9 @@ const Ventas = () => {
                 } else {
                     params.sede = 'ninguna_imposible';
                 }
+                // Las ventas normales siempre pueden pasar este filtro — el check "Feria del
+                // Hogar" (dentro del filtro de Sede) solo decide si las de feria se incluyen.
+                params.es_feria_hogar = includeFeria ? 'true,false' : 'false';
             }
             const response = await API.get(`/ventas/`, { params });
             
@@ -291,7 +347,7 @@ const Ventas = () => {
                 setIsLoading(false);
             }
         }
-    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, setNotification, usuario, hasInitializedVendedores]);
+    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, includeFeria, setNotification, usuario, hasInitializedVendedores]);
 
     const fetchReportSales = useCallback(async () => {
         try {
@@ -326,7 +382,7 @@ const Ventas = () => {
     // Effect for Filters (reset page to 1)
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes]);
+    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, includeFeria]);
 
     // Effect for Page Change & Filter Changes (single unified trigger)
     useEffect(() => {
@@ -342,13 +398,6 @@ const Ventas = () => {
             console.error('Error cargando vendedores:', vendedoresError);
         }
     }, [isVendedoresError, vendedoresError]);
-
-    useEffect(() => {
-        if (vendedores.length > 0 && !hasInitializedVendedores) {
-            setSelectedVendedores(vendedores.map(v => v.id));
-            setHasInitializedVendedores(true);
-        }
-    }, [vendedores, hasInitializedVendedores]);
 
     usePageRefresh(refetchVendedores);
 
@@ -403,11 +452,15 @@ const Ventas = () => {
         });
     };
 
+    const allSedeFiltersSelected = selectedSedes.length === sedesOptions.length && (!hasFeriaInPeriod || includeFeria);
+
     const selectAllSedes = () => {
-        if (selectedSedes.length === sedesOptions.length) {
+        if (allSedeFiltersSelected) {
             setSelectedSedes([]);
+            if (hasFeriaInPeriod) setIncludeFeria(false);
         } else {
             setSelectedSedes([...sedesOptions]);
+            if (hasFeriaInPeriod) setIncludeFeria(true);
         }
     };
 
@@ -732,6 +785,7 @@ const Ventas = () => {
             'F. Entrega': formatShortDate(venta.fecha_entrega),
             'Vendedor': `${venta.vendedor_nombre}${venta.vendedores_compartidos_nombres ? `, ${venta.vendedores_compartidos_nombres}` : ''}`,
             'Sede': venta.sede,
+            'Feria del Hogar': venta.es_feria_hogar ? 'Sí' : 'No',
             'Traslado': venta.traslado ? 'Sí' : 'No',
             'Cliente': venta.cliente_nombre,
             'Abono': formatCurrencyForExport(venta.abono),
@@ -806,7 +860,7 @@ const Ventas = () => {
                 <div className="sales-summary-report-wrapper expanded">
                     <div className="report-content-body">
                         <SalesSummaryReport
-                            ventas={reportSales}
+                            ventas={filteredReportSales}
                             vendedores={vendedores}
                             selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
                             formatCurrency={formatCurrency}
@@ -944,15 +998,15 @@ const Ventas = () => {
                             <div className="v-multi-select-container" ref={sedesRef}>
                                 <button
                                     type="button"
-                                    className={`v-multi-select-btn ${selectedSedes.length > 0 ? 'active-filter' : ''} ${isSedesOpen ? 'open' : ''}`}
+                                    className={`v-multi-select-btn ${(selectedSedes.length > 0 || (hasFeriaInPeriod && includeFeria)) ? 'active-filter' : ''} ${isSedesOpen ? 'open' : ''}`}
                                     onClick={() => setIsSedesOpen(prev => !prev)}
                                 >
                                     <span>
-                                        {selectedSedes.length === 0
+                                        {selectedSedes.length === 0 && !(hasFeriaInPeriod && includeFeria)
                                             ? 'Sede: Ninguna'
-                                            : selectedSedes.length === sedesOptions.length
+                                            : allSedeFiltersSelected
                                                 ? 'Sede: Todas'
-                                                : `Sede: ${selectedSedes.join(', ')}`}
+                                                : `Sede: ${[...selectedSedes, ...(hasFeriaInPeriod && includeFeria ? ['Feria del Hogar'] : [])].join(', ')}`}
                                     </span>
                                     <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
                                 </button>
@@ -961,7 +1015,7 @@ const Ventas = () => {
                                         <div className="v-popover-header">
                                             <span className="v-popover-title">Filtrar Sede</span>
                                             <button type="button" className="v-popover-action-btn" onClick={selectAllSedes}>
-                                                {selectedSedes.length === sedesOptions.length ? 'Ninguna' : 'Todas'}
+                                                {allSedeFiltersSelected ? 'Ninguna' : 'Todas'}
                                             </button>
                                         </div>
                                         {sedesOptions.map(s => (
@@ -970,10 +1024,16 @@ const Ventas = () => {
                                                 <span>{s}</span>
                                             </label>
                                         ))}
+                                        {hasFeriaInPeriod && (
+                                            <label className="v-popover-item">
+                                                <input type="checkbox" checked={includeFeria} onChange={(e) => setIncludeFeria(e.target.checked)} />
+                                                <span>Feria del Hogar</span>
+                                            </label>
+                                        )}
                                     </div>
                                 )}
                             </div>
-                            
+
                             {(usuario?.role?.toLowerCase() === 'administrador' || usuario?.role?.toLowerCase() === 'auxiliar') && (
                                 <div className="v-multi-select-container" ref={vendedoresRef}>
                                     <button
@@ -1086,7 +1146,11 @@ const Ventas = () => {
                                                 {venta.vendedores_compartidos_nombres ? `, ${venta.vendedores_compartidos_nombres}` : ''}
                                             </td>
                                             <td className="td-sede" style={{ textAlign: 'center' }}>
-                                                {venta.sede === 'Lottus 1' ? '1' : venta.sede === 'Lottus 2' ? '2' : venta.sede}
+                                                {venta.es_feria_hogar ? (
+                                                    <span title="Venta de Feria del Hogar" style={{ fontWeight: 'bold', color: 'var(--blue-2)' }}>FH</span>
+                                                ) : (
+                                                    venta.sede === 'Lottus 1' ? '1' : venta.sede === 'Lottus 2' ? '2' : venta.sede
+                                                )}
                                             </td>
                                             <td className="td-traslado" style={{ textAlign: 'center' }}>
                                                 {venta.traslado ? 'Sí' : 'No'}
@@ -1430,7 +1494,12 @@ const Ventas = () => {
                             <div className={`mobile-sale-item ${expandedVentaId === venta.id ? 'expanded' : ''}`} key={venta.id}>
                                 <div className="mobile-sale-summary" onClick={() => handleExpandVenta(venta.id)}>
                                     <div className="summary-row-top">
-                                        <span className="summary-id">#{venta.id}</span>
+                                        <span className="summary-id">
+                                            #{venta.id}
+                                            {venta.es_feria_hogar && (
+                                                <span title="Venta de Feria del Hogar" style={{ marginLeft: '0.3rem', fontWeight: 'bold', color: 'var(--blue-2)' }}>FH</span>
+                                            )}
+                                        </span>
                                         <Badge tone={estadoTone(venta.estado)}>
                                             {capitalizeEstado(venta.estado)}
                                         </Badge>

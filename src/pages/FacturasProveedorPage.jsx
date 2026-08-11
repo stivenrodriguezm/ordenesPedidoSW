@@ -127,6 +127,7 @@ function FacturasProveedorPage() {
     // Filtros & Ordenamiento
     const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
     const [selectedProveedores, setSelectedProveedores] = useState([]);
+    const [hasInitializedProveedores, setHasInitializedProveedores] = useState(false);
     const [filterFechaDesde, setFilterFechaDesde] = useState('');
     const [filterFechaHasta, setFilterFechaHasta] = useState('');
     const [filterSearch, setFilterSearch] = useState('');
@@ -642,6 +643,20 @@ function FacturasProveedorPage() {
         return [...new Set(facturas.map(f => f.proveedorNombre))].filter(Boolean);
     }, [facturas]);
 
+    // Selecciona todos los proveedores disponibles la primera vez que se cargan, y luego
+    // solo depura de la selección los que ya no existen en la lista actual (por ejemplo,
+    // si cambia el rango de fechas) — sin esto, la selección "vieja" arrastra nombres que
+    // ya no aparecen como checkbox y el botón Todos/Ninguno queda desincronizado.
+    useEffect(() => {
+        if (allProveedorOptions.length === 0) return;
+        if (!hasInitializedProveedores) {
+            setSelectedProveedores(allProveedorOptions);
+            setHasInitializedProveedores(true);
+        } else {
+            setSelectedProveedores(prev => prev.filter(p => allProveedorOptions.includes(p)));
+        }
+    }, [allProveedorOptions, hasInitializedProveedores]);
+
     const toggleEstado = (estadoVal) => {
         setSelectedEstados(prev => {
             if (prev.includes(estadoVal)) {
@@ -712,7 +727,7 @@ function FacturasProveedorPage() {
                 return false;
             }
 
-            if (selectedProveedores.length > 0 && !selectedProveedores.includes(f.proveedorNombre)) {
+            if (hasInitializedProveedores && !selectedProveedores.includes(f.proveedorNombre)) {
                 return false;
             }
 
@@ -761,14 +776,15 @@ function FacturasProveedorPage() {
         }
 
         return result;
-    }, [facturas, filterSearch, selectedEstados, selectedProveedores, filterFechaDesde, filterFechaHasta, sortConfig]);
+    }, [facturas, filterSearch, selectedEstados, selectedProveedores, hasInitializedProveedores, filterFechaDesde, filterFechaHasta, sortConfig]);
 
     const defaultEstados = ['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso'];
     const estadosModified = selectedEstados.length !== defaultEstados.length || !selectedEstados.every(e => defaultEstados.includes(e));
-    const hasFilters = estadosModified || selectedProveedores.length > 0 || filterFechaDesde || filterFechaHasta || filterSearch;
+    const proveedoresModified = hasInitializedProveedores && selectedProveedores.length !== allProveedorOptions.length;
+    const hasFilters = estadosModified || proveedoresModified || filterFechaDesde || filterFechaHasta || filterSearch;
     const handleClearFilters = () => {
         setSelectedEstados(['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
-        setSelectedProveedores([]);
+        setSelectedProveedores(allProveedorOptions);
         setFilterFechaDesde('');
         setFilterFechaHasta('');
         setFilterSearch('');
@@ -973,12 +989,12 @@ function FacturasProveedorPage() {
                     <div className="v-multi-select-container" ref={proveedoresRef}>
                         <button
                             type="button"
-                            className={`v-multi-select-btn ${selectedProveedores.length > 0 ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`}
+                            className={`v-multi-select-btn ${selectedProveedores.length > 0 && selectedProveedores.length !== allProveedorOptions.length ? 'active-filter' : ''} ${isProveedoresOpen ? 'open' : ''}`}
                             onClick={() => setIsProveedoresOpen(prev => !prev)}
                         >
                             <span>
                                 {selectedProveedores.length === 0
-                                    ? 'Proveedor: Todos'
+                                    ? 'Proveedor: Ninguno'
                                     : selectedProveedores.length === allProveedorOptions.length
                                         ? 'Proveedor: Todos'
                                         : `Proveedor: ${selectedProveedores.length} seleccionados`}
@@ -1002,7 +1018,7 @@ function FacturasProveedorPage() {
                                     <label key={n} className="v-popover-item">
                                         <input
                                             type="checkbox"
-                                            checked={selectedProveedores.length === 0 || selectedProveedores.includes(n)}
+                                            checked={selectedProveedores.includes(n)}
                                             onChange={() => toggleProveedor(n)}
                                         />
                                         <span>{n}</span>
@@ -1199,8 +1215,8 @@ function FacturasProveedorPage() {
                                                                                             </div>
                                                                                             <div className="item-tags">
                                                                                                 {!isNested && grupoNombre && <span className="item-tag" style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
-                                                                                                {catNombre && <span className="item-tag">{catNombre}</span>}
-                                                                                                {subNombre && <span className="item-tag">{subNombre}</span>}
+                                                                                                <span className={`item-tag ${!catNombre ? 'item-tag-empty' : ''}`}>{catNombre || 'Sin categoría'}</span>
+                                                                                                <span className={`item-tag ${!subNombre ? 'item-tag-empty' : ''}`}>{subNombre || 'Sin subcategoría'}</span>
                                                                                             </div>
                                                                                         </div>
                                                                                         
@@ -1463,7 +1479,7 @@ function FacturasProveedorPage() {
 
             {/* ===== MODAL EDITAR FACTURA Y COSTOS DE TELA ===== */}
             {editModal && createPortal(
-                <div className="fact-modal-overlay edit-factura-overlay" onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
+                <div className="fact-modal-overlay edit-factura-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
                     <div className="edit-factura-modal" style={{ maxWidth: '850px', width: '90%' }}>
                         <div className="edit-factura-header">
                             <h3>Editar Factura #{editModal.id_manual || editModal.id}</h3>

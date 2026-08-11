@@ -1585,7 +1585,7 @@ function InventarioPage() {
 
             {/* ── MODAL: AGREGAR ENTRADA ──────────────────────────────────── */}
             {showModal && createPortal(
-                <div className={`inv-overlay${modalVisible ? ' inv-overlay-visible' : ''}`} onClick={closeModal}>
+                <div className={`inv-overlay${modalVisible ? ' inv-overlay-visible' : ''}`} onMouseDown={e => { if (e.target === e.currentTarget) closeModal(); }}>
                     <div className={`inv-modal${modalVisible ? ' inv-modal-visible' : ''}`} onClick={e => e.stopPropagation()}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
@@ -1852,7 +1852,7 @@ function InventarioPage() {
             {/* ── MODAL: NUEVO GRUPO ──────────────────────────────────────── */}
             {nuevoGrupoModal.open && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onClick={e => { if (e.target === e.currentTarget) setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' }); }}>
+                    onMouseDown={e => { if (e.target === e.currentTarget) setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' }); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
@@ -1920,7 +1920,7 @@ function InventarioPage() {
             {/* ── MODAL: EDITAR GRUPO ─────────────────────────────────────── */}
             {grupoEditModal && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onClick={e => { if (e.target === e.currentTarget) closeGrupoEdit(); }}>
+                    onMouseDown={e => { if (e.target === e.currentTarget) closeGrupoEdit(); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
@@ -2089,7 +2089,7 @@ function InventarioPage() {
             {/* ── MODAL: EDITAR ÍTEM INDIVIDUAL ────────────────────────────── */}
             {itemEditModal.open && itemEditModal.item && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onClick={e => { if (e.target === e.currentTarget) closeItemEdit(); }}>
+                    onMouseDown={e => { if (e.target === e.currentTarget) closeItemEdit(); }}>
                     <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
@@ -2390,7 +2390,7 @@ function InventarioPage() {
 
             {/* ── MODAL: TRASLADO ────────────────────────────────────────────────── */}
             {trasladoModal.open && trasladoModal.item && createPortal(
-                <div className="inv-overlay inv-overlay-visible" onClick={() => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false })}>
+                <div className="inv-overlay inv-overlay-visible" onMouseDown={e => { if (e.target === e.currentTarget) setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false }); }}>
                     <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
                         <div className="inv-modal-header">
                             <h3 style={{ margin: 0 }}>Trasladar Ítem</h3>

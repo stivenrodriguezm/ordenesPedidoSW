@@ -62,6 +62,7 @@ function CrearPedidoPage() {
   const [numeroOP, setNumeroOP] = useState(null);
   const [llevaTela, setLlevaTela] = useState(false);
   const [esExhibicion, setEsExhibicion] = useState(false);
+  const [esFeriaHogar, setEsFeriaHogar] = useState(false);
 
   const createOrderMutation = useMutation({
     mutationFn: (newOrder) =>
@@ -173,6 +174,7 @@ function CrearPedidoPage() {
       tela: llevaTela ? "Por pedir" : "Sin tela",
       venta: pedido.ordenCompra ? parseInt(pedido.ordenCompra) : null,
       es_exhibicion: esExhibicion,
+      es_feria_hogar: esFeriaHogar,
     });
   };
 
@@ -289,8 +291,13 @@ function CrearPedidoPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="ordenCompra">Orden de Compra:</label>
-              {ventasError ? <p className="error-text">No se pudieron cargar las órdenes.</p>
+              <label htmlFor="ordenCompra">Orden de Compra:{esFeriaHogar && ' (opcional)'}</label>
+              {esFeriaHogar ? (
+                <select id="ordenCompra" name="ordenCompra" value={pedido.ordenCompra} onChange={handleChange}>
+                  <option value="">Sin O.C. asociada — Feria del Hogar</option>
+                  {ventasPendientes.map((id) => <option key={id} value={id}>{id}</option>)}
+                </select>
+              ) : ventasError ? <p className="error-text">No se pudieron cargar las órdenes.</p>
                 : ventasPendientes.length === 0 ? <p className="info-text">No hay O.C. pendientes.</p>
                   : (
                     <select id="ordenCompra" name="ordenCompra" value={pedido.ordenCompra} onChange={handleChange} required>
@@ -315,6 +322,11 @@ function CrearPedidoPage() {
                 <input id="esExhibicion" type="checkbox" checked={esExhibicion} onChange={(e) => setEsExhibicion(e.target.checked)} />
                 <span className="toggle-checkbox-custom"></span>
                 <span className="toggle-text">¿Es para exhibición?</span>
+              </label>
+              <label className={`custom-toggle-card ${esFeriaHogar ? 'active' : ''}`}>
+                <input id="esFeriaHogar" type="checkbox" checked={esFeriaHogar} onChange={(e) => setEsFeriaHogar(e.target.checked)} />
+                <span className="toggle-checkbox-custom"></span>
+                <span className="toggle-text">¿Pedido para feria del hogar?</span>
               </label>
             </div>
           </div>
@@ -400,7 +412,7 @@ function CrearPedidoPage() {
                   : (user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : "Cargando...")}
               </p>
               <p>
-                <strong>Orden de compra:</strong> {pedido.ordenCompra || "No especificado"}
+                <strong>Orden de compra:</strong> {esFeriaHogar ? "Feria del hogar" : (pedido.ordenCompra || "No especificado")}
               </p>
             </div>
             <div className="info-column">

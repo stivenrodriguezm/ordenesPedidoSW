@@ -1,0 +1,12 @@
+.cepm-preview-wrapper {
+  background: var(--gray-100);
+  border-radius: 10px;
+  padding: 1.5rem;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.cepm-preview-wrapper .cer-page {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+  border-radius: 6px;
+}

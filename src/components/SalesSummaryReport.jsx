@@ -11,7 +11,8 @@ import {
     FaStore,
     FaTrophy,
     FaCrown,
-    FaFireAlt
+    FaFireAlt,
+    FaHome
 } from 'react-icons/fa';
 import './SalesSummaryReport.css';
 
@@ -43,6 +44,8 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         const salesBySede = {};
         const salesCountBySede = {};
         const salesByDayOfWeek = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let salesFeria = 0;
+        let salesCountFeria = 0;
 
         // Initialize vendor map
         if (Array.isArray(vendedores)) {
@@ -99,9 +102,17 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 salesByDayOfWeek[dayIndex] += valToAdd;
             }
 
-            const sedeName = venta.sede || 'Sin Sede';
-            salesBySede[sedeName] = (salesBySede[sedeName] || 0) + valToAdd;
-            salesCountBySede[sedeName] = (salesCountBySede[sedeName] || 0) + (isVendorRole ? (1 / numSellers) : 1);
+            if (venta.es_feria_hogar) {
+                // Las ventas de Feria del Hogar no pertenecen a ninguna sede — se excluyen
+                // por completo del desglose por sede (ni siquiera cuentan como "Sin Sede")
+                // y se contabilizan únicamente en su propia tarjeta.
+                salesFeria += valToAdd;
+                salesCountFeria += (isVendorRole ? (1 / numSellers) : 1);
+            } else {
+                const sedeName = venta.sede || 'Sin Sede';
+                salesBySede[sedeName] = (salesBySede[sedeName] || 0) + valToAdd;
+                salesCountBySede[sedeName] = (salesCountBySede[sedeName] || 0) + (isVendorRole ? (1 / numSellers) : 1);
+            }
 
             let primaryVendorId = null;
             if (venta.vendedor_nombre && Array.isArray(vendedores)) {
@@ -226,6 +237,8 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         const pctSede1 = totalSedesVal > 0 ? ((ventasSede1 / totalSedesVal) * 100).toFixed(1) : 0;
         const pctSede2 = totalSedesVal > 0 ? ((ventasSede2 / totalSedesVal) * 100).toFixed(1) : 0;
 
+        const pctFeria = totalSales > 0 ? ((salesFeria / totalSales) * 100).toFixed(1) : 0;
+
         const vendorsList = Object.values(salesByVendedorMap)
             .filter(v => v.total > 0 || v.count > 0)
             .sort((a, b) => b.total - a.total)
@@ -321,6 +334,9 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 countSede2,
                 projectionSede2,
                 pctSede2,
+                ventasFeria: salesFeria,
+                countFeria: salesCountFeria,
+                pctFeria,
                 cycleInfo
             },
             chartData: {
@@ -429,6 +445,23 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                         <span>{kpis.countSede2} ped.</span>
                     </div>
                 </div>
+
+                {/* Feria del Hogar — solo aparece si hay ventas marcadas como feria en el periodo */}
+                {(kpis.ventasFeria > 0 || kpis.countFeria > 0) && (
+                    <div className="compact-sede-card amber">
+                        <div className="c-sede-header">
+                            <div className="c-sede-title">
+                                <FaHome style={{ color: '#b45309' }} />
+                                <span>Feria del Hogar</span>
+                            </div>
+                            <span className="c-pct-pill amber">{kpis.pctFeria}%</span>
+                        </div>
+                        <div className="c-sede-val">{formatCurrency(kpis.ventasFeria)}</div>
+                        <div className="c-sede-footer">
+                            <span>{Math.round(kpis.countFeria)} ped.</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* === SECONDARY KPIS GRID === */}

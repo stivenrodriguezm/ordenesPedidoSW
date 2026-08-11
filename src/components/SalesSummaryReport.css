@@ -157,6 +157,11 @@
     color: #3730a3;
 }
 
+.c-pct-pill.amber {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .c-sede-val {
     font-size: 1.25rem;
     font-weight: 800;

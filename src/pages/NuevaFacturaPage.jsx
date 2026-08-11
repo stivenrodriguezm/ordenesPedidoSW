@@ -840,13 +840,13 @@ export default function NuevaFacturaPage() {
                                                 <label>Costo Unitario <span className="nf-req">*</span></label>
                                                 <div className="nf-prefix-wrap">
                                                     <span className="nf-prefix">$</span>
-                                                    <input 
-                                                        required 
-                                                        type="text" 
+                                                    <input
+                                                        required
+                                                        type="text"
                                                         placeholder="0"
                                                         className="nf-prefix-input"
-                                                        value={row.costoDisplay} 
-                                                        onChange={e => handleRefRow(index, 'costoDisplay', e.target.value)} 
+                                                        value={row.costoDisplay}
+                                                        onChange={e => handleRefRow(index, 'costoDisplay', e.target.value)}
                                                     />
                                                 </div>
                                             </div>
@@ -893,8 +893,8 @@ export default function NuevaFacturaPage() {
 
                                         </div>
 
-                                        {/* Fila 3: OP Asociada | Grupo | Observación */}
-                                        <div className="nf-ref-grid-3">
+                                        {/* Fila 3: OP Asociada | Disponibilidad | Grupo | Observación */}
+                                        <div className="nf-ref-grid-4">
                                             {/* OP Asociada */}
                                             {(() => {
                                                 const { query: opQ, open: opOpen } = getOpSearch(index);
@@ -1054,6 +1054,19 @@ export default function NuevaFacturaPage() {
                                                     </div>
                                                 );
                                             })()}
+
+                                            <div className="nf-form-group">
+                                                <label>Disponibilidad</label>
+                                                <select
+                                                    value={row.disponibilidad}
+                                                    onChange={e => handleRefRow(index, 'disponibilidad', e.target.value)}
+                                                    title={row.ventaId ? 'Asignada automáticamente por la OP/Venta vinculada — puedes cambiarla si es necesario.' : ''}
+                                                >
+                                                    <option value="exhibicion">Exhibición</option>
+                                                    <option value="cliente">Cliente</option>
+                                                    <option value="consignacion">Consignación</option>
+                                                </select>
+                                            </div>
 
                                             <div className="nf-form-group">
                                                 <label>Grupo <span className="nf-optional">(opcional)</span></label>

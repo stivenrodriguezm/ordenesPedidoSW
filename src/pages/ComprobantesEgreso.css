@@ -126,18 +126,32 @@
   background: var(--surface);
   border-radius: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--gray-100);
 }
 
 .modern-table {
   width: 100%;
+  /* table-layout: fixed + anchos por columna + elipsis en las celdas de texto
+     garantiza que la tabla NUNCA se desborde del contenedor, sin importar qué
+     tan largo sea un nombre de proveedor o un concepto — nada de scroll horizontal. */
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
+.th-ce-id { width: 9%; }
+.th-ce-fecha { width: 10%; }
+.th-ce-proveedor { width: 14%; }
+.th-ce-concepto { width: 23%; }
+.th-ce-metodo { width: 13%; }
+.th-ce-estado { width: 17%; }
+.th-ce-valor { width: 10%; }
+.th-ce-actions { width: 68px; }
+
 .modern-table th {
   background: var(--gray-50);
-  padding: 0.6rem 1rem;
+  padding: 0.6rem 0.65rem;
   text-align: left;
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -148,11 +162,51 @@
 }
 
 .modern-table td {
-  padding: 0.55rem 1rem;
+  padding: 0.55rem 0.65rem;
   border-bottom: 1px solid var(--gray-100);
   color: var(--gray-600);
   font-size: 0.85rem;
   vertical-align: middle;
+  overflow: hidden;
+}
+
+.ce-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0; /* fuerza a respetar el ancho de la columna con table-layout:fixed */
+}
+
+.ce-note-flag {
+  margin-left: 0.4rem;
+  color: var(--gray-400);
+  font-size: 0.72rem;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.ce-confirm-btn {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  transition: all 0.15s ease;
+}
+
+.ce-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
 }
 
 .table-row-hover:hover {
@@ -204,7 +258,14 @@
 .method-cell {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.method-cell .ce-ellipsis {
+  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .payment-icon-wrapper {
@@ -215,6 +276,7 @@
   align-items: center;
   justify-content: center;
   font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .payment-icon-wrapper.cash {
@@ -738,6 +800,11 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
+.lottus-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* Facturas List (Comprobantes de Egreso) */
 .lottus-facturas-list {
   display: flex;
@@ -1106,43 +1173,26 @@
 /* ==========================================================================
    Expandable CE Rows — Desktop
    ========================================================================== */
-.ce-expand-cell {
-  width: 36px;
-  text-align: center;
-  padding: 0 !important;
-}
-
-.ce-expand-btn {
+/* Botón de expandir fila — mismo patrón que Remisiones/Facturas/Órdenes */
+.action-btn {
   background: transparent;
   border: none;
-  color: var(--gray-400);
-  cursor: pointer;
-  padding: 0.3rem;
+  color: var(--text-muted);
+  padding: 0.4rem;
   border-radius: 6px;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  font-size: 0.75rem;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 
-.ce-expand-btn:hover {
-  background: var(--gray-100);
-  color: var(--gray-700);
-}
-
-.ce-expand-btn.open {
+.action-btn:hover {
+  background: var(--gray-200);
   color: var(--accent);
-  transform: rotate(180deg);
-}
-
-.ce-expand-placeholder {
-  color: var(--gray-300);
-  font-size: 0.7rem;
 }
 
 .ce-row-expanded {
-  background: var(--gray-50) !important;
+  background-color: var(--accent-soft) !important;
 }
 
 .ce-row-expanded td {
@@ -1150,87 +1200,120 @@
 }
 
 .ce-expanded-row td {
-  background: transparent !important;
+  padding: 0 !important;
+  background: var(--surface-muted) !important;
   border-bottom: 1px solid var(--gray-200) !important;
 }
 
-.ce-expanded-panel {
-  background: var(--gray-50);
-  border-top: 1px dashed var(--gray-200);
-  padding: 0.75rem 1.25rem 1rem;
-  animation: ceSlideDown 0.2s ease-out;
+/* Panel expandido: mismo patrón de 2 columnas usado en Remisiones/Telas */
+.ce-expanded-wrapper {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 2fr;
+  gap: 1.5rem;
+  padding: 1.25rem 1.75rem 1.5rem;
+  background: var(--surface-muted);
+  border-left: 3px solid var(--accent);
+  animation: ceSlideDown 0.2s ease;
 }
 
 @keyframes ceSlideDown {
-  from {
-    opacity: 0;
-    max-height: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    max-height: 600px;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.ce-expanded-header {
+.ce-det-panel {
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-md);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.ce-det-panel-wide {
+  overflow: hidden;
+}
+
+.ce-det-titulo {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+  margin: 0 0 0.75rem;
+}
+
+.ce-det-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 1.5rem;
+}
+
+.ce-det-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.6rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-.ce-expanded-title {
-  font-size: 0.82rem;
+.ce-det-item-full {
+  grid-column: 1 / -1;
+}
+
+.ce-det-label {
+  font-size: 0.65rem;
   font-weight: 700;
-  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
 }
 
-.ce-expanded-recibido {
-  font-size: 0.78rem;
-  color: var(--gray-500);
+.ce-det-valor {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gray-800);
 }
 
-.ce-expanded-recibido strong {
-  color: var(--gray-700);
+.ce-det-empty-val {
+  color: var(--gray-400);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.ce-det-empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
 }
 
 /* Sub-table: facturas inside expanded CE */
 .ce-facturas-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.ce-facturas-table thead tr {
-  background: var(--gray-100);
 }
 
 .ce-facturas-table thead th {
-  padding: 0.45rem 0.65rem;
-  font-size: 0.72rem;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--gray-600);
-  border-bottom: 1px solid var(--gray-200);
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1.5px solid var(--gray-200);
+  background: var(--surface-muted);
   white-space: nowrap;
 }
 
 .ce-facturas-table tbody td {
-  padding: 0.45rem 0.65rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
   border-bottom: 1px solid var(--gray-100);
-  color: var(--gray-800);
+  color: var(--gray-700);
+  background: var(--surface);
 }
 
 .ce-factura-row:hover td {
-  background: rgba(37, 99, 235, 0.03);
+  background: var(--surface-muted);
 }
 
 .ce-factura-estado {
@@ -1275,8 +1358,9 @@
 .ce-producto-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 0.2rem 0.5rem;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
   font-size: 0.75rem;
   border-radius: 4px;
 }
@@ -1285,9 +1369,35 @@
   background: var(--gray-50);
 }
 
+.ce-producto-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ce-producto-cant {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 0.68rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  margin-right: 0.35rem;
+}
+
 .ce-producto-nombre {
   color: var(--gray-700);
   font-weight: 500;
+}
+
+.ce-producto-cat {
+  color: var(--gray-400);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .ce-producto-costo {
@@ -1295,6 +1405,8 @@
   font-weight: 600;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.73rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -1341,6 +1453,16 @@
   flex-direction: column;
   gap: 0.5rem;
   animation: ceSlideDown 0.2s ease-out;
+}
+
+.ce-mobile-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
 }
 
 .ce-mobile-factura {

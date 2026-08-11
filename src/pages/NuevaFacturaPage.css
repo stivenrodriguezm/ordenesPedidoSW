@@ -399,16 +399,25 @@
     margin-bottom: 0.65rem;
 }
 
+.nf-ref-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.65rem;
+    margin-bottom: 0.65rem;
+}
+
 @media (max-width: 992px) {
     .nf-ref-grid-4,
-    .nf-ref-grid-3 {
+    .nf-ref-grid-3,
+    .nf-ref-grid-5 {
         grid-template-columns: 1fr 1fr;
     }
 }
 
 @media (max-width: 640px) {
     .nf-ref-grid-4,
-    .nf-ref-grid-3 {
+    .nf-ref-grid-3,
+    .nf-ref-grid-5 {
         grid-template-columns: 1fr;
     }
 }

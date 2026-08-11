@@ -275,9 +275,20 @@ const OrdenesPage = () => {
   }, [filteredOrdenes, vendedores]);
 
   useEffect(() => {
-    if (vendedoresActivos.length > 0 && !hasInitializedVendedores) {
+    if (vendedoresActivos.length === 0) return;
+    if (!hasInitializedVendedores) {
       setSelectedVendedores(vendedoresActivos.map(v => v.id));
       setHasInitializedVendedores(true);
+    } else {
+      // Depura ids que ya no están activos (p. ej. al cambiar otro filtro y que un
+      // vendedor deje de tener resultados) — si no, el botón Todos/Ninguno queda
+      // desincronizado porque selectedVendedores sigue siendo más grande que la
+      // lista de checkboxes realmente mostrada.
+      setSelectedVendedores(prev => {
+        const activeIds = new Set(vendedoresActivos.map(v => v.id));
+        const pruned = prev.filter(id => activeIds.has(id));
+        return pruned.length === prev.length ? prev : pruned;
+      });
     }
   }, [vendedoresActivos, hasInitializedVendedores]);
 
@@ -455,7 +466,7 @@ const OrdenesPage = () => {
         'O.P.': orden.id,
         'Proveedor': orden.proveedor_nombre,
         'Vendedor': orden.vendedor,
-        'Venta': orden.venta || orden.orden_venta,
+        'Venta': orden.venta || orden.orden_venta || (orden.es_feria_hogar ? 'Feria del Hogar' : ''),
         'F. Pedido': formatDate(orden.fecha_pedido),
         'F. Llegada': formatDate(orden.fecha_esperada),
         'Tela': orden.tela,
@@ -690,7 +701,7 @@ const OrdenesPage = () => {
                       <td className="td-op"><strong>#{orden.id}</strong></td>
                       <td className="td-proveedor">{orden.proveedor_nombre}</td>
                       <td className="td-vendedor">{orden.vendedor}</td>
-                      <td className="td-venta">{orden.venta || orden.orden_venta}</td>
+                      <td className="td-venta">{orden.venta || orden.orden_venta || (orden.es_feria_hogar ? 'FH' : '')}</td>
                       <td className="td-fecha-pedido">{formatDate(orden.fecha_pedido)}</td>
                       <td className="td-fecha-llegada">{formatDate(orden.fecha_esperada)}</td>
                       <td className="td-tela"><Badge tone={telaTone(orden.tela)}>{orden.tela}</Badge></td>
@@ -752,7 +763,7 @@ const OrdenesPage = () => {
                                   </div>
                                   <div className="info-item">
                                     <span className="label">O.C. / Venta:</span>
-                                    <span className="value font-mono">{orden.venta || orden.orden_venta || '—'}</span>
+                                    <span className="value font-mono">{orden.venta || orden.orden_venta || (orden.es_feria_hogar ? 'FH' : '—')}</span>
                                   </div>
                                   <div className="info-item">
                                     <span className="label">Fecha Pedido:</span>
@@ -932,7 +943,7 @@ const OrdenesPage = () => {
                       <div className="mobile-expanded-content">
                         <div className="orden-card">
                           <h4>Información</h4>
-                          <p><strong>Venta:</strong> {orden.venta || orden.orden_venta || '—'}</p>
+                          <p><strong>Venta:</strong> {orden.venta || orden.orden_venta || (orden.es_feria_hogar ? 'FH' : '—')}</p>
                           <p><strong>Observación:</strong> {orden.observacion || 'Ninguna'}</p>
                           {hasPermission('VER_COSTOS_ORDEN') && (
                             <p><strong>Costo:</strong> <span className="font-mono text-primary">{formatNumber(orden.costo)}</span></p>

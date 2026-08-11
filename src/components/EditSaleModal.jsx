@@ -18,6 +18,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     vendedores_compartidos: [],
     traslado: false,
     sede: 'Lottus 1',
+    es_feria_hogar: false,
     valor_total: '',
     estado: '',
     estado_pedidos: false,
@@ -33,7 +34,8 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         vendedor_id: saleData.vendedor || '',
         vendedores_compartidos: saleData.vendedores_compartidos || [],
         traslado: saleData.traslado || false,
-        sede: saleData.sede || 'Lottus 1',
+        sede: saleData.sede || '',
+        es_feria_hogar: saleData.es_feria_hogar || false,
         valor_total: Number.isFinite(Number(saleData.valor_total)) ? Number(saleData.valor_total) : 0,
         estado: saleData.estado,
         estado_pedidos: saleData.estado_pedidos,
@@ -78,7 +80,8 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         vendedor: formData.vendedor_id,
         vendedores_compartidos: formData.vendedores_compartidos,
         traslado: formData.traslado,
-        sede: formData.sede,
+        sede: formData.es_feria_hogar ? null : (formData.sede || null),
+        es_feria_hogar: formData.es_feria_hogar,
         valor_total: parseFloat(formData.valor_total),
         estado: formData.estado,
         estado_pedidos: formData.estado_pedidos,
@@ -137,10 +140,17 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
         <div className="form-group">
           <label>Sede:</label>
-          <select name="sede" value={formData.sede} onChange={handleChange} disabled={isFieldsDisabled}>
-            <option value="Lottus 1">Lottus 1</option>
-            <option value="Lottus 2">Lottus 2</option>
-          </select>
+          {formData.es_feria_hogar ? (
+            <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem', color: '#78716c', background: '#f5f5f4', borderRadius: '6px' }}>
+              No aplica — venta de Feria del Hogar
+            </div>
+          ) : (
+            <select name="sede" value={formData.sede} onChange={handleChange} disabled={isFieldsDisabled}>
+              <option value="" disabled>Seleccione una sede</option>
+              <option value="Lottus 1">Lottus 1</option>
+              <option value="Lottus 2">Lottus 2</option>
+            </select>
+          )}
         </div>
         <div className="form-group">
           <label>Vendedor Principal:</label>
@@ -194,6 +204,10 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         <div className="form-group checkbox-inline">
           <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isFieldsDisabled} />
           <label htmlFor="traslado">¿Incluye Traslado?</label>
+        </div>
+        <div className="form-group checkbox-inline">
+          <input type="checkbox" id="es_feria_hogar" name="es_feria_hogar" checked={formData.es_feria_hogar} onChange={handleChange} disabled={isFieldsDisabled} />
+          <label htmlFor="es_feria_hogar">¿Venta de Feria del Hogar?</label>
         </div>
         <div className="form-group">
           <label>Estado de Pedidos:</label>

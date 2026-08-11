@@ -44,6 +44,7 @@ const NuevaVenta = () => {
     vendedores_compartidos: [],
     traslado: false,
     sede: '',
+    es_feria_hogar: false,
     fecha_venta: '',
     fecha_entrega: '',
     valor_total: ''
@@ -214,7 +215,8 @@ const NuevaVenta = () => {
         id_vendedor: ventaData.id_vendedor,
         vendedores_compartidos: ventaData.vendedores_compartidos,
         traslado: ventaData.traslado,
-        sede: ventaData.sede,
+        sede: ventaData.es_feria_hogar ? null : ventaData.sede,
+        es_feria_hogar: ventaData.es_feria_hogar,
         fecha_venta: ventaData.fecha_venta,
         fecha_entrega: ventaData.fecha_entrega || null,
         valor_total: parseFloat(ventaData.valor_total.toString().replace(/\D/g, ''))
@@ -533,16 +535,22 @@ const NuevaVenta = () => {
             </div>
             <div className="nv-form-group">
               <label>Sede:</label>
-              <select
-                name="sede"
-                value={ventaData.sede}
-                onChange={handleVentaChange}
-                required
-              >
-                <option value="" disabled>Seleccione una sede</option>
-                <option value="Lottus 1">Lottus 1</option>
-                <option value="Lottus 2">Lottus 2</option>
-              </select>
+              {ventaData.es_feria_hogar ? (
+                <div className="nv-feria-sede-note" style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem', color: '#78716c', background: '#f5f5f4', borderRadius: '6px' }}>
+                  No aplica — venta de Feria del Hogar
+                </div>
+              ) : (
+                <select
+                  name="sede"
+                  value={ventaData.sede}
+                  onChange={handleVentaChange}
+                  required
+                >
+                  <option value="" disabled>Seleccione una sede</option>
+                  <option value="Lottus 1">Lottus 1</option>
+                  <option value="Lottus 2">Lottus 2</option>
+                </select>
+              )}
             </div>
             <div className="nv-form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
               <input
@@ -553,6 +561,16 @@ const NuevaVenta = () => {
                 onChange={(e) => setVentaData(prev => ({...prev, traslado: e.target.checked}))}
               />
               <label htmlFor="traslado" style={{marginBottom: 0}}>¿Incluye Traslado?</label>
+            </div>
+            <div className="nv-form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
+              <input
+                type="checkbox"
+                name="es_feria_hogar"
+                id="es_feria_hogar"
+                checked={ventaData.es_feria_hogar}
+                onChange={(e) => setVentaData(prev => ({...prev, es_feria_hogar: e.target.checked}))}
+              />
+              <label htmlFor="es_feria_hogar" style={{marginBottom: 0}}>¿Venta de Feria del Hogar?</label>
             </div>
               </div>
               <div className="column">

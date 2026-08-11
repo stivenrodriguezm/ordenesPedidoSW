@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
 import useDebounce from '../hooks/useDebounce';
 import './ComprobantesEgreso.css';
 import './VentasImprovements.css';
 import API from '../services/api';
-import { getTodayStr } from '../utils/dates';
+import { groupProductos } from '../utils/groupProductos';
 import {
   FaFileExport,
   FaPlus,
@@ -24,10 +23,13 @@ import {
   FaChevronUp,
   FaBoxOpen,
   FaTimes,
-  FaCheckCircle
+  FaCheckCircle,
+  FaPrint,
+  FaStickyNote
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
+import ComprobanteEgresoPrintModal from '../components/ComprobanteEgresoPrintModal';
 import { PageHeader, Button } from '../components/ui';
 
 import { formatCOP } from '../utils/formatCOP';
@@ -41,781 +43,9 @@ const PaymentIcon = ({ method }) => {
   return <div className="payment-icon-wrapper other"><FaCreditCard /></div>;
 };
 
-const CreateCEModal = ({ isOpen, onClose, onSave, mediosPago, proveedores, isLoading }) => {
-  const todayStr = getTodayStr();
-
-  const [newCE, setNewCE] = useState({ id: '', fecha: todayStr, medio_pago: '', proveedor: '', recibido_por: '', valor: '', descripcion: '', concepto: '' });
-  const [motivoOtro, setMotivoOtro] = useState('');
-  const [tipoConcepto, setTipoConcepto] = useState('facturas'); // 'facturas' | 'otro'
-  const [facturasDisponibles, setFacturasDisponibles] = useState([]);
-  const [facturasSeleccionadas, setFacturasSeleccionadas] = useState([]);
-  const [facturasSinDescuento, setFacturasSinDescuento] = useState([]);
-  const [expandedFacturaIds, setExpandedFacturaIds] = useState([]);
-  const [loadingFacturas, setLoadingFacturas] = useState(false);
-  const [porcentajeDescuento, setPorcentajeDescuento] = useState(0);
-  const [savedData, setSavedData] = useState(null);
-  const pdfRef = useRef(null);
-
-  const [saldoCaja, setSaldoCaja] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setNewCE({ id: '', fecha: todayStr, medio_pago: '', proveedor: '', recibido_por: '', valor: '', descripcion: '', concepto: '' });
-      setMotivoOtro('');
-      setTipoConcepto('facturas');
-      setFacturasDisponibles([]);
-      setFacturasSeleccionadas([]);
-      setFacturasSinDescuento([]);
-      setExpandedFacturaIds([]);
-      setPorcentajeDescuento(0);
-      setSavedData(null);
-      API.get('/caja/')
-        .then(res => {
-          if (res.data?.stats?.saldo_actual !== undefined) {
-            setSaldoCaja(res.data.stats.saldo_actual);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isOpen]);
-
-  // Auto-load discount % and persona que recibe from proveedor when proveedor changes
-  useEffect(() => {
-    if (newCE.proveedor && Array.isArray(proveedores)) {
-      const prov = proveedores.find(p => String(p.id) === String(newCE.proveedor));
-      if (prov) {
-        if (prov.porcentaje_descuento != null) {
-          setPorcentajeDescuento(parseFloat(prov.porcentaje_descuento) || 0);
-        } else {
-          setPorcentajeDescuento(0);
-        }
-        if (prov.nombre_encargado && prov.nombre_encargado !== 'N/A') {
-          setNewCE(c => ({ ...c, recibido_por: prov.nombre_encargado }));
-        }
-      }
-    }
-  }, [newCE.proveedor, proveedores]);
-
-  // Load facturas when proveedor changes (only in 'facturas' mode)
-  useEffect(() => {
-    if (tipoConcepto === 'facturas' && newCE.proveedor) {
-      setLoadingFacturas(true);
-      setFacturasSeleccionadas([]);
-      setFacturasSinDescuento([]);
-      setExpandedFacturaIds([]);
-      API.get('/suministros/facturas/', { params: { proveedor: newCE.proveedor, estado: 'pendiente', page_size: 100, full: 'true' } })
-        .then(res => {
-          const all = res.data.results || res.data;
-          if (Array.isArray(all)) {
-            const sorted = [...all].sort((a, b) => {
-              const dateA = a.fecha_pago || a.fecha_factura || '9999-12-31';
-              const dateB = b.fecha_pago || b.fecha_factura || '9999-12-31';
-              return dateA.localeCompare(dateB);
-            });
-            setFacturasDisponibles(sorted);
-          } else {
-            setFacturasDisponibles([]);
-          }
-        })
-        .catch(() => setFacturasDisponibles([]))
-        .finally(() => setLoadingFacturas(false));
-    } else {
-      setFacturasDisponibles([]);
-      setFacturasSeleccionadas([]);
-      setFacturasSinDescuento([]);
-      setExpandedFacturaIds([]);
-    }
-  }, [newCE.proveedor, tipoConcepto]);
-
-  // Auto-update Valor Bruto when tipoConcepto === 'facturas'
-  useEffect(() => {
-    if (tipoConcepto === 'facturas') {
-      const totalFacturas = facturasSeleccionadas.reduce((sum, fId) => {
-        const fact = facturasDisponibles.find(f => f.id === fId);
-        return sum + (fact ? (parseFloat(fact.valor) || 0) : 0);
-      }, 0);
-      setNewCE(c => ({ ...c, valor: String(Math.round(totalFacturas)) }));
-    }
-  }, [facturasSeleccionadas, facturasDisponibles, tipoConcepto]);
-
-  const handleChange = (e) => setNewCE({ ...newCE, [e.target.name]: e.target.value });
-  const handleValorChange = (e) => {
-    if (tipoConcepto === 'facturas') return; // Read-only in facturas mode
-    const raw = e.target.value.replace(/[^0-9]/g, '');
-    setNewCE({ ...newCE, valor: raw });
-  };
-
-  const toggleFactura = (id) => {
-    setFacturasSeleccionadas(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const toggleDescuentoFactura = (e, id) => {
-    e.stopPropagation();
-    setFacturasSinDescuento(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const toggleExpandFactura = (e, id) => {
-    e.stopPropagation();
-    setExpandedFacturaIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const numericVal = parseInt(newCE.valor) || 0;
-
-  const descuentoMonto = useMemo(() => {
-    if (tipoConcepto === 'facturas') {
-      return facturasSeleccionadas.reduce((sum, fId) => {
-        if (facturasSinDescuento.includes(fId)) return sum;
-        const fact = facturasDisponibles.find(f => f.id === fId);
-        if (!fact) return sum;
-        const valFact = parseFloat(fact.valor) || 0;
-        return sum + Math.round(valFact * (porcentajeDescuento / 100));
-      }, 0);
-    } else {
-      return Math.round(numericVal * (porcentajeDescuento / 100));
-    }
-  }, [tipoConcepto, facturasSeleccionadas, facturasSinDescuento, facturasDisponibles, porcentajeDescuento, numericVal]);
-
-  const valorFinal = numericVal - descuentoMonto;
-
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsGeneratingPDF(true);
-
-    const payload = { ...newCE, valor: String(valorFinal) };
-    if (tipoConcepto === 'facturas' && facturasSeleccionadas.length > 0) {
-      payload.facturas_ids = facturasSeleccionadas;
-      delete payload.concepto;
-    }
-    if (payload.medio_pago === 'Otro' && motivoOtro) {
-      payload.descripcion = `(Medio de pago: ${motivoOtro}) ${payload.descripcion || ''}`.trim();
-    }
-    
-    const provObj = Array.isArray(proveedores) ? proveedores.find(p => String(p.id) === String(newCE.proveedor)) : null;
-    const facturasInfo = facturasSeleccionadas.map(id => facturasDisponibles.find(f => f.id === id)).filter(Boolean);
-
-    const pdfData = {
-      ...payload,
-      id: newCE.id || 'N/A',
-      fecha: newCE.fecha || todayStr,
-      proveedor_nombre: provObj?.nombre_empresa || 'Proveedor',
-      proveedor_nit: provObj?.nit || provObj?.cedula || '',
-      recibido_por: newCE.recibido_por || provObj?.nombre_encargado || provObj?.nombre_empresa || '',
-      facturas_info: facturasInfo,
-      bruto: numericVal,
-      descuento_pct: parseFloat(porcentajeDescuento) || 0,
-      descuento_monto: descuentoMonto,
-      valor_final: valorFinal,
-      concepto: payload.concepto || (tipoConcepto === 'facturas' && facturasInfo.length > 0
-        ? `Pago fact. ${facturasInfo.map(f => f.id_manual || f.id).join(', ')}`
-        : 'Pago a proveedor'),
-    };
-
-    try {
-      // 1. Post to API
-      const createdRes = await onSave(payload);
-      const createdId = createdRes?.id || newCE.id || 'N/A';
-      pdfData.id = createdId;
-      pdfData.estado = createdRes?.estado || (pdfData.medio_pago === 'Efectivo' ? 'Pagado' : 'Por Confirmar Pago');
-
-      // 2. Set saved data & render PDF template
-      setSavedData(pdfData);
-      await new Promise(r => setTimeout(r, 150));
-
-      if (pdfRef.current) {
-        pdfRef.current.style.display = 'block';
-        await new Promise(r => setTimeout(r, 250));
-
-        const { default: html2canvas } = await import('html2canvas');
-        const canvas = await html2canvas(pdfRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          useCORS: true,
-          logging: false,
-        });
-        pdfRef.current.style.display = 'none';
-
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = await import('jspdf');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-        
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const canvasAspect = canvas.height / canvas.width;
-        const imgW = pageW;
-        const imgH = imgW * canvasAspect;
-
-        pdf.addImage(imgData, 'PNG', 0, 0, imgW, Math.min(imgH, pageH));
-        pdf.save(`Comprobante_Egreso_CE_${createdId}.pdf`);
-      }
-
-      onClose();
-    } catch (err) {
-      console.error('Error procesando comprobante o PDF:', err);
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  const fmt = (v) => v ? formatCOP(v) : '$0';
-
-  const conceptoPreview = tipoConcepto === 'facturas' && facturasSeleccionadas.length > 0
-    ? `Pago fact. ${facturasSeleccionadas.map(id => facturasDisponibles.find(f => f.id === id)?.id_manual || id).join(', ')}`
-    : null;
-
-  const formatDateShort = (str) => {
-    if (!str) return '—';
-    const [y, m, d] = str.split('-');
-    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    return `${parseInt(d)}-${months[parseInt(m)-1]}-${y}`;
-  };
-
-  if (!isOpen) return null;
-
-  return createPortal(
-    <>
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
-          {/* Header */}
-          <div className="lottus-modal-header">
-            <div className="lottus-modal-title-wrap">
-              <div className="lottus-modal-icon-badge">
-                <FaArrowDown />
-              </div>
-              <div>
-                <div className="lottus-modal-type-badge">
-                  <span className="lottus-badge-dot"></span> Comprobante de Egreso
-                </div>
-                <h3 className="lottus-modal-title">Nuevo Comprobante de Egreso</h3>
-                <p className="lottus-modal-subtitle">Registra los datos generales de la salida de dinero.</p>
-              </div>
-            </div>
-            <button className="lottus-close-btn" onClick={onClose} type="button" title="Cerrar">×</button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="lottus-modal-form">
-            {/* Row 1: ID + Fecha */}
-            <div className="lottus-form-row">
-              <div className="lottus-form-group">
-                <label>No. Comprobante <span className="lottus-req">*</span></label>
-                <input type="text" name="id" value={newCE.id} onChange={handleChange} required placeholder="Ej: CE-001" className="lottus-input" />
-              </div>
-              <div className="lottus-form-group">
-                <label>Fecha <span className="lottus-req">*</span></label>
-                <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha" value={newCE.fecha} onChange={handleChange} required className="lottus-input" />
-              </div>
-            </div>
-
-            {/* Proveedor & Recibido por */}
-            <div className="lottus-form-row">
-              <div className="lottus-form-group">
-                <label>Proveedor <span className="lottus-req">*</span></label>
-                <select name="proveedor" value={newCE.proveedor} onChange={handleChange} required className="lottus-select">
-                  <option value="">Seleccionar Proveedor...</option>
-                  {Array.isArray(proveedores) && proveedores.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="lottus-form-group">
-                <label>Recibido por (Persona que recibe) <span className="lottus-req">*</span></label>
-                <input
-                  type="text"
-                  name="recibido_por"
-                  value={newCE.recibido_por}
-                  onChange={handleChange}
-                  required
-                  placeholder="Nombre de quien recibe el dinero..."
-                  className="lottus-input"
-                />
-              </div>
-            </div>
-
-            {/* Row 2: Medio de Pago + Valor + Descuento */}
-            <div className="lottus-form-row">
-              <div className="lottus-form-group">
-                <label>Medio de Pago <span className="lottus-req">*</span></label>
-                <select name="medio_pago" value={newCE.medio_pago} onChange={handleChange} required className="lottus-select">
-                  <option value="">Seleccionar...</option>
-                  {mediosPago.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
-              
-              {newCE.medio_pago === 'Otro' && (
-                <div className="lottus-form-group">
-                  <label>Especificar Medio <span className="lottus-req">*</span></label>
-                  <input 
-                    type="text" 
-                    value={motivoOtro} 
-                    onChange={(e) => setMotivoOtro(e.target.value)} 
-                    required 
-                    placeholder="Ej: Tarjeta Crédito" 
-                    className="lottus-input" 
-                  />
-                </div>
-              )}
-
-              <div className="lottus-form-group">
-                <div className="lottus-label-flex">
-                  <label>Valor Bruto <span className="lottus-req">*</span></label>
-                  {numericVal > 0 && <span className="lottus-val-preview">{formatCOP(numericVal)}</span>}
-                </div>
-                <div className="lottus-input-icon">
-                  <span className="lottus-prefix">$</span>
-                  <input 
-                    type="text" 
-                    name="valor" 
-                    value={newCE.valor ? formatCOP(numericVal).replace('$', '').trim() : ''} 
-                    onChange={handleValorChange} 
-                    readOnly={tipoConcepto === 'facturas'}
-                    required 
-                    placeholder="0" 
-                    className={`lottus-input lottus-input-pl ${tipoConcepto === 'facturas' ? 'lottus-input-readonly' : ''}`}
-                    title={tipoConcepto === 'facturas' ? "El valor bruto se suma automáticamente de las facturas seleccionadas" : ""}
-                  />
-                </div>
-                {tipoConcepto === 'facturas' && (
-                  <span className="lottus-hint" style={{ fontSize: '0.72rem', marginTop: '0.25rem', color: 'var(--info)' }}>
-                    ⚡ Automático según facturas seleccionadas
-                  </span>
-                )}
-              </div>
-
-              <div className="lottus-form-group" style={{ position: 'relative' }}>
-                <label>% Descuento Global</label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    step="0.01"
-                    placeholder="0"
-                    value={porcentajeDescuento === 0 || porcentajeDescuento === '0' ? '' : porcentajeDescuento} 
-                    onChange={e => setPorcentajeDescuento(e.target.value)} 
-                    onBlur={() => {
-                      if (porcentajeDescuento === '' || isNaN(parseFloat(porcentajeDescuento))) {
-                        setPorcentajeDescuento(0);
-                      }
-                    }}
-                    className="lottus-input" 
-                    style={{ paddingRight: '2.2rem' }}
-                  />
-                  <span style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '0.85rem', pointerEvents: 'none' }}>%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Value summary if discount applied */}
-            {descuentoMonto > 0 && numericVal > 0 && (
-              <div className="lottus-descuento-summary">
-                <div className="lottus-descuento-row">
-                  <span>Valor bruto total:</span>
-                  <span>{formatCOP(numericVal)}</span>
-                </div>
-                <div className="lottus-descuento-row descuento">
-                  <span>Descuento total aplicado:</span>
-                  <span>-{formatCOP(descuentoMonto)}</span>
-                </div>
-                <div className="lottus-descuento-row total">
-                  <span><strong>Valor final a pagar:</strong></span>
-                  <span><strong>{formatCOP(valorFinal)}</strong></span>
-                </div>
-              </div>
-            )}
-
-            {/* Tipo Concepto Toggle */}
-            <div className="lottus-form-group full">
-              <label>Tipo de Concepto</label>
-              <div className="lottus-toggle-row">
-                <button
-                  type="button"
-                  className={`lottus-toggle-btn ${tipoConcepto === 'facturas' ? 'active' : ''}`}
-                  onClick={() => setTipoConcepto('facturas')}
-                >
-                  📄 Pagar Facturas
-                </button>
-                <button
-                  type="button"
-                  className={`lottus-toggle-btn ${tipoConcepto === 'otro' ? 'active' : ''}`}
-                  onClick={() => setTipoConcepto('otro')}
-                >
-                  ✏️ Otro Concepto
-                </button>
-              </div>
-            </div>
-
-            {/* Facturas Section */}
-            {tipoConcepto === 'facturas' && (
-              <div className="lottus-form-group full">
-                <label>Facturas Pendientes {newCE.proveedor ? '' : <span className="lottus-hint">(elige proveedor primero)</span>}</label>
-                {!newCE.proveedor ? (
-                  <div className="lottus-facturas-empty">Selecciona un proveedor para ver sus facturas pendientes.</div>
-                ) : loadingFacturas ? (
-                  <div className="lottus-facturas-empty">Cargando facturas del proveedor...</div>
-                ) : facturasDisponibles.length === 0 ? (
-                  <div className="lottus-facturas-empty">No hay facturas pendientes para este proveedor.</div>
-                ) : (
-                  <div className="lottus-facturas-list">
-                    {facturasDisponibles.map(f => {
-                      const isSelected = facturasSeleccionadas.includes(f.id);
-                      const isDescuentoDisabled = facturasSinDescuento.includes(f.id);
-                      const isExpanded = expandedFacturaIds.includes(f.id);
-                      const items = f.items_inventario || f.detalles || [];
-                      const factVal = parseFloat(f.valor) || 0;
-                      const pctDcto = parseFloat(porcentajeDescuento) || 0;
-                      const factDcto = isDescuentoDisabled ? 0 : Math.round(factVal * (pctDcto / 100));
-
-                      return (
-                        <div
-                          key={f.id}
-                          className={`lottus-factura-card ${isSelected ? 'selected' : ''}`}
-                          style={{
-                            flexShrink: 0,
-                            border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                            borderRadius: '6px',
-                            padding: '6px 10px',
-                            marginBottom: '5px',
-                            background: isSelected ? '#f8fafc' : '#ffffff',
-                            boxShadow: isSelected ? '0 1px 3px rgba(37,99,235,0.08)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {/* Header Row */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1, minWidth: 0 }}>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleFactura(f.id)}
-                                style={{ width: '15px', height: '15px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0 }}
-                              />
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '700', fontSize: '0.83rem', color: '#0f172a' }}>
-                                    Factura #{f.id_manual || f.id}
-                                  </span>
-                                  {f.observaciones && (
-                                    <span style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }} title={f.observaciones}>
-                                      📝 {f.observaciones}
-                                    </span>
-                                  )}
-                                </div>
-                                {/* Dates: Subtle gray text */}
-                                <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {f.fecha_factura && <span>Factura: {formatDateShort(f.fecha_factura)}</span>}
-                                  {f.fecha_factura && f.fecha_pago && <span style={{ color: '#cbd5e1' }}>•</span>}
-                                  {f.fecha_pago && <span style={{ fontWeight: '600', color: '#0284c7' }}>Vence: {formatDateShort(f.fecha_pago)}</span>}
-                                </div>
-                              </div>
-                            </label>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-                              <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#0f172a' }}>
-                                {fmt(f.valor)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Actions Row: Discount Exemption + Ver Productos */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
-                            <div>
-                              {isSelected && pctDcto > 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleDescuentoFactura(e, f.id)}
-                                  style={{
-                                    background: isDescuentoDisabled ? '#fff1f2' : '#f0fdf4',
-                                    color: isDescuentoDisabled ? '#e11d48' : '#16a34a',
-                                    border: `1px solid ${isDescuentoDisabled ? '#fda4af' : '#86efac'}`,
-                                    borderRadius: '4px',
-                                    padding: '2px 8px',
-                                    fontSize: '0.73rem',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                  }}
-                                  title={isDescuentoDisabled ? "Clic para aplicar el descuento a esta factura" : "Clic para eximir esta factura del descuento"}
-                                >
-                                  {isDescuentoDisabled ? '🚫 Exenta de Descuento' : `✓ Descuento Aplicado (${pctDcto}%)`}
-                                </button>
-                              ) : (
-                                <span style={{ fontSize: '0.73rem', color: '#94a3b8' }}>
-                                  {isSelected ? 'Sin descuento global' : 'Selecciona para pagar'}
-                                </span>
-                              )}
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleExpandFactura(e, f.id); }}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#2563eb',
-                                fontSize: '0.75rem',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <span>{isExpanded ? 'Ocultar productos ▲' : `Ver productos (${items.length}) ▼`}</span>
-                            </button>
-                          </div>
-
-                          {/* Expanded products content */}
-                          {isExpanded && (
-                            <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                              {items.length === 0 ? (
-                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '4px' }}>
-                                  No hay ítems registrados en esta factura.
-                                </div>
-                              ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <div style={{ fontSize: '0.73rem', fontWeight: '600', color: '#475569', marginBottom: '2px' }}>
-                                    Productos recibidos:
-                                  </div>
-                                  {items.map((item, idx) => (
-                                    <div key={item.id || idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', padding: '3px 0', borderBottom: idx < items.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
-                                      <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                                        {item.referencia_nombre || item.referencia || item.descripcion || 'Producto'}
-                                        {item.variacion ? ` (${item.variacion})` : ''}
-                                      </span>
-                                      <span style={{ color: '#475569' }}>
-                                        {item.cantidad} {item.unidad_medida || 'und'} x {fmt(item.costo_especifico || item.costo || item.costo_unitario)} = <strong>{fmt((item.cantidad || 1) * (parseFloat(item.costo_especifico || item.costo || item.costo_unitario) || 0))}</strong>
-                                      </span>
-                                    </div>
-                                  ))}
-                                  {factDcto > 0 && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#16a34a', fontWeight: '600', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #dcfce7' }}>
-                                      <span>Descuento individual ({pctDcto}%):</span>
-                                      <span>-{fmt(factDcto)}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {conceptoPreview && (
-                  <div className="lottus-concepto-preview">
-                    <span>Concepto generado: </span><strong>{conceptoPreview}</strong>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Concepto libre */}
-            {tipoConcepto === 'otro' && (
-              <div className="lottus-form-group full">
-                <label>Concepto del Egreso <span className="lottus-req">*</span></label>
-                <input type="text" name="concepto" value={newCE.concepto} onChange={handleChange} required placeholder="Ej: Pago de servicios públicos, nómina..." className="lottus-input" />
-              </div>
-            )}
-
-            {/* Descripción */}
-            <div className="lottus-form-group full">
-              <label>Notas / Observaciones <span className="lottus-hint">(opcional)</span></label>
-              <textarea name="descripcion" value={newCE.descripcion} onChange={handleChange} placeholder="Detalles adicionales..." rows="2" className="lottus-input" />
-            </div>
-
-            {/* Warning when cash balance is insufficient */}
-            {(() => {
-              const isEfectivo = newCE.medio_pago?.toLowerCase() === 'efectivo';
-              const numericVal = parseFloat(newCE.valor) || 0;
-              const isExceedingCash = isEfectivo && saldoCaja !== null && numericVal > saldoCaja;
-              if (!isExceedingCash) return null;
-              return (
-                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span>⚠️</span>
-                  <span>Saldo insuficiente en caja de efectivo. Saldo disponible: {formatCOP(saldoCaja)}. Intenta egresar: {formatCOP(numericVal)}.</span>
-                </div>
-              );
-            })()}
-
-            {/* Footer Actions */}
-            <div className="lottus-modal-actions">
-              <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="lottus-btn-submit"
-                disabled={(() => {
-                  const isEfectivo = newCE.medio_pago?.toLowerCase() === 'efectivo';
-                  const numericVal = parseFloat(newCE.valor) || 0;
-                  const isExceedingCash = isEfectivo && saldoCaja !== null && numericVal > saldoCaja;
-                  return isLoading || !newCE.id || !newCE.proveedor || !newCE.medio_pago || numericVal <= 0 || isExceedingCash || !newCE.recibido_por?.trim();
-                })()}
-              >
-                {isLoading ? 'Guardando...' : 'Crear Comprobante'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Hidden PDF template for Letter print */}
-      {savedData && (
-        <div
-          ref={pdfRef}
-          style={{
-            display: 'none',
-            position: 'absolute',
-            top: '-9999px',
-            left: '-9999px',
-            width: '794px',
-            backgroundColor: '#ffffff',
-            padding: '40px 48px',
-            fontFamily: '"Segoe UI", Arial, sans-serif',
-            color: '#0f172a',
-            boxSizing: 'border-box',
-            borderRadius: '0'
-          }}
-        >
-          {/* Header Bar */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '16px', marginBottom: '24px', borderRadius: '0' }}>
-            {/* Logo LOTTUS - Audiowide Regular, explicit padding for html2canvas vertical centering */}
-            <div style={{ backgroundColor: '#000', padding: '6px 22px 14px 22px', display: 'inline-block', borderRadius: '0' }}>
-              <span style={{ color: '#ffffff', fontWeight: '400', fontSize: '22px', letterSpacing: '4px', fontFamily: '"Audiowide", cursive, sans-serif', textTransform: 'uppercase', lineHeight: '1', margin: 0, padding: 0, display: 'block' }}>
-                LOTTUS
-              </span>
-            </div>
-            
-            {/* Document Title */}
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '3px' }}>
-                COMPROBANTE DE EGRESO
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', letterSpacing: '0.5px' }}>
-                NO. CE-{savedData.id}
-              </div>
-              <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px', fontWeight: '600' }}>
-                FECHA: {formatDateShort(savedData.fecha)}
-              </div>
-            </div>
-          </div>
-
-          {/* General Metadata Box (Clean subtle grid) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid #cbd5e1', marginBottom: '22px', borderRadius: '0' }}>
-            <div style={{ padding: '12px 16px', borderRight: '1px solid #cbd5e1', borderRadius: '0' }}>
-              <div style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', color: '#64748b', letterSpacing: '1px', marginBottom: '4px' }}>
-                BENEFICIARIO / PROVEEDOR
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                {savedData.proveedor_nombre || 'N/A'}
-              </div>
-              {savedData.recibido_por && (
-                <div style={{ fontSize: '11px', color: '#475569', marginTop: '3px', fontWeight: '600' }}>
-                  Recibido por: {savedData.recibido_por}
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: '12px 16px', borderRadius: '0' }}>
-              <div style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', color: '#64748b', letterSpacing: '1px', marginBottom: '4px' }}>
-                MEDIO DE PAGO
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-                {savedData.medio_pago || 'Efectivo'}
-              </div>
-              <div style={{ fontSize: '11px', color: '#475569', fontWeight: '600', marginTop: '3px' }}>
-                Estado: Pagado
-              </div>
-            </div>
-          </div>
-
-          {/* Facturas Detail Table (if facturas payment) */}
-          {savedData.facturas_info && savedData.facturas_info.length > 0 && (
-            <div style={{ marginBottom: '22px', borderRadius: '0' }}>
-              <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px', color: '#475569' }}>
-                DETALLE DE FACTURAS PAGADAS
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '0' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#000000', color: '#ffffff', borderRadius: '0' }}>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase', borderRight: '1px solid #333333', color: '#ffffff' }}>No. Factura</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase', borderRight: '1px solid #333333', color: '#ffffff' }}>Fecha Emisión</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase', borderRight: '1px solid #333333', color: '#ffffff' }}>Fecha Vencimiento</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase', color: '#ffffff' }}>Valor Bruto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {savedData.facturas_info.map((f, i) => (
-                    <tr key={f.id || i} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', borderRight: '1px solid #e2e8f0' }}>Factura #{f.id_manual || f.id}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569', borderRight: '1px solid #e2e8f0' }}>{formatDateShort(f.fecha_factura)}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569', borderRight: '1px solid #e2e8f0' }}>{formatDateShort(f.fecha_pago)}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{fmt(f.valor)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Totals Summary Box (Clean, non-red discount) */}
-          <div style={{ marginLeft: 'auto', width: '290px', border: '1px solid #cbd5e1', marginBottom: '28px', borderRadius: '0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid #e2e8f0', fontSize: '12px' }}>
-              <span style={{ color: '#475569', fontWeight: '600' }}>VALOR BRUTO</span>
-              <span style={{ fontWeight: '700', color: '#0f172a' }}>{formatCOP(savedData.bruto)}</span>
-            </div>
-            {savedData.descuento_monto > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid #e2e8f0', fontSize: '12px' }}>
-                <span style={{ color: '#475569', fontWeight: '600' }}>DESCUENTO ({savedData.descuento_pct}%)</span>
-                <span style={{ fontWeight: '700', color: '#0f172a' }}>-{formatCOP(savedData.descuento_monto)}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#000000', color: '#ffffff', borderRadius: '0' }}>
-              <span style={{ fontSize: '12px', fontWeight: '800', letterSpacing: '0.5px', color: '#ffffff' }}>NETO A PAGAR</span>
-              <span style={{ fontSize: '14px', fontWeight: '900', color: '#ffffff' }}>{formatCOP(savedData.valor_final)}</span>
-            </div>
-          </div>
-
-          {/* Signature Area (Single Recipient signature box with generous height) */}
-          <div style={{ marginTop: '32px', paddingTop: '10px', borderRadius: '0' }}>
-            <div style={{ border: '1px solid #cbd5e1', padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '170px', borderRadius: '0' }}>
-              <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', color: '#475569', letterSpacing: '1px' }}>
-                RECIBÍ CONFORME (BENEFICIARIO / PROVEEDOR)
-              </div>
-              <div style={{ borderTop: '1.5px solid #0f172a', paddingTop: '8px', marginTop: '75px' }}>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#0f172a' }}>Firma, C.C. / NIT y Fecha de Recepción</div>
-                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>Nombre: {savedData.recibido_por || savedData.proveedor_nombre}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Note */}
-          <div style={{ marginTop: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '8px', textAlign: 'center', fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            LOTTUS • DOCUMENTO OFICIAL DE COMPROBANTE DE EGRESO • GENERADO EL {new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
-          </div>
-        </div>
-      )}
-    </>,
-    document.body
-  );
-};
-
-
 const ComprobantesEgreso = () => {
-  const { proveedores, usuario, notify } = useContext(AppContext);
-  const location = useLocation();
+  const { proveedores, usuario } = useContext(AppContext);
+  const navigate = useNavigate();
   const hasPermission = usePermissions();
   const [comprobantesData, setComprobantesData] = useState([]);
   const [expandedCEIds, setExpandedCEIds] = useState([]);
@@ -840,13 +70,12 @@ const ComprobantesEgreso = () => {
 
   const filterBarRef = useRef(null);
 
-  const [isCreatingCE, setIsCreatingCE] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 30;
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [printPreviewItem, setPrintPreviewItem] = useState(null);
 
   const mediosPago = [
     { value: 'Efectivo', label: 'Efectivo' },
@@ -955,11 +184,6 @@ const ComprobantesEgreso = () => {
     fetchData(currentPage);
   }, [currentPage, fetchData]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('action') === 'create') setIsCreatingCE(true);
-  }, [location]);
-
   const handleFilterChange = (e) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setCurrentPage(1);
@@ -982,23 +206,6 @@ const ComprobantesEgreso = () => {
       setNotification({ message: errorMsg, type: 'error' });
     } finally {
       setIsConfirmingCE(false);
-    }
-  };
-
-  const handleCreateCE = async (ceData) => {
-    setIsSubmitting(true);
-    try {
-      const res = await API.post(`/comprobantes-egreso/crear/`, ceData);
-      setNotification({ message: 'Comprobante creado exitosamente.', type: 'success' });
-      fetchData(filters, 1);
-      return res.data;
-    } catch (error) {
-      const data = error.response?.data;
-      const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al crear el comprobante de egreso.'));
-      setNotification({ message: errorMsg, type: 'error' });
-      throw error;
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -1062,7 +269,7 @@ const ComprobantesEgreso = () => {
               <Button variant="ghost" icon={FaFileExport} onClick={exportData} title="Exportar" />
             )}
             {hasPermission('CREAR_COMPROBANTE_EGRESO') && (
-              <Button variant="primary" icon={FaPlus} onClick={() => setIsCreatingCE(true)}>
+              <Button variant="primary" icon={FaPlus} onClick={() => navigate('/comprobantes-egreso/nuevo')}>
                 <span className="long-text">Nuevo Comprobante</span>
                 <span className="short-text">Nuevo</span>
               </Button>
@@ -1269,7 +476,6 @@ const ComprobantesEgreso = () => {
           <table className="modern-table">
             <thead>
               <tr>
-                <th className="th-ce-expand" style={{ width: '36px' }}></th>
                 <th className="th-ce-id">CE</th>
                 <th className="th-ce-fecha">Fecha</th>
                 <th className="th-ce-proveedor">Proveedor</th>
@@ -1277,7 +483,7 @@ const ComprobantesEgreso = () => {
                 <th className="th-ce-metodo">Medio Pago</th>
                 <th className="th-ce-estado">Estado</th>
                 <th className="th-ce-valor text-right">Valor</th>
-                <th className="th-ce-desc">Nota</th>
+                <th className="th-ce-actions"></th>
               </tr>
             </thead>
             <tbody>
@@ -1286,12 +492,12 @@ const ComprobantesEgreso = () => {
                   <tr key={i} className="skeleton-row">
                     <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '130px' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '110px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '85%' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '85%' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                     <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }}></div></td>
-                    <td><div className="skeleton skeleton-text" style={{ width: '150px' }}></div></td>
+                    <td></td>
                   </tr>
                 ))
               ) : comprobantesData.length > 0 ? (
@@ -1301,28 +507,22 @@ const ComprobantesEgreso = () => {
                   const hasFacturas = facturas.length > 0;
                   return (
                     <React.Fragment key={item.id}>
-                      <tr className={`table-row-hover ${isExpanded ? 'ce-row-expanded' : ''}`} onClick={() => hasFacturas && toggleExpandCE(item.id)} style={{ cursor: hasFacturas ? 'pointer' : 'default' }}>
-                        <td className="ce-expand-cell">
-                          {hasFacturas ? (
-                            <button type="button" className={`ce-expand-btn ${isExpanded ? 'open' : ''}`} onClick={(e) => { e.stopPropagation(); toggleExpandCE(item.id); }}>
-                              <FaChevronDown />
-                            </button>
-                          ) : (
-                            <span className="ce-expand-placeholder">—</span>
-                          )}
-                        </td>
+                      <tr className={`table-row-hover ${isExpanded ? 'ce-row-expanded' : ''}`} onClick={() => toggleExpandCE(item.id)} style={{ cursor: 'pointer' }}>
                         <td className="font-bold">#{item.id}</td>
                         <td className="text-muted">{formatDate(item.fecha)}</td>
-                        <td>{item.proveedor_nombre || '—'}</td>
-                        <td className="concept-cell">{item.concepto}</td>
+                        <td className="ce-ellipsis" title={item.proveedor_nombre || ''}>{item.proveedor_nombre || '—'}</td>
+                        <td className="ce-ellipsis" title={item.concepto || ''}>
+                          {item.concepto}
+                          {item.descripcion && <FaStickyNote className="ce-note-flag" title={item.descripcion} />}
+                        </td>
                         <td>
                           <div className="method-cell">
                             <PaymentIcon method={item.medio_pago} />
-                            <span>{item.medio_pago}</span>
+                            <span className="ce-ellipsis">{item.medio_pago}</span>
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                             <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`}>
                               {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
                             </span>
@@ -1330,21 +530,7 @@ const ComprobantesEgreso = () => {
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
-                                style={{
-                                  background: '#2563eb',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  padding: '0.25rem 0.6rem',
-                                  fontSize: '0.72rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  boxShadow: '0 1px 3px rgba(37,99,235,0.2)',
-                                  transition: 'all 0.15s ease'
-                                }}
+                                className="ce-confirm-btn"
                                 title="Confirmar transferencia de egreso realizada"
                               >
                                 <FaCheckCircle size={11} /> Confirmar
@@ -1355,60 +541,103 @@ const ComprobantesEgreso = () => {
                         <td className="text-right font-mono value-expense">
                           -{formatCurrency(item.valor)}
                         </td>
-                        <td className="note-cell">{item.descripcion || '—'}</td>
+                        <td className="ce-actions-cell">
+                          <button type="button" className="action-btn" title="Imprimir comprobante" onClick={(e) => { e.stopPropagation(); setPrintPreviewItem(item); }}>
+                            <FaPrint />
+                          </button>
+                          <button type="button" className="action-btn" title={isExpanded ? 'Ocultar detalle' : 'Ver detalle'} onClick={(e) => { e.stopPropagation(); toggleExpandCE(item.id); }}>
+                            {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                          </button>
+                        </td>
                       </tr>
-                      {isExpanded && hasFacturas && (
+                      {isExpanded && (
                         <tr className="ce-expanded-row">
-                          <td colSpan="9" style={{ padding: 0 }}>
-                            <div className="ce-expanded-panel">
-                              <div className="ce-expanded-header">
-                                <span className="ce-expanded-title">📄 Facturas asociadas ({facturas.length})</span>
-                                {item.recibido_por && <span className="ce-expanded-recibido">Recibido por: <strong>{item.recibido_por}</strong></span>}
+                          <td colSpan="8" style={{ padding: 0 }}>
+                            <div className="ce-expanded-wrapper">
+                              <div className="ce-det-panel">
+                                <h4 className="ce-det-titulo">Datos del Comprobante</h4>
+                                <div className="ce-det-grid">
+                                  <div className="ce-det-item">
+                                    <span className="ce-det-label">Concepto</span>
+                                    <span className="ce-det-valor">{item.concepto || '—'}</span>
+                                  </div>
+                                  <div className="ce-det-item">
+                                    <span className="ce-det-label">Recibido por</span>
+                                    <span className="ce-det-valor">{item.recibido_por || '—'}</span>
+                                  </div>
+                                  <div className="ce-det-item">
+                                    <span className="ce-det-label">Medio de pago</span>
+                                    <span className="ce-det-valor">{item.medio_pago || '—'}</span>
+                                  </div>
+                                  <div className="ce-det-item">
+                                    <span className="ce-det-label">Estado</span>
+                                    <span className="ce-det-valor">{item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}</span>
+                                  </div>
+                                  <div className="ce-det-item ce-det-item-full">
+                                    <span className="ce-det-label">Nota / Observación</span>
+                                    <span className={`ce-det-valor ${!item.descripcion ? 'ce-det-empty-val' : ''}`}>{item.descripcion || 'Sin observaciones'}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <table className="ce-facturas-table">
-                                <thead>
-                                  <tr>
-                                    <th>No. Factura</th>
-                                    <th>Fecha Emisión</th>
-                                    <th>Fecha Pago</th>
-                                    <th>Estado</th>
-                                    <th className="text-right">Valor</th>
-                                    <th>Observaciones</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {facturas.map((f) => (
-                                    <React.Fragment key={f.id}>
-                                      <tr className="ce-factura-row">
-                                        <td className="font-bold">#{f.id_manual}</td>
-                                        <td>{formatDate(f.fecha_factura)}</td>
-                                        <td>{f.fecha_pago ? formatDate(f.fecha_pago) : '—'}</td>
-                                        <td>
-                                          <span className={`ce-factura-estado ${f.estado === 'pagada' ? 'pagada' : f.estado === 'pago_en_proceso' ? 'en-proceso' : 'pendiente'}`}>
-                                            {f.estado === 'pagada' ? '✓ Pagada' : f.estado === 'pago_en_proceso' ? '⏳ Pago en proceso' : 'Pendiente'}
-                                          </span>
-                                        </td>
-                                        <td className="text-right font-mono">{formatCurrency(f.valor)}</td>
-                                        <td className="note-cell">{f.observaciones || '—'}</td>
+                              <div className="ce-det-panel ce-det-panel-wide">
+                                <h4 className="ce-det-titulo">Facturas Asociadas ({facturas.length})</h4>
+                                {hasFacturas ? (
+                                  <table className="ce-facturas-table">
+                                    <thead>
+                                      <tr>
+                                        <th>No. Factura</th>
+                                        <th>Fecha Emisión</th>
+                                        <th>Fecha Pago</th>
+                                        <th>Estado</th>
+                                        <th className="text-right">Valor</th>
+                                        <th>Observaciones</th>
                                       </tr>
-                                      {f.productos && f.productos.length > 0 && (
-                                        <tr className="ce-productos-row">
-                                          <td colSpan="6" style={{ padding: '0 0 0 2rem' }}>
-                                            <div className="ce-productos-list">
-                                              {f.productos.map((p) => (
-                                                <div key={p.id} className="ce-producto-item">
-                                                  <span className="ce-producto-nombre">{p.referencia_nombre}{p.variacion ? ` (${p.variacion})` : ''}</span>
-                                                  <span className="ce-producto-costo">{formatCurrency(p.costo)}</span>
+                                    </thead>
+                                    <tbody>
+                                      {facturas.map((f) => (
+                                        <React.Fragment key={f.id}>
+                                          <tr className="ce-factura-row">
+                                            <td className="font-bold">#{f.id_manual}</td>
+                                            <td>{formatDate(f.fecha_factura)}</td>
+                                            <td>{f.fecha_pago ? formatDate(f.fecha_pago) : '—'}</td>
+                                            <td>
+                                              <span className={`ce-factura-estado ${f.estado === 'pagada' ? 'pagada' : f.estado === 'pago_en_proceso' ? 'en-proceso' : 'pendiente'}`}>
+                                                {f.estado === 'pagada' ? '✓ Pagada' : f.estado === 'pago_en_proceso' ? '⏳ Pago en proceso' : 'Pendiente'}
+                                              </span>
+                                            </td>
+                                            <td className="text-right font-mono">{formatCurrency(f.valor)}</td>
+                                            <td className="note-cell">{f.observaciones || '—'}</td>
+                                          </tr>
+                                          {f.productos && f.productos.length > 0 && (
+                                            <tr className="ce-productos-row">
+                                              <td colSpan="6" style={{ padding: '0 0 0 2rem' }}>
+                                                <div className="ce-productos-list">
+                                                  {groupProductos(f.productos).map((p) => (
+                                                    <div key={p.id} className="ce-producto-item">
+                                                      <div className="ce-producto-main">
+                                                        {p.cantidad > 1 && <span className="ce-producto-cant">x{p.cantidad}</span>}
+                                                        <span className="ce-producto-nombre">{p.referencia_nombre}{p.variacion ? ` (${p.variacion})` : ''}</span>
+                                                        {(p.categoria_nombre || p.subcategoria_nombre) && (
+                                                          <span className="ce-producto-cat">
+                                                            {[p.categoria_nombre, p.subcategoria_nombre].filter(Boolean).join(' · ')}
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <span className="ce-producto-costo">{formatCurrency(p.costo * p.cantidad)}</span>
+                                                    </div>
+                                                  ))}
                                                 </div>
-                                              ))}
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      )}
-                                    </React.Fragment>
-                                  ))}
-                                </tbody>
-                              </table>
+                                              </td>
+                                            </tr>
+                                          )}
+                                        </React.Fragment>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                ) : (
+                                  <p className="ce-det-empty">Este comprobante no tiene facturas asociadas.</p>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1417,7 +646,7 @@ const ComprobantesEgreso = () => {
                   );
                 })
               ) : (
-                <tr><td colSpan="9" className="empty-state">No se encontraron comprobantes.</td></tr>
+                <tr><td colSpan="8" className="empty-state">No se encontraron comprobantes.</td></tr>
               )}
             </tbody>
           </table>
@@ -1475,16 +704,27 @@ const ComprobantesEgreso = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <div className="card-id">#{item.id}</div>
-                      {hasFacturas && (
-                        <button type="button" className={`ce-mobile-expand-btn ${isExpanded ? 'open' : ''}`} onClick={() => toggleExpandCE(item.id)}>
-                          <FaChevronDown /> {isExpanded ? 'Ocultar' : `Facturas (${facturas.length})`}
-                        </button>
-                      )}
+                      <button type="button" className="ce-mobile-expand-btn" onClick={() => setPrintPreviewItem(item)}>
+                        <FaPrint /> Imprimir
+                      </button>
+                      <button type="button" className={`ce-mobile-expand-btn ${isExpanded ? 'open' : ''}`} onClick={() => toggleExpandCE(item.id)}>
+                        <FaChevronDown /> {isExpanded ? 'Ocultar' : hasFacturas ? `Facturas (${facturas.length})` : 'Ver detalle'}
+                      </button>
                     </div>
                   </div>
-                  {isExpanded && hasFacturas && (
+                  {isExpanded && (
                     <div className="ce-mobile-expanded">
-                      {facturas.map(f => (
+                      <div className="ce-mobile-info-grid">
+                        <div className="ce-det-item">
+                          <span className="ce-det-label">Recibido por</span>
+                          <span className="ce-det-valor">{item.recibido_por || '—'}</span>
+                        </div>
+                        <div className="ce-det-item ce-det-item-full">
+                          <span className="ce-det-label">Nota / Observación</span>
+                          <span className={`ce-det-valor ${!item.descripcion ? 'ce-det-empty-val' : ''}`}>{item.descripcion || 'Sin observaciones'}</span>
+                        </div>
+                      </div>
+                      {hasFacturas ? facturas.map(f => (
                         <div key={f.id} className="ce-mobile-factura">
                           <div className="ce-mobile-factura-header">
                             <span className="font-bold">Fact. #{f.id_manual}</span>
@@ -1498,16 +738,26 @@ const ComprobantesEgreso = () => {
                           </div>
                           {f.productos && f.productos.length > 0 && (
                             <div className="ce-mobile-productos">
-                              {f.productos.map(p => (
+                              {groupProductos(f.productos).map(p => (
                                 <div key={p.id} className="ce-producto-item">
-                                  <span className="ce-producto-nombre">{p.referencia_nombre}{p.variacion ? ` (${p.variacion})` : ''}</span>
-                                  <span className="ce-producto-costo">{formatCurrency(p.costo)}</span>
+                                  <div className="ce-producto-main">
+                                    {p.cantidad > 1 && <span className="ce-producto-cant">x{p.cantidad}</span>}
+                                    <span className="ce-producto-nombre">{p.referencia_nombre}{p.variacion ? ` (${p.variacion})` : ''}</span>
+                                    {(p.categoria_nombre || p.subcategoria_nombre) && (
+                                      <span className="ce-producto-cat">
+                                        {[p.categoria_nombre, p.subcategoria_nombre].filter(Boolean).join(' · ')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="ce-producto-costo">{formatCurrency(p.costo * p.cantidad)}</span>
                                 </div>
                               ))}
                             </div>
                           )}
                         </div>
-                      ))}
+                      )) : (
+                        <p className="ce-det-empty">Sin facturas asociadas.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1529,13 +779,10 @@ const ComprobantesEgreso = () => {
         </button>
       </div>
 
-      <CreateCEModal
-        isOpen={isCreatingCE}
-        onClose={() => setIsCreatingCE(false)}
-        onSave={handleCreateCE}
-        mediosPago={mediosPago}
-        proveedores={proveedores}
-        isLoading={isSubmitting}
+      <ComprobanteEgresoPrintModal
+        open={!!printPreviewItem}
+        onClose={() => setPrintPreviewItem(null)}
+        comprobante={printPreviewItem}
       />
 
       {/* Modal Confirmación Transferencia Egreso */}

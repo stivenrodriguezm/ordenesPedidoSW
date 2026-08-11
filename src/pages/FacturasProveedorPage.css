@@ -377,6 +377,14 @@
     letter-spacing: 0.05em;
 }
 
+.item-tag-empty {
+    background: transparent;
+    color: var(--gray-400);
+    font-style: italic;
+    font-weight: 500;
+    border: 1px dashed var(--gray-200);
+}
+
 .compact-col-desc {
     gap: 0.2rem;
 }

@@ -1,0 +1,31 @@
+/* Impresión aislada de un solo componente: cualquier elemento marcado con
+   la clase .print-area (y sus descendientes) se muestra en la hoja impresa;
+   todo lo demás (sidebar, overlays, encabezados) se oculta, sin importar
+   dónde viva en el árbol del DOM. Usado por ComprobanteEgresoPrintModal. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none !important;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}
