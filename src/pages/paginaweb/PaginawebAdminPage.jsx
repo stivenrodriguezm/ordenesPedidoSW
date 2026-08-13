@@ -177,7 +177,7 @@ function PaginawebAdminPage() {
       }
     } catch (err) {
       console.error('Error subiendo imagen:', err);
-      notify('Error al subir la imagen', 'error');
+      notify(err.response?.data?.error || 'Error al subir la imagen', 'error');
     } finally {
       setUploading(false);
     }
@@ -975,7 +975,7 @@ function PaginawebAdminPage() {
                   type="file"
                   id="pw-img-native-file"
                   multiple
-                  accept="image/*"
+                  accept="image/*,.cr2,.cr3,.nef,.nrw,.arw,.srf,.sr2,.raf,.rw2,.orf,.dng,.pef,.srw,.raw,.kdc,.mrw,.x3f,.3fr,.erf,.mef,.mos,.ptx,.rwl,.iiq"
                   onChange={handleImageUpload}
                   style={{ display: 'none' }}
                 />
