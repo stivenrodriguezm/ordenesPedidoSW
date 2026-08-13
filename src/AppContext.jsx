@@ -12,8 +12,12 @@ export const usePermissions = () => {
   
   const hasPermission = (feature) => {
     if (!usuario) return false;
-    // 'ALL' solo llega desde el backend cuando el rol (p.ej. administrador
-    // recién creado) todavía no tiene una configuración explícita guardada.
+    // El rol administrador siempre tiene acceso total (misma regla que el
+    // backend aplica en cada endpoint), sin importar qué haya quedado
+    // guardado en la configuración de permisos del rol.
+    if (usuario.role?.toLowerCase() === 'administrador') return true;
+    // 'ALL' llega desde el backend para roles sin configuración explícita
+    // guardada todavía.
     if (permissions.includes('ALL')) return true;
 
     if (feature === 'ACCESO_CAJA') {
