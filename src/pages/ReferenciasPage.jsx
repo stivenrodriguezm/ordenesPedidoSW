@@ -5,7 +5,7 @@ import "./ReferenciasPage.css";
 import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaTags, FaTrash, FaSearch, FaTimes, FaSitemap, FaSave } from "react-icons/fa";
 import { AppContext } from "../AppContext";
 import AppNotification from '../components/AppNotification';
-import { PageHeader, Button } from '../components/ui';
+import { PageHeader, Button, Modal } from '../components/ui';
 
 // ─── Inline notification helper ───────────────────────────────────────────────
 const InlineNotif = ({ message, type }) => {
@@ -455,98 +455,92 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
     });
   };
 
-  if (!isOpen) return null;
-
   const availableSubcategories = subcategorias.filter(sub =>
     categoriasSelected.includes(sub.categoria)
   );
 
   return (
-    <div className="ref-modal-overlay">
-      <div className="ref-modal-content" style={{ maxWidth: 520 }}>
-        <div className="ref-modal-header">
-          <h3>{referencia ? 'Editar Referencia' : 'Nueva Referencia'}</h3>
-          <button className="ref-modal-close" onClick={onClose}>×</button>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={referencia ? 'Editar Referencia' : 'Nueva Referencia'}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" form="referencia-form" loading={isLoading}>
+            {isLoading ? 'Guardando...' : (referencia ? 'Guardar Cambios' : 'Crear Referencia')}
+          </Button>
+        </>
+      }
+    >
+      <form id="referencia-form" onSubmit={handleSubmit}>
+        <div className="ds-field">
+          <label className="ds-label">Nombre de la Referencia</label>
+          <input
+            className="ds-input"
+            type="text"
+            placeholder="Ej. Sofá Madrid"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            required
+          />
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Nombre de la Referencia</label>
-            <input
-              type="text"
-              placeholder="Ej. Sofá Madrid"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
-            />
-          </div>
 
-          <div className="form-group">
-            <label>Proveedor</label>
-            <select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} required>
-              <option value="">Seleccione un proveedor...</option>
-              {proveedores.map((proveedor) => (
-                <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre_empresa}</option>
-              ))}
-            </select>
-          </div>
+        <div className="ds-field">
+          <label className="ds-label">Proveedor</label>
+          <select className="ds-select" value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} required>
+            <option value="">Seleccione un proveedor...</option>
+            {proveedores.map((proveedor) => (
+              <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre_empresa}</option>
+            ))}
+          </select>
+        </div>
 
-          <div className="form-group">
-            <label>Categorías</label>
+        <div className="ds-field">
+          <label className="ds-label">Categorías</label>
+          <div className="multi-chips-selector">
+            {categorias.map((cat) => {
+              const isSelected = categoriasSelected.includes(cat.id);
+              return (
+                <button
+                  type="button"
+                  key={cat.id}
+                  className={`interactive-chip ${isSelected ? 'interactive-chip--selected' : ''}`}
+                  onClick={() => handleToggleCategory(cat.id)}
+                >
+                  {cat.nombre}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="ds-field">
+          <label className="ds-label">Subcategorías</label>
+          {categoriasSelected.length === 0 ? (
+            <p className="ds-field__hint">Seleccione al menos una categoría para ver subcategorías.</p>
+          ) : availableSubcategories.length === 0 ? (
+            <p className="ds-field__hint">No hay subcategorías registradas para las categorías seleccionadas.</p>
+          ) : (
             <div className="multi-chips-selector">
-              {categorias.map((cat) => {
-                const isSelected = categoriasSelected.includes(cat.id);
+              {availableSubcategories.map((sub) => {
+                const isSelected = subcategoriasSelected.includes(sub.id);
                 return (
                   <button
                     type="button"
-                    key={cat.id}
+                    key={sub.id}
                     className={`interactive-chip ${isSelected ? 'interactive-chip--selected' : ''}`}
-                    onClick={() => handleToggleCategory(cat.id)}
+                    onClick={() => handleToggleSubcategory(sub.id)}
                   >
-                    {cat.nombre}
+                    {sub.nombre}
                   </button>
                 );
               })}
             </div>
-          </div>
-
-          <div className="form-group">
-            <label>Subcategorías</label>
-            {categoriasSelected.length === 0 ? (
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                Seleccione al menos una categoría para ver subcategorías.
-              </p>
-            ) : availableSubcategories.length === 0 ? (
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                No hay subcategorías registradas para las categorías seleccionadas.
-              </p>
-            ) : (
-              <div className="multi-chips-selector">
-                {availableSubcategories.map((sub) => {
-                  const isSelected = subcategoriasSelected.includes(sub.id);
-                  return (
-                    <button
-                      type="button"
-                      key={sub.id}
-                      className={`interactive-chip ${isSelected ? 'interactive-chip--selected' : ''}`}
-                      onClick={() => handleToggleSubcategory(sub.id)}
-                    >
-                      {sub.nombre}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="ref-modal-actions">
-            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" loading={isLoading}>
-              {isLoading ? 'Guardando...' : (referencia ? 'Guardar Cambios' : 'Crear Referencia')}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          )}
+        </div>
+      </form>
+    </Modal>
   );
 };
 
