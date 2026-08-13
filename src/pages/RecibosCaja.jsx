@@ -50,35 +50,53 @@ const PAYMENT_METHODS = [
   { label: 'Otro', icon: <FaMobileAlt /> },
 ];
 
+const emptyPago = () => ({ metodo_pago: '', valor: '' });
+
 const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading }) => {
   const todayStr = getTodayStr();
 
-  const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
+  const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', nota: '', pagos: [emptyPago()] });
   const [ventaSearch, setVentaSearch] = useState('');
   const [showVentaDropdown, setShowVentaDropdown] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setNewRC({ id: '', fecha: todayStr, venta: '', metodo_pago: '', valor: '', nota: '' });
+      setNewRC({ id: '', fecha: todayStr, venta: '', nota: '', pagos: [emptyPago()] });
       setVentaSearch('');
       setShowVentaDropdown(false);
     }
   }, [isOpen]);
 
   const handleChange = (e) => setNewRC({ ...newRC, [e.target.name]: e.target.value });
-  const handleValorChange = (e) => {
-    const raw = e.target.value.replace(/[^0-9]/g, '');
-    setNewRC({ ...newRC, valor: raw });
+
+  const handlePagoMetodo = (index, metodo) => {
+    const pagos = [...newRC.pagos];
+    pagos[index] = { ...pagos[index], metodo_pago: metodo };
+    setNewRC({ ...newRC, pagos });
   };
+  const handlePagoValor = (index, e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    const pagos = [...newRC.pagos];
+    pagos[index] = { ...pagos[index], valor: raw };
+    setNewRC({ ...newRC, pagos });
+  };
+  const handleAddPago = () => setNewRC({ ...newRC, pagos: [...newRC.pagos, emptyPago()] });
+  const handleRemovePago = (index) => setNewRC({ ...newRC, pagos: newRC.pagos.filter((_, i) => i !== index) });
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!newRC.metodo_pago) return;
-    onSave(newRC);
+    const pagosValidos = newRC.pagos.filter(p => p.metodo_pago && (parseInt(p.valor) || 0) > 0);
+    if (pagosValidos.length === 0) return;
+    onSave({
+      ...newRC,
+      pagos: pagosValidos.map(p => ({ metodo_pago: p.metodo_pago, valor: parseInt(p.valor) || 0 })),
+    });
   };
 
   if (!isOpen) return null;
 
-  const numericVal = parseInt(newRC.valor) || 0;
+  const totalVal = newRC.pagos.reduce((sum, p) => sum + (parseInt(p.valor) || 0), 0);
+  const pagosValidos = newRC.pagos.filter(p => p.metodo_pago && (parseInt(p.valor) || 0) > 0);
   const filteredVentas = ventas.filter(v => v.id_venta.toString().includes(ventaSearch));
 
   return createPortal(
@@ -165,47 +183,51 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
             )}
           </div>
 
-          {/* Método de Pago */}
-          <div className="lottus-form-group full">
-            <label>Método de Pago <span className="lottus-req">*</span></label>
-            <div className="lottus-payment-grid">
-              {PAYMENT_METHODS.map((method) => {
-                const isActive = newRC.metodo_pago === method.label;
-                return (
-                  <button
-                    key={method.label}
-                    type="button"
-                    className={`lottus-payment-btn ${isActive ? 'active' : ''}`}
-                    onClick={() => setNewRC({ ...newRC, metodo_pago: method.label })}
-                  >
-                    <span className="lottus-pay-icon">{method.icon}</span>
-                    <span>{method.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Valor */}
+          {/* Pago(s) — uno o varios medios de pago para el mismo recibo */}
           <div className="lottus-form-group full">
             <div className="lottus-label-flex">
-              <label>Valor Recibido <span className="lottus-req">*</span></label>
-              {numericVal > 0 && (
-                <span className="lottus-val-preview">{formatCOP(numericVal)}</span>
+              <label>Pago(s) <span className="lottus-req">*</span></label>
+              {totalVal > 0 && (
+                <span className="lottus-val-preview">Total: {formatCOP(totalVal)}</span>
               )}
             </div>
-            <div className="lottus-input-icon">
-              <span className="lottus-prefix">$</span>
-              <input
-                type="text"
-                name="valor"
-                value={newRC.valor ? formatCOP(numericVal).replace('$', '').trim() : ''}
-                onChange={handleValorChange}
-                required
-                placeholder="0"
-                className="lottus-input lottus-input-pl"
-              />
+            <div className="rc-pagos-list">
+              {newRC.pagos.map((pago, index) => (
+                <div key={index} className="rc-pago-row">
+                  <select
+                    className="lottus-select"
+                    value={pago.metodo_pago}
+                    onChange={(e) => handlePagoMetodo(index, e.target.value)}
+                  >
+                    <option value="">Método...</option>
+                    {PAYMENT_METHODS.map(m => (
+                      <option key={m.label} value={m.label}>{m.label}</option>
+                    ))}
+                  </select>
+                  <div className="lottus-input-icon rc-pago-valor-wrap">
+                    <span className="lottus-prefix">$</span>
+                    <input
+                      type="text"
+                      value={pago.valor ? formatCOP(parseInt(pago.valor) || 0).replace('$', '').trim() : ''}
+                      onChange={(e) => handlePagoValor(index, e)}
+                      placeholder="0"
+                      className="lottus-input lottus-input-pl"
+                    />
+                  </div>
+                  {newRC.pagos.length > 1 && (
+                    <button type="button" className="rc-pago-remove-btn" onClick={() => handleRemovePago(index)} title="Quitar este pago">
+                      <FaTimes />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
+            <button type="button" className="rc-btn-add-pago" onClick={handleAddPago}>
+              <FaPlus /> Agregar otro medio de pago
+            </button>
+            <p className="lottus-hint" style={{ marginTop: '0.15rem' }}>
+              Si el pago se dividió en varios medios (ej. parte efectivo, parte transferencia), agrega una línea por cada uno. El efectivo se confirma al instante; los demás quedan pendientes hasta que un administrador los confirme.
+            </p>
           </div>
 
           {/* Nota */}
@@ -219,7 +241,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
             <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
               Cancelar
             </button>
-            <button type="submit" className="lottus-btn-submit" disabled={isLoading || !newRC.metodo_pago || !newRC.id || !newRC.venta || numericVal <= 0}>
+            <button type="submit" className="lottus-btn-submit" disabled={isLoading || pagosValidos.length === 0 || !newRC.id || !newRC.venta || totalVal <= 0}>
               {isLoading ? 'Guardando...' : 'Crear Recibo'}
             </button>
           </div>
@@ -265,7 +287,8 @@ const RecibosCaja = () => {
   const { data: pendientesIds = [], isError: pendientesIdsError, error: pendientesIdsErr } = usePendientesIds();
   const ventas = useMemo(() => pendientesIds.map(id => ({ id_venta: id })), [pendientesIds]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedRecibo, setSelectedRecibo] = useState(null);
+  const [confirmTarget, setConfirmTarget] = useState(null); // { recibo, pago }
+  const [expandedReciboId, setExpandedReciboId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 30;
@@ -278,15 +301,15 @@ const RecibosCaja = () => {
   // --- Stats Calculation ---
   const stats = useMemo(() => {
     const total = recibosData.reduce((sum, item) => sum + parseFloat(item.valor || 0), 0);
-    const pending = recibosData.filter(item => item.estado === 'Pendiente').length;
+    const pending = recibosData.filter(item => item.estado === 'Pendiente' || item.estado === 'Parcial').length;
     return { total, pending };
   }, [recibosData]);
 
-  // --- Sorting: Mostrar pendientes primero, luego mantener orden por fecha/id ---
+  // --- Sorting: Mostrar pendientes/parciales primero, luego mantener orden por fecha/id ---
   const sortedRecibosData = useMemo(() => {
     return [...recibosData].sort((a, b) => {
-      const aPending = a.estado === 'Pendiente' ? 0 : 1;
-      const bPending = b.estado === 'Pendiente' ? 0 : 1;
+      const aPending = (a.estado === 'Pendiente' || a.estado === 'Parcial') ? 0 : 1;
+      const bPending = (b.estado === 'Pendiente' || b.estado === 'Parcial') ? 0 : 1;
       if (aPending !== bPending) return aPending - bPending;
       return 0;
     });
@@ -369,11 +392,11 @@ const RecibosCaja = () => {
   };
 
   const handleConfirmRecibo = async () => {
-    if (!selectedRecibo) return;
+    if (!confirmTarget?.pago) return;
     setIsSubmitting(true);
     try {
-      await API.patch(`/recibos-caja/${selectedRecibo.id}/confirmar/`, {});
-      setNotification({ message: 'Recibo confirmado.', type: 'success' });
+      await API.patch(`/recibos-caja/pagos/${confirmTarget.pago.id}/confirmar/`, {});
+      setNotification({ message: 'Pago confirmado.', type: 'success' });
       setShowConfirmModal(false);
       fetchData(filters, currentPage);
     } catch (error) {
@@ -397,6 +420,7 @@ const RecibosCaja = () => {
         'RC': item.id,
         'Fecha': item.fecha,
         'Venta': item.venta,
+        'Vendedor': item.vendedor_nombre || '-',
         'Método': item.metodo_pago,
         'Valor': item.valor,
         'Nota': item.nota,
@@ -509,6 +533,7 @@ const RecibosCaja = () => {
                 <th>RC ID</th>
                 <th>Fecha</th>
                 <th>Venta</th>
+                <th>Vendedor</th>
                 <th>Método</th>
                 <th className="text-right">Valor</th>
                 <th>Nota</th>
@@ -523,6 +548,7 @@ const RecibosCaja = () => {
                     <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
+                    <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '90px' }}></div></td>
                     <td className="text-right"><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }}></div></td>
                     <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
@@ -531,39 +557,85 @@ const RecibosCaja = () => {
                   </tr>
                 ))
               ) : sortedRecibosData.length > 0 ? (
-                sortedRecibosData.map((item) => (
-                  <tr key={item.id} className="table-row-hover">
-                    <td className="font-bold">#{item.id}</td>
-                    <td className="text-muted">{formatDate(item.fecha)}</td>
-                    <td><span className="venta-tag">#{item.venta}</span></td>
-                    <td>
-                      <div className="method-cell">
-                        <PaymentIcon method={item.metodo_pago} />
-                        <span>{item.metodo_pago}</span>
-                      </div>
-                    </td>
-                    <td className="text-right font-mono">{formatCurrency(item.valor)}</td>
-                    <td className="note-cell" title={item.nota}>{item.nota || '—'}</td>
-                    <td>
-                      <Badge tone={item.estado.toLowerCase() === 'confirmado' ? 'success' : item.estado.toLowerCase() === 'anulado' ? 'danger' : 'warning'}>
-                        {item.estado}
-                      </Badge>
-                    </td>
-                    <td className="actions-cell">
-                      {item.estado === 'Pendiente' && hasPermission('APROBAR_RECIBO') && (
-                        <button
-                          className="action-btn confirm"
-                          onClick={() => { setSelectedRecibo(item); setShowConfirmModal(true); }}
-                          title="Confirmar Ingreso"
-                        >
-                          <FaCheckCircle />
-                        </button>
+                sortedRecibosData.map((item) => {
+                  const pagos = item.pagos || [];
+                  const isMultiple = pagos.length > 1;
+                  const isExpanded = expandedReciboId === item.id;
+                  const singlePendingPago = pagos.length === 1 && pagos[0].estado === 'Pendiente' ? pagos[0] : null;
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr
+                        className={`table-row-hover ${isMultiple ? 'table-row-clickable' : ''}`}
+                        onClick={isMultiple ? () => setExpandedReciboId(isExpanded ? null : item.id) : undefined}
+                      >
+                        <td className="font-bold">#{item.id}</td>
+                        <td className="text-muted">{formatDate(item.fecha)}</td>
+                        <td><span className="venta-tag">#{item.venta}</span></td>
+                        <td className="text-muted">{item.vendedor_nombre || '-'}</td>
+                        <td>
+                          <div className="method-cell">
+                            <PaymentIcon method={item.metodo_pago} />
+                            <span>{item.metodo_pago}</span>
+                          </div>
+                        </td>
+                        <td className="text-right font-mono">{formatCurrency(item.valor)}</td>
+                        <td className="note-cell" title={item.nota}>{item.nota || '—'}</td>
+                        <td>
+                          <Badge tone={item.estado.toLowerCase() === 'confirmado' ? 'success' : item.estado.toLowerCase() === 'anulado' ? 'danger' : item.estado.toLowerCase() === 'parcial' ? 'info' : 'warning'}>
+                            {item.estado}
+                          </Badge>
+                        </td>
+                        <td className="actions-cell">
+                          {singlePendingPago && hasPermission('APROBAR_RECIBO') && (
+                            <button
+                              className="action-btn confirm"
+                              onClick={(e) => { e.stopPropagation(); setConfirmTarget({ recibo: item, pago: singlePendingPago }); setShowConfirmModal(true); }}
+                              title="Confirmar Ingreso"
+                            >
+                              <FaCheckCircle />
+                            </button>
+                          )}
+                          {isMultiple && (
+                            <button
+                              className="action-btn"
+                              onClick={(e) => { e.stopPropagation(); setExpandedReciboId(isExpanded ? null : item.id); }}
+                              title="Ver pagos"
+                            >
+                              <FaChevronDown style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {isMultiple && isExpanded && (
+                        <tr className="expanded-row">
+                          <td colSpan="9">
+                            <div className="rc-pagos-detail">
+                              {pagos.map(pago => (
+                                <div key={pago.id} className="rc-pago-detail-row">
+                                  <PaymentIcon method={pago.metodo_pago} />
+                                  <span className="rc-pago-detail-metodo">{pago.metodo_pago}</span>
+                                  <span className="rc-pago-detail-valor font-mono">{formatCurrency(pago.valor)}</span>
+                                  <Badge tone={pago.estado === 'Confirmado' ? 'success' : 'warning'}>{pago.estado}</Badge>
+                                  {pago.estado === 'Pendiente' && hasPermission('APROBAR_RECIBO') && (
+                                    <button
+                                      className="action-btn confirm"
+                                      onClick={() => { setConfirmTarget({ recibo: item, pago }); setShowConfirmModal(true); }}
+                                      title="Confirmar este pago"
+                                    >
+                                      <FaCheckCircle />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))
+                    </React.Fragment>
+                  );
+                })
               ) : (
-                <tr><td colSpan="8" className="empty-state">No se encontraron recibos.</td></tr>
+                <tr><td colSpan="9" className="empty-state">No se encontraron recibos.</td></tr>
               )}
             </tbody>
           </table>
@@ -574,26 +646,48 @@ const RecibosCaja = () => {
           {isLoading ? (
             <div className="loading-spinner"></div>
           ) : sortedRecibosData.length > 0 ? (
-            sortedRecibosData.map((item) => (
-              <div className="transaction-card" key={item.id}>
-                <div className="card-left">
-                  <PaymentIcon method={item.metodo_pago} />
-                  <div className="card-info">
-                    <div className="card-title">Recibo #{item.id}</div>
-                    <div className="card-subtitle">{formatDate(item.fecha)} • Venta #{item.venta}</div>
+            sortedRecibosData.map((item) => {
+              const pagos = item.pagos || [];
+              const isMultiple = pagos.length > 1;
+              const singlePendingPago = pagos.length === 1 && pagos[0].estado === 'Pendiente' ? pagos[0] : null;
+              return (
+                <div className="transaction-card" key={item.id}>
+                  <div className="card-left">
+                    <PaymentIcon method={item.metodo_pago} />
+                    <div className="card-info">
+                      <div className="card-title">Recibo #{item.id}</div>
+                      <div className="card-subtitle">{formatDate(item.fecha)} • Venta #{item.venta}{item.vendedor_nombre ? ` • ${item.vendedor_nombre}` : ''}</div>
+                    </div>
                   </div>
+                  <div className="card-right">
+                    <div className="card-amount">{formatCurrency(item.valor)}</div>
+                    <span className={`status-dot ${item.estado.toLowerCase()}`}></span>
+                  </div>
+                  {singlePendingPago && usuario?.role === 'administrador' && (
+                    <button className="mobile-confirm-btn" onClick={() => { setConfirmTarget({ recibo: item, pago: singlePendingPago }); setShowConfirmModal(true); }}>
+                      Confirmar
+                    </button>
+                  )}
+                  {isMultiple && (
+                    <div className="rc-pagos-detail" style={{ marginTop: '0.5rem' }}>
+                      {pagos.map(pago => (
+                        <div key={pago.id} className="rc-pago-detail-row">
+                          <PaymentIcon method={pago.metodo_pago} />
+                          <span className="rc-pago-detail-metodo">{pago.metodo_pago}</span>
+                          <span className="rc-pago-detail-valor font-mono">{formatCurrency(pago.valor)}</span>
+                          <Badge tone={pago.estado === 'Confirmado' ? 'success' : 'warning'}>{pago.estado}</Badge>
+                          {pago.estado === 'Pendiente' && usuario?.role === 'administrador' && (
+                            <button className="mobile-confirm-btn" onClick={() => { setConfirmTarget({ recibo: item, pago }); setShowConfirmModal(true); }}>
+                              Confirmar
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="card-right">
-                  <div className="card-amount">{formatCurrency(item.valor)}</div>
-                  <span className={`status-dot ${item.estado.toLowerCase()}`}></span>
-                </div>
-                {item.estado === 'Pendiente' && usuario?.role === 'administrador' && (
-                  <button className="mobile-confirm-btn" onClick={() => { setSelectedRecibo(item); setShowConfirmModal(true); }}>
-                    Confirmar
-                  </button>
-                )}
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="empty-state-mobile">No hay movimientos.</div>
           )}
@@ -619,40 +713,40 @@ const RecibosCaja = () => {
         isLoading={isSubmitting}
       />
 
-      {selectedRecibo && (
+      {confirmTarget && (
         <ConfirmModal
           isOpen={showConfirmModal}
           onClose={() => setShowConfirmModal(false)}
           onConfirm={handleConfirmRecibo}
-          title="Confirmar Ingreso"
+          title="Confirmar Pago"
           isLoading={isSubmitting}
         >
           <div className="rc-confirm-container">
             <div className="rc-confirm-row">
               <span className="rc-confirm-label">N° Recibo</span>
-              <span className="rc-confirm-val font-mono">#{selectedRecibo.id}</span>
+              <span className="rc-confirm-val font-mono">#{confirmTarget.recibo.id}</span>
             </div>
             <div className="rc-confirm-row">
-              <span className="rc-confirm-label">Valor del Ingreso</span>
-              <span className="rc-confirm-val amount">{formatCurrency(selectedRecibo.valor)}</span>
+              <span className="rc-confirm-label">Valor del Pago</span>
+              <span className="rc-confirm-val amount">{formatCurrency(confirmTarget.pago.valor)}</span>
             </div>
             <div className="rc-confirm-row">
               <span className="rc-confirm-label">Método de Pago</span>
               <span className="rc-confirm-val method">
-                <PaymentIcon method={selectedRecibo.metodo_pago} />
-                {selectedRecibo.metodo_pago || 'N/A'}
+                <PaymentIcon method={confirmTarget.pago.metodo_pago} />
+                {confirmTarget.pago.metodo_pago || 'N/A'}
               </span>
             </div>
-            {selectedRecibo.venta && (
+            {confirmTarget.recibo.venta && (
               <div className="rc-confirm-row">
                 <span className="rc-confirm-label">Venta Asociada</span>
-                <span className="rc-confirm-val">Venta #{selectedRecibo.venta}</span>
+                <span className="rc-confirm-val">Venta #{confirmTarget.recibo.venta}</span>
               </div>
             )}
-            {selectedRecibo.fecha && (
+            {confirmTarget.recibo.fecha && (
               <div className="rc-confirm-row">
                 <span className="rc-confirm-label">Fecha</span>
-                <span className="rc-confirm-val">{selectedRecibo.fecha}</span>
+                <span className="rc-confirm-val">{confirmTarget.recibo.fecha}</span>
               </div>
             )}
           </div>

@@ -33,6 +33,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
         direccion_entrega: '',
         direccion_entrega_custom: '',
         orden_asociada_id: initialOrdenAsociadaId,
+        observacion: '',
         detalles: [{ referencia: '', color: '', cantidad: '' }]
     });
 
@@ -192,6 +193,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
             direccion_entrega: finalDireccion,
             estado: 'Pendiente',
             orden_asociada_id: newPedido.orden_asociada_id ? parseInt(newPedido.orden_asociada_id) : null,
+            observacion: newPedido.observacion.trim() || null,
             detalles: validDetalles.map(d => {
                 const desc = `${tipoMaterial === 'Cuero' ? '[CUERO] ' : ''}${d.referencia.trim()}${d.color && d.color.trim() ? ` - Color: ${d.color.trim()}` : ''}`;
                 return {
@@ -221,6 +223,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                 direccion_entrega: '',
                 direccion_entrega_custom: '',
                 orden_asociada_id: '',
+                observacion: '',
                 detalles: [{ referencia: '', color: '', cantidad: '' }]
             });
             setTipoMaterial('Tela');
@@ -438,6 +441,18 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                                 <textarea required name="direccion_entrega_custom" value={newPedido.direccion_entrega_custom} onChange={handlePedidoChange} placeholder="Escriba la dirección de entrega detallada..." rows="2"></textarea>
                             </div>
                         )}
+
+                        {/* Observación General (opcional) */}
+                        <div className="pt-form-group">
+                            <label>📝 Observación General (opcional)</label>
+                            <textarea
+                                name="observacion"
+                                value={newPedido.observacion}
+                                onChange={handlePedidoChange}
+                                placeholder="Alguna nota o indicación general para este pedido de material..."
+                                rows="2"
+                            ></textarea>
+                        </div>
 
                         <div className="pt-modal-footer">
                             <button type="button" className="pt-btn-secondary" onClick={onClose}>Cancelar</button>
@@ -676,6 +691,24 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                         {pdfData?.direccion_entrega || 'No especificada'}
                     </span>
                 </div>
+
+                {/* Observación General Section */}
+                {pdfData?.observacion && (
+                    <div style={{
+                        backgroundColor: '#fffbeb',
+                        border: '1px solid #fde68a',
+                        borderRadius: '8px',
+                        padding: '14px 18px',
+                        marginTop: '12px',
+                    }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '4px' }}>
+                            Observación:
+                        </span>
+                        <span style={{ fontSize: '13px', color: '#334155', fontWeight: '500', whiteSpace: 'pre-line' }}>
+                            {pdfData.observacion}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* AppToast / Notification Component for Modal alerts */}

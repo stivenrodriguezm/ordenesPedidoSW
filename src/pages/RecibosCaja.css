@@ -192,6 +192,41 @@
   gap: 0.75rem;
 }
 
+.table-row-clickable {
+  cursor: pointer;
+}
+
+.expanded-row td {
+  background: var(--gray-50);
+  padding: 0.75rem 1.25rem;
+}
+
+.rc-pagos-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rc-pago-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+}
+
+.rc-pago-detail-metodo {
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex: 1;
+}
+
+.rc-pago-detail-valor {
+  font-weight: 700;
+}
+
 .payment-icon-wrapper {
   width: 32px;
   height: 32px;
@@ -698,6 +733,66 @@
   display: flex;
   align-items: center;
   font-size: 0.82rem;
+}
+
+/* Multi-line payments (Recibos de Caja) */
+.rc-pagos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rc-pago-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.rc-pago-valor-wrap {
+  min-width: 0;
+}
+
+.rc-pago-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--danger);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.rc-pago-remove-btn:hover {
+  background: #fef2f2;
+  border-color: var(--danger);
+}
+
+.rc-btn-add-pago {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px dashed var(--gray-300);
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--info);
+  background: var(--gray-50);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rc-btn-add-pago:hover {
+  background: #eff6ff;
+  border-color: var(--info);
 }
 
 /* Actions Footer */

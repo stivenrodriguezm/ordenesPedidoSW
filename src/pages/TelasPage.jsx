@@ -435,6 +435,8 @@ const TelasPage = () => {
             'Fecha': p.fecha_creacion,
             'Estado': p.estado,
             'Orden Asociada': p.orden_id ? `#${p.orden_id}` : '-',
+            'Venta': p.venta_id ? `#${p.venta_id}` : '-',
+            'Vendedor': p.venta_vendedor_nombre || '-',
             'Dirección Entrega': p.direccion_entrega,
         }));
         const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -558,6 +560,8 @@ const TelasPage = () => {
                                     <th>Fecha</th>
                                     <th>Estado</th>
                                     <th>Orden Asoc.</th>
+                                    <th>Venta</th>
+                                    <th>Vendedor</th>
                                     <th>Dirección</th>
                                     <th style={{ textAlign: 'right' }}>Acción</th>
                                 </tr>
@@ -573,12 +577,14 @@ const TelasPage = () => {
                                             <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
+                                            <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
                                             <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
                                         </tr>
                                     ))
                                 ) : displayedPedidos.length === 0 ? (
-                                    <tr><td colSpan="9" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
+                                    <tr><td colSpan="11" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
                                 ) : (
                                     displayedPedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
@@ -601,6 +607,8 @@ const TelasPage = () => {
                                                 </span>
                                             </td>
                                             <td>{pedido.orden_id ? <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#3b82f6' }}>#{pedido.orden_id}</span> : '-'}</td>
+                                            <td>{pedido.venta_id ? <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#0d9488' }}>#{pedido.venta_id}</span> : '-'}</td>
+                                            <td><span style={{ fontWeight: '500', color: '#475569' }}>{pedido.venta_vendedor_nombre || '-'}</span></td>
                                             <td className="truncate-text" style={{ maxWidth: '350px', fontSize: '0.85rem', color: '#334155' }} title={pedido.direccion_entrega}>{pedido.direccion_entrega}</td>
                                             <td style={{ width: '50px', textAlign: 'right' }}>
                                                 <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(pedido.id); }} style={{ marginLeft: 'auto' }}>
@@ -610,7 +618,7 @@ const TelasPage = () => {
                                         </tr>
                                         {expandedPedidoId === pedido.id && (
                                              <tr className="expanded-row">
-                                                 <td colSpan="9">
+                                                 <td colSpan="11">
                                                      <div className="details-view-wrapper telas-details-wrapper">
                                                          <div className="tela-expanded-wrapper">
                                                              <div className="tela-expanded-header">
@@ -663,6 +671,13 @@ const TelasPage = () => {
                                                                      <span className="tela-info-value">{pedido.fecha_esperada ? pedido.fecha_esperada.split('-').reverse().join('/') : '—'}</span>
                                                                  </div>
                                                              </div>
+
+                                                             {pedido.observacion && (
+                                                                 <div className="tela-info-item" style={{ marginBottom: '1rem' }}>
+                                                                     <span className="tela-info-label">Observación</span>
+                                                                     <span className="tela-info-value" style={{ whiteSpace: 'pre-line' }}>{pedido.observacion}</span>
+                                                                 </div>
+                                                             )}
 
                                                              <div className="tela-expanded-body">
                                                                  <h4 className="tela-section-subtitle">Detalles del Pedido de Tela</h4>
@@ -753,6 +768,13 @@ const TelasPage = () => {
                                             <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Dirección de Entrega</div>
                                             <div style={{ fontSize: '0.9rem', color: '#334155' }}>{pedido.direccion_entrega}</div>
                                         </div>
+
+                                        {pedido.observacion && (
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Observación</div>
+                                                <div style={{ fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-line' }}>{pedido.observacion}</div>
+                                            </div>
+                                        )}
 
                                         {hasPermission('EDITAR_ESTADO_TELA_ORDEN') && (
                                             <Button 

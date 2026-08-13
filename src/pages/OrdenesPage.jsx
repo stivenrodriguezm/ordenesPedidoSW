@@ -80,6 +80,14 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
     onSave(orden.id, payload);
   };
 
+  const modalTelasOptions = useMemo(() => {
+    const defaultOptions = ['Sin tela', 'Pendiente', 'Pedida'];
+    if (orden?.tela && !defaultOptions.includes(orden.tela)) {
+      return [orden.tela, ...defaultOptions];
+    }
+    return defaultOptions;
+  }, [orden?.tela]);
+
   return (
     <Modal
       open={isOpen}
@@ -136,7 +144,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
               onChange={handleChange}
               disabled={telaLockedForVendedor}
             >
-              {telas.map(t => <option key={t} value={t}>{t}</option>)}
+              {modalTelasOptions.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             {telaLockedForVendedor && (
               <p className="ds-field__hint">🔒 No se puede modificar el estado de tela cuando ya está "En fabrica".</p>
@@ -216,7 +224,7 @@ const OrdenesPage = () => {
     { value: 'recibido', label: 'Recibido' },
     { value: 'anulado', label: 'Anulado' },
   ];
-  const telas = ['Por pedir', 'Pedida', 'En fabrica', 'Sin tela'];
+  const telas = ['Sin tela', 'Pendiente', 'Pedida'];
 
   const displayedOrdenes = useMemo(() => {
     if (!debouncedSearchTerm) return filteredOrdenes;
@@ -855,6 +863,9 @@ const OrdenesPage = () => {
                                         <p className="tela-card-proveedor"><strong>Proveedor:</strong> {pt.proveedor}</p>
                                         {pt.fecha_creacion && (
                                           <p className="tela-card-fecha">{formatDate(pt.fecha_creacion)}</p>
+                                        )}
+                                        {pt.observacion && (
+                                          <p className="tela-card-observacion" style={{ whiteSpace: 'pre-line' }}><strong>Obs:</strong> {pt.observacion}</p>
                                         )}
                                         {pt.detalles && pt.detalles.length > 0 && (
                                           <ul className="tela-detalles-list">

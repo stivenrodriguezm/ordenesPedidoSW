@@ -50,7 +50,6 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   const canEditEstadoVenta = canEditEverything || hasPermission('EDITAR_ESTADO_VENTA');
   const canEditEstadoPedidos = canEditEverything || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA');
 
-  const isFieldsDisabled = !canEditEverything;
   const isEstadoDisabled = !canEditEstadoVenta || (usuario?.role?.toLowerCase() === 'auxiliar' && (formData.estado || '').trim().toLowerCase() === 'entregado');
   const isEstadoPedidosDisabled = !canEditEstadoPedidos || (usuario?.role?.toLowerCase() === 'auxiliar' && formData.estado_pedidos);
 
@@ -129,123 +128,137 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <input type="text" name="cliente_id" value={formData.cliente_id} onChange={handleChange} disabled />
         </div>
 
-        <div className="form-group">
-          <label>Fecha de Venta:</label>
-          <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required disabled={isFieldsDisabled} />
-        </div>
-        <div className="form-group">
-          <label>Fecha de Entrega:</label>
-          <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} disabled={isFieldsDisabled} />
-        </div>
-
-        <div className="form-group">
-          <label>Sede:</label>
-          {formData.es_feria_hogar ? (
-            <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem', color: '#78716c', background: '#f5f5f4', borderRadius: '6px' }}>
-              No aplica — venta de Feria del Hogar
+        {canEditEverything && (
+          <>
+            <div className="form-group">
+              <label>Fecha de Venta:</label>
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required />
             </div>
-          ) : (
-            <select name="sede" value={formData.sede} onChange={handleChange} disabled={isFieldsDisabled}>
-              <option value="" disabled>Seleccione una sede</option>
-              <option value="Lottus 1">Lottus 1</option>
-              <option value="Lottus 2">Lottus 2</option>
-            </select>
-          )}
-        </div>
-        <div className="form-group">
-          <label>Vendedor Principal:</label>
-          <select name="vendedor_id" value={formData.vendedor_id} onChange={(e) => {
-                  handleChange(e);
-                  setFormData(prev => ({
-                    ...prev, 
-                    vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== e.target.value?.toString())
-                  }));
-                }} required disabled={isFieldsDisabled}>
-            <option value="">Seleccionar vendedor</option>
-            {(vendedores || []).map(vendedor => (
-              <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
-            ))}
-          </select>
-        </div>
+            <div className="form-group">
+              <label>Fecha de Entrega:</label>
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} />
+            </div>
 
-        {formData.vendedor_id && !isFieldsDisabled && (
-          <div className="form-group full-width">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-              <input 
-                type="checkbox" 
-                checked={showSharedVendors || ((formData.vendedores_compartidos || []).length > 0)} 
-                onChange={(e) => setShowSharedVendors(e.target.checked)} 
-              /> 
-              Venta Compartida (Opcional)
-            </label>
-            {(showSharedVendors || ((formData.vendedores_compartidos || []).length > 0)) && (
-              <div className="shared-vendors-box">
-                {(vendedores || []).filter(v => v.id?.toString() !== formData.vendedor_id?.toString()).map(v => (
-                  <label key={v.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.85rem', marginBottom: 0}}>
-                    <input 
-                      type="checkbox" 
-                      value={v.id} 
-                      checked={(formData.vendedores_compartidos || []).includes(v.id) || (formData.vendedores_compartidos || []).includes(v.id?.toString())}
-                      onChange={(e) => {
-                        if(e.target.checked) {
-                          setFormData(prev => ({...prev, vendedores_compartidos: [...(prev.vendedores_compartidos || []), v.id]}));
-                        } else {
-                          setFormData(prev => ({...prev, vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== v.id?.toString())}));
-                        }
-                      }}
-                    /> {v.first_name}
-                  </label>
+            <div className="form-group">
+              <label>Sede:</label>
+              {formData.es_feria_hogar ? (
+                <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem', color: '#78716c', background: '#f5f5f4', borderRadius: '6px' }}>
+                  No aplica — venta de Feria del Hogar
+                </div>
+              ) : (
+                <select name="sede" value={formData.sede} onChange={handleChange}>
+                  <option value="" disabled>Seleccione una sede</option>
+                  <option value="Lottus 1">Lottus 1</option>
+                  <option value="Lottus 2">Lottus 2</option>
+                </select>
+              )}
+            </div>
+            <div className="form-group">
+              <label>Vendedor Principal:</label>
+              <select name="vendedor_id" value={formData.vendedor_id} onChange={(e) => {
+                      handleChange(e);
+                      setFormData(prev => ({
+                        ...prev,
+                        vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== e.target.value?.toString())
+                      }));
+                    }} required>
+                <option value="">Seleccionar vendedor</option>
+                {(vendedores || []).map(vendedor => (
+                  <option key={vendedor.id} value={vendedor.id}>{vendedor.first_name}</option>
                 ))}
+              </select>
+            </div>
+
+            {formData.vendedor_id && (
+              <div className="form-group full-width">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={showSharedVendors || ((formData.vendedores_compartidos || []).length > 0)}
+                    onChange={(e) => setShowSharedVendors(e.target.checked)}
+                  />
+                  Venta Compartida (Opcional)
+                </label>
+                {(showSharedVendors || ((formData.vendedores_compartidos || []).length > 0)) && (
+                  <div className="shared-vendors-box">
+                    {(vendedores || []).filter(v => v.id?.toString() !== formData.vendedor_id?.toString()).map(v => (
+                      <label key={v.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.85rem', marginBottom: 0}}>
+                        <input
+                          type="checkbox"
+                          value={v.id}
+                          checked={(formData.vendedores_compartidos || []).includes(v.id) || (formData.vendedores_compartidos || []).includes(v.id?.toString())}
+                          onChange={(e) => {
+                            if(e.target.checked) {
+                              setFormData(prev => ({...prev, vendedores_compartidos: [...(prev.vendedores_compartidos || []), v.id]}));
+                            } else {
+                              setFormData(prev => ({...prev, vendedores_compartidos: (prev.vendedores_compartidos || []).filter(id => id?.toString() !== v.id?.toString())}));
+                            }
+                          }}
+                        /> {v.first_name}
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            <div className="form-group checkbox-inline">
+              <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} />
+              <label htmlFor="traslado">¿Incluye Traslado?</label>
+            </div>
+            <div className="form-group checkbox-inline">
+              <input type="checkbox" id="es_feria_hogar" name="es_feria_hogar" checked={formData.es_feria_hogar} onChange={handleChange} />
+              <label htmlFor="es_feria_hogar">¿Venta de Feria del Hogar?</label>
+            </div>
+
+            <div className="form-group">
+              <label>Valor Total:</label>
+              <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required />
+            </div>
+          </>
+        )}
+
+        {canEditEstadoPedidos && (
+          <div className="form-group">
+            <label>Estado de Pedidos:</label>
+            <select
+              name="estado_pedidos"
+              value={formData.estado_pedidos ? 'true' : 'false'}
+              onChange={(e) => setFormData(prev => ({ ...prev, estado_pedidos: e.target.value === 'true' }))}
+              disabled={isEstadoPedidosDisabled}
+            >
+              <option value="false">Pendiente</option>
+              <option value="true">Pedido</option>
+            </select>
           </div>
         )}
 
-        <div className="form-group checkbox-inline">
-          <input type="checkbox" id="traslado" name="traslado" checked={formData.traslado} onChange={handleChange} disabled={isFieldsDisabled} />
-          <label htmlFor="traslado">¿Incluye Traslado?</label>
-        </div>
-        <div className="form-group checkbox-inline">
-          <input type="checkbox" id="es_feria_hogar" name="es_feria_hogar" checked={formData.es_feria_hogar} onChange={handleChange} disabled={isFieldsDisabled} />
-          <label htmlFor="es_feria_hogar">¿Venta de Feria del Hogar?</label>
-        </div>
-        <div className="form-group">
-          <label>Estado de Pedidos:</label>
-          <select
-            name="estado_pedidos"
-            value={formData.estado_pedidos ? 'true' : 'false'}
-            onChange={(e) => setFormData(prev => ({ ...prev, estado_pedidos: e.target.value === 'true' }))}
-            disabled={isEstadoPedidosDisabled}
-          >
-            <option value="false">Pendiente</option>
-            <option value="true">Pedido</option>
-          </select>
-        </div>
+        {canEditEstadoVenta && (
+          <div className="form-group">
+            <label>Estado de Venta:</label>
+            <select
+              name="estado"
+              value={formData.estado}
+              onChange={handleChange}
+              required
+              disabled={isEstadoDisabled}
+            >
+              {(availableEstados || []).map(estado => (
+                <option key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1).replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        <div className="form-group">
-          <label>Valor Total:</label>
-          <input type="number" name="valor_total" value={formData.valor_total} onChange={handleChange} required disabled={isFieldsDisabled} />
-        </div>
-        <div className="form-group">
-          <label>Estado de Venta:</label>
-          <select
-            name="estado"
-            value={formData.estado}
-            onChange={handleChange}
-            required
-            disabled={isEstadoDisabled}
-          >
-            {(availableEstados || []).map(estado => (
-              <option key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1).replace(/_/g, ' ')}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="edit-sale-modal-actions">
-          <Button type="submit" style={{ minWidth: '160px' }}>
-            Guardar Cambios
-          </Button>
-        </div>
+        {(canEditEverything || canEditEstadoVenta || canEditEstadoPedidos) ? (
+          <div className="edit-sale-modal-actions">
+            <Button type="submit" style={{ minWidth: '160px' }}>
+              Guardar Cambios
+            </Button>
+          </div>
+        ) : (
+          <p className="text-muted" style={{ marginTop: '0.5rem' }}>No tienes permisos para editar esta venta.</p>
+        )}
       </form>
     </Modal>
   );
