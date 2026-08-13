@@ -152,6 +152,12 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
+.nce-card-body input:disabled {
+  background: var(--gray-100);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 .nce-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

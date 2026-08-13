@@ -36,7 +36,7 @@ export default function NuevaComprobanteEgresoPage() {
   const navigate = useNavigate();
   const todayStr = getTodayStr();
 
-  const [id, setId] = useState('');
+  const [siguienteNumero, setSiguienteNumero] = useState(null);
   const [fecha, setFecha] = useState(todayStr);
   const [proveedor, setProveedor] = useState('');
   const [proveedorOtroNombre, setProveedorOtroNombre] = useState('');
@@ -68,6 +68,14 @@ export default function NuevaComprobanteEgresoPage() {
     API.get('/caja/')
       .then(res => {
         if (res.data?.stats?.saldo_actual !== undefined) setSaldoCaja(res.data.stats.saldo_actual);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    API.get('/comprobantes-egreso/siguiente-numero/')
+      .then(res => {
+        if (res.data?.siguiente !== undefined) setSiguienteNumero(res.data.siguiente);
       })
       .catch(() => {});
   }, []);
@@ -199,8 +207,7 @@ export default function NuevaComprobanteEgresoPage() {
   const proveedorInvalido = !proveedor || (isProveedorOtro && !proveedorOtroNombre.trim());
   const tieneAlgoQuePagar = facturasSeleccionadas.length > 0
     || otrosConceptos.some(o => o.descripcion.trim() && (parseInt(o.valor) || 0) > 0);
-  const isFormInvalid = !id.trim()
-    || proveedorInvalido
+  const isFormInvalid = proveedorInvalido
     || !medioPago
     || (medioPago === 'Otro' && !motivoOtro.trim())
     || !recibidoPor.trim()
@@ -226,7 +233,6 @@ export default function NuevaComprobanteEgresoPage() {
     ].filter(Boolean).join(' ').trim();
 
     const payload = {
-      id,
       fecha,
       proveedor: isProveedorOtro ? '' : proveedor,
       proveedor_otro_nombre: isProveedorOtro ? proveedorOtroNombre : '',
@@ -299,8 +305,8 @@ export default function NuevaComprobanteEgresoPage() {
             <div className="nce-card-body">
               <div className="nce-grid-2">
                 <div className="nce-form-group">
-                  <label><FaReceipt /> No. Comprobante <span className="nce-req">*</span></label>
-                  <input type="text" required placeholder="Ej: 2150" value={id} onChange={e => setId(e.target.value)} autoFocus />
+                  <label><FaReceipt /> No. Comprobante</label>
+                  <input type="text" value={siguienteNumero != null ? `#${siguienteNumero} (automático)` : 'Generando...'} disabled />
                 </div>
                 <div className="nce-form-group">
                   <label><FaCalendarDay /> Fecha <span className="nce-req">*</span></label>
