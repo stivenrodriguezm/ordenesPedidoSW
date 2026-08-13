@@ -153,7 +153,14 @@ const Ventas = () => {
     // Estados para la expansión
     const [expandedVentaId, setExpandedVentaId] = useState(null);
     const [ventaDetails, setVentaDetails] = useState(null);
+    // Rastrea qué venta está realmente activa en este momento (a diferencia de
+    // expandedVentaId, se lee "en vivo" dentro de callbacks async) — evita que
+    // una respuesta tardía de una venta ya abandonada sobreescriba lo que se
+    // está mostrando ahora (ej. abrir la venta A, cambiar rápido a la B antes
+    // de que A responda, y que los pagos de A terminen mostrándose bajo B).
+    const activeVentaIdRef = useRef(null);
     const [expandedNestedOrderId, setExpandedNestedOrderId] = useState(null);
+    const activeNestedOrderIdRef = useRef(null);
     const [nestedOrderDetails, setNestedOrderDetails] = useState(null);
     const [detailsError, setDetailsError] = useState(null);
     const [isPartialData, setIsPartialData] = useState(false);
@@ -518,9 +525,11 @@ const Ventas = () => {
         if (expandedVentaId === ventaId) {
             setExpandedVentaId(null);
             setVentaDetails(null);
+            activeVentaIdRef.current = null;
             return;
         }
 
+        activeVentaIdRef.current = ventaId;
         setExpandedVentaId(ventaId);
         setLoadingDetails(true);
         setDetailsError(null);
@@ -534,6 +543,10 @@ const Ventas = () => {
                 API.get(`/ventas/${ventaId}/`),
                 API.get('/recibos-caja/', { params: { venta_id: ventaId, page_size: 50 } })
             ]);
+
+            // El usuario pudo haber cambiado a otra venta mientras esto cargaba —
+            // esta respuesta ya no corresponde a lo que se está mostrando.
+            if (activeVentaIdRef.current !== ventaId) return;
 
             let detailsData = {};
             let recibosData = [];
@@ -575,10 +588,13 @@ const Ventas = () => {
             setIsPartialData(isPartial);
 
         } catch (error) {
+            if (activeVentaIdRef.current !== ventaId) return;
             console.error('Critical error loading sale details:', error);
             setDetailsError('Error al cargar los detalles de la venta.');
         } finally {
-            setLoadingDetails(false);
+            if (activeVentaIdRef.current === ventaId) {
+                setLoadingDetails(false);
+            }
         }
     };
 
@@ -588,12 +604,16 @@ const Ventas = () => {
         setDetailsError(null);
         try {
             const response = await API.get(`/ventas/${ventaId}/`);
+            if (activeVentaIdRef.current !== ventaId) return;
             setVentaDetails(response.data);
         } catch (error) {
+            if (activeVentaIdRef.current !== ventaId) return;
             console.error('Error al refrescar detalles de la venta:', error);
             setDetailsError('Error al actualizar los detalles.');
         } finally {
-            setLoadingDetails(false);
+            if (activeVentaIdRef.current === ventaId) {
+                setLoadingDetails(false);
+            }
         }
     };
 
@@ -601,13 +621,16 @@ const Ventas = () => {
         if (expandedNestedOrderId === orderId) {
             setExpandedNestedOrderId(null);
             setNestedOrderDetails(null);
+            activeNestedOrderIdRef.current = null;
         } else {
+            activeNestedOrderIdRef.current = orderId;
             setExpandedNestedOrderId(orderId);
             const parsedInitial = Array.isArray(initialDetalles) ? initialDetalles : [];
             setNestedOrderDetails(parsedInitial);
             setLoadingNestedDetails(true);
             try {
                 const response = await API.get(`/pedidos/${orderId}/detalles/`);
+                if (activeNestedOrderIdRef.current !== orderId) return;
                 let data = [];
                 if (response.data && Array.isArray(response.data.detalles)) {
                     data = response.data.detalles;
@@ -622,12 +645,15 @@ const Ventas = () => {
                     setNestedOrderDetails(parsedInitial);
                 }
             } catch (error) {
+                if (activeNestedOrderIdRef.current !== orderId) return;
                 console.error('Error cargando detalles del pedido anidado:', error);
                 if (parsedInitial.length > 0) {
                     setNestedOrderDetails(parsedInitial);
                 }
             } finally {
-                setLoadingNestedDetails(false);
+                if (activeNestedOrderIdRef.current === orderId) {
+                    setLoadingNestedDetails(false);
+                }
             }
         }
     };
@@ -669,7 +695,9 @@ const Ventas = () => {
                 setShowObservacionVentaModal(false);
                 setObservacionVentaText('');
             }
-            API.get(`/ventas/${expandedVentaId}/`).then(response => {
+            const observedVentaId = expandedVentaId;
+            API.get(`/ventas/${observedVentaId}/`).then(response => {
+                if (activeVentaIdRef.current !== observedVentaId) return;
                 setVentaDetails(response.data);
             }).catch(error => console.error(error));
         } catch (error) {
@@ -719,7 +747,9 @@ const Ventas = () => {
             }
 
             // Re-fetch venta details to show new observacion in the background
-            API.get(`/ventas/${expandedVentaId}/`).then(response => {
+            const observedVentaId = expandedVentaId;
+            API.get(`/ventas/${observedVentaId}/`).then(response => {
+                if (activeVentaIdRef.current !== observedVentaId) return;
                 setVentaDetails(response.data);
             }).catch(error => console.error(error));
 

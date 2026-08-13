@@ -189,6 +189,9 @@ const OrdenesPage = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+  // Evita que una respuesta tardía de una orden ya abandonada sobreescriba
+  // los detalles de la orden que se está mostrando ahora (mismo bug que en Ventas.jsx).
+  const activeOrderIdRef = useRef(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderTelas, setOrderTelas] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -387,8 +390,10 @@ const OrdenesPage = () => {
     if (expandedOrderId === orderId) {
       setExpandedOrderId(null);
       setOrderTelas([]);
+      activeOrderIdRef.current = null;
       return;
     }
+    activeOrderIdRef.current = orderId;
     setExpandedOrderId(orderId);
     setLoadingDetails(true);
     setOrderDetails(null); // Reset details on new expand
@@ -396,6 +401,7 @@ const OrdenesPage = () => {
     setErrorMessage(''); // Reset error message
     try {
       const response = await API.get(`pedidos/${orderId}/detalles/`);
+      if (activeOrderIdRef.current !== orderId) return;
       let data = [];
       if (response.data.detalles && Array.isArray(response.data.detalles)) {
         data = response.data.detalles;
@@ -405,12 +411,15 @@ const OrdenesPage = () => {
       setOrderDetails(data);
       setOrderTelas(Array.isArray(response.data.pedidos_telas) ? response.data.pedidos_telas : []);
     } catch (error) {
+      if (activeOrderIdRef.current !== orderId) return;
       console.error("Error fetching order details:", error);
       const errorMsg = error.response?.data?.error || 'Error al cargar los detalles del pedido.';
       setErrorMessage(errorMsg);
       console.error(error);
     } finally {
-      setLoadingDetails(false);
+      if (activeOrderIdRef.current === orderId) {
+        setLoadingDetails(false);
+      }
     }
   };
 

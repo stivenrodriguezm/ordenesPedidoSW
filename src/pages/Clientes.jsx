@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './Clientes.css';
 import { usePermissions } from '../AppContext';
 import { FaChevronDown, FaEdit, FaPlus, FaFileExport, FaSearch, FaUsers } from 'react-icons/fa';
@@ -130,6 +130,9 @@ const Clientes = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [expandedClienteId, setExpandedClienteId] = useState(null);
   const [expandedData, setExpandedData] = useState(null);
+  // Evita que una respuesta tardía de un cliente ya abandonado sobreescriba
+  // los datos del cliente que se está mostrando ahora (mismo bug que en Ventas.jsx).
+  const activeClienteIdRef = useRef(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -182,9 +185,11 @@ const Clientes = () => {
   const handleExpandCliente = async (clienteId) => {
     if (expandedClienteId === clienteId) {
       setExpandedClienteId(null);
+      activeClienteIdRef.current = null;
       return;
     }
 
+    activeClienteIdRef.current = clienteId;
     setExpandedClienteId(clienteId);
     setLoadingDetails(true);
     setExpandedData(null);
@@ -195,6 +200,9 @@ const Clientes = () => {
         API.get(`/clientes/${clienteId}/ventas-observaciones/`)
       ]);
 
+      // El usuario pudo haber cambiado a otro cliente mientras esto cargaba.
+      if (activeClienteIdRef.current !== clienteId) return;
+
       const mergedData = {
         ...clienteRes.data,
         ventas: detailsRes.data.ventas,
@@ -204,9 +212,12 @@ const Clientes = () => {
       setExpandedData(mergedData);
 
     } catch (error) {
+      if (activeClienteIdRef.current !== clienteId) return;
       setNotification({ message: 'Error al cargar los detalles del cliente.', type: 'error' });
     } finally {
-      setLoadingDetails(false);
+      if (activeClienteIdRef.current === clienteId) {
+        setLoadingDetails(false);
+      }
     }
   };
 
