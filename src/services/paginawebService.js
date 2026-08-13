@@ -35,16 +35,6 @@ export const deleteAdminProduct = async (id) => {
   return response.data;
 };
 
-export const getAdminSettings = async () => {
-  const response = await API.get('/paginaweb/admin/settings/');
-  return response.data;
-};
-
-export const saveAdminSettings = async (settingsData) => {
-  const response = await API.post('/paginaweb/admin/settings/', settingsData);
-  return response.data;
-};
-
 export const uploadPaginawebImage = async (formData) => {
   // No Content-Type header here: setting 'multipart/form-data' explicitly omits
   // the boundary parameter the browser generates for FormData, which breaks

@@ -9,8 +9,6 @@ import {
   createAdminProduct,
   updateAdminProduct,
   deleteAdminProduct,
-  getAdminSettings,
-  saveAdminSettings,
   uploadPaginawebImage,
 } from '../../services/paginawebService';
 import {
@@ -54,7 +52,6 @@ function PaginawebAdminPage() {
   const [activeTab, setActiveTab] = useState('products');
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
-  const [settings, setSettings] = useState({});
   const [asesores, setAsesores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -92,13 +89,11 @@ function PaginawebAdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [prodsData, settingsData, asesoresData] = await Promise.all([
+      const [prodsData, asesoresData] = await Promise.all([
         getAdminProducts(),
-        getAdminSettings(),
         getAdminAsesores(),
       ]);
       setProducts(prodsData.results || prodsData || []);
-      setSettings(settingsData.settings || settingsData || {});
       setAsesores(asesoresData.results || asesoresData || []);
     } catch (err) {
       console.error('Error cargando gestión web:', err);
@@ -390,17 +385,6 @@ function PaginawebAdminPage() {
     }
   };
 
-  const handleSaveSettings = async (e) => {
-    e.preventDefault();
-    try {
-      await saveAdminSettings(settings);
-      notify('Configuración del sitio guardada exitosamente', 'success');
-    } catch (err) {
-      console.error('Error guardando ajustes:', err);
-      notify('Error al guardar ajustes', 'error');
-    }
-  };
-
   const formatPrice = (val) => {
     if (!val && val !== 0) return '$ 0';
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
@@ -485,7 +469,6 @@ function PaginawebAdminPage() {
         <Tabs
           tabs={[
             { id: 'products', label: `Productos Web (${products.length})` },
-            { id: 'settings', label: 'Ajustes del Sitio Web' },
             { id: 'asesores', label: `Paleta de Vendedores (${asesores.length})` },
           ]}
           active={activeTab}
@@ -593,54 +576,6 @@ function PaginawebAdminPage() {
               </table>
             </div>
           )}
-        </div>
-      )}
-
-      {/* PESTAÑA AJUSTES */}
-      {activeTab === 'settings' && (
-        <div className="pw-main-card">
-          <form onSubmit={handleSaveSettings} className="pw-settings-form-layout">
-            <h3 className="pw-form-section-title">Ajustes Globales del Sitio Web</h3>
-
-            <div className="ds-field">
-              <label className="ds-label">Anuncio / Banner Superior:</label>
-              <input
-                type="text"
-                className="ds-input"
-                value={settings.bannerText || ''}
-                onChange={(e) => setSettings({ ...settings, bannerText: e.target.value })}
-                placeholder="e.g. Envíos gratis a todo Bogotá en compras superiores a $2,000,000"
-              />
-            </div>
-
-            <div className="ds-field">
-              <label className="ds-label">Teléfono / WhatsApp de Contacto:</label>
-              <input
-                type="text"
-                className="ds-input"
-                value={settings.whatsappPhone || ''}
-                onChange={(e) => setSettings({ ...settings, whatsappPhone: e.target.value })}
-                placeholder="e.g. +57 300 123 4567"
-              />
-            </div>
-
-            <div className="ds-field">
-              <label className="ds-label">Dirección del Showroom:</label>
-              <input
-                type="text"
-                className="ds-input"
-                value={settings.showroomAddress || ''}
-                onChange={(e) => setSettings({ ...settings, showroomAddress: e.target.value })}
-                placeholder="e.g. Calle 109 # 18-20, Bogotá"
-              />
-            </div>
-
-            <div style={{ marginTop: '0.5rem' }}>
-              <Button variant="primary" icon={FaSave} type="submit">
-                Guardar Ajustes Web
-              </Button>
-            </div>
-          </form>
         </div>
       )}
 
