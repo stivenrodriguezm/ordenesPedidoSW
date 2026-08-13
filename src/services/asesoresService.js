@@ -25,10 +25,8 @@ export const deleteAdminAsesor = async (id) => {
 };
 
 export const uploadAsesorFoto = async (formData) => {
-  const response = await API.post('/paginaweb/admin/asesores/upload-foto/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // See uploadPaginawebImage in paginawebService.js: no explicit Content-Type
+  // here so the browser can set it with the correct multipart boundary.
+  const response = await API.post('/paginaweb/admin/asesores/upload-foto/', formData);
   return response.data;
 };

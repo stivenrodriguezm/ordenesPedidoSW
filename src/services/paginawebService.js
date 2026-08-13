@@ -46,10 +46,9 @@ export const saveAdminSettings = async (settingsData) => {
 };
 
 export const uploadPaginawebImage = async (formData) => {
-  const response = await API.post('/paginaweb/upload/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // No Content-Type header here: setting 'multipart/form-data' explicitly omits
+  // the boundary parameter the browser generates for FormData, which breaks
+  // multipart parsing server-side. Let axios/the browser set it automatically.
+  const response = await API.post('/paginaweb/upload/', formData);
   return response.data;
 };
