@@ -36,7 +36,6 @@ export default function NuevaComprobanteEgresoPage() {
   const navigate = useNavigate();
   const todayStr = getTodayStr();
 
-  const [siguienteNumero, setSiguienteNumero] = useState(null);
   const [fecha, setFecha] = useState(todayStr);
   const [proveedor, setProveedor] = useState('');
   const [proveedorOtroNombre, setProveedorOtroNombre] = useState('');
@@ -68,14 +67,6 @@ export default function NuevaComprobanteEgresoPage() {
     API.get('/caja/')
       .then(res => {
         if (res.data?.stats?.saldo_actual !== undefined) setSaldoCaja(res.data.stats.saldo_actual);
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    API.get('/comprobantes-egreso/siguiente-numero/')
-      .then(res => {
-        if (res.data?.siguiente !== undefined) setSiguienteNumero(res.data.siguiente);
       })
       .catch(() => {});
   }, []);
@@ -303,15 +294,9 @@ export default function NuevaComprobanteEgresoPage() {
               </div>
             </div>
             <div className="nce-card-body">
-              <div className="nce-grid-2">
-                <div className="nce-form-group">
-                  <label><FaReceipt /> No. Comprobante</label>
-                  <input type="text" value={siguienteNumero != null ? `#${siguienteNumero} (automático)` : 'Generando...'} disabled />
-                </div>
-                <div className="nce-form-group">
-                  <label><FaCalendarDay /> Fecha <span className="nce-req">*</span></label>
-                  <input type="date" required value={fecha} onClick={e => { try { e.target.showPicker(); } catch (err) {} }} onChange={e => setFecha(e.target.value)} />
-                </div>
+              <div className="nce-form-group">
+                <label><FaCalendarDay /> Fecha <span className="nce-req">*</span></label>
+                <input type="date" required value={fecha} onClick={e => { try { e.target.showPicker(); } catch (err) {} }} onChange={e => setFecha(e.target.value)} />
               </div>
 
               <div className="nce-form-group">
