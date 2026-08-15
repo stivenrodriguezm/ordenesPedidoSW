@@ -1,5 +1,48 @@
 
 
+/* --- Banner de error al registrar --- */
+.nf-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--danger-soft, #fef2f2);
+    border: 1px solid var(--danger, #dc2626);
+    color: var(--danger, #991b1b);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.4;
+    animation: ds-fade-up 0.2s ease both;
+}
+
+.nf-error-banner svg:first-child {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+}
+
+.nf-error-banner span {
+    flex: 1;
+}
+
+.nf-error-banner__close {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.15s ease;
+}
+
+.nf-error-banner__close:hover {
+    opacity: 1;
+}
+
 /* --- Form Layout (2 columns) --- */
 .nf-form-layout {
     display: grid;

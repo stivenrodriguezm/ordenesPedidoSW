@@ -55,6 +55,43 @@ const isExistingGrupoId = (localId) => localId && !String(localId).startsWith('g
 
 const formatCOPInt = (value) => formatCOP(parseInt(value) || 0);
 
+// Traduce nombres de campo del backend a etiquetas legibles para el banner de error.
+const FIELD_LABELS = {
+    id_manual: 'Número de factura',
+    proveedor: 'Proveedor',
+    valor: 'Valor',
+    fecha_factura: 'Fecha de factura',
+    fecha_pago: 'Fecha de pago',
+    estado: 'Estado',
+    observaciones: 'Observaciones',
+    productos: 'Productos',
+    non_field_errors: null,
+    detail: null,
+};
+
+// Convierte la respuesta de error de DRF (que puede ser un string, una lista,
+// o un objeto anidado por campo) en un mensaje legible en español, con el
+// nombre del campo cuando ayuda a ubicar el problema.
+const extractErrorMessage = (data) => {
+    if (!data) return null;
+    if (typeof data === 'string') return data;
+    if (Array.isArray(data)) {
+        return data.map(extractErrorMessage).filter(Boolean).join(' ');
+    }
+    if (typeof data === 'object') {
+        return Object.entries(data)
+            .map(([key, val]) => {
+                const msg = extractErrorMessage(val);
+                if (!msg) return null;
+                const label = FIELD_LABELS[key] !== undefined ? FIELD_LABELS[key] : key;
+                return label ? `${label}: ${msg}` : msg;
+            })
+            .filter(Boolean)
+            .join(' ');
+    }
+    return String(data);
+};
+
 export default function NuevaFacturaPage() {
     const { proveedores, usuario, notify } = useContext(AppContext);
     const hasPermission = usePermissions();
@@ -62,6 +99,7 @@ export default function NuevaFacturaPage() {
     const queryClient = useQueryClient();
 
     const [isCreating, setIsCreating] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
 
     // Use global notification
     const showToast = (message, type = 'success') => {
@@ -417,7 +455,8 @@ export default function NuevaFacturaPage() {
 
     const handleSubmit = async e => {
         e.preventDefault();
-        
+        setSubmitError(null);
+
         if (!form.idManual || !form.proveedorId || valorFactura <= 0) {
             showToast('Por favor complete los campos obligatorios y asegúrese de que el total sea mayor a 0.', 'error');
             return;
@@ -445,7 +484,8 @@ export default function NuevaFacturaPage() {
                 grupoIdMap[instance.localId] = res.data.id;
             } catch (err) {
                 console.error('Error creando grupo', instance.nombre, err);
-                showToast(`Error al crear el grupo "${instance.nombre}". Intenta de nuevo.`, 'error');
+                const detail = extractErrorMessage(err.response?.data);
+                setSubmitError(`No se pudo crear el grupo "${instance.nombre}".${detail ? ` ${detail}` : ' Intenta de nuevo.'}`);
                 setIsCreating(false);
                 return;
             }
@@ -497,7 +537,8 @@ export default function NuevaFacturaPage() {
             navigate('/suministros/facturas', { state: { toastMessage: 'Factura creada exitosamente.', toastType: 'success' } });
         } catch (error) {
             console.error("Error creating factura:", error);
-            showToast("Hubo un error al guardar la factura. Verifica los datos.", "error");
+            const message = extractErrorMessage(error.response?.data) || 'No se pudo guardar la factura. Intenta de nuevo.';
+            setSubmitError(message);
         } finally {
             setIsCreating(false);
         }
@@ -529,6 +570,16 @@ export default function NuevaFacturaPage() {
                     </div>
                 }
             />
+
+            {submitError && (
+                <div className="nf-error-banner">
+                    <FaExclamationCircle />
+                    <span>{submitError}</span>
+                    <button type="button" className="nf-error-banner__close" onClick={() => setSubmitError(null)} aria-label="Cerrar">
+                        <FaTimes />
+                    </button>
+                </div>
+            )}
 
             <form id="nueva-factura-form" onSubmit={handleSubmit} className="nf-form-layout">
                 {/* COLUMNA IZQUIERDA: Info General y Grupos */}
