@@ -25,8 +25,13 @@ API.interceptors.request.use(
 const forceLogout = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
-  if (!window.location.pathname.includes("/login")) {
-    window.location.href = "/login"; // Forzar recarga para limpiar estado
+  // La app usa HashRouter (ver App.jsx): la ruta real vive en location.hash,
+  // no en location.pathname (que siempre es "/"). Por eso el chequeo debe
+  // mirar el hash, y el redirect debe apuntar a "/#/login" — "/login" a
+  // secas es una navegación real del navegador a una ruta que no existe en
+  // el hosting estático (Hostinger la sirve como 404 en vez de la SPA).
+  if (!window.location.hash.includes("/login")) {
+    window.location.href = "/#/login"; // Forzar recarga para limpiar estado
   }
 };
 
