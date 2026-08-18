@@ -1,0 +1,117 @@
+/* Pqrs.css — pestaña "PQRS" de Gestión Web, extiende Paginaweb.css */
+
+.pqrs-filter-select {
+  max-width: 200px;
+}
+
+.pqrs-radicado {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-700, #334155);
+}
+
+.pqrs-client-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pqrs-client-email {
+  font-size: 0.78rem;
+  color: var(--gray-400, #94a3b8);
+}
+
+.pqrs-date-cell {
+  font-size: 0.82rem;
+  color: var(--gray-500, #64748b);
+  white-space: nowrap;
+}
+
+.pqrs-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.pqrs-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.pqrs-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--gray-700, #334155);
+}
+
+.pqrs-meta-item a {
+  color: var(--accent, #1e3a8a);
+  text-decoration: none;
+}
+.pqrs-meta-item a:hover {
+  text-decoration: underline;
+}
+
+.pqrs-asunto-tag {
+  font-size: 0.8rem;
+  color: var(--gray-500, #64748b);
+  margin-left: 0.5rem;
+}
+
+.pqrs-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.pqrs-status-row .ds-select {
+  max-width: 220px;
+}
+
+.pqrs-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pqrs-thread-bubble {
+  border-radius: var(--r-md, 10px);
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.pqrs-thread-bubble p {
+  margin: 0 0 0.4rem;
+  white-space: pre-wrap;
+}
+
+.pqrs-thread-bubble--client {
+  background: var(--gray-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.pqrs-thread-bubble--admin {
+  background: #fdf8ec;
+  border: 1px solid #f0e0ad;
+  margin-left: 1.5rem;
+}
+
+.pqrs-thread-date {
+  font-size: 0.72rem;
+  color: var(--gray-400, #94a3b8);
+}
+
+.pqrs-send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}

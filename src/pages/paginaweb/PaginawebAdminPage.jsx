@@ -18,6 +18,8 @@ import {
   deleteAdminAsesor,
   uploadAsesorFoto,
 } from '../../services/asesoresService';
+import { getAdminPqrs } from '../../services/pqrsService';
+import PqrsPanel from './PqrsPanel';
 import { getMediaUrl } from '../../apiConfig';
 import { AppContext } from '../../AppContext';
 import { PageHeader, Button, Badge, Modal, StatCard, Skeleton, Tabs } from '../../components/ui';
@@ -53,6 +55,7 @@ function PaginawebAdminPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [asesores, setAsesores] = useState([]);
+  const [pqrs, setPqrs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal Estado (Productos)
@@ -89,12 +92,14 @@ function PaginawebAdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [prodsData, asesoresData] = await Promise.all([
+      const [prodsData, asesoresData, pqrsData] = await Promise.all([
         getAdminProducts(),
         getAdminAsesores(),
+        getAdminPqrs(),
       ]);
       setProducts(prodsData.results || prodsData || []);
       setAsesores(asesoresData.results || asesoresData || []);
+      setPqrs(pqrsData.results || pqrsData || []);
     } catch (err) {
       console.error('Error cargando gestión web:', err);
       notify('Error al cargar los datos de la web', 'error');
@@ -470,6 +475,7 @@ function PaginawebAdminPage() {
           tabs={[
             { id: 'products', label: `Productos Web (${products.length})` },
             { id: 'asesores', label: `Paleta de Vendedores (${asesores.length})` },
+            { id: 'pqrs', label: `PQRS (${pqrs.length})` },
           ]}
           active={activeTab}
           onChange={setActiveTab}
@@ -695,6 +701,11 @@ function PaginawebAdminPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* PESTAÑA PQRS */}
+      {activeTab === 'pqrs' && (
+        <PqrsPanel pqrs={pqrs} loading={loading} notify={notify} onRefresh={loadData} />
       )}
 
       {/* MODAL CREAR / EDITAR ASESOR */}
