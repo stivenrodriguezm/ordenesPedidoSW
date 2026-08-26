@@ -28,6 +28,7 @@ const roleTone = (role) => {
   if (r === 'administrador') return 'accent';
   if (r === 'vendedor') return 'info';
   if (r === 'auxiliar') return 'warning';
+  if (r === 'marketing') return 'success';
   return 'neutral';
 };
 
@@ -117,6 +118,7 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
               <option value="vendedor">Vendedor</option>
               <option value="auxiliar">Auxiliar</option>
               <option value="transportador">Transportador</option>
+              <option value="marketing">Marketing</option>
               <option value="administrador">Administrador</option>
             </select>
           </div>
@@ -240,7 +242,13 @@ const FEATURES_CATALOG = [
     ]
   },
   { module: "Página Web", features: [
-      { code: "GESTION_WEB", label: "Acceso a Gestión Web (Productos, Banner, Asesores)" }
+      { code: "GESTION_WEB", label: "Acceso a Gestión Web (ver productos, asesores y PQRS)" },
+      { code: "CREAR_PRODUCTO_WEB", label: "Crear productos" },
+      { code: "EDITAR_PRODUCTO_WEB", label: "Editar productos existentes" },
+      { code: "ELIMINAR_PRODUCTO_WEB", label: "Eliminar productos" },
+      { code: "EDITAR_CONFIGURACION_WEB", label: "Editar configuración del sitio (banner, textos)" },
+      { code: "ADMINISTRAR_ASESORES_WEB", label: "Crear, editar y eliminar asesores (tarjetas digitales)" },
+      { code: "RESPONDER_PQRS", label: "Ver y responder tickets PQRS" }
     ]
   },
   { module: "Catálogos Adicionales", features: [

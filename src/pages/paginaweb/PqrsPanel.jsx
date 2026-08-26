@@ -39,7 +39,7 @@ function formatDate(iso) {
   }
 }
 
-function PqrsPanel({ pqrs, loading, notify, onRefresh }) {
+function PqrsPanel({ pqrs, loading, notify, onRefresh, canResponder = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('todos');
   const [selected, setSelected] = useState(null);
@@ -225,7 +225,7 @@ function PqrsPanel({ pqrs, loading, notify, onRefresh }) {
               <select
                 className="ds-select"
                 value={selected.estado}
-                disabled={updatingEstado}
+                disabled={updatingEstado || !canResponder}
                 onChange={(e) => handleChangeEstado(e.target.value)}
               >
                 {ESTADOS.map((op) => (
@@ -254,22 +254,28 @@ function PqrsPanel({ pqrs, loading, notify, onRefresh }) {
               </div>
             )}
 
-            <form className="pqrs-modal-section" onSubmit={handleSendResponse}>
-              <h4 className="pw-form-sub-header">Responder al cliente</h4>
-              <textarea
-                className="ds-textarea"
-                rows={4}
-                placeholder="Escribe la respuesta que recibirá el cliente por correo..."
-                value={respuesta}
-                onChange={(e) => setRespuesta(e.target.value)}
-              />
-              <div className="pqrs-send-row">
-                <span className="pw-field-hint">Se enviará por correo a {selected.email}</span>
-                <Button type="submit" variant="primary" icon={FaPaperPlane} loading={sending} disabled={!respuesta.trim()}>
-                  Enviar respuesta
-                </Button>
+            {canResponder ? (
+              <form className="pqrs-modal-section" onSubmit={handleSendResponse}>
+                <h4 className="pw-form-sub-header">Responder al cliente</h4>
+                <textarea
+                  className="ds-textarea"
+                  rows={4}
+                  placeholder="Escribe la respuesta que recibirá el cliente por correo..."
+                  value={respuesta}
+                  onChange={(e) => setRespuesta(e.target.value)}
+                />
+                <div className="pqrs-send-row">
+                  <span className="pw-field-hint">Se enviará por correo a {selected.email}</span>
+                  <Button type="submit" variant="primary" icon={FaPaperPlane} loading={sending} disabled={!respuesta.trim()}>
+                    Enviar respuesta
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="pqrs-modal-section">
+                <p className="pw-field-hint">No tienes permiso para responder tickets PQRS.</p>
               </div>
-            </form>
+            )}
           </div>
         )}
       </Modal>

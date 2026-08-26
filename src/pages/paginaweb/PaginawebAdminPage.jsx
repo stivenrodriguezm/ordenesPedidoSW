@@ -21,7 +21,7 @@ import {
 import { getAdminPqrs } from '../../services/pqrsService';
 import PqrsPanel from './PqrsPanel';
 import { getMediaUrl } from '../../apiConfig';
-import { AppContext } from '../../AppContext';
+import { AppContext, usePermissions } from '../../AppContext';
 import { PageHeader, Button, Badge, Modal, StatCard, Skeleton, Tabs } from '../../components/ui';
 import './Paginaweb.css';
 import './Asesores.css';
@@ -51,6 +51,11 @@ function getErrorMessage(err, fallback) {
 
 function PaginawebAdminPage() {
   const { notify } = useContext(AppContext);
+  const hasPermission = usePermissions();
+  const canCrearProducto = hasPermission('CREAR_PRODUCTO_WEB');
+  const canEditarProducto = hasPermission('EDITAR_PRODUCTO_WEB');
+  const canEliminarProducto = hasPermission('ELIMINAR_PRODUCTO_WEB');
+  const canAdministrarAsesores = hasPermission('ADMINISTRAR_ASESORES_WEB');
   const [activeTab, setActiveTab] = useState('products');
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
@@ -404,12 +409,12 @@ function PaginawebAdminPage() {
         subtitle="Administra los productos, imágenes, banners y configuraciones para la tienda pública de LOTTUS"
         actions={
           <>
-            {activeTab === 'products' && (
+            {activeTab === 'products' && canCrearProducto && (
               <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateModal}>
                 Nuevo Producto Web
               </Button>
             )}
-            {activeTab === 'asesores' && (
+            {activeTab === 'asesores' && canAdministrarAsesores && (
               <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateAsesorModal}>
                 Nuevo Asesor
               </Button>
@@ -507,11 +512,13 @@ function PaginawebAdminPage() {
           ) : filteredProducts.length === 0 ? (
             <div className="pw-empty-state-panel">
               <p>No se encontraron productos registrados en el catálogo web.</p>
-              <div style={{ marginTop: '1rem' }}>
-                <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateModal}>
-                  Crear Producto
-                </Button>
-              </div>
+              {canCrearProducto && (
+                <div style={{ marginTop: '1rem' }}>
+                  <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateModal}>
+                    Crear Producto
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="pw-table-container">
@@ -560,20 +567,24 @@ function PaginawebAdminPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="pw-table-actions">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={FaEdit}
-                            onClick={() => handleOpenEditModal(p)}
-                            title="Editar"
-                          />
-                          <Button
-                            variant="danger-soft"
-                            size="sm"
-                            icon={FaTrashAlt}
-                            onClick={() => handleDeleteProduct(p.id)}
-                            title="Eliminar"
-                          />
+                          {canEditarProducto && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={FaEdit}
+                              onClick={() => handleOpenEditModal(p)}
+                              title="Editar"
+                            />
+                          )}
+                          {canEliminarProducto && (
+                            <Button
+                              variant="danger-soft"
+                              size="sm"
+                              icon={FaTrashAlt}
+                              onClick={() => handleDeleteProduct(p.id)}
+                              title="Eliminar"
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -610,11 +621,13 @@ function PaginawebAdminPage() {
           ) : filteredAsesores.length === 0 ? (
             <div className="pw-empty-state-panel">
               <p>No hay asesores registrados en la paleta de vendedores.</p>
-              <div style={{ marginTop: '1rem' }}>
-                <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateAsesorModal}>
-                  Crear Asesor
-                </Button>
-              </div>
+              {canAdministrarAsesores && (
+                <div style={{ marginTop: '1rem' }}>
+                  <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateAsesorModal}>
+                    Crear Asesor
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="pw-table-container">
@@ -658,7 +671,7 @@ function PaginawebAdminPage() {
                             <input
                               type="checkbox"
                               checked={!!a.activo}
-                              disabled={isPending}
+                              disabled={isPending || !canAdministrarAsesores}
                               onChange={() => handleToggleAsesorActivo(a)}
                             />
                             <span className="pw-slider" />
@@ -677,20 +690,24 @@ function PaginawebAdminPage() {
                                 <FaExternalLinkAlt />
                               </a>
                             )}
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={FaEdit}
-                              onClick={() => handleOpenEditAsesorModal(a)}
-                              title="Editar"
-                            />
-                            <Button
-                              variant="danger-soft"
-                              size="sm"
-                              icon={FaTrashAlt}
-                              onClick={() => handleDeleteAsesor(a)}
-                              title="Eliminar"
-                            />
+                            {canAdministrarAsesores && (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  icon={FaEdit}
+                                  onClick={() => handleOpenEditAsesorModal(a)}
+                                  title="Editar"
+                                />
+                                <Button
+                                  variant="danger-soft"
+                                  size="sm"
+                                  icon={FaTrashAlt}
+                                  onClick={() => handleDeleteAsesor(a)}
+                                  title="Eliminar"
+                                />
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -705,7 +722,7 @@ function PaginawebAdminPage() {
 
       {/* PESTAÑA PQRS */}
       {activeTab === 'pqrs' && (
-        <PqrsPanel pqrs={pqrs} loading={loading} notify={notify} onRefresh={loadData} />
+        <PqrsPanel pqrs={pqrs} loading={loading} notify={notify} onRefresh={loadData} canResponder={hasPermission('RESPONDER_PQRS')} />
       )}
 
       {/* MODAL CREAR / EDITAR ASESOR */}
@@ -732,7 +749,7 @@ function PaginawebAdminPage() {
                 <input
                   type="checkbox"
                   checked={!!editingAsesor.activo}
-                  disabled={pendingToggleIds.has(editingAsesor.id)}
+                  disabled={pendingToggleIds.has(editingAsesor.id) || !canAdministrarAsesores}
                   onChange={() => handleToggleAsesorActivo(editingAsesor)}
                 />
                 <span className="pw-slider" />

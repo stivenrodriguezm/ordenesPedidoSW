@@ -131,7 +131,7 @@ function App() {
                   {/* Redirect de ruta antigua */}
                   <Route path="/nuevaRemision" element={<Navigate to="/suministros/remisiones/nueva" replace />} />
                   <Route path="/suministros/inventario" element={<PrivateRoute feature="VER_INVENTARIO"><InventarioPage /></PrivateRoute>} />
-                  <Route path="/paginaweb/gestion" element={<PrivateRoute><PaginawebAdminPage /></PrivateRoute>} />
+                  <Route path="/paginaweb/gestion" element={<PrivateRoute feature="GESTION_WEB"><PaginawebAdminPage /></PrivateRoute>} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
       </Suspense>
