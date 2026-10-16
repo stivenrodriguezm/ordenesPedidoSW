@@ -158,7 +158,7 @@ describe('Configurar los precios de una referencia existente', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sin precios/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Configurar Detroit de Proveedor demo' }));
     await waitFor(() => expect(servicio.createLinea).toHaveBeenCalledWith({ referencia: 101, activo: false }));
-    expect(await screen.findByRole('button', { name: 'Agregar variante' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Formar agrupación' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Nueva Línea' })).not.toBeInTheDocument();
     expect(screen.getByText('Borrador', { exact: true })).toBeInTheDocument();
   });
@@ -171,13 +171,14 @@ describe('Configurar los precios de una referencia existente', () => {
     fireEvent.click(boton);
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo configurar.');
     fireEvent.click(boton);
-    expect(await screen.findByRole('button', { name: 'Agregar variante' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Formar agrupación' })).toBeInTheDocument();
     expect(servicio.createLinea).toHaveBeenCalledTimes(2);
   });
 
   it('busca por proveedor y distingue referencias con el mismo nombre', async () => {
     servicio.getReferenciasPrecios.mockResolvedValue([referencia, { ...referencia, id: 102, proveedor_nombre: 'Otro fabricante' }]);
     inicio();
+    fireEvent.click(await screen.findByRole('button', { name: 'Expandir referencia Detroit' }));
     expect(await screen.findByRole('button', { name: 'Configurar Detroit de Otro fabricante' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Buscar referencia, proveedor o medida'), { target: { value: 'otro fabricante' } });
     expect(screen.queryByRole('button', { name: 'Configurar Detroit de Proveedor demo' })).not.toBeInTheDocument();
@@ -195,5 +196,44 @@ describe('Configurar los precios de una referencia existente', () => {
     fireEvent.click(within(modal).getByRole('button', { name: 'Guardar cambios' }));
     await waitFor(() => expect(servicio.updateLinea).toHaveBeenCalledWith(1, { notas: 'Nota comercial', activo: true, fotos: [], es_decorativo: false }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});
+
+
+describe('Subcategorías y agrupación del catálogo', () => {
+  it('usa la identidad de la subcategoría sin otro nombre o selector de variante', async () => {
+    await montar();
+    expect(screen.getByText('Sofá 235', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Producto / medida')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Tipo de Sofá 235')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Agregar variante' })).not.toBeInTheDocument();
+  });
+
+  it('muestra juntas referencias del mismo nombre y separa cada proveedor al cambiar agrupación', async () => {
+    const refs = [
+      { id: 1, nombre: 'Valencia', proveedor: 10, proveedor_nombre: 'Muebles Norte', categorias: [], subcategorias: [{ id: 1, nombre: 'Silla', categoria_nombre: 'Comedor' }], linea: null },
+      { id: 2, nombre: 'Valencia', proveedor: 11, proveedor_nombre: 'Muebles Sur', categorias: [], subcategorias: [{ id: 2, nombre: 'Sofá', categoria_nombre: 'Sala' }], linea: null },
+    ];
+    servicio.getReferenciasPrecios.mockResolvedValue(refs);
+    render(<QueryClientProvider client={new QueryClient()}><ListaPreciosAdminPage /></QueryClientProvider>);
+    fireEvent.change(screen.getByLabelText('Buscar referencia, proveedor o medida'), { target: { value: 'Valencia' } });
+    expect(await screen.findByRole('button', { name: 'Contraer referencia Valencia' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Configurar Valencia de Muebles Norte' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Configurar Valencia de Muebles Sur' })).toBeInTheDocument();
+    expect(screen.getByText('Silla')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Agrupar por'), { target: { value: 'proveedor' } });
+    expect(screen.getByRole('button', { name: 'Contraer proveedor Muebles Norte' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Contraer proveedor Muebles Sur' })).toBeInTheDocument();
+    expect(servicio.getLinea).not.toHaveBeenCalled();
+  });
+
+  it('cambiar agrupación o cerrar el grupo conserva los costos pendientes', async () => {
+    await montar();
+    fireEvent.change(screen.getByLabelText('Costo base'), { target: { value: '4250000' } });
+    fireEvent.change(screen.getByLabelText('Agrupar por'), { target: { value: 'proveedor' } });
+    expect(screen.getByLabelText('Agrupar por')).toHaveValue('referencia');
+    fireEvent.click(screen.getByRole('button', { name: 'Contraer referencia Detroit' }));
+    expect(screen.getByLabelText('Costo base')).toHaveValue('$4.250.000');
+    expect(screen.getByRole('button', { name: 'Contraer referencia Detroit' })).toHaveAttribute('aria-expanded', 'true');
   });
 });

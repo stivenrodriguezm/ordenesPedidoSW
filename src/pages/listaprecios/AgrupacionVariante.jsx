@@ -45,12 +45,14 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
   const [guardado, setGuardado] = useState(form), [montado, setMontado] = useState(nuevo);
   const [abierto, setAbierto] = useState(nuevo), [errores, setErrores] = useState({}), [error, setError] = useState('');
   const [extras, setExtras] = useState(() => new Set());
+  const [subcategoria, setSubcategoria] = useState('');
+  const objetivo = linea.variantes.find(v => v.subcategoria === Number(subcategoria));
   const [nombre, setNombre] = useState(''), [categoria, setCategoria] = useState(categorias[0]?.id || '');
   const cambiado = nuevo || JSON.stringify(form) !== JSON.stringify(guardado);
   const revision = useMemo(() => validar(form), [form]), consulta = JSON.stringify(revision.componentes);
   const consultaDemorada = useDebounce(consulta, 350);
   const usados = linea.variantes.some(v => v.id !== variante.id && v.componentes?.some(c => c.variante === variante.id));
-  const disponibles = linea.variantes.filter(v => v.id !== variante.id && !v.componentes?.length);
+  const disponibles = linea.variantes.filter(v => v.id !== variante.id && v.id !== objetivo?.id && !v.componentes?.length);
   const cambiar = patch => { setForm(f => ({ ...f, ...patch })); setErrores({}); setError(''); };
   const cambiarFila = (i, patch) => cambiar({ filas: form.filas.map((f, j) => j === i ? { ...f, ...patch } : f) });
   const simulacion = useQuery({
@@ -60,10 +62,10 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
     retry: false, staleTime: 0,
   });
   const guardar = useMutation({
-    mutationFn: componentes => nuevo ? crearAgrupacion(linea.id, { nombre: nombre.trim(), categoria: categoria ? Number(categoria) : null, componentes }) : guardarComponentes(variante.id, componentes),
+    mutationFn: componentes => nuevo ? crearAgrupacion(linea.id, { ...(linea.referencia ? { subcategoria: Number(subcategoria) } : { nombre: nombre.trim(), categoria: categoria ? Number(categoria) : null }), componentes }) : guardarComponentes(variante.id, componentes),
     onSuccess: async data => {
       actualizarLineaEnCache(client, linea.id, l => ({
-        ...l, variantes: nuevo ? [...l.variantes, data] : l.variantes.map(v => v.id === data.id ? data : v),
+        ...l, variantes: nuevo && !l.variantes.some(v => v.id === data.id) ? [...l.variantes, data] : l.variantes.map(v => v.id === data.id ? data : v),
       }));
       setGuardado(form); await invalidarListaPrecios(client, linea.id);
       notify(form.activa ? 'Agrupación guardada. Los productos originales conservan sus costos.' : 'Guardado como producto individual.', 'success');
@@ -73,7 +75,8 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
   });
   const enviar = e => {
     e.preventDefault(); setError(''); setErrores(revision.errores);
-    if (nuevo && !nombre.trim()) { setError('Escribe el nombre de la agrupación.'); return; }
+    if (nuevo && linea.referencia && !subcategoria) { setError('Selecciona la subcategoría del conjunto.'); return; }
+    if (nuevo && !linea.referencia && !nombre.trim()) { setError('Escribe el nombre de la agrupación.'); return; }
     if (!revision.valido) return;
     guardar.mutate(revision.componentes);
   };
@@ -83,7 +86,7 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
   const multiplo = v => Number(v).toLocaleString('es-CO', { maximumFractionDigits: 3 });
   const contenido = () => <form className="lp-agrupacion-editor" aria-label={nuevo ? 'Nueva agrupación' : `Agrupación de ${variante.nombre}`} onSubmit={enviar} noValidate data-estado={guardar.isPending ? 'guardando' : cambiado ? 'pendiente' : ''}>
     <fieldset disabled={guardar.isPending}>
-      {nuevo ? <div className="lp-agrupacion-identidad"><label>Nombre del conjunto<input className="ds-input" value={nombre} maxLength={150} placeholder="Ej.: Comedor de 6 puestos" onChange={e => setNombre(e.target.value)} /></label><label>Categoría<select className="ds-input" value={categoria} onChange={e => setCategoria(e.target.value)}>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label></div>
+      {nuevo && linea.referencia ? <div className="lp-agrupacion-identidad"><label>Subcategoría del conjunto<select className="ds-input" value={subcategoria} onChange={e => { setSubcategoria(e.target.value); cambiar({ filas: [] }); }}><option value="">Seleccionar…</option>{linea.variantes.filter(v => !v.componentes?.length && !linea.variantes.some(j => j.componentes?.some(c => c.variante === v.id))).map(v => <option key={v.subcategoria} value={v.subcategoria}>{v.categoria_nombre} · {v.nombre}</option>)}</select></label><p className="lp-agrupacion-ayuda">El conjunto usa la ficha de esta subcategoría. Agrega abajo las piezas que lo forman.</p></div> : nuevo ? <div className="lp-agrupacion-identidad"><label>Nombre del conjunto<input className="ds-input" value={nombre} maxLength={150} placeholder="Ej.: Comedor de 6 puestos" onChange={e => setNombre(e.target.value)} /></label><label>Categoría<select className="ds-input" value={categoria} onChange={e => setCategoria(e.target.value)}>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label></div>
         : <label className="lp-agrupacion-toggle"><input type="checkbox" checked={form.activa} disabled={usados} onChange={e => cambiar({ activa: e.target.checked })} /> Combinar otras variantes de esta colección</label>}
       {usados && <p className="lp-agrupacion-ayuda">Esta pieza ya pertenece a otro conjunto. Los conjuntos se forman con productos individuales.</p>}
       {form.activa && <>

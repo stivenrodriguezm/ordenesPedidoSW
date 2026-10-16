@@ -92,8 +92,8 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
       </div>
       {fotos.length > 1 && <div className="lp-detalle-thumbs">{fotos.map((foto, i) => <button key={foto} aria-label={`Ver foto ${i + 1}`} aria-pressed={fotoIdx === i}
         className={`lp-thumb ${fotoIdx === i ? 'lp-thumb--active' : ''}`} onClick={() => setFotoIdx(i)}><img src={foto} alt="" loading="lazy" /></button>)}</div>}
-      <section className="lp-config-section" aria-label="Producto y medida">
-        <h4><span>1</span> Producto y medida</h4>
+      <section className="lp-config-section" aria-label={linea.referencia ? "Subcategoría" : "Producto y medida"}>
+        <h4><span>1</span> {linea.referencia ? "Subcategoría" : "Producto y medida"}</h4>
         <div className="lp-variantes">{linea.variantes.map((v) => <button key={v.id} className={`lp-variante-opcion ${v.id === varianteId ? 'is-selected' : ''}`}
           aria-pressed={v.id === varianteId} onClick={() => elegirVariante(v)}>
           <span>{v.nombre}{v.componentes && <small>Conjunto · {v.componentes}</small>}</span>

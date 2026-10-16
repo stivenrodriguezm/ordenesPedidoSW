@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FaTags, FaPlus, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaImage, FaUpload,
@@ -11,7 +11,7 @@ import {
   getImpactoMultiplicador, simularMultiplicador, asignarMultiplicadorMasivo,
   getGruposTela, createGrupoTela, updateGrupoTela, deleteGrupoTela, getImpactoGrupoTela,
   getLineas, getLinea, getReferenciasPrecios, createLinea, updateLinea, deleteLinea,
-  createVariante, updateVariante, deleteVariante,
+  sincronizarSubcategorias, updateVariante, deleteVariante,
   createPrecioVariante, updatePrecioVariante, deletePrecioVariante,
   uploadListaPreciosFoto,
 } from '../../services/listaPreciosService';
@@ -28,6 +28,7 @@ import VariantesOrdenables from './VariantesOrdenables';
 import AgrupacionVariante from './AgrupacionVariante';
 import CargosVariante from './CargosVariante';
 import './ListaPreciosAdminPage.css';
+import { agruparReferencias } from './agruparReferencias';
 
 // Secciones, de la más usada a la menos usada (2026-10-15).
 const TABS = [
@@ -780,35 +781,29 @@ function VarianteEditor({ variante, linea, grupos, multiplicadores, notify }) {
     <div className={`lp-variante-card${expandido ? ' lp-variante-card--open' : ''}`} data-estado={updateVarianteMut.isPending || updatePrecioMut.isPending || clearPrecioMut.isPending || deletePrecioMut.isPending ? 'guardando' : undefined}>
       <div className="lp-variante-header lp-variante-captura">
         <div className="lp-captura-identidad">
-          <CampoPrecio tipo="texto" label="Producto / medida" valor={variante.nombre}
-            onCommit={(nombre) => updateVarianteMut.mutateAsync({ nombre })} />
+          {linea.referencia ? <div className="lp-subcategoria-identidad"><small>Subcategoría</small><strong>{variante.nombre}</strong><span>{variante.categoria_nombre}</span>{variante.costo_confirmado === false && <em>Pendiente de costo</em>}</div>
+            : <CampoPrecio tipo="texto" label="Producto / medida" valor={variante.nombre} onCommit={(nombre) => updateVarianteMut.mutateAsync({ nombre })} />}
           <div className="lp-captura-insignias">{variante.cargos.some((c) => c.tipo === 'decorativos') && <span className="lp-decorativos-badge" title="Cojines incluidos: 2 decorativos por unidad"><FaCouch size={9} /> Decorativos x2</span>}
             {!!variante.componentes?.length && <span className="lp-juego-badge" title={variante.componentes.map(c => `${c.cantidad} ${c.variante_nombre}`).join(' + ')}><FaLayerGroup size={10} /> Conjunto</span>}
           </div>
         </div>
         {variante.componentes?.length ? <div className="lp-captura lp-captura-costo lp-costo-total-producto"><label htmlFor={`costo-total-${variante.id}`}>Costo total del producto</label><div className="lp-captura-control"><input id={`costo-total-${variante.id}`} className="lp-inline-input" value={formatCOP(variante.costo_total_producto)} readOnly /></div><small>Base sin tela/cuero</small></div>
-          : <CampoPrecio label="Costo base" valor={variante.costo_base} className="lp-captura-costo" onCommit={(costo_base) => updateVarianteMut.mutateAsync({ costo_base })} />}
+          : <CampoPrecio label="Costo base" valor={variante.costo_confirmado === false ? null : variante.costo_base} placeholder="Indica el costo" className="lp-captura-costo" onCommit={(costo_base) => updateVarianteMut.mutateAsync({ costo_base })} />}
         {variante.componentes?.length ? <p className="lp-consumo-heredado">Consumos según las piezas del conjunto</p> : <div className="lp-consumos" role="group" aria-label={`Materiales de ${variante.nombre}`}>
           <ConsumoMaterial material="tela" valor={variante.metraje_tela} onCommit={(metraje_tela) => updateVarianteMut.mutateAsync({ metraje_tela })} />
           <ConsumoMaterial material="cuero" valor={variante.decimetraje_cuero} onCommit={(decimetraje_cuero) => updateVarianteMut.mutateAsync({ decimetraje_cuero })} />
         </div>}
         <CampoPrecio label="Tope Dcto" tipo="decimal" valor={variante.descuento_maximo} nullable min={0} max={100} sufijo="%" placeholder="25"
           className="lp-captura-descuento" onCommit={(descuento_maximo) => updateVarianteMut.mutateAsync({ descuento_maximo })} />
-        <label className="lp-captura-categoria">Tipo de producto
-          {linea.subcategorias?.length ? <select className="lp-inline-input lp-inline-select" value={variante.subcategoria || ''} aria-label={`Tipo de ${variante.nombre}`} disabled={updateVarianteMut.isPending}
-            onChange={e => updateVarianteMut.mutate({ subcategoria: e.target.value ? Number(e.target.value) : null })}>
-            <option value="">Otro detalle / medida</option>{linea.subcategorias.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </select> : <span className="lp-ref-clasificacion">{variante.categoria_nombre || 'Sin clasificar'}</span>}
-        </label>
         <span
           className={`lp-multiplicador-badge ${variante.multiplicador ? 'lp-multiplicador-badge--custom' : ''}`}
           title={variante.multiplicador ? `Multiplicador propio: ${variante.multiplicador_nombre}` : 'Usa el multiplicador general'}
         >
           ×{Number(variante.multiplicador_efectivo).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
         </span>
-        <button className="action-btn" title="Eliminar detalle" onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Eliminar "${variante.nombre}"?`)) deleteVarianteMut.mutate(); }}>
+        {!linea.referencia && <button className="action-btn" title="Eliminar detalle" onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Eliminar "${variante.nombre}"?`)) deleteVarianteMut.mutate(); }}>
           <FaTrash size={13} />
-        </button>
+        </button>}
         <button type="button" className="lp-variante-expand" aria-expanded={expandido}
           aria-controls={`variante-detalle-${variante.id}`} aria-label={`${expandido ? 'Contraer' : 'Expandir'} ${variante.nombre}`}
           onClick={(e) => { e.stopPropagation();
@@ -952,7 +947,6 @@ function LineaFormModal({ isOpen, onClose, linea, onSave, isLoading, notify, err
 const LineaRow = memo(function LineaRow({ linea: resumen, grupos, categorias, multiplicadores, onEdit, notify, abrirInicial = false }) {
   const [expandido, setExpandido] = useState(abrirInicial);
   const [nuevaAgrupacion, setNuevaAgrupacion] = useState(false);
-  const [nuevoTipo, setNuevoTipo] = useState('');
   const queryClient = useQueryClient();
   const detalle = useQuery({
     queryKey: ['lp-linea', resumen.id], queryFn: ({ signal }) => getLinea(resumen.id, { signal }),
@@ -964,10 +958,10 @@ const LineaRow = memo(function LineaRow({ linea: resumen, grupos, categorias, mu
     actualizarLineaEnCache(queryClient, detalle.data.id, () => detalle.data);
   }, [detalle.data, queryClient]);
 
-  const createVarianteMut = useMutation({
-    mutationFn: (data) => createVariante(data),
-    onSuccess: () => invalidarListaPrecios(queryClient, linea.id),
-    onError: () => notify('Error al crear el detalle.', 'error'),
+  const sincronizar = useMutation({
+    mutationFn: () => sincronizarSubcategorias(linea.id),
+    onSuccess: data => { actualizarLineaEnCache(queryClient, linea.id, () => data); invalidarListaPrecios(queryClient, linea.id); },
+    onError: error => notify(mensajeDeError(error, 'No se pudieron actualizar las subcategorías.'), 'error'),
   });
   const deleteLineaMut = useMutation({
     mutationFn: () => deleteLinea(linea.id),
@@ -1001,7 +995,7 @@ const LineaRow = memo(function LineaRow({ linea: resumen, grupos, categorias, mu
         <div className="lp-linea-info">
           <span className="lp-linea-nombre">{linea.nombre}</span>
           <span className="lp-linea-proveedor">{linea.proveedor_nombre}{linea.referencia && ` · Ref. #${linea.referencia}`}</span>
-          <span className="lp-linea-sub">{categoriasDeLinea.join(' · ') || 'Sin productos todavía'} · {linea.variantes.length} variante(s)</span>
+          <span className="lp-linea-sub">{categoriasDeLinea.join(' · ') || 'Sin productos todavía'} · {linea.variantes.length} subcategoría(s)</span>
         </div>
         {linea.activo ? <Badge tone="success">Publicada</Badge> : <Badge tone="neutral">Borrador</Badge>}
         <button className="action-btn" title="Configurar precios" aria-label={`Configurar precios de ${linea.nombre}`} onClick={configurarPrecios}><FaEdit size={14} /></button>
@@ -1019,28 +1013,16 @@ const LineaRow = memo(function LineaRow({ linea: resumen, grupos, categorias, mu
       {expandido && detalle.data && (
         <div className="lp-linea-variantes" aria-busy={detalle.isFetching}>
           {detalle.isFetching && <p className="lp-section-hint" role="status">Actualizando precios…</p>}
-          {!linea.activo && <div className="lp-ref-borrador"><span>Estos precios están en borrador. Revísalos antes de mostrarlos al vendedor.</span><Button size="sm" variant="secondary" disabled={!linea.variantes.length} onClick={configurarPrecios}>Revisar y publicar</Button></div>}
+          {!linea.activo && <div className="lp-ref-borrador"><span>Estos precios están en borrador. Revísalos antes de mostrarlos al vendedor.</span><Button size="sm" variant="secondary" disabled={!linea.variantes.length || linea.variantes.some(v => v.costo_confirmado === false)} onClick={configurarPrecios}>Revisar y publicar</Button></div>}
           {detalle.isError && <ErrorState message="No se pudieron actualizar los precios. Reintenta para confirmar los cálculos." onRetry={detalle.refetch} />}
           <VariantesOrdenables linea={linea} notify={notify}>{v => (
             <VarianteEditor variante={v} linea={linea} grupos={grupos} categorias={categorias} multiplicadores={multiplicadores} notify={notify} />
           )}</VariantesOrdenables>
           <div className="lp-agregar-variante-row">
-            <select
-              className="lp-inline-input lp-inline-select"
-              aria-label={`Nuevo tipo de ${linea.nombre}`} value={nuevoTipo}
-              onChange={(e) => setNuevoTipo(e.target.value)}
-            >
-              <option value="">Otro producto / medida</option>{linea.subcategorias?.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-            </select>
-            <Button
-              size="sm" variant="ghost" icon={FaPlus}
-              loading={createVarianteMut.isPending} onClick={() => createVarianteMut.mutate({ linea: linea.id, subcategoria: nuevoTipo ? Number(nuevoTipo) : null, ...(nuevoTipo ? {} : { nombre: 'Nuevo detalle' }), costo_base: 0 })}
-            >
-              Agregar variante
-            </Button>
-            <Button size="sm" variant="ghost" icon={FaLayerGroup} disabled={!linea.variantes.some(v => !v.componentes?.length)} onClick={() => setNuevaAgrupacion(true)}>
-              Agregar agrupación
-            </Button>
+            <span className="lp-section-hint">Categorías y subcategorías del catálogo de Referencias.</span>
+            {linea.subcategorias?.some(s => !linea.variantes.some(v => v.subcategoria === s.id)) && <Button size="sm" variant="secondary" loading={sincronizar.isPending} onClick={() => sincronizar.mutate()}>Actualizar subcategorías</Button>}
+            {!linea.subcategorias?.length && <p className="lp-section-hint">Asigna subcategorías en Referencias para capturar sus costos.</p>}
+            <Button size="sm" variant="ghost" icon={FaLayerGroup} disabled={linea.variantes.length < 2} onClick={() => setNuevaAgrupacion(true)}>Formar agrupación</Button>
           </div>
           <EspecialesLinea linea={linea} grupos={grupos} multiplicadores={multiplicadores} notify={notify} />
         </div>
@@ -1068,13 +1050,38 @@ function ReferenciaPreciosRow({ referencia, onConfigurar, ...props }) {
   return <div className="ds-card lp-ref-sin-precios">
     <div className="lp-ref-identidad"><strong>{referencia.nombre}</strong><span>{referencia.proveedor_nombre}</span>
       <small>Ref. #{referencia.id} · {referencia.categorias?.map(c => c.nombre).join(' · ') || 'Sin clasificación'} · Sin precios</small></div>
+    {!!referencia.subcategorias?.length && <div className="lp-ref-tipos">{referencia.subcategorias.map(s => <span key={s.id}><small>{s.categoria_nombre}</small>{s.nombre}</span>)}</div>}
     <Button size="sm" variant="secondary" loading={configurar.isPending} onClick={() => configurar.mutate()} aria-label={`Configurar ${referencia.nombre} de ${referencia.proveedor_nombre}`}>Configurar precios</Button>
     {configurar.isError && <div role="alert" className="ds-error-box">{mensajeDeError(configurar.error, 'No se pudo abrir la configuración. Intenta de nuevo.')}</div>}
   </div>;
 }
 
+function GrupoReferencias({ grupo, modo, busqueda, notify, children }) {
+  const [abierto, setAbierto] = useState(grupo.referencias.length === 1 || !!busqueda);
+  const [montado, setMontado] = useState(abierto);
+  const contenedor = useRef(null);
+  useEffect(() => { if (busqueda) { setAbierto(true); setMontado(true); } }, [busqueda]);
+  const cambiar = () => {
+    if (abierto && contenedor.current?.querySelector('[data-estado="error"], [data-estado="pendiente"], [data-estado="guardando"]')) {
+      notify('Confirma o corrige los campos pendientes antes de cerrar el grupo.', 'warning'); return;
+    }
+    setAbierto(!abierto); setMontado(true);
+  };
+  const proveedores = new Set(grupo.referencias.map(r => r.proveedor ?? r.proveedor_nombre)).size;
+  return <section className="lp-grupo-referencias" ref={contenedor}>
+    <button type="button" className="lp-grupo-cabecera" onClick={cambiar} aria-expanded={abierto} aria-label={`${abierto ? 'Contraer' : 'Expandir'} ${modo === 'referencia' ? 'referencia' : 'proveedor'} ${grupo.nombre}`}>
+      <FaLayerGroup aria-hidden="true" /><strong>{modo === 'referencia' ? `Referencia · ${grupo.nombre}` : grupo.nombre}</strong>
+      <span>{grupo.referencias.length} {grupo.referencias.length === 1 ? 'producto' : 'productos'}{modo === 'referencia' && ` · ${proveedores} ${proveedores === 1 ? 'proveedor' : 'proveedores'}`}</span>
+      {abierto ? <FaChevronUp aria-hidden="true" /> : <FaChevronDown aria-hidden="true" />}
+    </button>
+    {montado && <div className="lp-grupo-contenido" hidden={!abierto}>{children}</div>}
+  </section>;
+}
+
 function LineasTab({ notify }) {
   const queryClient = useQueryClient();
+  const contenedor = useRef(null);
+  const [agrupacion, setAgrupacion] = useState('referencia');
   const [categoriaId, setCategoriaId] = useState('');
   const [search, setSearch] = useState('');
   const [estado, setEstado] = useState('todas');
@@ -1100,21 +1107,31 @@ function LineasTab({ notify }) {
   const consulta = normalizarBusqueda(search).split(/\s+/).filter(Boolean);
   const visibles = referencias.filter(r => (configurando.has(r.id) || estado === 'todas' || (estado === 'configuradas' ? !!r.linea : !r.linea))
     && (!categoriaId || r.categorias?.some(c => String(c.id) === categoriaId) || r.subcategorias?.some(s => String(s.categoria) === categoriaId))
-    && consulta.every(p => normalizarBusqueda([r.nombre, r.proveedor_nombre, ...(r.categorias || []).map(c => c.nombre), ...(r.linea?.variantes || []).map(v => v.nombre)].join(' ')).includes(p)));
+    && consulta.every(p => normalizarBusqueda([r.nombre, r.proveedor_nombre, ...(r.categorias || []).map(c => c.nombre), ...(r.subcategorias || []).map(s => s.nombre), ...(r.linea?.variantes || []).map(v => v.nombre)].join(' ')).includes(p)));
   const configuradas = referencias.filter(r => r.linea).length;
-  return <div>
-    <p className="lp-ref-explicacion">Los productos son las referencias de tu catálogo. Aquí configuras sus medidas, costos y precios.</p>
+  const agrupadas = useMemo(() => agruparReferencias(visibles, agrupacion), [visibles, agrupacion]);
+  const cambiarVista = accion => {
+    if (contenedor.current?.querySelector('[data-estado="error"], [data-estado="pendiente"], [data-estado="guardando"]')) {
+      notify('Confirma o corrige los campos pendientes antes de cambiar la vista.', 'warning'); return;
+    }
+    accion();
+  };
+  return <div ref={contenedor}>
+    <p className="lp-ref-explicacion">Configura los costos de las subcategorías de cada referencia y proveedor.</p>
     <div className="lp-tab-toolbar">
-      <div className="v-search-pill lp-lineas-search"><FaSearch /><input type="search" aria-label="Buscar referencia, proveedor o medida" placeholder="Referencia, proveedor o medida…" value={search} onChange={e => setSearch(e.target.value)} />
-        {search && <button type="button" aria-label="Limpiar búsqueda" className="lp-search-clear" onClick={() => setSearch('')}><FaTimes /></button>}</div>
-      <label className="v-select-pill"><span>Categoría</span><select aria-label="Filtrar categoría" value={categoriaId} onChange={e => setCategoriaId(e.target.value)}><option value="">Todas</option>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
+      <div className="v-search-pill lp-lineas-search"><FaSearch /><input type="search" aria-label="Buscar referencia, proveedor o medida" placeholder="Referencia, proveedor o medida…" value={search} onChange={e => cambiarVista(() => setSearch(e.target.value))} />
+        {search && <button type="button" aria-label="Limpiar búsqueda" className="lp-search-clear" onClick={() => cambiarVista(() => setSearch(''))}><FaTimes /></button>}</div>
+      <label className="v-select-pill"><span>Agrupar por</span><select aria-label="Agrupar por" value={agrupacion} onChange={e => cambiarVista(() => setAgrupacion(e.target.value))}><option value="referencia">Referencia</option><option value="proveedor">Proveedor</option></select></label>
+      <label className="v-select-pill"><span>Categoría</span><select aria-label="Filtrar categoría" value={categoriaId} onChange={e => cambiarVista(() => setCategoriaId(e.target.value))}><option value="">Todas</option>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
     </div>
     <div className="lp-ref-filtros" role="group" aria-label="Referencias con o sin precios">
-      {[['todas', 'Todas', referencias.length], ['configuradas', 'Con precios', configuradas], ['pendientes', 'Sin precios', referencias.length - configuradas]].map(([id, nombre, n]) => <button type="button" key={id} aria-pressed={estado === id} onClick={() => { setEstado(id); setConfigurando(new Set()); }}>{nombre} <span>{n}</span></button>)}
+      {[['todas', 'Todas', referencias.length], ['configuradas', 'Con precios', configuradas], ['pendientes', 'Sin precios', referencias.length - configuradas]].map(([id, nombre, n]) => <button type="button" key={id} aria-pressed={estado === id} onClick={() => cambiarVista(() => { setEstado(id); setConfigurando(new Set()); })}>{nombre} <span>{n}</span></button>)}
     </div>
     {isLoading ? <div className="lp-loading">Cargando referencias…</div> : isError ? <ErrorState message="No se pudieron cargar las referencias." onRetry={refetch} />
       : !visibles.length ? <EmptyState title="Sin referencias para mostrar" message="Ajusta la búsqueda o los filtros. Los productos se administran en Referencias." />
-        : <div className="lp-lineas-list">{visibles.map(r => <ReferenciaPreciosRow key={r.id} referencia={r} grupos={grupos} categorias={categorias} multiplicadores={multiplicadores} onConfigurar={iniciarConfiguracion} onEdit={editarLinea} notify={notify} />)}</div>}
+        : <div className="lp-lineas-list">{agrupadas.map(g => <GrupoReferencias key={`${agrupacion}-${g.clave}`} grupo={g} modo={agrupacion} busqueda={search} notify={notify}>
+          {g.referencias.map(r => <ReferenciaPreciosRow key={r.id} referencia={r} grupos={grupos} categorias={categorias} multiplicadores={multiplicadores} onConfigurar={iniciarConfiguracion} onEdit={editarLinea} notify={notify} />)}
+        </GrupoReferencias>)}</div>}
     <LineaFormModal isOpen={!!editing} onClose={() => setEditing(null)} linea={editing} isLoading={saveMutation.isPending} onSave={data => saveMutation.mutate(data)} notify={notify}
       error={saveMutation.isError ? mensajeDeError(saveMutation.error, 'No se pudo guardar la configuración.') : ''} />
   </div>;

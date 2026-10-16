@@ -163,7 +163,7 @@ function ListaPreciosPage() {
           <div className="lp-card-foto"><FotoPrecio src={linea.fotos?.[0]} loading="lazy" decoding="async" /></div>
           <div className="lp-card-info"><span className="lp-eyebrow">{[...new Set(linea.variantes.map((v) => v.categoria_nombre))].filter(Boolean).join(' · ')}</span><strong className="lp-card-nombre">{linea.nombre}</strong>
             {linea.proveedor_nombre && <small className="lp-card-proveedor">{linea.proveedor_nombre} · Ref. #{linea.referencia}</small>}
-            <span className="lp-card-descripcion">{linea.variantes.length === 1 ? linea.variantes[0].nombre : `${linea.variantes.length} productos y medidas`}</span>
+            <span className="lp-card-descripcion">{linea.variantes.length === 1 ? linea.variantes[0].nombre : `${linea.variantes.length} subcategorías`}</span>
             <span className="lp-card-precio">{precios.length ? `Desde ${formatCOP(Math.min(...precios))}` : 'Consultar disponibilidad de precio'}</span>
             {escritorio && <span className="lp-card-abrir">Ver opciones <FaArrowRight /></span>}
             {conjunto && <span className="lp-card-conjunto"><FaLayerGroup /> Conjunto disponible</span>}</div>

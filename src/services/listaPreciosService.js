@@ -285,3 +285,5 @@ export const getBibliotecaEspeciales = async () => {
   const response = await API.get('/listaprecios/especiales/biblioteca/');
   return response.data;
 };
+
+export const sincronizarSubcategorias = (id) => API.post(`/listaprecios/lineas/${id}/sincronizar-subcategorias/`).then(r => r.data);

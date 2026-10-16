@@ -134,3 +134,22 @@ describe('Agrupaciones por costos de piezas', () => {
     await waitFor(() => expect(client.getQueryData(['lp-lineas'])[0].variantes.at(-1).id).toBe(4));
   });
 });
+
+it('un conjunto usa una subcategoría existente y reemplaza su ficha sin duplicarla', async () => {
+  const destino = { ...juego, subcategoria: 103, categoria_nombre: 'Comedor', componentes: [] };
+  const unificada = { ...linea, referencia: 50, variantes: [{ ...mesa, subcategoria: 101 }, { ...silla, subcategoria: 102 }, destino] };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(['lp-linea', 5], unificada);
+  servicio.crearAgrupacion.mockResolvedValue({ ...juego, subcategoria: 103 });
+  render(<QueryClientProvider client={client}><AgrupacionVariante nuevo linea={unificada} variante={{ componentes: [] }} notify={vi.fn()} /></QueryClientProvider>);
+  expect(screen.queryByLabelText('Nombre del conjunto')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Subcategoría del conjunto'), { target: { value: '103' } });
+  agregarPieza(1); agregarPieza(2);
+  escribir('Cantidad de Silla', '6');
+  fireEvent.click(screen.getByRole('button', { name: 'Crear agrupación' }));
+  await waitFor(() => expect(servicio.crearAgrupacion).toHaveBeenCalledWith(5, { subcategoria: 103, componentes: [
+    { variante: 1, cantidad: 1, costo_unitario: null, multiplicador: null },
+    { variante: 2, cantidad: 6, costo_unitario: null, multiplicador: null },
+  ] }));
+  expect(client.getQueryData(['lp-linea', 5]).variantes).toHaveLength(3);
+});

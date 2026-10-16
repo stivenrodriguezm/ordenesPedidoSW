@@ -777,3 +777,30 @@
 @media (max-width: 580px) {
   .lp-admin-page .lp-nota__texto, .lp-admin-page .lp-nota__input { font-size: 14px; }
 }
+
+/* Referencia → proveedor → subcategorías: identidad compartida con el catálogo. */
+.lp-admin-page .lp-grupo-referencias { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); overflow: clip; }
+.lp-admin-page .lp-grupo-cabecera { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; padding: 14px 16px; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.lp-admin-page .lp-grupo-cabecera > strong { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.lp-admin-page .lp-grupo-cabecera > span { font-size: 12px; color: var(--gray-500); }
+.lp-admin-page .lp-grupo-cabecera > svg { flex-shrink: 0; color: var(--gray-500); }
+.lp-admin-page .lp-grupo-cabecera:hover { background: var(--gray-50); }
+.lp-admin-page .lp-grupo-cabecera:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; }
+.lp-admin-page .lp-grupo-contenido { padding: 0 12px 12px; display: grid; gap: 10px; }
+.lp-admin-page .lp-grupo-contenido[hidden] { display: none; }
+.lp-admin-page .lp-grupo-contenido > .lp-linea-card, .lp-admin-page .lp-grupo-contenido > .lp-ref-sin-precios { margin: 0; box-shadow: none; }
+.lp-admin-page .lp-subcategoria-identidad { display: flex; flex-direction: column; gap: 4px; padding: 4px 0; min-width: 0; }
+.lp-admin-page .lp-subcategoria-identidad > small { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--gray-500); }
+.lp-admin-page .lp-subcategoria-identidad > strong { font-size: 14px; overflow-wrap: anywhere; }
+.lp-admin-page .lp-subcategoria-identidad > span { font-size: 12px; color: var(--gray-500); }
+.lp-admin-page .lp-subcategoria-identidad > em { font-size: 11px; font-style: normal; color: #91651b; }
+.lp-admin-page .lp-ref-tipos { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.lp-admin-page .lp-ref-tipos > span { padding: 5px 9px; border-radius: 7px; background: var(--gray-50); border: 1px solid var(--border); font-size: 12px; }
+.lp-admin-page .lp-ref-tipos small { display: block; color: var(--gray-500); font-size: 10px; }
+@media (max-width: 580px) {
+  .lp-admin-page .lp-grupo-cabecera { flex-wrap: wrap; padding: 12px; gap: 8px; }
+  .lp-admin-page .lp-grupo-cabecera > strong { flex-basis: calc(100% - 60px); }
+  .lp-admin-page .lp-grupo-cabecera > span { flex: 1; padding-left: 22px; }
+  .lp-admin-page .lp-grupo-contenido { padding: 0 6px 6px; }
+  .lp-admin-page .lp-ref-tipos { flex-basis: 100%; }
+}
