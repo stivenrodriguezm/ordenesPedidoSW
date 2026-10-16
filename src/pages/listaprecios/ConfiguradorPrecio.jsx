@@ -46,14 +46,14 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
   const listo = !incompatibles && !!fila && precioValido(valor) && !calculando && !error && !confirmando;
   const fotos = linea.fotos || [];
   const item = {
-    lineaId: linea.id, lineaNombre: linea.nombre, varianteId, varianteNombre: variante?.nombre,
+    lineaId: linea.id, lineaNombre: linea.nombre, referenciaId: linea.referencia, varianteId, varianteNombre: variante?.nombre,
     categoriaNombre: variante?.categoria_nombre, grupoId: fila?.grupo ?? null, grupoNombre: fila?.grupo_nombre || '',
     opcionales: calcula ? precio.data?.opcionales_incluidos || [] : [],
     notas: (variante?.notas || []).join(' · '), componentes: variante?.componentes || '',
     precioUnitario: listo ? Number(valor) : null, cantidad, foto: fotos[0] || null,
     // «Cojines incluidos»: cuántos decorativos cubre por unidad, o, si es un decorativo, hasta cuánto se cubre.
     decorativosIncluidos: variante?.decorativos_incluidos || 0,
-    esDecorativo: linea.slug === 'decorativos', topeIncluido: fila?.tope_incluido ?? null,
+    esDecorativo: linea.es_decorativo || linea.slug === 'decorativos', topeIncluido: fila?.tope_incluido ?? null,
   };
   const elegirVariante = (v) => {
     setVarianteId(v.id);
@@ -107,7 +107,7 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
           <span>{p.grupo_nombre || 'Sin tela'}</span><strong>{precioValido(p.precio) ? formatCOP(p.precio) : 'Sin precio'}</strong>
         </button>)}</div>
         <p className="lp-ayuda">{variante?.componentes ? 'El grupo de tela aplica a las piezas tapizadas del conjunto.' : 'Precios base por unidad. Los adicionales se calculan aparte.'}</p>
-        {linea.slug === 'decorativos' && <p className="lp-ayuda">Decorativo: si la cotización lleva un producto con «Cojines incluidos», va sin cobro hasta su precio en grupo 2{fila?.tope_incluido != null && fila.tope_incluido < fila.precio ? ` (aquí cubre ${formatCOP(fila.tope_incluido)})` : ''}.</p>}
+        {(linea.es_decorativo || linea.slug === 'decorativos') && <p className="lp-ayuda">Decorativo: si la cotización lleva un producto con «Cojines incluidos», va sin cobro hasta su precio en grupo 2{fila?.tope_incluido != null && fila.tope_incluido < fila.precio ? ` (aquí cubre ${formatCOP(fila.tope_incluido)})` : ''}.</p>}
         {!fila && <p className="lp-aviso" role="status">Esta medida no ofrece el grupo anterior. Elige uno disponible para confirmar el precio.</p>}
       </section>
       {(!!variante?.opcionales?.length || variante?.decorativos_incluidos > 0) && <section className="lp-config-section" aria-label="Adicionales">
@@ -133,9 +133,9 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
       <details className="lp-config-galeria"><summary>Ver foto del producto</summary><FotoPrecio src={fotos[fotoIdx]} alt={linea.nombre} /></details>
 </>;
   if (inline) return <section className="lp-configurador lp-configurador--inline" aria-label={`Configurar ${linea.nombre}`}>
-    <header className="lp-config-inline-cabecera"><div><span className="lp-eyebrow">Configura y cotiza</span><h2>{linea.nombre}</h2></div>
+    <header className="lp-config-inline-cabecera"><div><span className="lp-eyebrow">{linea.proveedor_nombre || 'Configura y cotiza'}{linea.referencia ? ` · Ref. #${linea.referencia}` : ''}</span><h2>{linea.nombre}</h2></div>
       <button className="lp-icon-btn" aria-label="Cerrar configuración" onClick={onClose}><FaTimes /></button></header>
     <div className="lp-config-inline-cuerpo">{contenido}</div><footer className="lp-config-inline-pie">{footer}</footer>
   </section>;
-  return <Modal open onClose={onClose} title={linea.nombre} size="lg" className="lp-configurador" footer={footer}>{contenido}</Modal>;
+  return <Modal open onClose={onClose} title={linea.proveedor_nombre ? `${linea.nombre} · ${linea.proveedor_nombre}` : linea.nombre} size="lg" className="lp-configurador" footer={footer}>{contenido}</Modal>;
 }

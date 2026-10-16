@@ -60,7 +60,7 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
     retry: false, staleTime: 0,
   });
   const guardar = useMutation({
-    mutationFn: componentes => nuevo ? crearAgrupacion(linea.id, { nombre: nombre.trim(), categoria: Number(categoria), componentes }) : guardarComponentes(variante.id, componentes),
+    mutationFn: componentes => nuevo ? crearAgrupacion(linea.id, { nombre: nombre.trim(), categoria: categoria ? Number(categoria) : null, componentes }) : guardarComponentes(variante.id, componentes),
     onSuccess: async data => {
       actualizarLineaEnCache(client, linea.id, l => ({
         ...l, variantes: nuevo ? [...l.variantes, data] : l.variantes.map(v => v.id === data.id ? data : v),
@@ -73,7 +73,7 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
   });
   const enviar = e => {
     e.preventDefault(); setError(''); setErrores(revision.errores);
-    if (nuevo && (!nombre.trim() || !categoria)) { setError('Escribe el nombre y selecciona la categoría de la agrupación.'); return; }
+    if (nuevo && !nombre.trim()) { setError('Escribe el nombre de la agrupación.'); return; }
     if (!revision.valido) return;
     guardar.mutate(revision.componentes);
   };

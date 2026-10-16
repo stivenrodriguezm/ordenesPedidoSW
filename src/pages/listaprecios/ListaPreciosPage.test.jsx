@@ -29,6 +29,17 @@ beforeEach(() => {
 });
 
 describe('Consulta de showroom', () => {
+  it('distingue referencias homónimas por proveedor y permite buscar la correcta', async () => {
+    servicio.getCatalogo.mockResolvedValue([
+      { ...sofa, referencia: 101, proveedor_nombre: 'Fabricante Andino' },
+      { ...sofa, id: 3, referencia: 102, proveedor_nombre: 'Fabricante Costero' },
+    ]);
+    montar();
+    expect(await screen.findByRole('button', { name: 'Consultar Detroit de Fabricante Andino · Ref. 101' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Consultar Detroit de Fabricante Costero · Ref. 102' })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'fabricante costero' } });
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Consultar Detroit de Fabricante Andino · Ref. 101' })).not.toBeInTheDocument());
+  });
   it('respeta el orden de administración y selecciona la primera variante sin adelantar los conjuntos', async () => {
     montar();
     const modal = await consultar('Qatar');

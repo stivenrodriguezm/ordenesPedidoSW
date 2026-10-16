@@ -7,7 +7,7 @@ export function indexarCatalogo(lineas = []) {
     linea,
     nombre: normalizarBusqueda(linea.nombre),
     variantes: (linea.variantes || []).map((v) => ({
-      v, texto: normalizarBusqueda([linea.nombre, linea.notas, v.nombre, v.categoria_nombre, v.componentes, ...(v.notas || [])].join(' ')),
+      v, texto: normalizarBusqueda([linea.nombre, linea.proveedor_nombre, linea.referencia, linea.notas, v.nombre, v.categoria_nombre, v.componentes, ...(v.notas || [])].join(' ')),
     })),
   }));
 }

@@ -260,3 +260,4 @@ body:has(.lp-page) .ia-acceso, body:has(.lp-page) .ia-chat-wrapper.is-minimizado
   .lp-configurador, .lp-cotizacion { width: 100%; max-height: calc(100dvh - 16px); }
   .lp-configurador .ds-modal__body, .lp-cotizacion .ds-modal__body { padding: 16px; overscroll-behavior: contain; }
 }
+.lp-card-proveedor { display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }

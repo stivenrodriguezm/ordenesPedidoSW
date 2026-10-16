@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as servicio from '../../services/listaPreciosService';
 import ListaPreciosAdminPage from './ListaPreciosAdminPage';
 
-vi.mock('../../services/listaPreciosService', async (original) => ({ ...await original(), getLineas: vi.fn(), getLinea: vi.fn(), getGruposTela: vi.fn(), getCategorias: vi.fn(), getMultiplicadores: vi.fn(), updateVariante: vi.fn(), createCargo: vi.fn(), createLinea: vi.fn() }));
+vi.mock('../../services/listaPreciosService', async (original) => ({ ...await original(), getLineas: vi.fn(), getLinea: vi.fn(), getReferenciasPrecios: vi.fn(), getGruposTela: vi.fn(), getCategorias: vi.fn(), getMultiplicadores: vi.fn(), updateVariante: vi.fn(), createCargo: vi.fn(), createLinea: vi.fn(), updateLinea: vi.fn() }));
 let variante;
 const montar = async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -23,7 +23,8 @@ beforeEach(() => {
   servicio.getGruposTela.mockResolvedValue([]);
   servicio.getMultiplicadores.mockResolvedValue([{ id: 1, valor: '1.76', es_general: true }]);
   servicio.getLineas.mockImplementation(async () => [{ id: 1, nombre: 'Detroit', activo: true, variantes: [{ ...variante }] }]);
-  servicio.getLinea.mockImplementation(async () => ({ id: 1, nombre: 'Detroit', activo: true, variantes: [{ ...variante }] }));
+  servicio.getLinea.mockImplementation(async () => ({ id: 1, referencia: 101, nombre: 'Detroit', proveedor_nombre: 'Proveedor demo', categorias: [{ id: 1, nombre: 'Salas' }], subcategorias: [], activo: true, variantes: [{ ...variante }] }));
+  servicio.getReferenciasPrecios.mockImplementation(async () => [{ id: 101, referencia: 101, nombre: 'Detroit', proveedor_nombre: 'Proveedor demo', categorias: [{ id: 1, nombre: 'Salas' }], subcategorias: [], linea: { id: 1, referencia: 101, nombre: 'Detroit', proveedor_nombre: 'Proveedor demo', variantes: [{ ...variante }] } }]);
   servicio.updateVariante.mockImplementation(async (_, patch) => { Object.assign(variante, patch); return { ...variante }; });
 });
 
@@ -31,7 +32,7 @@ describe('Administración de precios', () => {
   it('carga solo cabeceras y pide cada referencia al abrirla; reabrir reutiliza el detalle', async () => {
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ListaPreciosAdminPage /></QueryClientProvider>);
     const cabecera = await screen.findByText('Detroit', { exact: true });
-    expect(servicio.getLineas).toHaveBeenCalledWith({ resumen: 1 });
+    expect(servicio.getReferenciasPrecios).toHaveBeenCalledTimes(1);
     expect(servicio.getLinea).not.toHaveBeenCalled();
     fireEvent.click(cabecera);
     await screen.findByLabelText('Costo base');
@@ -49,7 +50,7 @@ describe('Administración de precios', () => {
     await screen.findByText('Guardado');
     expect(input).toBeEnabled();
     expect(input).toHaveValue('$3.500.000');
-    expect(servicio.getLineas).toHaveBeenCalledTimes(1);
+    expect(servicio.getReferenciasPrecios).toHaveBeenCalledTimes(1);
     expect(servicio.getLinea).toHaveBeenCalledTimes(2);
     expect(client.getQueryData(['lp-linea', 1]).variantes[0].costo_base).toBe(3500000);
   });
@@ -135,33 +136,64 @@ describe('Administración de precios', () => {
     expect(screen.getByLabelText('Costo base')).toBeInTheDocument();
     expect(servicio.updateVariante).not.toHaveBeenCalled();
   });
+  it('impide revisar la publicación mientras hay un costo sin confirmar', async () => {
+    await montar();
+    fireEvent.change(screen.getByLabelText('Costo base'), { target: { value: '3500000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Configurar precios de Detroit' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Costo base')).toHaveValue('$3.500.000');
+  });
 });
 
 
-describe('Crear una línea de precios', () => {
-  it('envía los campos del formulario sin exigir identificadores internos y cierra al guardar', async () => {
-    servicio.createLinea.mockResolvedValue({ id: 22, nombre: 'Sofá Álamo', slug: 'sofa-alamo', variantes: [] });
-    await montar();
-    fireEvent.click(screen.getByRole('button', { name: 'Nueva Línea', exact: true }));
-    fireEvent.change(within(screen.getByRole('dialog')).getByLabelText('Nombre'), { target: { value: 'Sofá Álamo' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Crear Línea', exact: true }));
-    await waitFor(() => expect(servicio.createLinea).toHaveBeenCalledWith({ nombre: 'Sofá Álamo', notas: '', activo: true, fotos: [] }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByText('Línea creada exitosamente.')).toBeInTheDocument();
+describe('Configurar los precios de una referencia existente', () => {
+  const referencia = { id: 101, nombre: 'Detroit', proveedor_nombre: 'Proveedor demo', categorias: [], subcategorias: [], linea: null };
+  const inicio = () => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ListaPreciosAdminPage /></QueryClientProvider>);
+
+  it('selecciona la referencia sin crear otro nombre o proveedor y abre su captura', async () => {
+    servicio.getReferenciasPrecios.mockResolvedValue([referencia]);
+    servicio.createLinea.mockResolvedValue({ id: 22, referencia: 101, nombre: 'Detroit', proveedor_nombre: 'Proveedor demo', activo: false, categorias: [], subcategorias: [], variantes: [] });
+    inicio();
+    await screen.findByRole('button', { name: 'Configurar Detroit de Proveedor demo' });
+    fireEvent.click(screen.getByRole('button', { name: /Sin precios/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Configurar Detroit de Proveedor demo' }));
+    await waitFor(() => expect(servicio.createLinea).toHaveBeenCalledWith({ referencia: 101, activo: false }));
+    expect(await screen.findByRole('button', { name: 'Agregar variante' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nueva Línea' })).not.toBeInTheDocument();
+    expect(screen.getByText('Borrador', { exact: true })).toBeInTheDocument();
   });
 
-  it('muestra la validación dentro del modal y conserva el nombre para corregir y reintentar', async () => {
-    servicio.createLinea.mockRejectedValueOnce({ response: { status: 400, data: { nombre: ['Revisa el nombre de la línea.'] } } }).mockResolvedValueOnce({ id: 22 });
+  it('un error mantiene la referencia disponible para reintentar sin duplicarla', async () => {
+    servicio.getReferenciasPrecios.mockResolvedValue([referencia]);
+    servicio.createLinea.mockRejectedValueOnce({ response: { status: 400, data: { referencia: ['No se pudo configurar.'] } } }).mockResolvedValueOnce({ id: 22, referencia: 101, nombre: 'Detroit', variantes: [] });
+    inicio();
+    const boton = await screen.findByRole('button', { name: 'Configurar Detroit de Proveedor demo' });
+    fireEvent.click(boton);
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo configurar.');
+    fireEvent.click(boton);
+    expect(await screen.findByRole('button', { name: 'Agregar variante' })).toBeInTheDocument();
+    expect(servicio.createLinea).toHaveBeenCalledTimes(2);
+  });
+
+  it('busca por proveedor y distingue referencias con el mismo nombre', async () => {
+    servicio.getReferenciasPrecios.mockResolvedValue([referencia, { ...referencia, id: 102, proveedor_nombre: 'Otro fabricante' }]);
+    inicio();
+    expect(await screen.findByRole('button', { name: 'Configurar Detroit de Otro fabricante' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Buscar referencia, proveedor o medida'), { target: { value: 'otro fabricante' } });
+    expect(screen.queryByRole('button', { name: 'Configurar Detroit de Proveedor demo' })).not.toBeInTheDocument();
+    expect(screen.getByText('Ref. #102 · Sin clasificación · Sin precios')).toBeInTheDocument();
+  });
+
+  it('editar precios permite notas y publicación sin editar la identidad de Referencias', async () => {
+    servicio.updateLinea.mockImplementation(async (_, patch) => ({ ...await servicio.getLinea(), ...patch }));
     await montar();
-    fireEvent.click(screen.getByRole('button', { name: 'Nueva Línea', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Configurar precios de Detroit' }));
     const modal = screen.getByRole('dialog');
-    fireEvent.change(within(modal).getByLabelText('Nombre'), { target: { value: 'Álamo' } });
-    fireEvent.click(within(modal).getByRole('button', { name: 'Crear Línea', exact: true }));
-    expect(await within(modal).findByRole('alert')).toHaveTextContent('Nombre: Revisa el nombre de la línea.');
-    expect(within(modal).getByLabelText('Nombre')).toHaveValue('Álamo');
-    fireEvent.click(within(modal).getByRole('button', { name: 'Crear Línea', exact: true }));
+    expect(within(modal).queryByLabelText('Nombre')).not.toBeInTheDocument();
+    expect(within(modal).getByText('Proveedor demo')).toBeInTheDocument();
+    fireEvent.change(within(modal).getByRole('textbox'), { target: { value: 'Nota comercial' } });
+    fireEvent.click(within(modal).getByRole('button', { name: 'Guardar cambios' }));
+    await waitFor(() => expect(servicio.updateLinea).toHaveBeenCalledWith(1, { notas: 'Nota comercial', activo: true, fotos: [], es_decorativo: false }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Nueva Línea', exact: true }));
-    expect(within(screen.getByRole('dialog')).queryByRole('alert')).not.toBeInTheDocument();
   });
 });

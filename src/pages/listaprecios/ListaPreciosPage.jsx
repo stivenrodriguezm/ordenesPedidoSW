@@ -159,9 +159,10 @@ function ListaPreciosPage() {
       : <div className={`lp-grid ${escritorio && vista === 'lista' ? 'lp-grid--lista' : ''}`}>{resultados.map((linea) => {
         const precios = linea.variantes.flatMap((v) => v.precios || []).map((p) => p.precio).filter(precioValido).map(Number);
         const conjunto = linea.variantes.some((v) => v.componentes);
-        return <button key={linea.id} className={`lp-card ${seleccion?.linea.id === linea.id ? 'lp-card--seleccionada' : ''}`} aria-pressed={seleccion?.linea.id === linea.id} onClick={() => abrirLinea(linea)} aria-label={`Consultar ${linea.nombre}`}>
+        return <button key={linea.id} className={`lp-card ${seleccion?.linea.id === linea.id ? 'lp-card--seleccionada' : ''}`} aria-pressed={seleccion?.linea.id === linea.id} onClick={() => abrirLinea(linea)} aria-label={`Consultar ${linea.nombre}${linea.proveedor_nombre ? ` de ${linea.proveedor_nombre} · Ref. ${linea.referencia}` : ''}`}>
           <div className="lp-card-foto"><FotoPrecio src={linea.fotos?.[0]} loading="lazy" decoding="async" /></div>
           <div className="lp-card-info"><span className="lp-eyebrow">{[...new Set(linea.variantes.map((v) => v.categoria_nombre))].filter(Boolean).join(' · ')}</span><strong className="lp-card-nombre">{linea.nombre}</strong>
+            {linea.proveedor_nombre && <small className="lp-card-proveedor">{linea.proveedor_nombre} · Ref. #{linea.referencia}</small>}
             <span className="lp-card-descripcion">{linea.variantes.length === 1 ? linea.variantes[0].nombre : `${linea.variantes.length} productos y medidas`}</span>
             <span className="lp-card-precio">{precios.length ? `Desde ${formatCOP(Math.min(...precios))}` : 'Consultar disponibilidad de precio'}</span>
             {escritorio && <span className="lp-card-abrir">Ver opciones <FaArrowRight /></span>}

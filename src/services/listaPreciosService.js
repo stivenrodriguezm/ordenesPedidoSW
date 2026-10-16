@@ -8,7 +8,7 @@ export const getCatalogo = async (params = {}) => {
 };
 
 export const getCategoriasPublicas = async () => {
-  const response = await API.get('/listaprecios/categorias-publicas/');
+  const response = await API.get('/listaprecios/clasificacion/');
   return response.data;
 };
 
@@ -25,7 +25,7 @@ export const getPrecioVariante = async (varianteId, { grupo, opcionales } = {}) 
 // ---- Categorías (admin — solo agrupan/etiquetan, no definen precio) ----
 
 export const getCategorias = async () => {
-  const response = await API.get('/listaprecios/categorias/');
+  const response = await API.get('/listaprecios/clasificacion/');
   return response.data;
 };
 
@@ -117,6 +117,11 @@ export const getImpactoGrupoTela = async (id) => {
 };
 
 // ---- Líneas de producto ----
+
+export const getReferenciasPrecios = async () => {
+  const response = await API.get('/listaprecios/referencias/');
+  return response.data;
+};
 
 export const getLineas = async (params = {}) => {
   const response = await API.get('/listaprecios/lineas/', { params });

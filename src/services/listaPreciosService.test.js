@@ -8,6 +8,8 @@ import {
   convertirCotizacionAVenta,
   simularMultiplicador,
   getLinea,
+  getReferenciasPrecios,
+  getCategorias,
 } from './listaPreciosService'
 
 vi.mock('./api', () => ({
@@ -20,6 +22,14 @@ vi.mock('./api', () => ({
 }))
 
 describe('listaPreciosService - Cotizaciones del servidor (P09-01, P09-04)', () => {
+  it('lee referencias y clasificación de origen para la captura unificada', async () => {
+    API.get.mockResolvedValueOnce({ data: [{ id: 101, nombre: 'Detroit', linea: null }] });
+    expect(await getReferenciasPrecios()).toEqual([{ id: 101, nombre: 'Detroit', linea: null }]);
+    expect(API.get).toHaveBeenLastCalledWith('/listaprecios/referencias/');
+    API.get.mockResolvedValueOnce({ data: [{ id: 2, nombre: 'Sala' }] });
+    expect(await getCategorias()).toEqual([{ id: 2, nombre: 'Sala' }]);
+    expect(API.get).toHaveBeenLastCalledWith('/listaprecios/clasificacion/');
+  });
   it('permite cancelar un detalle reemplazado por una edición más reciente', async () => {
     const signal = new AbortController().signal;
     API.get.mockResolvedValueOnce({ data: { id: 5, variantes: [] } });

@@ -4,6 +4,8 @@ export function actualizarLineaEnCache(queryClient, lineaId, actualizar) {
   queryClient.setQueryData(['lp-linea', lineaId], anterior => anterior && actualizar(anterior));
   queryClient.setQueriesData({ queryKey: ['lp-lineas'] }, anterior => Array.isArray(anterior)
     ? anterior.map(l => l.id === lineaId ? actualizar(l) : l) : anterior);
+  queryClient.setQueriesData({ queryKey: ['lp-referencias'] }, anterior => Array.isArray(anterior)
+    ? anterior.map(r => r.linea?.id === lineaId ? { ...r, linea: actualizar(r.linea) } : r) : anterior);
 }
 
 export default function invalidarListaPrecios(queryClient, lineaId, variante) {
@@ -15,6 +17,7 @@ export default function invalidarListaPrecios(queryClient, lineaId, variante) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ['lp-especiales-biblioteca'] }),
     queryClient.invalidateQueries({ queryKey: ['lp-lineas'], ...(lineaId == null ? {} : { refetchType: 'none' }) }),
+    queryClient.invalidateQueries({ queryKey: ['lp-referencias'], ...(lineaId == null ? {} : { refetchType: 'none' }) }),
     queryClient.invalidateQueries({ queryKey: lineaId == null ? ['lp-linea'] : ['lp-linea', lineaId] }),
     queryClient.invalidateQueries({ queryKey: ['listaprecios-catalogo'] }),
     queryClient.invalidateQueries({ queryKey: ['lp-precio-variante'] }),
