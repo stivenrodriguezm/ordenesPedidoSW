@@ -1,1449 +1,455 @@
-import React, { useState, useEffect, useRef, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay, startOfDay, parseISO } from 'date-fns';
+import { startOfWeek, addDays, addWeeks, subDays, subWeeks, format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+    FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaList, FaCalendarAlt, FaChevronLeft,
+    FaChevronRight, FaTruck, FaPrint, FaPen, FaMapMarkerAlt, FaPhoneAlt, FaWhatsapp, FaExclamationTriangle,
+    FaUserSlash, FaCalendarDay, FaHistory, FaSlidersH,
+} from 'react-icons/fa';
 import API from '../services/api';
 import { usePageRefresh } from '../hooks/usePageRefresh';
-import { useVendedores, usePendientesIds } from '../hooks/useSharedData';
+import { useVendedores } from '../hooks/useSharedData';
 import { formatCOP } from '../utils/formatCOP';
-import { formatDate as formatDateShared } from '../utils/dates';
-import { generateRemisionPDF } from '../utils/generateRemisionPDF';
-import { FaPlus, FaSearch, FaChevronDown, FaChevronUp, FaTimes, FaClock, FaImage, FaEdit, FaList, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaCheckCircle, FaTruck } from 'react-icons/fa';
+import { getTodayStr, parseLocalDate } from '../utils/dates';
+import {
+    ESTADOS_REMISION, ESTADOS_ACTIVOS, metodoPagoLabel, fmtFranja, fmtFranjaCorta, fmtFechaLarga, fmtFechaCorta,
+    fechaRelativa, totalUnidades, nombreTransportador, whatsappNumero, lineasProductos,
+} from '../utils/remisiones';
 import { AppContext, usePermissions } from '../AppContext';
-import { PageHeader, Button, Badge, Modal } from '../components/ui';
+import { PageHeader, Button, Badge, Modal, EmptyState, ErrorState } from '../components/ui';
+import RemisionPrintModal from '../components/RemisionPrintModal';
+import RemisionAccionModal, { ACCIONES_REMISION } from '../components/RemisionAccionModal';
+import RemisionEditarModal from '../components/RemisionEditarModal';
 import './RemisionesPage.css';
 
-const ESTADO_LABELS = {
-    creada: 'Creada',
-    despachada: 'Despachada',
-    finalizada: 'Finalizada',
-    anulada: 'Anulada',
-    devuelta: 'Devuelta',
-};
-
-// Tono del Badge del design system según el estado de la remisión
-const estadoTone = (estado) => {
-    const map = { creada: 'info', despachada: 'warning', finalizada: 'success', anulada: 'danger', devuelta: 'neutral' };
-    return map[estado] || 'neutral';
-};
-
-const METODOS_PAGO = [
-    { value: 'efectivo', label: 'Efectivo' },
-    { value: 'transferencia', label: 'Transferencia' },
-    { value: 'datafono', label: 'Datáfono' },
-    { value: 'pagado', label: 'Pagado' },
-    { value: 'otro', label: 'Otro' },
+const TABS = [
+    { key: 'activas', label: 'Activas', estados: ESTADOS_ACTIVOS },
+    { key: 'creada', label: 'Por despachar', estados: ['creada'] },
+    { key: 'despachada', label: 'En ruta', estados: ['despachada'] },
+    { key: 'finalizada', label: 'Entregadas', estados: ['finalizada'] },
+    { key: 'cerradas', label: 'Devueltas y anuladas', estados: ['devuelta', 'anulada'] },
+    { key: 'todas', label: 'Todas', estados: null },
 ];
 
-// Transportadores y Vendedores se cargan dinámicamente desde la API:
-// `transportadores` en el estado del componente y `vendedores` vía useVendedores().
+const RAPIDOS = [
+    { key: 'hoy', label: 'Para hoy', icon: FaCalendarDay },
+    { key: 'manana', label: 'Para mañana', icon: FaCalendarAlt },
+    { key: 'atrasadas', label: 'Atrasadas', icon: FaExclamationTriangle, tone: 'danger' },
+    { key: 'sin_transportador', label: 'Sin transportador', icon: FaUserSlash, tone: 'warn' },
+];
 
-function generateId(list) {
-    let id;
-    const existing = new Set(list.map(r => r.id));
-    do { id = Math.floor(1000 + Math.random() * 9000); } while (existing.has(id));
-    return id;
+const PAGE_SIZE = 40;
+const SIN_ASIGNAR = '__sin__';
+
+const normalizar = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const hhmm = t => (t ? String(t).slice(0, 5) : '');
+
+function textoBusqueda(r) {
+    return normalizar([
+        r.id, ...(r.ventas || []), r.orden_asociada, r.cliente_nombre, r.cliente_documento,
+        r.cliente_telefono1, r.cliente_telefono2, r.direccion_entrega, r.barrio, r.ciudad,
+        r.vendedor_nombre, nombreTransportador(r),
+    ].join(' '));
 }
 
-function formatDate(dtStr) {
-    return formatDateShared(dtStr) || '—';
+function cumpleRapido(r, key, hoy, manana) {
+    const activa = ESTADOS_ACTIVOS.includes(r.estado);
+    if (!activa) return false;
+    if (key === 'hoy') return r.fecha_entrega === hoy;
+    if (key === 'manana') return r.fecha_entrega === manana;
+    if (key === 'atrasadas') return !!r.fecha_entrega && r.fecha_entrega < hoy;
+    if (key === 'sin_transportador') return !nombreTransportador(r);
+    return true;
 }
 
-// Helper functions will be bound inside the component scope
-
-const CATEGORY_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899'];
-function getCatColor(catId) { return CATEGORY_COLORS[(catId - 1) % CATEGORY_COLORS.length]; }
-
-const emptyForm = () => ({
-    fechaEntrega: '',
-    horaDesde: '08:00',
-    horaHasta: '12:00',
-    direccionEntrega: '',
-    ciudad: 'Bogotá',
-    barrio: '',
-    ordenId: '',
-    observacion: '',
-    sinSaldo: false,
-    saldo: '',
-    saldoDisplay: '',
-    metodoPago: '',
-    transportadorUsuario: '', // ForeignKey ID
-    transportador: '',        // String fallback
-    vendedor: '',
-    sharedSellersInfo: '',
-    inventarioIds: [],
-});
-
-// Obs tooltip component
-function ObsCell({ text }) {
-    const [visible, setVisible] = useState(false);
-    const [pos, setPos] = useState({ x: 0, y: 0 });
-    if (!text) return <span className="empty-val">—</span>;
-    return (
-        <span
-            className="obs-cell-trigger"
-            onMouseEnter={e => { setVisible(true); setPos({ x: e.clientX, y: e.clientY }); }}
-            onMouseMove={e => setPos({ x: e.clientX, y: e.clientY })}
-            onMouseLeave={() => setVisible(false)}
-            title={text}
-        >
-            <span className="obs-text-truncated">{text}</span>
-            {visible && (
-                <span
-                    className="obs-tooltip-popup"
-                    style={{ left: pos.x + 14, top: pos.y - 10 }}
-                >
-                    {text}
-                </span>
-            )}
-        </span>
-    );
+// Próximas entregas primero en las vistas de trabajo; las más recientes primero en el histórico.
+function ordenar(lista, ascendente) {
+    return [...lista].sort((a, b) => {
+        const fa = a.fecha_entrega || (ascendente ? '9999' : '0000');
+        const fb = b.fecha_entrega || (ascendente ? '9999' : '0000');
+        if (fa !== fb) return ascendente ? fa.localeCompare(fb) : fb.localeCompare(fa);
+        const ha = a.hora_desde || '';
+        const hb = b.hora_desde || '';
+        if (ha !== hb) return ascendente ? ha.localeCompare(hb) : hb.localeCompare(ha);
+        return ascendente ? a.id - b.id : b.id - a.id;
+    });
 }
 
-// Image Preview Modal (Lightbox)
-function ImagePreviewModal({ isOpen, onClose, imageUrl }) {
-    if (!isOpen) return null;
-    return (
-        <div className="img-lightbox-overlay" onClick={onClose}>
-            <div className="img-lightbox-content" onClick={e => e.stopPropagation()}>
-                <button className="img-lightbox-close" onClick={onClose}>&times;</button>
-                <img src={imageUrl} alt="Vista previa del producto" className="img-lightbox-main" />
-            </div>
-        </div>
-    );
+function accionesDisponibles(rem, perm, esTransportador) {
+    const e = rem.estado;
+    if (esTransportador) {
+        return [
+            ...(e === 'creada' ? ['despachada'] : []),
+            ...(ESTADOS_ACTIVOS.includes(e) ? ['finalizada'] : []),
+        ];
+    }
+    const acciones = [];
+    if (perm.estado && e === 'creada') acciones.push('despachada', 'finalizada');
+    if (perm.estado && e === 'despachada') acciones.push('finalizada', 'devuelta', 'creada');
+    if (perm.anular && e === 'creada') acciones.push('anulada');
+    return acciones;
 }
 
-function RemisionesPage() {
-    const { proveedores, usuario } = useContext(AppContext);
-    const hasPermission = usePermissions();
-    const navigate = useNavigate();
-    const role              = usuario?.role;
-    const isTransportador   = role === 'transportador';
-    const isAuxiliar        = role === 'auxiliar';
-    const isAdmin           = role === 'administrador' || role === 'admin';
-    const canEditRemision   = isTransportador || isAuxiliar || isAdmin;
+// 'editar' (datos de la entrega), 'seguimiento' (solo flete/nota) o null.
+function modoEdicion(rem, perm) {
+    if (perm.editar && ESTADOS_ACTIVOS.includes(rem.estado)) return 'editar';
+    if (perm.estado && rem.estado === 'finalizada') return 'seguimiento';
+    return null;
+}
 
-    // Edit modal state (for transportador)
-    const [editModal, setEditModal] = useState({ open: false, remision: null });
-    const [editModalVisible, setEditModalVisible] = useState(false);
-    const [editForm, setEditForm] = useState({ estado: '', nota_transportador: '', costo_entrega: '', costo_display: '' });
-    const [editSaving, setEditSaving] = useState(false);
-    
-    const [remisiones, setRemisiones] = useState([]);
-    const [inventario, setInventario] = useState([]);
-    const [productos, setProductos] = useState([]);
-    const [categorias, setCategorias] = useState([]);
-    const [subcategorias, setSubcategorias] = useState([]);
-    const [grupos, setGrupos] = useState([]);
-    
-    // Adicional: state for dropdowns
-    const [transportadores, setTransportadores] = useState([]);
+const EstadoBadge = ({ estado }) => (
+    <Badge tone={ESTADOS_REMISION[estado]?.tone || 'neutral'}>{ESTADOS_REMISION[estado]?.label || estado}</Badge>
+);
 
-    // Datos compartidos con otras páginas (dedupe/caché con React Query)
-    const { data: ordenesPendientes = [], refetch: refetchPendientesIds } = usePendientesIds();
-    const { data: vendedores = [], refetch: refetchVendedores } = useVendedores();
+function RelTag({ rem }) {
+    const rel = fechaRelativa(rem.fecha_entrega, rem.estado);
+    if (!rel || !ESTADOS_ACTIVOS.includes(rem.estado)) return null;
+    const txt = { hoy: 'Hoy', manana: 'Mañana', atrasada: 'Atrasada' }[rel];
+    return <span className={`rl-rel rl-rel--${rel}`}>{txt}</span>;
+}
 
-    const [showModal, setShowModal] = useState(false);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [form, setForm] = useState(emptyForm);
-    const [invSearch, setInvSearch] = useState('');
-    const [qrInput, setQrInput] = useState('');
-    const [invMode, setInvMode] = useState('items'); // 'items' | 'grupos'
-    const [colCatFilter, setColCatFilter] = useState('');
-    const [colSubcatFilter, setColSubcatFilter] = useState('');
-    const [colProvFilter, setColProvFilter] = useState('');
-    const [colCatOpen, setColCatOpen] = useState(false);
-    const [colSubcatOpen, setColSubcatOpen] = useState(false);
-    const [expandedId, setExpandedId] = useState(null);
+/* ────────────────────────────────────────────────────────────────────────────
+   Detalle de una remisión (fila expandida y ventana del calendario)
+   ──────────────────────────────────────────────────────────────────────────── */
+function RemisionDetalle({ rem, perm, esTransportador, onPrint, onEdit, onAccion }) {
+    const unidades = totalUnidades(rem);
+    const telefonos = [rem.cliente_telefono1, rem.cliente_telefono2].filter(Boolean);
+    const ubicacion = [rem.barrio, rem.ciudad].filter(Boolean).join(', ');
+    const mapa = rem.direccion_entrega
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([rem.direccion_entrega, ubicacion].filter(Boolean).join(', '))}`
+        : null;
+    const cobrar = !rem.sin_saldo && Number(rem.saldo) > 0;
+    const acciones = accionesDisponibles(rem, perm, esTransportador);
+    const edicion = modoEdicion(rem, perm);
+    const eventos = [...(rem.eventos || [])].reverse();
 
-    // View mode: 'table' or 'calendar'
-    const [viewMode, setViewMode] = useState(isTransportador ? 'calendar' : 'table');
-    const [calendarViewType, setCalendarViewType] = useState('week'); // 'week' or 'day'
-    const [focusedDate, setFocusedDate] = useState(new Date());
-    const currentWeekStart = startOfWeek(focusedDate, { weekStartsOn: 1 }); // Monday
-
-    const [previewImg, setPreviewImg] = useState({ open: false, url: '' });
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Toast notification
-    const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
-    const toastTimerRef = useRef(null);
-
-    const showToast = useCallback((message, type = 'success') => {
-        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-        setToast({ visible: true, message, type });
-        toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 4000);
-    }, []);
-
-    // ... filters ...
-    const [searchTerm, setSearchTerm] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
-    const [estadoFilter, setEstadoFilter] = useState('');
-    const [transFilter, setTransFilter] = useState('');
-    const [vendedorFilter, setVendedorFilter] = useState('');
-
-    // Pagination
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 50;
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, dateFrom, dateTo, estadoFilter, transFilter, vendedorFilter]);
-
-    const [inventarioLoaded, setInventarioLoaded] = useState(false);
-    const [inventarioLoading, setInventarioLoading] = useState(false);
-
-    const fetchAll = useCallback(async () => {
-            setIsLoading(true);
-            try {
-                const safeGet = (url) => API.get(url).catch(err => {
-                    console.warn(`Request failed for ${url}:`, err);
-                    return { data: { results: [], data: [] } };
-                });
-
-                const [remRes, transpRes] = await Promise.all([
-                    API.get('/suministros/remisiones/'),
-                    safeGet('/transportadores/'),
-                    refetchPendientesIds(),
-                    refetchVendedores(),
-                ]);
-                
-                const rawRemisiones = remRes.data.results || remRes.data;
-                const formattedRem = rawRemisiones.map(r => ({
-                    ...r,
-                    fechaCreacion: r.fecha_creacion,
-                    fechaEntrega: r.fecha_entrega,
-                    horaDesde: r.hora_desde,
-                    horaHasta: r.hora_hasta,
-                    direccionEntrega: r.direccion_entrega,
-                    ordenAsociadaId: r.orden_asociada,
-                    sinSaldo: r.sin_saldo,
-                    metodoPago: r.metodo_pago,
-                    clienteNombre: r.cliente_nombre || 'Cliente Nuevo',
-                    vendedor: r.vendedor_nombre || r.vendedor,
-                    transportador_display: r.transportador_usuario_nombre || r.transportador,
-                    inventarioIds: r.inventario_items || [],
-                    inventarioDetalle: r.inventario_items_detalle || []
-                }));
-
-                setRemisiones(formattedRem);
-                setTransportadores(Array.isArray(transpRes.data) ? transpRes.data : []);
-            } catch (error) {
-                console.error("Error fetching remisiones:", error);
-            } finally {
-                setIsLoading(false);
-            }
-    }, []);
-
-    usePageRefresh(fetchAll);
-
-    // Lazy load inventario only when creating a new remision
-    const loadInventarioData = async () => {
-        if (inventarioLoaded) return;
-        setInventarioLoading(true);
-        try {
-            const safeGet = (url) => API.get(url).catch(err => {
-                console.warn(`Request failed for ${url}:`, err);
-                return { data: { results: [], data: [] } };
-            });
-            const [invRes, prodRes, catRes, subRes, grupoRes] = await Promise.all([
-                safeGet('/suministros/inventario/'),
-                safeGet('/referencias/'),
-                safeGet('/suministros/categorias/'),
-                safeGet('/suministros/subcategorias/'),
-                safeGet('/suministros/grupos/'),
-            ]);
-            const rawInv = invRes.data?.results || invRes.data || [];
-            setInventario(Array.isArray(rawInv) ? rawInv.map(inv => ({
-                ...inv,
-                id: inv.id_referencia,
-                productoId: inv.referencia,
-                subcategoriaId: inv.subcategoria,
-            })) : []);
-            const rawProd = prodRes.data?.results || prodRes.data || [];
-            setProductos(Array.isArray(rawProd) ? rawProd.map(p => ({
-                ...p,
-                categoriaId: p.categoria,
-                subcategoriaId: p.subcategoria,
-                proveedorId: p.proveedor
-            })) : []);
-            setCategorias(catRes.data.results || catRes.data || []);
-            setSubcategorias(subRes.data.results || subRes.data || []);
-            setGrupos(grupoRes.data.results || grupoRes.data || []);
-            setInventarioLoaded(true);
-        } catch (err) {
-            console.error('Error loading inventario:', err);
-        } finally {
-            setInventarioLoading(false);
-        }
-    };
-
-    const nextScope = () => {
-        if (calendarViewType === 'day') setFocusedDate(prev => addDays(prev, 1));
-        else setFocusedDate(prev => addWeeks(prev, 1));
-    };
-    const prevScope = () => {
-        if (calendarViewType === 'day') setFocusedDate(prev => subDays(prev, 1));
-        else setFocusedDate(prev => subWeeks(prev, 1));
-    };
-
-    const goToday = () => setFocusedDate(new Date());
-
-    const INVENTARIO = inventario;
-    const PRODUCTOS = productos;
-    const CATEGORIAS = categorias;
-    const SUBCATEGORIAS = subcategorias;
-
-    const getProducto = id => PRODUCTOS.find(p => p.id == id);
-    const getCategoria = id => CATEGORIAS.find(c => c.id == id);
-    const getSubcategoria = id => SUBCATEGORIAS.find(s => s.id == id);
-
-    // ─── Edit modal helpers (for transportador) ───────────────────────────────
-    const openEditModal = (rem) => {
-        setEditForm({
-            estado: rem.estado || 'creada',
-            nota_transportador: rem.nota_transportador || '',
-            costo_entrega: rem.costo_entrega ? String(rem.costo_entrega) : '',
-            costo_display: rem.costo_entrega ? formatCOP(parseFloat(rem.costo_entrega)) : '',
-        });
-        setEditModal({ open: true, remision: rem });
-        requestAnimationFrame(() => requestAnimationFrame(() => setEditModalVisible(true)));
-    };
-
-    const closeEditModal = () => {
-        setEditModalVisible(false);
-        setTimeout(() => setEditModal({ open: false, remision: null }), 280);
-    };
-
-    const handleEditCostoChange = e => {
-        const raw = e.target.value.replace(/[^0-9]/g, '');
-        setEditForm(prev => ({ ...prev, costo_entrega: raw, costo_display: raw ? formatCOP(parseInt(raw, 10)) : '' }));
-    };
-
-    const isFinished = (est) => est === 'finalizada' || est === 'devuelta';
-
-    const handleEditSubmit = async e => {
-        e.preventDefault();
-        if (!editModal.remision) return;
-        setEditSaving(true);
-        try {
-            const payload = {
-                estado: editForm.estado,
-            };
-            // Auxiliar → solo estado. Transportador → estado + nota + costo. Admin → todo.
-            if (isTransportador || isAdmin) {
-                payload.nota_transportador = editForm.nota_transportador;
-                payload.costo_entrega = editForm.costo_entrega ? parseFloat(editForm.costo_entrega) : 0;
-            }
-            await API.patch(`/suministros/remisiones/${editModal.remision.id}/`, payload);
-            // Refresh remisiones
-            const remRes = await API.get('/suministros/remisiones/');
-            const rawRemisiones = remRes.data.results || remRes.data;
-                setRemisiones(rawRemisiones.map(r => ({
-                    ...r,
-                    fechaCreacion: r.fecha_creacion,
-                    fechaEntrega: r.fecha_entrega,
-                    horaDesde: r.hora_desde,
-                    horaHasta: r.hora_hasta,
-                    direccionEntrega: r.direccion_entrega,
-                    ordenAsociadaId: r.orden_asociada,
-                    sinSaldo: r.sin_saldo,
-                    metodoPago: r.metodo_pago,
-                    clienteNombre: r.cliente_nombre || 'Cliente Nuevo',
-                    vendedor: r.vendedor_nombre || r.vendedor,
-                    transportador_display: r.transportador_usuario_nombre || r.transportador,
-                    inventarioIds: r.inventario_items || []
-                })));
-            closeEditModal();
-        } catch (err) {
-            console.error('Error updating remision:', err);
-            showToast('Error al actualizar la remisión.', 'error');
-        } finally {
-            setEditSaving(false);
-        }
-    };
-
-    const openModal = () => {
-        setForm(emptyForm());
-        setInvSearch('');
-        setColCatFilter('');
-        setColSubcatFilter('');
-        setColCatOpen(false);
-        setColSubcatOpen(false);
-        setShowModal(true);
-        requestAnimationFrame(() => requestAnimationFrame(() => setModalVisible(true)));
-        // Lazy load inventario only the first time the modal opens
-        loadInventarioData();
-    };
-
-    const closeModal = () => {
-        setModalVisible(false);
-        setTimeout(() => setShowModal(false), 280);
-    };
-
-    const handleField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
-
-    const handleSaldoChange = e => {
-        const raw = e.target.value.replace(/[^0-9]/g, '');
-        setForm(prev => ({
-            ...prev,
-            saldo: raw,
-            saldoDisplay: raw ? formatCOP(parseInt(raw, 10)) : '',
-        }));
-    };
-
-    const handleSinSaldoToggle = () => {
-        setForm(prev => ({
-            ...prev,
-            sinSaldo: !prev.sinSaldo,
-            saldo: prev.sinSaldo ? prev.saldo : '',
-            saldoDisplay: prev.sinSaldo ? prev.saldoDisplay : '',
-            metodoPago: prev.sinSaldo ? prev.metodoPago : '',
-        }));
-    };
-
-    const toggleInventarioItem = invId => {
-        setForm(prev => {
-            const selected = prev.inventarioIds.includes(invId)
-                ? prev.inventarioIds.filter(id => id !== invId)
-                : [...prev.inventarioIds, invId];
-            return { ...prev, inventarioIds: selected };
-        });
-    };
-
-    // Add all available items of a group (those not already in another remision dispatch)
-    const selectGrupo = (grupo) => {
-        const grupoItemIds = inventario
-            .filter(inv => inv.grupo_id === grupo.id && !['por_despachar', 'cliente'].includes(inv.disponibilidad))
-            .map(inv => inv.id);
-
-        if (grupoItemIds.length === 0) {
-            showToast(`El grupo "${grupo.nombre}" no tiene ítems disponibles en inventario.`, 'error');
-            return;
-        }
-
-        setForm(prev => {
-            // Check if ALL are already selected → deselect all
-            const allSelected = grupoItemIds.every(id => prev.inventarioIds.includes(id));
-            const newIds = allSelected
-                ? prev.inventarioIds.filter(id => !grupoItemIds.includes(id))
-                : [...new Set([...prev.inventarioIds, ...grupoItemIds])];
-            return { ...prev, inventarioIds: newIds };
-        });
-
-        const alreadySelected = grupoItemIds.every(id => form.inventarioIds.includes(id));
-        if (!alreadySelected) {
-            const partialCount = inventario.filter(inv =>
-                inv.grupo_id === grupo.id
-            ).length;
-            if (grupoItemIds.length < partialCount) {
-                showToast(
-                    `Grupo "${grupo.nombre}" agregado parcialmente: ${grupoItemIds.length} de ${partialCount} ítems disponibles.`,
-                    'warning'
-                );
-            } else {
-                showToast(`Grupo "${grupo.nombre}" agregado: ${grupoItemIds.length} ítem${grupoItemIds.length !== 1 ? 's' : ''}.`, 'success');
-            }
-        }
-    };
-
-    const handleSubmit = async e => {
-        e.preventDefault();
-        if (isSubmitting) return;
-        setIsSubmitting(true);
-
-        const payload = {
-            fecha_entrega: form.fechaEntrega || null,
-            hora_desde: form.horaDesde || null,
-            hora_hasta: form.horaHasta || null,
-            direccion_entrega: form.direccionEntrega,
-            ciudad: form.ciudad,
-            barrio: form.barrio,
-            orden_asociada: form.ordenId && form.ordenId !== 'sin_orden' ? parseInt(form.ordenId) : null,
-            estado: 'creada',
-            sin_saldo: form.sinSaldo,
-            saldo: form.sinSaldo ? 0 : (parseFloat(form.saldo) || 0),
-            metodo_pago: form.sinSaldo ? '' : form.metodoPago,
-            transportador_usuario: form.transportadorUsuario && form.transportadorUsuario !== '__otro__' ? parseInt(form.transportadorUsuario) : null,
-            transportador: form.transportadorUsuario === '__otro__' ? (form.transportador || '') : '',
-            vendedor: form.vendedor ? parseInt(form.vendedor) : null,
-            observacion: form.observacion,
-            cliente_nombre: 'Cliente Nuevo',
-            inventario_items: form.inventarioIds,
-        };
-
-        try {
-            const createRes = await API.post('/suministros/remisiones/', payload);
-            const newRemision = createRes.data;
-            const newId = newRemision?.id;
-
-            // Run all fetching operations in parallel to optimize loading time
-            const [remRes, invRes, detailRes] = await Promise.all([
-                API.get('/suministros/remisiones/'),
-                API.get('/suministros/inventario/'),
-                newId ? API.get(`/suministros/remisiones/${newId}/`).catch(err => {
-                    console.warn('No se pudo obtener detalle completo de la remisión:', err);
-                    return null;
-                }) : Promise.resolve(null)
-            ]);
-
-            // Process Remisiones
-            const rawRemisiones = remRes.data.results || remRes.data;
-            const formattedRem = rawRemisiones.map(r => ({
-                ...r,
-                fechaCreacion: r.fecha_creacion,
-                fechaEntrega: r.fecha_entrega,
-                horaDesde: r.hora_desde,
-                horaHasta: r.hora_hasta,
-                direccionEntrega: r.direccion_entrega,
-                ordenAsociadaId: r.orden_asociada,
-                sinSaldo: r.sin_saldo,
-                metodoPago: r.metodo_pago,
-                clienteNombre: r.cliente_nombre || 'Cliente Nuevo',
-                vendedor: r.vendedor_nombre || r.vendedor,
-                transportador_display: r.transportador_usuario_nombre || r.transportador,
-                inventarioIds: r.inventario_items || [],
-                inventarioDetalle: r.inventario_items_detalle || [],
-            }));
-            setRemisiones(formattedRem);
-
-            // Process Inventario
-            const rawInv = invRes.data.results || invRes.data;
-            setInventario(rawInv.map(inv => ({
-                ...inv,
-                id: inv.id_referencia,
-                productoId: inv.referencia,
-                subcategoriaId: inv.subcategoria,
-            })));
-
-            // Prepare Remission Details for PDF
-            let createdRemFull = detailRes ? detailRes.data : (formattedRem.find(r => r.id === newId) || newRemision);
-
-            const pdfItems =
-                createdRemFull?.inventario_items_detalle?.length
-                    ? createdRemFull.inventario_items_detalle
-                    : createdRemFull?.inventarioDetalle?.length
-                        ? createdRemFull.inventarioDetalle
-                        : (createdRemFull?.inventario_items || createdRemFull?.inventarioIds || []).map(id => ({ id_referencia: id }));
-
-            // Generar y descargar PDF asynchronously (non-blocking)
-            generateRemisionPDF(createdRemFull, pdfItems).catch(pdfErr => {
-                console.warn('PDF generation error:', pdfErr);
-            });
-
-            closeModal();
-            showToast('¡Remisión creada exitosamente! El PDF se descargará en un momento.', 'success');
-
-        } catch (error) {
-            console.error('Error creating remision:', error);
-            showToast('Error al crear la remisión. Verifica los datos e intenta de nuevo.', 'error');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const toggleExpand = id => setExpandedId(expandedId === id ? null : id);
-
-    const getEstadoClass = est => {
-        const map = { creada: 'status-creada', despachada: 'status-despachada', finalizada: 'status-finalizada', anulada: 'status-anulada', devuelta: 'status-devuelta' };
-        return map[est] || '';
-    };
-
-    // Selected items derived
-    const selectedItems = form.inventarioIds.map(invId => {
-        const inv = INVENTARIO.find(i => i.id === invId);
-        if (!inv) return null;
-        const prod = getProducto(inv.productoId);
-        const cat = prod ? getCategoria(prod.categoriaId) : null;
-        const subcat = inv.subcategoriaId ? getSubcategoria(inv.subcategoriaId) : null;
-        return { invId, nombre: prod?.nombre || `Ítem #${invId}`, cat: cat?.nombre, subcat: subcat?.nombre, variacion: inv.variacion };
-    }).filter(Boolean);
-
-    // Filtered main table
-    const filteredRemisiones = useMemo(() => {
-        return remisiones.filter(r => {
-            if (searchTerm) {
-                const q = searchTerm.toLowerCase();
-                if (!String(r.id).includes(q) && !(r.ordenAsociadaId && String(r.ordenAsociadaId).includes(q))) return false;
-            }
-            if (dateFrom && r.fechaCreacion < dateFrom) return false;
-            if (dateTo && r.fechaCreacion.split('T')[0] > dateTo) return false;
-            if (estadoFilter && r.estado !== estadoFilter) return false;
-            if (transFilter && !(r.transportador_display || '').toLowerCase().includes(transFilter.toLowerCase())) return false;
-            if (vendedorFilter && r.vendedor !== vendedorFilter) return false;
-            return true;
-        });
-    }, [remisiones, searchTerm, dateFrom, dateTo, estadoFilter, transFilter, vendedorFilter]);
-
-    const hasFilters = searchTerm || dateFrom || dateTo || estadoFilter || transFilter || vendedorFilter;
-    
-    const paginatedRemisiones = useMemo(() => {
-        const start = (currentPage - 1) * itemsPerPage;
-        return filteredRemisiones.slice(start, start + itemsPerPage);
-    }, [filteredRemisiones, currentPage]);
-    const totalPages = Math.ceil(filteredRemisiones.length / itemsPerPage);
-
-    const clearFilters = () => { setSearchTerm(''); setDateFrom(''); setDateTo(''); setEstadoFilter(''); setTransFilter(''); setVendedorFilter(''); };
-    const uniqueTransportadores = [...new Set(remisiones.map(r => r.transportador).filter(Boolean))];
-    const uniqueVendedores = [...new Set(remisiones.map(r => r.vendedor).filter(Boolean))];
-
-    // Inventory search filter — searches by id, referencia (product name), venta
-    let filteredInventario = useMemo(() => {
-        const filtered = inventario.filter(inv => {
-            if (inv.disponibilidad === 'por_despachar') return false;
-            
-            if (!form.ordenId) return false;
-
-            if (form.ordenId === 'sin_orden') {
-                if (inv.venta) return false;
-            } else {
-                if (String(inv.venta) === String(form.ordenId)) {
-                    // allowed
-                } else if (!inv.venta && (inv.disponibilidad === 'exhibicion' || inv.disponibilidad === 'consignacion')) {
-                    // allowed
-                } else {
-                    return false;
-                }
-            }
-
-            if (colCatFilter) {
-                const prod = productos.find(p => p.id === inv.productoId);
-                if (!prod || String(prod.categoria) !== colCatFilter) return false; // assuming getProducto logic was needed
-            }
-            if (colSubcatFilter && String(inv.subcategoriaId) !== colSubcatFilter) return false;
-            if (colProvFilter) {
-                const prod = productos.find(p => p.id === inv.productoId);
-                if (!prod || String(prod.proveedorId) !== colProvFilter) return false;
-            }
-            if (!invSearch) return true;
-            const q = invSearch.toLowerCase();
-            const prod = productos.find(p => p.id === inv.productoId);
-            return (
-                String(inv.id).toLowerCase().includes(q) ||
-                prod?.nombre?.toLowerCase().includes(q) ||
-                String(inv.venta || '').toLowerCase().includes(q)
-            );
-        });
-
-        filtered.sort((a, b) => {
-            if (form.ordenId && form.ordenId !== 'sin_orden') {
-                const aMatches = String(a.venta) === String(form.ordenId);
-                const bMatches = String(b.venta) === String(form.ordenId);
-                if (aMatches && !bMatches) return -1;
-                if (!aMatches && bMatches) return 1;
-            }
-            return 0;
-        });
-
-        return filtered;
-    }, [inventario, form.ordenId, colCatFilter, colSubcatFilter, colProvFilter, invSearch, productos]);
-
-    const colSubcatOptions = useMemo(() => colCatFilter
-        ? subcategorias.filter(s => String(s.categoria) === colCatFilter) // using state 'subcategorias'
-        : subcategorias, [colCatFilter, subcategorias]);
-
-    const handleQRScan = async (e) => {
-        e.preventDefault();
-        if (!qrInput.trim()) return;
-        try {
-            const res = await API.get(`/suministros/inventario/por-qr/?qr=${encodeURIComponent(qrInput.trim())}`);
-            const item = res.data;
-            if (item && item.id) {
-                setForm(prev => {
-                    if (!prev.inventarioIds.includes(item.id)) {
-                        return { ...prev, inventarioIds: [...prev.inventarioIds, item.id] };
-                    }
-                    return prev;
-                });
-                setInventario(prev => {
-                    if (!prev.find(i => i.id === item.id)) {
-                        return [...prev, item];
-                    }
-                    return prev;
-                });
-                setQrInput('');
-            }
-        } catch (err) {
-            showToast('Ítem no encontrado por QR', 'error');
-        }
-    };
+    const productos = lineasProductos(rem);
 
     return (
-        <div className="ds-page remisiones-page ds-fade-in">
-
-            {/* ===== TOAST NOTIFICATION ===== */}
-            <div className={`rem-toast rem-toast--${toast.type}${toast.visible ? ' rem-toast--visible' : ''}`}>
-                {toast.type === 'success'
-                    ? <FaCheckCircle className="rem-toast-icon" />
-                    : <FaTimes className="rem-toast-icon" />
-                }
-                <span className="rem-toast-msg">{toast.message}</span>
-                <button className="rem-toast-close" onClick={() => setToast(t => ({ ...t, visible: false }))}>
-                    <FaTimes />
-                </button>
-            </div>
-
-            {/* ===== HEADER ===== */}
-            <PageHeader
-                icon={FaTruck}
-                title="Remisiones"
-                subtitle="Gestiona y programa las remisiones de entrega"
-                actions={(
-                    <>
-                        <div className="view-mode-toggle">
-                            <button
-                                className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
-                                onClick={() => setViewMode('table')}
-                                title="Vista de Tabla"
-                            >
-                                <FaList />
-                            </button>
-                            <button
-                                className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
-                                onClick={() => setViewMode('calendar')}
-                                title="Vista de Calendario"
-                            >
-                                <FaCalendarAlt />
-                            </button>
-                        </div>
-                        {hasPermission('CREAR_REMISION') && (
-                            <Button icon={FaPlus} onClick={() => navigate('/suministros/remisiones/nueva')}>
-                                Nueva Remisión
-                            </Button>
+        <div className="rl-detail">
+            <div className="rl-detail__grid">
+                <section className="rl-panel">
+                    <h4 className="rl-panel__title">Entrega</h4>
+                    <div className="rl-kv">
+                        <span className="rl-kv__label">Fecha</span>
+                        <span className="rl-kv__value">{fmtFechaLarga(rem.fecha_entrega, true) || 'Sin fecha'}</span>
+                        {(rem.hora_desde || rem.hora_hasta) && <span className="rl-kv__sub">{fmtFranja(hhmm(rem.hora_desde), hhmm(rem.hora_hasta))}</span>}
+                    </div>
+                    <div className="rl-kv">
+                        <span className="rl-kv__label">Dirección</span>
+                        <span className="rl-kv__value">{rem.direccion_entrega || '—'}</span>
+                        {ubicacion && <span className="rl-kv__sub">{ubicacion}</span>}
+                        {mapa && (
+                            <a className="rl-link" href={mapa} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+                                <FaMapMarkerAlt /> Ver en el mapa
+                            </a>
                         )}
-                    </>
-                )}
-            />
-
-            {/* ===== FILTROS ===== */}
-            <div className="ds-card rem-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
-                <div className="v-filters-bar" style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
-                    <div className="v-search-pill">
-                        <FaSearch />
-                        <input
-                            type="text"
-                            placeholder="Buscar por ID u O.C..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
                     </div>
-                    <div className="v-select-pill">
-                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Desde:</span>
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={e => setDateFrom(e.target.value)}
-                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
-                        />
+                    <div className="rl-kv">
+                        <span className="rl-kv__label">Recibe</span>
+                        <span className="rl-kv__value">{rem.cliente_nombre || '—'}</span>
+                        {rem.cliente_documento && <span className="rl-kv__sub">C.C. {rem.cliente_documento}</span>}
                     </div>
-                    <div className="v-select-pill">
-                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0 0.5rem', fontWeight: 600 }}>Hasta:</span>
-                        <input
-                            type="date"
-                            value={dateTo}
-                            onChange={e => setDateTo(e.target.value)}
-                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
-                        />
-                    </div>
-                    <div className="v-select-pill">
-                        <select value={estadoFilter} onChange={e => setEstadoFilter(e.target.value)}>
-                            <option value="">Estado: Todos</option>
-                            {Object.entries(ESTADO_LABELS).map(([val, label]) => (
-                                <option key={val} value={val}>{label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="v-select-pill">
-                        <select value={transFilter} onChange={e => setTransFilter(e.target.value)}>
-                            <option value="">Transportador: Todos</option>
-                            {uniqueTransportadores.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                    </div>
-                    <div className="v-select-pill">
-                        <select value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}>
-                            <option value="">Vendedor: Todos</option>
-                            {uniqueVendedores.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
-                    </div>
-                    {hasFilters && (
-                        <button type="button" className="fct-clear-pill" onClick={clearFilters} title="Limpiar filtros">
-                            <FaTimes />
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* ===== MAIN CONTENT ===== */}
-            {viewMode === 'table' ? (
-                <div className="ds-table-wrap">
-                    <div className="ds-table-scroll">
-                    <table className="ds-table rem-tabla-ppal">
-                        <thead>
-                            <tr>
-                                <th><span className="rem-th-truncate" title="ID">ID</span></th>
-                                <th><span className="rem-th-truncate" title="Fecha Creación">
-                                    <span className="rem-text-full">Fecha Creación</span>
-                                    <span className="rem-text-short">F. Creación</span>
-                                </span></th>
-                                <th><span className="rem-th-truncate" title="Fecha Entrega">
-                                    <span className="rem-text-full">Fecha Entrega</span>
-                                    <span className="rem-text-short">F. Entrega</span>
-                                </span></th>
-                                <th><span className="rem-th-truncate" title="Rango Hora">Rango Hora</span></th>
-                                <th><span className="rem-th-truncate" title="O.C.">O.C.</span></th>
-                                <th><span className="rem-th-truncate" title="Saldo">Saldo</span></th>
-                                <th><span className="rem-th-truncate" title="Método de Pago">Método de Pago</span></th>
-                                <th><span className="rem-th-truncate" title="Transportador">Transportador</span></th>
-                                <th><span className="rem-th-truncate" title="Vendedor">Vendedor</span></th>
-                                <th><span className="rem-th-truncate" title="Costo Envío">Costo Envío</span></th>
-                                <th><span className="rem-th-truncate" title="Estado">Estado</span></th>
-                                <th><span className="rem-th-truncate" title="Observación">Observación</span></th>
-                                <th style={{ width: 60, textAlign: 'center' }}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                Array.from({ length: 5 }).map((_, index) => (
-                                    <tr key={index} className="skeleton-row">
-                                        <td><div className="skeleton skeleton-text" style={{ width: '40px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '50px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
-                                        <td><div className="skeleton skeleton-badge"></div></td>
-                                        <td><div className="skeleton skeleton-text" style={{ width: '100px' }}></div></td>
-                                        <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '4px', margin: '0 auto' }}></div></td>
-                                    </tr>
-                                ))
-                            ) : filteredRemisiones.length === 0 ? (
-                                <tr><td colSpan="13" className="rem-empty-row">No hay remisiones para estos filtros.</td></tr>
-                            ) : paginatedRemisiones.map(rem => {
-                                const metodoPagoLabel = METODOS_PAGO.find(m => m.value === rem.metodoPago)?.label;
+                    {telefonos.length > 0 && (
+                        <div className="rl-kv">
+                            <span className="rl-kv__label">Contacto</span>
+                            {telefonos.map(t => {
+                                const wa = whatsappNumero(t);
                                 return (
-                                    <React.Fragment key={rem.id}>
-                                        <tr className={expandedId === rem.id ? 'expanded-row-highlight' : ''} onClick={() => toggleExpand(rem.id)} style={{ cursor: 'pointer' }}>
-                                            <td><span className="remision-id-num">{rem.id}</span></td>
-                                            <td>{formatDate(rem.fechaCreacion)}</td>
-                                            <td>{rem.fechaEntrega ? formatDate(rem.fechaEntrega) : <span className="empty-val">—</span>}</td>
-                                            <td>
-                                                {rem.horaDesde && rem.horaHasta ? (
-                                                    <span className="hora-rango-badge">
-                                                        <FaClock style={{ fontSize: '0.65rem', opacity: 0.6 }} />
-                                                        {rem.horaDesde.slice(0, 5)} – {rem.horaHasta.slice(0, 5)}
-                                                    </span>
-                                                ) : <span className="empty-val">—</span>}
-                                            </td>
-                                            <td>{rem.ordenAsociadaId ? <span className="text-plain">{rem.ordenAsociadaId}</span> : <span className="empty-val">—</span>}</td>
-                                            <td>
-                                                {rem.sinSaldo
-                                                    ? <span className="sin-saldo-badge">Sin saldo</span>
-                                                    : <span className="valor-cop">{formatCOP(rem.saldo)}</span>}
-                                            </td>
-                                            <td>{metodoPagoLabel ? <span className="text-plain">{metodoPagoLabel}</span> : <span className="empty-val">—</span>}</td>
-                                            <td>{rem.transportador_display ? <span className="text-plain">{rem.transportador_display}</span> : <span className="empty-val">—</span>}</td>
-                                            <td>{rem.vendedor ? <span className="rem-vendedor-badge">{rem.vendedor}</span> : <span className="empty-val">—</span>}</td>
-                                            <td>
-                                                {rem.costo_entrega && parseFloat(rem.costo_entrega) > 0
-                                                    ? <span className="valor-cop">{formatCOP(parseFloat(rem.costo_entrega))}</span>
-                                                    : <span className="empty-val">—</span>}
-                                            </td>
-                                            <td>
-                                                <Badge tone={estadoTone(rem.estado)}>
-                                                    {ESTADO_LABELS[rem.estado] || rem.estado}
-                                                </Badge>
-                                            </td>
-                                            <td className="obs-cell-col">
-                                                <ObsCell text={rem.observacion} />
-                                            </td>
-                                            <td style={{ textAlign: 'center', display: 'flex', gap: '0.25rem', alignItems: 'center', justifyContent: 'center' }}>
-                                                {canEditRemision && (
-                                                    <button
-                                                        className="action-btn"
-                                                        title="Actualizar remisión"
-                                                        onClick={(e) => { e.stopPropagation(); openEditModal(rem); }}
-                                                    >
-                                                        <FaEdit />
-                                                    </button>
-                                                )}
-                                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(rem.id); }}>
-                                                    {expandedId === rem.id ? <FaChevronUp /> : <FaChevronDown />}
-                                                </button>
-                                            </td>
-                                        </tr>
-
-                                        {expandedId === rem.id && (
-                                            <tr className="expanded-row">
-                                                <td colSpan="13">
-                                                    <div className="rem-expanded-wrapper">
-                                                        {/* Left panel: client info */}
-                                                        <div className="rem-det-panel">
-                                                            <h4 className="rem-det-titulo">Datos del Cliente</h4>
-                                                            <div className="rem-det-grid">
-                                                                <div className="rem-det-item">
-                                                                    <span className="rem-det-label">Cliente</span>
-                                                                    <span className="rem-det-valor">{rem.clienteNombre || 'Cliente Estándar'}</span>
-                                                                </div>
-                                                                <div className="rem-det-item">
-                                                                    <span className="rem-det-label">Documento</span>
-                                                                    <span className="rem-det-valor">CC 1020304050</span>
-                                                                </div>
-                                                                <div className="rem-det-item">
-                                                                    <span className="rem-det-label">Teléfono 1</span>
-                                                                    <span className="rem-det-valor">+57 300 000 0000</span>
-                                                                </div>
-                                                                <div className="rem-det-item">
-                                                                    <span className="rem-det-label">Teléfono 2</span>
-                                                                    <span className="rem-det-valor">+57 300 111 1111</span>
-                                                                </div>
-                                                                {rem.direccionEntrega && (
-                                                                    <div className="rem-det-item rem-det-item-full">
-                                                                        <span className="rem-det-label">Dirección</span>
-                                                                        <span className="rem-det-valor">{rem.direccionEntrega}{rem.ciudad ? `, ${rem.ciudad}` : ''}</span>
-                                                                    </div>
-                                                                )}
-                                                                <div className="rem-det-item">
-                                                                    <span className="rem-det-label">Vendedor</span>
-                                                                    <span className="rem-det-valor">{rem.vendedor || '—'}</span>
-                                                                </div>
-                                                                {rem.observacion && (
-                                                                    <div className="rem-det-item rem-det-item-full">
-                                                                        <span className="rem-det-label">Observación</span>
-                                                                        <span className="rem-det-valor rem-det-obs">{rem.observacion}</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="rem-det-panel rem-det-panel-wide">
-                                                            <h4 className="rem-det-titulo">Productos Entregados</h4>
-                                                            <p className="rem-det-subtitle">
-                                                                A continuación se listan los productos despachados en esta remisión, incluyendo su variación y observación particular.
-                                                            </p>
-                                                            {rem.inventarioIds.length === 0 ? (
-                                                                <p className="rem-det-empty">Sin ítems registrados.</p>
-                                                            ) : (
-                                                                <table className="rem-det-table">
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th className="rem-det-th" style={{ width: '60px' }}>Id</th>
-                                                                            <th className="rem-det-th">Producto</th>
-                                                                            <th className="rem-det-th">Proveedor</th>
-                                                                            <th className="rem-det-th">Categoría</th>
-                                                                            <th className="rem-det-th">Subcategoría</th>
-                                                                            <th className="rem-det-th" style={{ width: '25%' }}>Variación</th>
-                                                                            <th className="rem-det-th" style={{ width: '20%' }}>Observación</th>
-                                                                            <th className="rem-det-th" style={{ width: '40px' }}></th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {(rem.inventarioDetalle && rem.inventarioDetalle.length > 0 ? rem.inventarioDetalle : rem.inventarioIds).map(itemRef => {
-                                                                            // itemRef can be an ID or a detail object
-                                                                            const invId = typeof itemRef === 'object' ? itemRef.id_referencia : itemRef;
-                                                                            const detail = typeof itemRef === 'object' ? itemRef : null;
-                                                                            
-                                                                            // Try global state first, then fallback to embedded detail
-                                                                            const inv = INVENTARIO.find(i => i.id === invId);
-                                                                            const prod = PRODUCTOS.find(p => p.id === (inv?.productoId));
-                                                                            
-                                                                            const prodNombre = prod?.nombre || detail?.producto_nombre || '—';
-                                                                            const catObj = prod ? CATEGORIAS.find(c => c.id === prod.categoriaId) : null;
-                                                                            const catNombre = catObj?.nombre || detail?.categoria_nombre;
-                                                                            const subcatObj = (inv?.subcategoriaId) ? SUBCATEGORIAS.find(s => s.id === inv.subcategoriaId) : null;
-                                                                            const subcatNombre = subcatObj?.nombre || detail?.subcategoria_nombre || '—';
-                                                                            
-                                                                            const color = prod ? getCatColor(prod.categoriaId) : (detail ? '#3b82f6' : '#94a3b8');
-                                                                            const proveedorObj = prod?.proveedorId ? (proveedores || []).find(p => p.id === prod.proveedorId) : null;
-                                                                            const proveedorNombre = proveedorObj ? proveedorObj.nombre_empresa : (detail?.proveedor_nombre || '—');
-                                                                            
-                                                                            const variacion = inv?.variacion || detail?.variacion || '—';
-                                                                            const observacion = inv?.observacion || detail?.observacion;
-                                                                            const hasImagen = inv?.imagen || detail?.imagen;
-
-                                                                            return (
-                                                                                <tr key={invId} className="rem-det-tr">
-                                                                                    <td className="rem-det-td"><span className="remision-id-num">{invId}</span></td>
-                                                                                    <td className="rem-det-td rem-det-td-prod">
-                                                                                        <span className="rem-det-prod-name">{prodNombre}</span>
-                                                                                    </td>
-                                                                                    <td className="rem-det-td"><span className="text-plain">{proveedorNombre}</span></td>
-                                                                                    <td className="rem-det-td">
-                                                                                        {catNombre && (
-                                                                                            <span className="rem-det-cat-badge" style={{ '--cat-color': color }}>
-                                                                                                {catNombre}
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </td>
-                                                                                    <td className="rem-det-td">{subcatNombre}</td>
-                                                                                    <td className="rem-det-td">{variacion}</td>
-                                                                                    <td className="rem-det-td rem-det-td-obs">
-                                                                                        {observacion
-                                                                                            ? <span className="rem-det-obs-text" title={observacion}>{observacion}</span>
-                                                                                            : <span className="rem-det-empty-val">—</span>}
-                                                                                    </td>
-                                                                                    <td className="rem-det-td" style={{ textAlign: 'center' }}>
-                                                                                        {hasImagen && (
-                                                                                            <button className="action-btn" title="Ver imagen" style={{ padding: '0.35rem', margin: '0 auto', fontSize: '0.9rem' }}>
-                                                                                                <FaImage />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            );
-                                                                        })}
-                                                                    </tbody>
-                                                                </table>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                    <span key={t} className="rl-phone">
+                                        <a className="rl-link" href={`tel:${t}`} onClick={e => e.stopPropagation()}><FaPhoneAlt /> {t}</a>
+                                        {wa && (
+                                            <a className="rl-link rl-link--wa" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+                                                <FaWhatsapp /> WhatsApp
+                                            </a>
                                         )}
-                                    </React.Fragment>
+                                    </span>
                                 );
                             })}
-                        </tbody>
-                    </table>
-                    </div>
-                    {/* Pagination Controls */}
-                    {filteredRemisiones.length > 0 && (
-                        <div className="rem-pagination-controls">
-                            <span className="rem-pagination-info">
-                                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredRemisiones.length)} de {filteredRemisiones.length} remisiones
-                            </span>
-                            <div className="rem-pagination-buttons">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    icon={FaChevronLeft}
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                >
-                                    Anterior
-                                </Button>
-                                <span className="rem-pagination-page">
-                                    Página {currentPage} de {totalPages || 1}
-                                </span>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled={currentPage === totalPages || totalPages === 0}
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                >
-                                    Siguiente <FaChevronRight />
-                                </Button>
-                            </div>
                         </div>
                     )}
-                </div>
-                ) : (
-                    <div className="ds-card rem-calendar-card">
-                        <CalendarView 
-                            remisiones={remisiones}
-                            currentWeekStart={currentWeekStart}
-                            focusedDate={focusedDate}
-                            viewType={calendarViewType}
-                            setViewType={setCalendarViewType}
-                            nextScope={nextScope}
-                            prevScope={prevScope}
-                            goToday={goToday}
-                            openEditModal={openEditModal}
-                            ESTADO_LABELS={ESTADO_LABELS}
-                        />
-                    </div>
-                )}
+                </section>
 
-            {/* ===== MODAL ACTUALIZAR REMISIÓN ===== */}
-            {editModal.open && (() => {
-                const rem    = editModal.remision;
-                const locked = isFinished(rem?.estado);
-                const onlyEstado = isAuxiliar && !isAdmin;
-
-                return (
-                    <Modal
-                        open={editModal.open}
-                        onClose={closeEditModal}
-                        size="lg"
-                        title={(
-                            <>
-                                Actualizar Remisión{' '}
-                                <span className="rem-edit-subtitle">N° <strong>{String(rem?.id).padStart(5,'0')}</strong></span>
-                            </>
-                        )}
-                        footer={(
-                            <>
-                                <Button variant="secondary" onClick={closeEditModal}>
-                                    Cancelar
-                                </Button>
-                                {!locked && (
-                                    <Button
-                                        type="submit"
-                                        form="rem-edit-form"
-                                        icon={FaCheckCircle}
-                                        loading={editSaving}
-                                    >
-                                        Guardar Cambios
-                                    </Button>
-                                )}
-                            </>
-                        )}
-                    >
-                        {/* ── Info Card ── */}
-                        <div className="rem-edit-infocard">
-                            <div className="rem-edit-infocard-grid">
-                                <div className="ric-item">
-                                    <span className="ric-label">Cliente</span>
-                                    <span className="ric-value">{rem?.clienteNombre || '—'}</span>
-                                </div>
-                                <div className="ric-item">
-                                    <span className="ric-label">Orden de Compra</span>
-                                    <span className="ric-value">{rem?.ordenAsociadaId || '—'}</span>
-                                </div>
-                                <div className="ric-item">
-                                    <span className="ric-label">Fecha de Entrega</span>
-                                    <span className="ric-value">{rem?.fechaEntrega ? formatDate(rem.fechaEntrega) : '—'}</span>
-                                </div>
-                                <div className="ric-item">
-                                    <span className="ric-label">Horario</span>
-                                    <span className="ric-value">
-                                        {rem?.horaDesde && rem?.horaHasta
-                                            ? <><FaClock style={{ fontSize: '0.65rem', opacity: 0.7, marginRight: 3 }} />{rem.horaDesde} – {rem.horaHasta}</>
-                                            : '—'}
+                <section className="rl-panel">
+                    <h4 className="rl-panel__title">Productos · {unidades} unidad{unidades === 1 ? '' : 'es'}</h4>
+                    {productos.length === 0 ? (
+                        <p className="rl-muted">Sin productos registrados.</p>
+                    ) : (
+                        <ul className="rl-products">
+                            {productos.map(p => (p.tipo === 'grupo' ? (
+                                <li key={p.key} className="rl-products__group">
+                                    Juego: {p.nombre} · {p.piezas} pieza{p.piezas === 1 ? '' : 's'}
+                                </li>
+                            ) : (
+                                <li key={p.key} className={p.anidado ? 'is-nested' : ''}>
+                                    <span className="rl-products__qty">{p.cantidad}</span>
+                                    <span className="rl-products__info">
+                                        <span className="rl-products__name">
+                                            {p.referencia || p.subcategoria || p.categoria || 'Producto'}
+                                        </span>
+                                        {(p.categoria || p.subcategoria) && (
+                                            <span className="rl-products__cat">
+                                                {[p.categoria, p.subcategoria].filter(Boolean).join(' · ')}
+                                            </span>
+                                        )}
+                                        {p.descripcion && <span className="rl-products__detail">{p.descripcion}</span>}
+                                        {p.tela && <span className="rl-products__detail">Tapizado: {p.tela}</span>}
                                     </span>
-                                </div>
-                                <div className="ric-item ric-item-wide">
-                                    <span className="ric-label">Dirección</span>
-                                    <span className="ric-value">{rem?.direccionEntrega || '—'}{rem?.ciudad ? `, ${rem.ciudad}` : ''}</span>
-                                </div>
-                                <div className="ric-item">
-                                    <span className="ric-label">Transportador</span>
-                                    <span className="ric-value">{rem?.transportador_display || '—'}</span>
-                                </div>
-                            </div>
-                            {/* Estado badge actual */}
-                            <div className="ric-estado-row">
-                                <span className="ric-label">Estado actual</span>
-                                <Badge tone={estadoTone(rem?.estado)}>
-                                    {ESTADO_LABELS[rem?.estado] || rem?.estado}
-                                </Badge>
-                            </div>
+                                    {p.codigo && <span className="rl-code">{p.codigo}</span>}
+                                </li>
+                            )))}
+                        </ul>
+                    )}
+                </section>
+
+                <section className="rl-panel">
+                    <h4 className="rl-panel__title">Cobro y seguimiento</h4>
+                    <div className="rl-kv-grid">
+                        <div className="rl-kv">
+                            <span className="rl-kv__label">Cobrar</span>
+                            <span className="rl-kv__value">{cobrar ? formatCOP(rem.saldo) : 'Sin saldo'}</span>
+                            {cobrar && <span className="rl-kv__sub">{metodoPagoLabel(rem.metodo_pago) || 'Método sin definir'}</span>}
                         </div>
-
-                        {/* ── Form ── */}
-                        <form id="rem-edit-form" onSubmit={handleEditSubmit} className="rem-edit-form">
-
-                            {locked && (
-                                <div className="rem-edit-alert rem-edit-alert--warn">
-                                    ⚠️ Esta remisión está <strong>{ESTADO_LABELS[rem?.estado]}</strong> y no puede modificarse.
-                                </div>
-                            )}
-
-                            {/* Estado */}
-                            <div className="rem-edit-field-group">
-                                <label className="rem-edit-label">Nuevo Estado</label>
-                                <div className="rem-edit-estado-grid">
-                                    {['creada','despachada','finalizada','devuelta'].map(est => (
-                                        <button
-                                            key={est}
-                                            type="button"
-                                            disabled={locked}
-                                            className={`rem-edit-estado-btn est-${est}${editForm.estado === est ? ' selected' : ''}`}
-                                            onClick={() => !locked && setEditForm(prev => ({ ...prev, estado: est }))}
-                                        >
-                                            {ESTADO_LABELS[est]}
-                                        </button>
-                                    ))}
-                                </div>
+                        <div className="rl-kv">
+                            <span className="rl-kv__label">Transportador</span>
+                            <span className="rl-kv__value">{nombreTransportador(rem) || 'Sin asignar'}</span>
+                        </div>
+                        <div className="rl-kv">
+                            <span className="rl-kv__label">Asesor</span>
+                            <span className="rl-kv__value">{rem.vendedor_nombre || '—'}</span>
+                        </div>
+                        {'costo_entrega' in rem && (
+                            <div className="rl-kv">
+                                <span className="rl-kv__label">Costo del flete</span>
+                                <span className="rl-kv__value">{Number(rem.costo_entrega) > 0 ? formatCOP(rem.costo_entrega) : '—'}</span>
                             </div>
+                        )}
+                    </div>
+                    {rem.ventas_detalle?.length > 0 && (
+                        <div className="rl-kv">
+                            <span className="rl-kv__label">{rem.ventas_detalle.length > 1 ? 'Ventas' : 'Venta'}</span>
+                            <span className="rl-ventas">
+                                {rem.ventas_detalle.map(v => (
+                                    <span key={v.id} className="rl-venta-chip">
+                                        #{v.id}
+                                        <em>{v.estado === 'entregado' ? 'Entregada' : v.estado === 'anulada' ? 'Anulada' : 'Pendiente'}</em>
+                                    </span>
+                                ))}
+                            </span>
+                        </div>
+                    )}
+                    {rem.observacion && (
+                        <div className="rl-note">
+                            <span className="rl-kv__label">Indicaciones</span>
+                            {rem.observacion}
+                        </div>
+                    )}
+                    {rem.novedades && (
+                        <div className="rl-note">
+                            <span className="rl-kv__label">Novedades</span>
+                            {rem.novedades}
+                        </div>
+                    )}
+                    {rem.nota_transportador && (
+                        <div className="rl-note rl-note--transp">
+                            <span className="rl-kv__label">Nota del transportador</span>
+                            {rem.nota_transportador}
+                        </div>
+                    )}
+                    {eventos.length > 0 && (
+                        <div className="rl-history">
+                            <span className="rl-kv__label"><FaHistory /> Historial</span>
+                            <ol>
+                                {eventos.map((ev, i) => (
+                                    <li key={i}>
+                                        <span className={`rl-history__dot rl-history__dot--${ev.tipo}`} />
+                                        <span className="rl-history__body">
+                                            <strong>{ev.tipo_label}</strong>
+                                            {ev.usuario_nombre && <> por {ev.usuario_nombre}</>}
+                                            <span className="rl-history__date">
+                                                {format(new Date(ev.fecha), "d MMM yyyy, h:mm a", { locale: es })}
+                                            </span>
+                                            {ev.detalle && <span className="rl-history__detail">{ev.detalle}</span>}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    )}
+                </section>
+            </div>
 
-                            {/* Costo + Nota → solo si no es auxiliar puro */}
-                            {!onlyEstado && (
-                                <>
-                                    <div className="rem-edit-row">
-                                        <div className="rem-edit-field-group">
-                                            <label className="rem-edit-label">Costo del Flete</label>
-                                            <div className="rem-edit-prefix-wrap">
-                                                <span className="rem-edit-prefix">$</span>
-                                                <input
-                                                    type="text"
-                                                    className="rem-edit-input"
-                                                    placeholder="0"
-                                                    value={editForm.costo_display}
-                                                    onChange={handleEditCostoChange}
-                                                    disabled={locked}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="rem-edit-field-group">
-                                        <label className="rem-edit-label">Nota del Transportador</label>
-                                        <textarea
-                                            className="rem-edit-textarea"
-                                            rows={3}
-                                            placeholder="Ej: El cliente no estaba, se dejó en recepción..."
-                                            value={editForm.nota_transportador}
-                                            onChange={e => setEditForm(prev => ({ ...prev, nota_transportador: e.target.value }))}
-                                            disabled={locked}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </form>
-                    </Modal>
-                );
-            })()}
+            {(perm.imprimir || edicion || acciones.length > 0) && (
+                <div className="rl-detail__actions">
+                    {perm.imprimir && <Button variant="secondary" size="sm" icon={FaPrint} onClick={() => onPrint(rem)}>Imprimir</Button>}
+                    {edicion && (
+                        <Button variant="secondary" size="sm" icon={FaPen} onClick={() => onEdit(rem)}>
+                            {edicion === 'editar' ? 'Editar / reprogramar' : 'Registrar flete o nota'}
+                        </Button>
+                    )}
+                    <span className="rl-detail__spacer" />
+                    {acciones.map(a => {
+                        const cfg = ACCIONES_REMISION[a];
+                        const principal = a === 'finalizada' || (a === 'despachada' && rem.estado === 'creada' && !acciones.includes('finalizada'));
+                        const variante = cfg.variant === 'danger' ? 'danger-soft' : principal ? 'primary' : 'secondary';
+                        return (
+                            <Button key={a} size="sm" variant={variante} icon={cfg.icon} onClick={() => onAccion(rem, a)}>
+                                {a === 'finalizada' ? 'Marcar entregada' : cfg.corto}
+                            </Button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
 
-// =============================================================================
-// SUB-COMPONENT: CalendarView
-// =============================================================================
-function CalendarView({ 
-    remisiones, currentWeekStart, focusedDate, viewType, setViewType,
-    nextScope, prevScope, goToday, openEditModal, ESTADO_LABELS 
-}) {
+/* ────────────────────────────────────────────────────────────────────────────
+   Calendario semana / día
+   ──────────────────────────────────────────────────────────────────────────── */
+function CalendarView({ remisiones, onOpen }) {
+    const [viewType, setViewType] = useState('week');
+    const [focusedDate, setFocusedDate] = useState(new Date());
+    const currentWeekStart = startOfWeek(focusedDate, { weekStartsOn: 1 });
+
     const CAL_START_H = 8;
     const CAL_END_H = 19;
-    const HOUR_HEIGHT = 42; 
+    const HOUR_HEIGHT = 42;
+    const CAL_START_MIN = CAL_START_H * 60;
+    const TIME_SLOTS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => `${String(i + CAL_START_H).padStart(2, '0')}:00`);
 
-    const TIME_SLOTS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => {
-        const h = i + CAL_START_H;
-        return `${String(h).padStart(2, '0')}:00`;
-    });
+    const DAYS = useMemo(() => (viewType === 'day'
+        ? [focusedDate]
+        : Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i))), [viewType, focusedDate, currentWeekStart]);
 
-    const WEEK_DAYS = useMemo(() => {
-        if (viewType === 'day') return [focusedDate];
-        return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
-    }, [viewType, focusedDate, currentWeekStart]);
+    const next = () => setFocusedDate(d => (viewType === 'day' ? addDays(d, 1) : addWeeks(d, 1)));
+    const prev = () => setFocusedDate(d => (viewType === 'day' ? subDays(d, 1) : subWeeks(d, 1)));
 
-    // Helper to parse "YYYY-MM-DD" or ISO as local date (avoiding UTC shift)
-    const parseLocalDate = (dateStr) => {
-        if (!dateStr) return null;
-        // Strip time if present: "2026-04-09T08:00:00" -> "2026-04-09"
-        const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-        const [y, m, d] = cleanDate.split('-').map(Number);
-        if (!y || !m || !d) return null;
-        return new Date(y, m - 1, d);
-    };
-
-    const timeToMinutes = (timeStr) => {
-        if (!timeStr) return 0;
-        const [h, m] = timeStr.split(':').map(Number);
+    const toMin = t => {
+        if (!t) return 0;
+        const [h, m] = t.split(':').map(Number);
         return h * 60 + (m || 0);
     };
 
-    const CAL_START_MIN = CAL_START_H * 60;
-
-    // Filter remisiones for this week
-    const weekRemisiones = useMemo(() => {
-        const weekEnd = addDays(currentWeekStart, 7);
-        const filtered = remisiones.filter(r => {
-            if (!r.fechaEntrega) return false;
-            const d = parseLocalDate(r.fechaEntrega);
-            return d >= currentWeekStart && d < weekEnd;
+    const visibles = useMemo(() => {
+        const inicio = DAYS[0];
+        const fin = addDays(DAYS[DAYS.length - 1], 1);
+        return remisiones.filter(r => {
+            const d = parseLocalDate(r.fecha_entrega);
+            return d && d >= new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate()) && d < fin;
         });
-        return filtered;
-    }, [remisiones, currentWeekStart]);
+    }, [remisiones, DAYS]);
 
-    // Overlap Detection & Positioning Algorithm
-    const getPositionedEvents = (day) => {
-        const dayEvents = weekRemisiones.filter(r => isSameDay(day, parseLocalDate(r.fechaEntrega)))
-            .map(r => ({
-                ...r,
-                startMin: timeToMinutes(r.horaDesde),
-                endMin: timeToMinutes(r.horaHasta) || (timeToMinutes(r.horaDesde) + 60)
-            }))
+    const eventosDelDia = day => {
+        const eventos = visibles
+            .filter(r => isSameDay(day, parseLocalDate(r.fecha_entrega)))
+            .map(r => ({ rem: r, startMin: Math.max(toMin(r.hora_desde) || CAL_START_MIN, CAL_START_MIN), endMin: toMin(r.hora_hasta) || (toMin(r.hora_desde) || CAL_START_MIN) + 60 }))
             .sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
-
-        if (dayEvents.length === 0) return [];
-
-        const groups = [];
-        dayEvents.forEach(event => {
-            let placed = false;
-            for (const group of groups) {
-                const lastInGroup = group[group.length - 1];
-                // Check if this event overlaps with ANY event in the group
-                const overlaps = group.some(e => event.startMin < e.endMin && event.endMin > e.startMin);
-                if (overlaps) {
-                    group.push(event);
-                    placed = true;
-                    break;
-                }
-            }
-            if (!placed) groups.push([event]);
+        const grupos = [];
+        eventos.forEach(ev => {
+            const grupo = grupos.find(g => g.some(e => ev.startMin < e.endMin && ev.endMin > e.startMin));
+            if (grupo) grupo.push(ev); else grupos.push([ev]);
         });
-
-        const positioned = [];
-        groups.forEach(group => {
-            const columns = [];
-            group.forEach(event => {
-                let colIdx = 0;
-                while (columns[colIdx] && columns[colIdx].some(e => event.startMin < e.endMin && event.endMin > e.startMin)) {
-                    colIdx++;
-                }
-                if (!columns[colIdx]) columns[colIdx] = [];
-                columns[colIdx].push(event);
-                event.colIdx = colIdx;
+        grupos.forEach(grupo => {
+            const columnas = [];
+            grupo.forEach(ev => {
+                let c = 0;
+                while (columnas[c] && columnas[c].some(e => ev.startMin < e.endMin && ev.endMin > e.startMin)) c++;
+                (columnas[c] = columnas[c] || []).push(ev);
+                ev.col = c;
             });
-            const maxCols = columns.length;
-            group.forEach(event => {
-                event.totalCols = maxCols;
-                positioned.push(event);
-            });
+            grupo.forEach(ev => { ev.cols = columnas.length; });
         });
-
-        return positioned;
-    };
-
-    const getEstadoClass = est => {
-        const map = { creada: 'status-creada', despachada: 'status-despachada', finalizada: 'status-finalizada', anulada: 'status-anulada', devuelta: 'status-devuelta' };
-        return map[est] || '';
+        return eventos;
     };
 
     return (
         <div className="calendar-container">
-            {/* Nav Header */}
             <div className="calendar-nav">
                 <div className="calendar-nav-left">
                     <h3 className="calendar-current-month">
                         {format(viewType === 'day' ? focusedDate : currentWeekStart, 'MMMM yyyy', { locale: es }).toUpperCase()}
                     </h3>
                     <span className="calendar-week-range">
-                        {viewType === 'day' 
+                        {viewType === 'day'
                             ? format(focusedDate, "EEEE d 'de' MMMM", { locale: es })
-                            : `Semana del ${format(currentWeekStart, 'd', { locale: es })} al ${format(WEEK_DAYS[6], 'd', { locale: es })}`
-                        }
+                            : `Semana del ${format(currentWeekStart, 'd', { locale: es })} al ${format(DAYS[6], 'd', { locale: es })}`}
                     </span>
                 </div>
-
                 <div className="calendar-nav-center">
                     <div className="cal-view-switcher">
-                        <button 
-                            className={`switcher-btn ${viewType === 'week' ? 'active' : ''}`}
-                            onClick={() => setViewType('week')}
-                        >
-                            Semana
-                        </button>
-                        <button 
-                            className={`switcher-btn ${viewType === 'day' ? 'active' : ''}`}
-                            onClick={() => setViewType('day')}
-                        >
-                            Día
-                        </button>
+                        <button className={`switcher-btn ${viewType === 'week' ? 'active' : ''}`} onClick={() => setViewType('week')}>Semana</button>
+                        <button className={`switcher-btn ${viewType === 'day' ? 'active' : ''}`} onClick={() => setViewType('day')}>Día</button>
                     </div>
                 </div>
-
                 <div className="calendar-nav-actions">
-                    <button className="cal-nav-btn" onClick={goToday}>Hoy</button>
+                    <button className="cal-nav-btn" onClick={() => setFocusedDate(new Date())}>Hoy</button>
                     <div className="cal-nav-arrows">
-                        <button className="cal-arrow-btn" onClick={prevScope}><FaChevronLeft /></button>
-                        <button className="cal-arrow-btn" onClick={nextScope}><FaChevronRight /></button>
+                        <button className="cal-arrow-btn" onClick={prev} aria-label="Anterior"><FaChevronLeft /></button>
+                        <button className="cal-arrow-btn" onClick={next} aria-label="Siguiente"><FaChevronRight /></button>
                     </div>
                 </div>
             </div>
 
-            {/* Grid */}
             <div className="calendar-grid-wrapper">
-                {(weekRemisiones.length === 0) && (
+                {visibles.length === 0 && (
                     <div className="calendar-empty-state">
                         <span className="empty-icon">📅</span>
-                        <p>No hay remisiones programadas para esta semana</p>
+                        <p>No hay remisiones programadas en estas fechas</p>
                     </div>
                 )}
                 <div className={`calendar-grid view-${viewType}`}>
-                    {/* Header: Days */}
-                    <div className="calendar-header-row"
-                        style={{ gridTemplateColumns: `55px repeat(${WEEK_DAYS.length}, 1fr)` }}
-                    >
-                        <div className="time-gutter-header"></div>
-                        {WEEK_DAYS.map((day, idx) => (
+                    <div className="calendar-header-row" style={{ gridTemplateColumns: `55px repeat(${DAYS.length}, 1fr)` }}>
+                        <div className="time-gutter-header" />
+                        {DAYS.map((day, idx) => (
                             <div key={idx} className={`calendar-day-header ${isSameDay(day, new Date()) ? 'is-today' : ''} ${idx === 6 && viewType === 'week' ? 'is-sunday' : ''}`}>
                                 <span className="day-name">{format(day, 'eee', { locale: es })}</span>
                                 <span className="day-number">{format(day, 'd')}</span>
                             </div>
                         ))}
                     </div>
-
                     <div className="calendar-body-scrollable">
-                        {/* body-grid: gutter (left) + columns-container (right) as flex row */}
                         <div className="calendar-body-grid">
-                            {/* Time Gutter */}
                             <div className="calendar-time-gutter">
-                                {TIME_SLOTS.map((time, idx) => (
-                                    <div key={idx} className="time-slot-label">
-                                        {time}
-                                    </div>
-                                ))}
+                                {TIME_SLOTS.map(t => <div key={t} className="time-slot-label">{t}</div>)}
                             </div>
-
-                            {/* Columns container: position:relative parent for events */}
                             <div className="calendar-columns-container">
-                                {/* Background Grid Lines (absolute, z=0) */}
                                 <div className="calendar-bg-lines">
-                                    {TIME_SLOTS.map((_, idx) => (
-                                        <div key={idx} className="calendar-bg-line"></div>
-                                    ))}
+                                    {TIME_SLOTS.map(t => <div key={t} className="calendar-bg-line" />)}
                                 </div>
-
-                                {/* Day columns grid (relative, z=1) */}
-                                <div
-                                    className="calendar-days-columns"
-                                    style={{ gridTemplateColumns: `repeat(${WEEK_DAYS.length}, 1fr)` }}
-                                >
-                                    {WEEK_DAYS.map((day, dayIdx) => {
-                                        const positionedEvents = getPositionedEvents(day);
-                                        return (
-                                            <div
-                                                key={dayIdx}
-                                                className={`calendar-day-column ${dayIdx === 6 && viewType === 'week' ? 'is-sunday' : ''} ${isSameDay(day, new Date()) ? 'is-today-col' : ''}`}
-                                            >
-                                                {positionedEvents.map(rem => {
-                                                    const top = ((rem.startMin - CAL_START_MIN) / 60) * HOUR_HEIGHT;
-                                                    const duration = Math.max(rem.endMin - rem.startMin, 45);
-                                                    const height = (duration / 60) * HOUR_HEIGHT;
-                                                    const width = 100 / rem.totalCols;
-                                                    const left = rem.colIdx * width;
-
-                                                    return (
-                                                        <div
-                                                            key={rem.id}
-                                                            className={`calendar-event ${getEstadoClass(rem.estado)}`}
-                                                            style={{
-                                                                top: `${top}px`,
-                                                                height: `${height}px`,
-                                                                width: `calc(${width}% - 3px)`,
-                                                                left: `calc(${left}% + 1px)`,
-                                                                minHeight: '38px',
-                                                            }}
-                                                            onClick={() => openEditModal(rem)}
-                                                        >
-                                                            <div className="event-content-wrapper">
-                                                                <div className="event-time-range">{rem.horaDesde} - {rem.horaHasta}</div>
-                                                                <div className="event-title">{rem.clienteNombre}</div>
-                                                                <div className="event-subtitle">OC: {rem.ordenAsociadaId || '—'}</div>
-                                                                {height > 60 && (
-                                                                    <div className="event-footer">
-                                                                        <span className="event-id">#{rem.id}</span>
-                                                                        <span className="event-status-dot"></span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                <div className="calendar-days-columns" style={{ gridTemplateColumns: `repeat(${DAYS.length}, 1fr)` }}>
+                                    {DAYS.map((day, dayIdx) => (
+                                        <div key={dayIdx} className={`calendar-day-column ${dayIdx === 6 && viewType === 'week' ? 'is-sunday' : ''} ${isSameDay(day, new Date()) ? 'is-today-col' : ''}`}>
+                                            {eventosDelDia(day).map(ev => {
+                                                const { rem } = ev;
+                                                const top = ((ev.startMin - CAL_START_MIN) / 60) * HOUR_HEIGHT;
+                                                const height = (Math.max(ev.endMin - ev.startMin, 45) / 60) * HOUR_HEIGHT;
+                                                const width = 100 / ev.cols;
+                                                return (
+                                                    <div
+                                                        key={rem.id}
+                                                        className={`calendar-event status-${rem.estado}`}
+                                                        style={{ top, height, width: `calc(${width}% - 3px)`, left: `calc(${ev.col * width}% + 1px)`, minHeight: 38 }}
+                                                        onClick={() => onOpen(rem)}
+                                                        title={`#${rem.id} · ${rem.cliente_nombre}`}
+                                                    >
+                                                        <div className="event-content-wrapper">
+                                                            <div className="event-time-range">{hhmm(rem.hora_desde)} - {hhmm(rem.hora_hasta)}</div>
+                                                            <div className="event-title">{rem.cliente_nombre}</div>
+                                                            <div className="event-subtitle">{[rem.barrio, nombreTransportador(rem)].filter(Boolean).join(' · ') || `Venta #${rem.orden_asociada || '—'}`}</div>
+                                                            {height > 60 && (
+                                                                <div className="event-footer">
+                                                                    <span className="event-id">#{rem.id}</span>
+                                                                    <span className="event-status-dot" />
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -1454,5 +460,445 @@ function CalendarView({
     );
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+   Página
+   ──────────────────────────────────────────────────────────────────────────── */
+function leerVista() {
+    try { return localStorage.getItem('remisiones.vista') || 'lista'; } catch { return 'lista'; }
+}
+
+function RemisionesPage() {
+    const { usuario, notify } = useContext(AppContext);
+    const hasPermission = usePermissions();
+    const navigate = useNavigate();
+    const esTransportador = usuario?.role === 'transportador';
+
+    const perm = useMemo(() => ({
+        crear: hasPermission('CREAR_REMISION'),
+        verTodas: hasPermission('VER_TODAS_REMISIONES'),
+        editar: hasPermission('EDITAR_REMISION'),
+        estado: hasPermission('CAMBIAR_ESTADO_REMISION'),
+        anular: hasPermission('ANULAR_REMISION'),
+        imprimir: hasPermission('DESCARGAR_REMISION'),
+        costo: hasPermission('VER_COSTO_ENTREGA_REMISION'),
+        cerrarVenta: hasPermission('EDITAR_ESTADO_VENTA'),
+    }), [usuario]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const [remisiones, setRemisiones] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
+    const [transportadores, setTransportadores] = useState([]);
+    const { data: vendedores = [] } = useVendedores();
+
+    const [vista, setVista] = useState(leerVista);
+    const [tab, setTab] = useState('activas');
+    const [rapido, setRapido] = useState(null);
+    const [search, setSearch] = useState('');
+    const [desde, setDesde] = useState('');
+    const [hasta, setHasta] = useState('');
+    const [transFilter, setTransFilter] = useState('');
+    const [asesorFilter, setAsesorFilter] = useState('');
+    const [page, setPage] = useState(1);
+    const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+    const [expandedId, setExpandedId] = useState(null);
+
+    const [printRem, setPrintRem] = useState(null);
+    const [editRem, setEditRem] = useState(null);
+    const [accion, setAccion] = useState(null); // { rem, accion }
+    const [calRem, setCalRem] = useState(null);
+
+    const fetchAll = useCallback(async () => {
+        setLoadError(false);
+        try {
+            const [remRes, transpRes] = await Promise.all([
+                API.get('/suministros/remisiones/'),
+                API.get('/transportadores/').catch(() => ({ data: [] })),
+            ]);
+            const data = remRes.data?.results || remRes.data || [];
+            setRemisiones(Array.isArray(data) ? data : []);
+            setTransportadores(Array.isArray(transpRes.data) ? transpRes.data : []);
+        } catch (err) {
+            console.error('Error cargando remisiones:', err);
+            setLoadError(true);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    usePageRefresh(fetchAll);
+
+    useEffect(() => { setPage(1); }, [tab, rapido, search, desde, hasta, transFilter, asesorFilter]);
+
+    const cambiarVista = v => {
+        setVista(v);
+        try { localStorage.setItem('remisiones.vista', v); } catch { /* sin almacenamiento */ }
+    };
+
+    const reemplazar = actualizada => {
+        setRemisiones(prev => prev.map(r => (r.id === actualizada.id ? actualizada : r)));
+        setCalRem(prev => (prev && prev.id === actualizada.id ? actualizada : prev));
+    };
+
+    /* ── Filtros ── */
+    const hoy = getTodayStr();
+    const manana = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+
+    const base = useMemo(() => {
+        const q = normalizar(search.trim());
+        return remisiones.filter(r => {
+            if (q && !textoBusqueda(r).includes(q)) return false;
+            if (desde && (!r.fecha_entrega || r.fecha_entrega < desde)) return false;
+            if (hasta && (!r.fecha_entrega || r.fecha_entrega > hasta)) return false;
+            if (transFilter === SIN_ASIGNAR && nombreTransportador(r)) return false;
+            if (transFilter && transFilter !== SIN_ASIGNAR && nombreTransportador(r) !== transFilter) return false;
+            if (asesorFilter && r.vendedor_nombre !== asesorFilter) return false;
+            return true;
+        });
+    }, [remisiones, search, desde, hasta, transFilter, asesorFilter]);
+
+    const conteoTabs = useMemo(() => {
+        const c = {};
+        TABS.forEach(t => { c[t.key] = t.estados ? base.filter(r => t.estados.includes(r.estado)).length : base.length; });
+        return c;
+    }, [base]);
+
+    const conteoRapidos = useMemo(() => {
+        const c = {};
+        RAPIDOS.forEach(q => { c[q.key] = base.filter(r => cumpleRapido(r, q.key, hoy, manana)).length; });
+        return c;
+    }, [base, hoy, manana]);
+
+    const filtradas = useMemo(() => {
+        const t = TABS.find(x => x.key === tab);
+        let lista = t.estados ? base.filter(r => t.estados.includes(r.estado)) : base;
+        if (rapido) lista = lista.filter(r => cumpleRapido(r, rapido, hoy, manana));
+        const ascendente = ['activas', 'creada', 'despachada'].includes(tab) || !!rapido;
+        return ordenar(lista, ascendente);
+    }, [base, tab, rapido, hoy, manana]);
+
+    const totalPages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
+    const pagina = filtradas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+    const opcionesTransp = useMemo(() => [...new Set(remisiones.map(nombreTransportador).filter(Boolean))].sort(), [remisiones]);
+    const opcionesAsesor = useMemo(() => [...new Set(remisiones.map(r => r.vendedor_nombre).filter(Boolean))].sort(), [remisiones]);
+    const hayFiltros = !!(search || desde || hasta || transFilter || asesorFilter || rapido);
+    const filtrosExtra = [desde, hasta, transFilter, asesorFilter].filter(Boolean).length;
+    const limpiar = () => { setSearch(''); setDesde(''); setHasta(''); setTransFilter(''); setAsesorFilter(''); setRapido(null); };
+
+    const elegirRapido = key => {
+        if (rapido === key) { setRapido(null); return; }
+        setRapido(key);
+        if (!['activas', 'creada', 'despachada'].includes(tab)) setTab('activas');
+    };
+
+    /* ── Acciones ── */
+    const alTerminarAccion = (actualizada, tipo) => {
+        reemplazar(actualizada);
+        setAccion(null);
+        const msg = {
+            despachada: 'quedó en ruta',
+            finalizada: 'quedó entregada',
+            devuelta: 'quedó devuelta; sus productos están libres',
+            anulada: 'quedó anulada; sus productos están libres',
+            creada: 'volvió a por despachar',
+        }[tipo];
+        notify(`Remisión #${actualizada.id} ${msg}.`, 'success');
+    };
+
+    const alEditar = actualizada => {
+        reemplazar(actualizada);
+        setEditRem(null);
+        notify(`Remisión #${actualizada.id} actualizada.`, 'success');
+    };
+
+    const detalleProps = {
+        perm,
+        esTransportador,
+        onPrint: setPrintRem,
+        onEdit: setEditRem,
+        onAccion: (rem, a) => setAccion({ rem, accion: a }),
+    };
+
+    const tabActual = TABS.find(t => t.key === tab);
+
+    return (
+        <div className="ds-page rl-page ds-fade-in">
+            <PageHeader
+                icon={FaTruck}
+                title="Remisiones"
+                subtitle={esTransportador ? 'Tus entregas asignadas' : 'Programa, despacha y haz seguimiento a las entregas'}
+                actions={(
+                    <>
+                        <div className="rl-view-toggle" role="tablist" aria-label="Vista">
+                            <button type="button" className={vista === 'lista' ? 'is-active' : ''} onClick={() => cambiarVista('lista')} title="Lista">
+                                <FaList /> <span>Lista</span>
+                            </button>
+                            <button type="button" className={vista === 'calendario' ? 'is-active' : ''} onClick={() => cambiarVista('calendario')} title="Calendario">
+                                <FaCalendarAlt /> <span>Calendario</span>
+                            </button>
+                        </div>
+                        {perm.crear && (
+                            <Button icon={FaPlus} onClick={() => navigate('/suministros/remisiones/nueva')}>
+                                Nueva remisión
+                            </Button>
+                        )}
+                    </>
+                )}
+            />
+
+            {/* Estados */}
+            <div className="rl-tabs" role="tablist">
+                {TABS.map(t => (
+                    <button
+                        key={t.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === t.key}
+                        className={`rl-tab${tab === t.key ? ' is-active' : ''}`}
+                        onClick={() => { setTab(t.key); if (!['activas', 'creada', 'despachada'].includes(t.key)) setRapido(null); }}
+                    >
+                        {t.label}
+                        <span className="rl-tab__count">{isLoading ? '·' : conteoTabs[t.key]}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Filtros */}
+            <div className={`rl-filters${filtrosAbiertos ? ' is-open' : ''}`}>
+                <div className="rl-search">
+                    <FaSearch />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Buscar por N°, venta, cliente, teléfono o dirección…"
+                        aria-label="Buscar remisiones"
+                    />
+                    {search && <button type="button" onClick={() => setSearch('')} aria-label="Limpiar búsqueda"><FaTimes /></button>}
+                </div>
+                <button
+                    type="button"
+                    className={`rl-filters-toggle${filtrosExtra ? ' has-active' : ''}`}
+                    onClick={() => setFiltrosAbiertos(o => !o)}
+                    aria-expanded={filtrosAbiertos}
+                >
+                    <FaSlidersH /> Filtros{filtrosExtra ? ` (${filtrosExtra})` : ''}
+                </button>
+                <label className="rl-filter">
+                    <span>Entrega desde</span>
+                    <input type="date" value={desde} onChange={e => setDesde(e.target.value)} onClick={e => { try { e.target.showPicker(); } catch { /* */ } }} />
+                </label>
+                <label className="rl-filter">
+                    <span>hasta</span>
+                    <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} onClick={e => { try { e.target.showPicker(); } catch { /* */ } }} />
+                </label>
+                {!esTransportador && (
+                    <label className="rl-filter">
+                        <span>Transportador</span>
+                        <select value={transFilter} onChange={e => setTransFilter(e.target.value)}>
+                            <option value="">Todos</option>
+                            <option value={SIN_ASIGNAR}>Sin asignar</option>
+                            {opcionesTransp.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </label>
+                )}
+                {perm.verTodas && opcionesAsesor.length > 1 && (
+                    <label className="rl-filter">
+                        <span>Asesor</span>
+                        <select value={asesorFilter} onChange={e => setAsesorFilter(e.target.value)}>
+                            <option value="">Todos</option>
+                            {opcionesAsesor.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                    </label>
+                )}
+                {hayFiltros && (
+                    <button type="button" className="rl-clear" onClick={limpiar}>
+                        <FaTimes /> Limpiar
+                    </button>
+                )}
+            </div>
+
+            {/* Atajos de trabajo */}
+            {!isLoading && (
+                <div className="rl-quick">
+                    {RAPIDOS.map(q => {
+                        const n = conteoRapidos[q.key];
+                        if (!n && rapido !== q.key) return null;
+                        return (
+                            <button
+                                key={q.key}
+                                type="button"
+                                className={`rl-quick__chip${q.tone ? ` rl-quick__chip--${q.tone}` : ''}${rapido === q.key ? ' is-active' : ''}`}
+                                onClick={() => elegirRapido(q.key)}
+                            >
+                                <q.icon /> {q.label} <strong>{n}</strong>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {loadError ? (
+                <ErrorState message="No se pudieron cargar las remisiones." onRetry={() => { setIsLoading(true); fetchAll(); }} />
+            ) : vista === 'calendario' ? (
+                <div className="ds-card rem-calendar-card">
+                    <CalendarView remisiones={filtradas} onOpen={setCalRem} />
+                </div>
+            ) : (
+                <div className="rl-list">
+                    <div className="rl-row rl-row--head" aria-hidden="true">
+                        <span>N°</span>
+                        <span>Entrega</span>
+                        <span>Cliente</span>
+                        <span>Venta</span>
+                        <span className="rl-right">Productos</span>
+                        <span className="rl-right">Cobrar</span>
+                        <span>Transportador</span>
+                        <span>Estado</span>
+                        <span />
+                    </div>
+
+                    {isLoading && Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="rl-row rl-row--skeleton">
+                            {Array.from({ length: 8 }).map((__, j) => <span key={j} className="ds-skeleton" />)}
+                        </div>
+                    ))}
+
+                    {!isLoading && filtradas.length === 0 && (
+                        <div className="rl-empty">
+                            <EmptyState
+                                icon={FaTruck}
+                                title={hayFiltros ? 'Nada coincide con los filtros' : `No hay remisiones ${tab === 'todas' ? '' : tabActual.label.toLowerCase()}`}
+                                message={hayFiltros ? 'Prueba quitando algún filtro.' : (perm.crear ? 'Cuando crees una remisión aparecerá aquí.' : null)}
+                                action={hayFiltros
+                                    ? <Button variant="secondary" size="sm" onClick={limpiar}>Limpiar filtros</Button>
+                                    : perm.crear && <Button size="sm" icon={FaPlus} onClick={() => navigate('/suministros/remisiones/nueva')}>Nueva remisión</Button>}
+                            />
+                        </div>
+                    )}
+
+                    {!isLoading && pagina.map(rem => {
+                        const abierta = expandedId === rem.id;
+                        const cobrar = !rem.sin_saldo && Number(rem.saldo) > 0;
+                        const transp = nombreTransportador(rem);
+                        const ventas = rem.ventas?.length ? rem.ventas : (rem.orden_asociada ? [rem.orden_asociada] : []);
+                        const unidades = totalUnidades(rem);
+                        return (
+                            <div key={rem.id} className={`rl-item${abierta ? ' is-open' : ''} rl-item--${rem.estado}`}>
+                                <div
+                                    className="rl-row"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-expanded={abierta}
+                                    onClick={() => setExpandedId(abierta ? null : rem.id)}
+                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(abierta ? null : rem.id); } }}
+                                >
+                                    <span className="rl-c rl-c--num"><span className="rl-num">#{rem.id}</span></span>
+                                    <span className="rl-c rl-c--fecha">
+                                        <span className="rl-strong">{rem.fecha_entrega ? fmtFechaCorta(rem.fecha_entrega) : 'Sin fecha'} <RelTag rem={rem} /></span>
+                                        {(rem.hora_desde || rem.hora_hasta) && <span className="rl-sub">{fmtFranjaCorta(hhmm(rem.hora_desde), hhmm(rem.hora_hasta))}</span>}
+                                    </span>
+                                    <span className="rl-c rl-c--cliente">
+                                        <span className="rl-strong rl-ellipsis">{rem.cliente_nombre}</span>
+                                        <span className="rl-sub rl-ellipsis">{[rem.direccion_entrega, rem.barrio].filter(Boolean).join(' · ') || '—'}</span>
+                                    </span>
+                                    <span className="rl-c rl-c--venta">
+                                        {ventas.length ? <>#{ventas[0]}{ventas.length > 1 && <span className="rl-sub"> +{ventas.length - 1}</span>}</> : <span className="rl-sub">Sin venta</span>}
+                                    </span>
+                                    <span className="rl-c rl-c--prod rl-right">{unidades} ud{unidades === 1 ? '' : 's'}.</span>
+                                    <span className="rl-c rl-c--cobro rl-right">
+                                        {cobrar ? (
+                                            <>
+                                                <span className="rl-strong rl-money">{formatCOP(rem.saldo)}</span>
+                                                {rem.metodo_pago && <span className="rl-sub">{metodoPagoLabel(rem.metodo_pago)}</span>}
+                                            </>
+                                        ) : <span className="rl-sub">Sin saldo</span>}
+                                    </span>
+                                    <span className="rl-c rl-c--transp">
+                                        {transp ? <span className="rl-ellipsis">{transp}</span> : <span className="rl-unassigned">Sin asignar</span>}
+                                    </span>
+                                    <span className="rl-c rl-c--estado"><EstadoBadge estado={rem.estado} /></span>
+                                    <span className="rl-c rl-c--acciones">
+                                        {perm.imprimir && (
+                                            <button
+                                                type="button"
+                                                className="rl-icon-btn"
+                                                title="Imprimir"
+                                                aria-label={`Imprimir remisión ${rem.id}`}
+                                                onClick={e => { e.stopPropagation(); setPrintRem(rem); }}
+                                            >
+                                                <FaPrint />
+                                            </button>
+                                        )}
+                                        <span className="rl-chevron" aria-hidden="true">{abierta ? <FaChevronUp /> : <FaChevronDown />}</span>
+                                    </span>
+                                </div>
+                                {abierta && <RemisionDetalle rem={rem} {...detalleProps} />}
+                            </div>
+                        );
+                    })}
+
+                    {!isLoading && filtradas.length > PAGE_SIZE && (
+                        <div className="rl-pagination">
+                            <span>
+                                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtradas.length)} de {filtradas.length}
+                            </span>
+                            <div>
+                                <Button variant="secondary" size="sm" icon={FaChevronLeft} disabled={page === 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+                                <Button variant="secondary" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Siguiente <FaChevronRight /></Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Detalle desde el calendario */}
+            <Modal
+                open={!!calRem}
+                onClose={() => setCalRem(null)}
+                size="xl"
+                title={calRem ? (
+                    <span className="rl-modal-title">
+                        Remisión #{calRem.id} <EstadoBadge estado={calRem.estado} />
+                    </span>
+                ) : ''}
+            >
+                {calRem && (
+                    <RemisionDetalle
+                        rem={calRem}
+                        {...detalleProps}
+                        onPrint={rem => { setCalRem(null); setPrintRem(rem); }}
+                        onEdit={rem => { setCalRem(null); setEditRem(rem); }}
+                        onAccion={(rem, a) => { setCalRem(null); setAccion({ rem, accion: a }); }}
+                    />
+                )}
+            </Modal>
+
+            <RemisionPrintModal open={!!printRem} remision={printRem} onClose={() => setPrintRem(null)} />
+
+            <RemisionEditarModal
+                open={!!editRem}
+                remision={editRem}
+                onClose={() => setEditRem(null)}
+                onDone={alEditar}
+                transportadores={transportadores}
+                vendedores={vendedores}
+                puedeEditar={perm.editar}
+                puedeSeguimiento={perm.estado}
+                puedeCosto={perm.costo}
+            />
+
+            <RemisionAccionModal
+                open={!!accion}
+                accion={accion?.accion}
+                remision={accion?.rem}
+                onClose={() => setAccion(null)}
+                onDone={alTerminarAccion}
+                puedeCosto={perm.costo}
+                puedeCerrarVenta={perm.cerrarVenta}
+                esTransportador={esTransportador}
+            />
+        </div>
+    );
+}
 
 export default RemisionesPage;

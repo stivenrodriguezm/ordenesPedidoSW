@@ -1,12 +1,15 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { useDialogo } from '../hooks/useDialogo';
+import { useBorrador } from '../hooks/useBorrador';
+import { useIdempotencia } from '../hooks/useIdempotencia';
 import { createPortal } from 'react-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
-import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaSave, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner, FaFileInvoiceDollar, FaLock } from 'react-icons/fa';
-import { PageHeader, Button } from '../components/ui';
+import { FaPlus, FaTrashAlt, FaChevronDown, FaChevronUp, FaEdit, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, FaSearch, FaLayerGroup, FaShoppingCart, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown, FaSpinner, FaFileInvoiceDollar, FaLock } from 'react-icons/fa';
+import { PageHeader, Button, Badge } from '../components/ui';
 import './FacturasProveedorPage.css';
 import './VentasImprovements.css';
 
@@ -76,14 +79,16 @@ const ESTADOS_FACTURA = [
     { value: 'atrasado', label: 'Atrasado' },
     { value: 'pago_en_proceso', label: 'Pago en proceso' },
     { value: 'pagado', label: 'Pagado' },
+    { value: 'anulada', label: 'Anulada' },
 ];
 
 function FacturasProveedorPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { proveedores, usuario, notify } = useContext(AppContext);
+    const { proveedores, notify, usuario } = useContext(AppContext);
+    const idempotencia = useIdempotencia();
     const hasPermission = usePermissions();
-    const canEditFechas = hasPermission('EDITAR_FECHAS_FACTURA');
+    
     const [facturas, setFacturas] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [subcategorias, setSubcategorias] = useState([]);
@@ -108,8 +113,7 @@ function FacturasProveedorPage() {
     };
     const [isLoadingFacturas, setIsLoadingFacturas] = useState(true);
     const [errorFacturas, setErrorFacturas] = useState(false);
-    const [isLoadingMeta, setIsLoadingMeta] = useState(true);
-    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [, setIsLoadingMeta] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
 
     // Toast (Global)
@@ -124,17 +128,23 @@ function FacturasProveedorPage() {
         }
     }, [location.state]);
 
-    // Filtros & Ordenamiento
-    const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
-    const [selectedProveedores, setSelectedProveedores] = useState([]);
-    const [hasInitializedProveedores, setHasInitializedProveedores] = useState(false);
-    const [filterFechaDesde, setFilterFechaDesde] = useState('');
-    const [filterFechaHasta, setFilterFechaHasta] = useState('');
-    const [filterSearch, setFilterSearch] = useState('');
+    // Filtros & Ordenamiento — persisten en la URL (P08-08): atrás/recarga/
+    // compartir conserva el conjunto. Los multi-select van como JSON (los
+    // nombres de proveedor pueden tener comas).
+    const [searchParams, setSearchParams] = useSearchParams();
+    const paramsIniciales = useRef(searchParams).current; // solo la primera carga
+    const leerArrParam = (k) => {
+        try { const v = JSON.parse(paramsIniciales.get(k) || 'null'); return Array.isArray(v) ? v : null; }
+        catch { return null; }
+    };
+    const [selectedEstados, setSelectedEstados] = useState(() => leerArrParam('estados') ?? ['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
+    const [selectedProveedores, setSelectedProveedores] = useState(() => leerArrParam('proveedores') ?? []);
+    const [hasInitializedProveedores, setHasInitializedProveedores] = useState(() => paramsIniciales.get('proveedores') !== null);
+    const [filterFechaDesde, setFilterFechaDesde] = useState(() => paramsIniciales.get('desde') || '');
+    const [filterFechaHasta, setFilterFechaHasta] = useState(() => paramsIniciales.get('hasta') || '');
+    const [filterSearch, setFilterSearch] = useState(() => paramsIniciales.get('q') || '');
     const [sortConfig, setSortConfig] = useState({ key: 'fechaPago', direction: 'asc' });
 
-    // Modal editar factura (obs + estado + fechas + productos)
-    const [editModal, setEditModal] = useState(null);
 
     // Popovers de filtro
     const [isEstadosOpen, setIsEstadosOpen] = useState(false);
@@ -168,40 +178,6 @@ function FacturasProveedorPage() {
         setErrorFacturas(false);
         try {
             const facRes = await API.get('/suministros/facturas/');
-            const fetchFacturasHeavy = async () => {
-                try {
-                    const heavyRes = await API.get('/suministros/facturas/?full=true');
-                    const heavyData = heavyRes.data.results || heavyRes.data;
-                    
-                    setFacturas(prev => prev.map(f => {
-                        const hf = heavyData.find(x => x.id === f.id);
-                        if (hf && !f._detailsLoaded) {
-                            const rawItems = (hf.items_inventario && hf.items_inventario.length > 0)
-                                ? hf.items_inventario
-                                : (hf.detalles || hf.productos || []);
-                            const prods = rawItems.map(p => ({
-                                ...p,
-                                id: p.id_referencia || p.id,
-                                referenciaId: p.referencia,
-                                referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
-                                categoriaId: p.categoria,
-                                subcategoriaId: p.subcategoria,
-                                ventaId: p.venta_id || p.venta,
-                                costo: p.costo_especifico !== undefined ? p.costo_especifico : p.costo,
-                                grupo_nombre: p.grupo_nombre || (p.grupo ? p.grupo.nombre : null),
-                                grupo_id: p.grupo_id || (p.grupo ? (typeof p.grupo === 'object' ? p.grupo.id : p.grupo) : null),
-                                grupo_categoria_nombre: p.grupo_categoria_nombre,
-                                grupo_subcategoria_nombre: p.grupo_subcategoria_nombre,
-                            }));
-                            return { ...f, ...hf, productos: prods, _detailsLoaded: true };
-                        }
-                        return f;
-                    }));
-                } catch (err) {
-                    console.error("Error fetching heavy facturas in background", err);
-                }
-            };
-
             const formattedFacturas = (facRes.data.results || facRes.data).map(f => ({
                 ...f,
                 idManual: f.id_manual,
@@ -211,8 +187,9 @@ function FacturasProveedorPage() {
                 productos: [],
                 _detailsLoaded: false
             }));
+            // El detalle de cada factura se pide al expandirla (toggleExpand);
+            // ya no se descargan todas con full=true en segundo plano (P08-03).
             setFacturas(formattedFacturas);
-            fetchFacturasHeavy(); // Trigger background fetch
         } catch (err) {
             console.error("Error fetching facturas", err);
             setErrorFacturas(true);
@@ -255,7 +232,40 @@ function FacturasProveedorPage() {
     const CATEGORIAS = categorias;
     const SUBCATEGORIAS = subcategorias;
 
-    const resetModal = () => { setForm(emptyForm()); setShowModal(false); };
+    // Borrador de la factura en curso (P08-06, U02): por usuario, con versión.
+    // Las imágenes (File) no son serializables: no se guardan y al recuperar
+    // se advierte que deben adjuntarse de nuevo.
+    const restaurarBorrador = (b) => {
+        if (!b || typeof b !== 'object') return;
+        setForm({ ...emptyForm(), ...(b.form || {}) });
+        setNewGrupoName(b.newGrupoName || '');
+        setNewGrupoCategoria(b.newGrupoCategoria || '');
+        setNewGrupoSubcategoria(b.newGrupoSubcategoria || '');
+        setShowModal(true);
+        showToast('Se recuperó un borrador de la factura. Las imágenes deben adjuntarse de nuevo.', 'success');
+    };
+    const hayContenidoFactura = Boolean(
+        form.idManual || form.valor || form.proveedorId || form.observaciones || form.fechaPago ||
+        form.grupoInstances.length || newGrupoName ||
+        form.productos.some(p => p.referenciaId || p.costo || p.variacion || p.observacion)
+    );
+    const borrador = useBorrador({
+        clave: 'nueva-factura-proveedor',
+        dueno: usuario?.id ?? usuario?.username ?? null,
+        version: 1,
+        datos: {
+            form: { ...form, productos: form.productos.map(p => ({ ...p, imagen: null })) },
+            newGrupoName,
+            newGrupoCategoria,
+            newGrupoSubcategoria,
+        },
+        hayContenido: hayContenidoFactura,
+        restaurar: restaurarBorrador,
+    });
+
+    const resetModal = () => { borrador.descartar(); setForm(emptyForm()); setShowModal(false); };
+    // Formulario largo: foco confinado y devuelto, sin cierre con Escape (P08-07).
+    const facturaDialogoRef = useDialogo(showModal);
 
     const handleField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -436,7 +446,7 @@ function FacturasProveedorPage() {
         return acc + (prodCosto * (parseInt(p.cantidad) || 1));
     }, 0);
     const valorFactura = parseInt(form.valor) || 0;
-    const canSubmit = valorFactura > 0 && totalCostos === valorFactura && form.proveedorId && form.idManual;
+    
 
     const handleSubmit = async e => {
         e.preventDefault();
@@ -519,7 +529,9 @@ function FacturasProveedorPage() {
         };
         
         try {
-            await API.post('/suministros/facturas/', payload);
+            // Reintentar el MISMO contenido reusa la clave y no duplica la factura (P08-06).
+            await API.post('/suministros/facturas/', payload, { headers: idempotencia.cabeceras(payload) });
+            idempotencia.confirmar();
             const fRes = await API.get('/suministros/facturas/');
             const rawFacturas = fRes.data.results || fRes.data;
             const formattedFacturas = rawFacturas.map(f => ({
@@ -553,7 +565,6 @@ function FacturasProveedorPage() {
     };
 
     const [loadingDetailsId, setLoadingDetailsId] = useState(null);
-    const [loadingEditId, setLoadingEditId] = useState(null);
 
     const toggleExpand = async (id) => {
         if (expandedId === id) {
@@ -605,6 +616,7 @@ function FacturasProveedorPage() {
         if (estado === 'pagada' || estado === 'pagado') return 'pagado';
         if (estado === 'anulada') return 'anulada';
         if (estado === 'pago_en_proceso') return 'pago_en_proceso';
+        // Abonos registrados en Cuentas por pagar (P10-02).
 
         const todayStr = getTodayStr();
         const fechaPagoStr = f.fechaPago ? String(f.fechaPago).split('T')[0] : '';
@@ -615,14 +627,14 @@ function FacturasProveedorPage() {
         return 'atrasado';
     };
 
-    const getEstadoClass = (effectiveEstado) => {
+    const getEstadoTone = (effectiveEstado) => {
         const e = (effectiveEstado || '').toLowerCase();
-        if (e === 'pagado' || e === 'pagada') return 'status-badge status-pagado';
-        if (e === 'por_pagar') return 'status-badge status-por-pagar';
-        if (e === 'atrasado' || e === 'atrasada') return 'status-badge status-atrasado';
-        if (e === 'pago_en_proceso') return 'status-badge status-pago-en-proceso';
-        if (e === 'anulada') return 'status-badge status-anulada';
-        return 'status-badge status-pendiente';
+        if (e === 'pagado' || e === 'pagada') return 'success';
+        if (e === 'por_pagar') return 'warning';
+        if (e === 'atrasado' || e === 'atrasada') return 'danger';
+        if (e === 'pago_en_proceso') return 'info';
+        if (e === 'anulada') return 'neutral';
+        return 'accent';
     };
 
     const getEstadoLabel = (effectiveEstado) => {
@@ -637,6 +649,7 @@ function FacturasProveedorPage() {
 
     // Una factura vinculada a un comprobante de egreso ya no se puede editar:
     // su estado lo gestiona el flujo de comprobantes (crear/confirmar), no el formulario de facturas.
+    // Con abonos (P10-02) tampoco: su valor sostiene el saldo pendiente.
     const isFacturaLocked = (f) => Boolean(f && f.comprobante_egreso);
 
     const allProveedorOptions = React.useMemo(() => {
@@ -707,8 +720,8 @@ function FacturasProveedorPage() {
             return <FaSort style={{ opacity: 0.35, fontSize: '0.75rem', flexShrink: 0 }} />;
         }
         return sortConfig.direction === 'asc' 
-            ? <FaSortUp style={{ color: '#274385', fontSize: '0.8rem', flexShrink: 0, marginBottom: '-2px' }} />
-            : <FaSortDown style={{ color: '#274385', fontSize: '0.8rem', flexShrink: 0, marginTop: '-2px' }} />;
+            ? <FaSortUp style={{ color: '#171815', fontSize: '0.8rem', flexShrink: 0, marginBottom: '-2px' }} />
+            : <FaSortDown style={{ color: '#171815', fontSize: '0.8rem', flexShrink: 0, marginTop: '-2px' }} />;
     };
 
     const filteredFacturas = React.useMemo(() => {
@@ -782,6 +795,20 @@ function FacturasProveedorPage() {
     const estadosModified = selectedEstados.length !== defaultEstados.length || !selectedEstados.every(e => defaultEstados.includes(e));
     const proveedoresModified = hasInitializedProveedores && selectedProveedores.length !== allProveedorOptions.length;
     const hasFilters = estadosModified || proveedoresModified || filterFechaDesde || filterFechaHasta || filterSearch;
+
+    // Sincroniza los filtros con la URL (replace: no ensucia el historial).
+    useEffect(() => {
+        setSearchParams(prev => {
+            const params = new URLSearchParams(prev);
+            const escribir = (k, v) => { if (v) params.set(k, v); else params.delete(k); };
+            escribir('estados', estadosModified ? JSON.stringify(selectedEstados) : '');
+            escribir('proveedores', proveedoresModified ? JSON.stringify(selectedProveedores) : '');
+            escribir('desde', filterFechaDesde);
+            escribir('hasta', filterFechaHasta);
+            escribir('q', filterSearch);
+            return params;
+        }, { replace: true });
+    }, [selectedEstados, selectedProveedores, estadosModified, proveedoresModified, filterFechaDesde, filterFechaHasta, filterSearch, setSearchParams]);
     const handleClearFilters = () => {
         setSelectedEstados(['pendiente', 'por_pagar', 'atrasado', 'pago_en_proceso']);
         setSelectedProveedores(allProveedorOptions);
@@ -790,128 +817,9 @@ function FacturasProveedorPage() {
         setFilterSearch('');
     };
 
-    // Abrir modal de edición de factura cargando referencias y telas
-    const openEditModal = async (f) => {
-        setLoadingEditId(f.id);
-        try {
-            const res = await API.get(`/suministros/facturas/${f.id}/`);
-            const fData = res.data;
-            const rawItems = (fData.items_inventario && fData.items_inventario.length > 0)
-                ? fData.items_inventario
-                : (fData.detalles || fData.productos || f.productos || []);
-            
-            const prods = rawItems.map(p => ({
-                id: p.id_referencia || p.id,
-                referenciaId: p.referencia,
-                referencia_nombre: p.referencia_nombre || p.producto_nombre || (p.referencia ? `Ref. #${p.referencia}` : '—'),
-                categoria: p.categoria,
-                subcategoria: p.subcategoria,
-                variacion: p.variacion || '',
-                costo: p.costo_especifico !== undefined ? p.costo_especifico : (p.costo || 0),
-                observacion: p.observacion || '',
-                disponibilidad: p.disponibilidad || 'exhibicion',
-                estado_fisico: p.estado_fisico || 'buen_estado',
-                zona: p.zona,
-                venta: p.venta_id || p.venta,
-                grupo: p.grupo_id || p.grupo,
-                lleva_tela: Boolean(p.telas_cueros && p.telas_cueros.length > 0),
-                tela_referencia: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].referencia : '',
-                tela_color: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].color : '',
-                tela_costo_metro: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].costo_unidad : '',
-                tela_cantidad_metros: p.telas_cueros && p.telas_cueros.length > 0 ? p.telas_cueros[0].cantidad : '',
-                telas_cueros: p.telas_cueros || (p.tela_referencia
-                    ? [{
-                        tipo: 'tela',
-                        referencia: p.tela_referencia || '',
-                        color: p.tela_color || '',
-                        unidad_medida: 'metro',
-                        costo_unidad: p.tela_costo_metro || '',
-                        cantidad: p.tela_cantidad_metros || ''
-                    }]
-                    : [])
-            }));
-
-            const cleanDate = (dStr) => {
-                if (!dStr) return '';
-                const s = String(dStr).trim();
-                if (s.includes('T')) return s.split('T')[0];
-                if (s.includes(' ')) return s.split(' ')[0];
-                return s;
-            };
-
-            setEditModal({
-                id: f.id,
-                id_manual: fData.id_manual || f.id_manual || f.idManual || '',
-                estado: fData.estado || f.estado || 'pendiente',
-                fecha_factura: cleanDate(fData.fecha_factura || f.fecha_factura || f.fechaFactura),
-                fecha_pago: cleanDate(fData.fecha_pago || f.fecha_pago || f.fechaPago),
-                observaciones: fData.observaciones || f.observaciones || '',
-                productos: prods,
-                comprobante_egreso: fData.comprobante_egreso ?? f.comprobante_egreso ?? null,
-            });
-        } catch (err) {
-            console.error("Error al cargar datos para edición", err);
-            showToast("Error al abrir edición de factura", "error");
-        } finally {
-            setLoadingEditId(null);
-        }
-    };
-
-    // Guardar desde el modal de edición
-    const saveEditModal = async () => {
-        if (!editModal) return;
-        setIsSavingEdit(true);
-        try {
-            const validProductos = (editModal.productos || [])
-                .map(p => {
-                    const refNum = parseInt(p.referenciaId || p.referencia);
-                    if (isNaN(refNum)) return null;
-                    return {
-                        referencia: refNum,
-                        categoria: p.categoria ? parseInt(p.categoria) : null,
-                        subcategoria: p.subcategoria ? parseInt(p.subcategoria) : null,
-                        variacion: p.variacion || '',
-                        costo: parseFloat(p.costo) || 0,
-                        cantidad: parseInt(p.cantidad) || 1,
-                        grupo_id: p.grupo ? parseInt(p.grupo) : null,
-                        observacion: p.observacion || '',
-                        disponibilidad: p.disponibilidad || 'exhibicion',
-                        estado_fisico: p.estado_fisico || 'buen_estado',
-                        zona: p.zona ? parseInt(p.zona) : null,
-                        venta_id: p.venta ? parseInt(p.venta) : null,
-                        telas_cueros: (p.telas_cueros || []).map(tc => ({
-                            tipo: tc.tipo || 'tela',
-                            referencia: (tc.referencia || '').trim(),
-                            color: (tc.color || '').trim(),
-                            unidad_medida: tc.tipo === 'cuero' ? 'decimetro' : 'metro',
-                            costo_unidad: parseFloat(tc.costo_unidad) || 0,
-                            cantidad: parseFloat(tc.cantidad) || 0
-                        }))
-                    };
-                })
-                .filter(Boolean);
-
-            const payload = {
-                id_manual: editModal.id_manual,
-                estado: editModal.estado,
-                observaciones: editModal.observaciones,
-                fecha_factura: editModal.fecha_factura || null,
-                fecha_pago: editModal.fecha_pago || null,
-                productos: validProductos
-            };
-
-            await API.patch(`/suministros/facturas/${editModal.id}/`, payload);
-            showToast("Factura y parámetros actualizados correctamente.", "success");
-            setEditModal(null);
-            fetchFacturas();
-        } catch (err) {
-            console.error("Error al guardar edición de factura:", err);
-            const serverMsg = err.response?.data?.detail || err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : '');
-            showToast(serverMsg ? `Error: ${serverMsg}` : "Error al actualizar la factura.", "error");
-        } finally {
-            setIsSavingEdit(false);
-        }
-    };
+    // La edición de factura vive en su propia página (misma UI que "Nueva
+    // Factura"), ver /suministros/facturas/:id/editar en App.jsx.
+    const goToEditFactura = (f) => navigate(`/suministros/facturas/${f.id}/editar`);
 
     return (
         <div className="ds-page facturas-page ds-fade-in">
@@ -1029,14 +937,14 @@ function FacturasProveedorPage() {
                     </div>
 
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Desde</label>
-                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
-                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#72726a', textTransform: 'uppercase' }}>Desde</label>
+                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#3e3e37', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Hasta</label>
-                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
-                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#334155', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#72726a', textTransform: 'uppercase' }}>Hasta</label>
+                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#3e3e37', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     {hasFilters && (
                         <button className="fct-clear-pill" onClick={handleClearFilters} title="Limpiar filtros">
@@ -1047,6 +955,10 @@ function FacturasProveedorPage() {
             </div>
 
             <div className="ordenes-container ds-card">
+                {/* Total del conjunto filtrado (P08-08, U05) */}
+                <div className="ds-totales-filtrados" role="status">
+                    {filteredFacturas.length} facturas · <strong>{formatCOPInt(filteredFacturas.reduce((sum, f) => sum + (parseFloat(f.valor) || 0), 0))}</strong>
+                </div>
                 <div className="desktop-view">
                     <table className="premium-table">
                         <thead>
@@ -1071,7 +983,7 @@ function FacturasProveedorPage() {
                                 </th>
                                 <th className={`sortable-th ${sortConfig.key === 'fechaPago' ? 'active-sort-th' : ''}`} onClick={() => handleSort('fechaPago')}>
                                     <span className="th-sort-wrapper">
-                                        <span>Fecha Pago</span>
+                                        <span>Fecha límite</span>
                                         {renderSortIcon('fechaPago')}
                                     </span>
                                 </th>
@@ -1106,9 +1018,9 @@ function FacturasProveedorPage() {
                                     </tr>
                                 ))
                             ) : errorFacturas ? (
-                                <tr><td colSpan="8" style={{ textAlign: 'center', color: '#ef4444', padding: '3rem', fontStyle: 'italic' }}>No se pudieron cargar las facturas.</td></tr>
+                                <tr><td colSpan="8" style={{ textAlign: 'center', color: '#a8432f', padding: '3rem', fontStyle: 'italic' }}>No se pudieron cargar las facturas.</td></tr>
                             ) : filteredFacturas.length === 0 ? (
-                                <tr><td colSpan="8" style={{ textAlign: 'center', color: '#94a3b8', padding: '3rem', fontStyle: 'italic' }}>No se encontraron facturas.</td></tr>
+                                <tr><td colSpan="8" style={{ textAlign: 'center', color: '#a3a398', padding: '3rem', fontStyle: 'italic' }}>No se encontraron facturas.</td></tr>
                             ) : filteredFacturas.map(f => (
                                 <React.Fragment key={f.id}>
                                     <tr className={expandedId === f.id ? 'expanded-row-highlight' : ''} onClick={() => toggleExpand(f.id)} style={{ cursor: 'pointer' }}>
@@ -1117,9 +1029,9 @@ function FacturasProveedorPage() {
                                         <td title={formatDate(f.fechaFactura)}>{formatDate(f.fechaFactura)}</td>
                                         <td title={f.fechaPago ? formatDate(f.fechaPago) : '—'}>{f.fechaPago ? formatDate(f.fechaPago) : <span className="empty-val">—</span>}</td>
                                         <td>
-                                            <span className={getEstadoClass(getEfectiveEstado(f))}>
+                                            <Badge tone={getEstadoTone(getEfectiveEstado(f))}>
                                                 {getEstadoLabel(getEfectiveEstado(f))}
-                                            </span>
+                                            </Badge>
                                         </td>
                                         <td title={formatCOP(f.valor)}><span className="valor-cop">{formatCOP(f.valor)}</span></td>
                                         <td className="obs-cell" title={f.observaciones || ''}>{f.observaciones || <span className="empty-val">—</span>}</td>
@@ -1135,9 +1047,9 @@ function FacturasProveedorPage() {
                                             <td colSpan="8">
                                                 <div className="factura-expanded-premium">
                                                     {loadingDetailsId === f.id ? (
-                                                         <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                                             <FaSpinner style={{ fontSize: '2.2rem', color: '#274385', animation: 'spin 0.8s linear infinite', marginBottom: '0.8rem' }} />
-                                                             <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#334155' }}>Cargando detalles de la factura...</span>
+                                                         <div style={{ textAlign: 'center', padding: '2.5rem', color: '#72726a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                             <FaSpinner style={{ fontSize: '2.2rem', color: '#171815', animation: 'spin 0.8s linear infinite', marginBottom: '0.8rem' }} />
+                                                             <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#3e3e37' }}>Cargando detalles de la factura...</span>
                                                          </div>
                                                     ) : (
                                                         <>
@@ -1158,11 +1070,11 @@ function FacturasProveedorPage() {
                                                                     {hasPermission('EDITAR_FACTURA') && (
                                                                         <button
                                                                             className={`btn-edit-obs${isFacturaLocked(f) ? ' btn-edit-obs-locked' : ''}`}
-                                                                            onClick={() => !isFacturaLocked(f) && openEditModal(f)}
-                                                                            disabled={loadingEditId === f.id || isFacturaLocked(f)}
-                                                                            title={isFacturaLocked(f) ? `Vinculada al Comprobante de Egreso #${f.comprobante_egreso} — no editable` : ''}
+                                                                            onClick={() => !isFacturaLocked(f) && goToEditFactura(f)}
+                                                                            disabled={isFacturaLocked(f)}
+                                                                            title={!isFacturaLocked(f) ? '' : `Vinculada al Comprobante de Egreso #${f.comprobante_egreso} — no editable`}
                                                                         >
-                                                                            {loadingEditId === f.id ? <FaSpinner className="fa-spin" /> : isFacturaLocked(f) ? <FaLock /> : <FaEdit />}
+                                                                            {isFacturaLocked(f) ? <FaLock /> : <FaEdit />}
                                                                             {isFacturaLocked(f) ? ' Bloqueada' : ' Editar'}
                                                                         </button>
                                                                     )}
@@ -1206,7 +1118,7 @@ function FacturasProveedorPage() {
                                                                                     <div 
                                                                                         key={keyIndex} 
                                                                                         className={`invoice-item-card compact-card ${isNested ? 'nested-item-card' : ''}`}
-                                                                                        style={isNested ? { borderLeft: '3px solid #0284c7', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' } : {}}
+                                                                                        style={isNested ? { borderLeft: '3px solid #4f6a7f', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' } : {}}
                                                                                     >
                                                                                         <div className="compact-col compact-col-main">
                                                                                             <div className="compact-title-group">
@@ -1214,7 +1126,7 @@ function FacturasProveedorPage() {
                                                                                                 <h4 className="item-title" title={refNombre}>{refNombre}</h4>
                                                                                             </div>
                                                                                             <div className="item-tags">
-                                                                                                {!isNested && grupoNombre && <span className="item-tag" style={{ background: '#e0f2fe', color: '#0284c7', borderColor: '#bae6fd' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
+                                                                                                {!isNested && grupoNombre && <span className="item-tag" style={{ background: '#eaeff1', color: '#4f6a7f', borderColor: '#c9d5dc' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
                                                                                                 <span className={`item-tag ${!catNombre ? 'item-tag-empty' : ''}`}>{catNombre || 'Sin categoría'}</span>
                                                                                                 <span className={`item-tag ${!subNombre ? 'item-tag-empty' : ''}`}>{subNombre || 'Sin subcategoría'}</span>
                                                                                             </div>
@@ -1232,7 +1144,7 @@ function FacturasProveedorPage() {
                                                                                                         const unitLabel = isCuero ? 'dm' : 'm';
                                                                                                         const tcTotal = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
                                                                                                         return (
-                                                                                                            <div key={idx} style={{ fontSize: '0.75rem', background: isCuero ? '#fff7ed' : '#f0f9ff', color: isCuero ? '#c2410c' : '#0369a1', border: `1px solid ${isCuero ? '#ffedd5' : '#e0f2fe'}`, padding: '0.2rem 0.5rem', borderRadius: '6px', marginBottom: '0.2rem' }}>
+                                                                                                            <div key={idx} style={{ fontSize: '0.75rem', background: isCuero ? '#f8f0e0' : '#eaeff1', color: isCuero ? '#a8732b' : '#4f6a7f', border: `1px solid ${isCuero ? '#f8f0e0' : '#eaeff1'}`, padding: '0.2rem 0.5rem', borderRadius: '6px', marginBottom: '0.2rem' }}>
                                                                                                                 <strong>[{isCuero ? 'Cuero' : 'Tela'}]</strong> {tc.referencia || 'Sin Ref'} {tc.color ? `(${tc.color})` : ''} 
                                                                                                                 {tc.costo_unidad > 0 && ` — ${formatCOP(tc.costo_unidad)}/${unitLabel} × ${tc.cantidad}${unitLabel}`}
                                                                                                                 {tcTotal > 0 && <span style={{ fontWeight: 700, marginLeft: '0.4rem' }}>= {formatCOP(tcTotal)}</span>}
@@ -1261,12 +1173,12 @@ function FacturasProveedorPage() {
                                                                                         <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
                                                                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                                                 <span className="item-costo" style={{ fontSize: '0.95rem', fontWeight: 800 }}>{formatCOP(baseCosto)}</span>
-                                                                                                <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Costo Proveedor</span>
+                                                                                                <span style={{ fontSize: '0.65rem', color: '#72726a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Costo Proveedor</span>
                                                                                             </div>
                                                                                             {hasTC && totalTCCosto > 0 && (
-                                                                                                <div style={{ fontSize: '0.72rem', background: '#f8fafc', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
-                                                                                                    <span style={{ color: '#475569' }}>Total c/Telas/Cueros: </span>
-                                                                                                    <strong style={{ color: '#0f172a' }}>{formatCOP(baseCosto + totalTCCosto)}</strong>
+                                                                                                <div style={{ fontSize: '0.72rem', background: '#faf9f5', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid #e4e3dc', textAlign: 'right' }}>
+                                                                                                    <span style={{ color: '#57574f' }}>Total c/Telas/Cueros: </span>
+                                                                                                    <strong style={{ color: '#171815' }}>{formatCOP(baseCosto + totalTCCosto)}</strong>
                                                                                                 </div>
                                                                                             )}
                                                                                             {p.imagen && (
@@ -1329,23 +1241,23 @@ function FacturasProveedorPage() {
                                                                                         style={{
                                                                                             cursor: 'pointer',
                                                                                             gridColumn: isExpanded ? '1 / -1' : 'auto',
-                                                                                            borderColor: isExpanded ? '#0284c7' : 'var(--color-border)',
-                                                                                            background: isExpanded ? '#f0f9ff' : '#ffffff',
+                                                                                            borderColor: isExpanded ? '#4f6a7f' : 'var(--color-border)',
+                                                                                            background: isExpanded ? '#eaeff1' : '#ffffff',
                                                                                             transition: 'all 0.25s ease'
                                                                                         }}
                                                                                     >
                                                                                         <div className="compact-col compact-col-main">
                                                                                             <div className="compact-title-group">
-                                                                                                <span className="item-id-badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
+                                                                                                <span className="item-id-badge" style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
                                                                                                     <FaLayerGroup style={{ fontSize: '0.65rem' }} /> {grupoBadgeStr}
                                                                                                 </span>
                                                                                                 <h4 className="item-title" title={gName}>{gName}</h4>
                                                                                             </div>
-                                                                                            <div className="group-ref-subtitle" style={{ fontSize: '0.78rem', color: '#0369a1', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                                                <span style={{ color: '#64748b', fontWeight: 500 }}>Ref:</span> <span title={refsLabel}>{refsLabel}</span>
+                                                                                            <div className="group-ref-subtitle" style={{ fontSize: '0.78rem', color: '#4f6a7f', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                                <span style={{ color: '#72726a', fontWeight: 500 }}>Ref:</span> <span title={refsLabel}>{refsLabel}</span>
                                                                                             </div>
                                                                                             <div className="item-tags" style={{ marginTop: '0.2rem' }}>
-                                                                                                <span className="item-tag" style={{ background: '#0284c7', color: '#ffffff', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
+                                                                                                <span className="item-tag" style={{ background: '#4f6a7f', color: '#ffffff', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
                                                                                                 {catLabel && <span className="item-tag">{catLabel}</span>}
                                                                                                 {subcatLabel && <span className="item-tag">{subcatLabel}</span>}
                                                                                             </div>
@@ -1363,7 +1275,7 @@ function FacturasProveedorPage() {
                                                                                                 </div>
                                                                                             )}
                                                                                             {badStateCount > 0 && (
-                                                                                                <div className="item-desc" style={{ marginTop: '0.2rem', color: '#b91c1c', fontWeight: 600, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                                                                <div className="item-desc" style={{ marginTop: '0.2rem', color: '#a8432f', fontWeight: 600, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                                                                                                     <FaExclamationTriangle style={{ fontSize: '0.65rem' }} /> {badStateCount} en mal estado
                                                                                                 </div>
                                                                                             )}
@@ -1382,9 +1294,9 @@ function FacturasProveedorPage() {
                                                                                                     borderRadius: '20px',
                                                                                                     fontSize: '0.75rem',
                                                                                                     fontWeight: 700,
-                                                                                                    border: '1.5px solid #0284c7',
-                                                                                                    background: isExpanded ? '#0284c7' : '#e0f2fe',
-                                                                                                    color: isExpanded ? '#ffffff' : '#0369a1',
+                                                                                                    border: '1.5px solid #4f6a7f',
+                                                                                                    background: isExpanded ? '#4f6a7f' : '#eaeff1',
+                                                                                                    color: isExpanded ? '#ffffff' : '#4f6a7f',
                                                                                                     cursor: 'pointer',
                                                                                                     transition: 'all 0.2s ease'
                                                                                                 }}
@@ -1396,8 +1308,8 @@ function FacturasProveedorPage() {
 
                                                                                         <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
                                                                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                                                                <span className="item-costo" style={{ color: '#0284c7', fontSize: '1.05rem', fontWeight: 800 }}>{formatCOP(totalCosto)}</span>
-                                                                                                <span style={{ fontSize: '0.62rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Costo Total Grupo</span>
+                                                                                                <span className="item-costo" style={{ color: '#4f6a7f', fontSize: '1.05rem', fontWeight: 800 }}>{formatCOP(totalCosto)}</span>
+                                                                                                <span style={{ fontSize: '0.62rem', color: '#72726a', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Costo Total Grupo</span>
                                                                                             </div>
                                                                                         </div>
 
@@ -1410,7 +1322,7 @@ function FacturasProveedorPage() {
                                                                                                     width: '100%',
                                                                                                     marginTop: '0.75rem',
                                                                                                     paddingTop: '0.85rem',
-                                                                                                    borderTop: '1.5px solid #bae6fd'
+                                                                                                    borderTop: '1.5px solid #c9d5dc'
                                                                                                 }}
                                                                                             >
                                                                                                 <div 
@@ -1423,16 +1335,16 @@ function FacturasProveedorPage() {
                                                                                                         padding: '0.5rem 0.75rem',
                                                                                                         background: '#ffffff',
                                                                                                         borderRadius: '8px',
-                                                                                                        border: '1px solid #bae6fd'
+                                                                                                        border: '1px solid #c9d5dc'
                                                                                                     }}
                                                                                                 >
                                                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                                                        <FaLayerGroup style={{ color: '#0284c7', fontSize: '0.9rem' }} />
-                                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
-                                                                                                            Componentes de {gName} <span style={{ color: '#0369a1', fontWeight: 600 }}>(Ref: {refsLabel})</span>
+                                                                                                        <FaLayerGroup style={{ color: '#4f6a7f', fontSize: '0.9rem' }} />
+                                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#171815' }}>
+                                                                                                            Componentes de {gName} <span style={{ color: '#4f6a7f', fontWeight: 600 }}>(Ref: {refsLabel})</span>
                                                                                                         </span>
                                                                                                     </div>
-                                                                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0369a1' }}>
+                                                                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4f6a7f' }}>
                                                                                                         Subtotal: {formatCOP(totalCosto)}
                                                                                                     </div>
                                                                                                 </div>
@@ -1477,286 +1389,13 @@ function FacturasProveedorPage() {
                 </div>
             </div>
 
-            {/* ===== MODAL EDITAR FACTURA Y COSTOS DE TELA ===== */}
-            {editModal && createPortal(
-                <div className="fact-modal-overlay edit-factura-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
-                    <div className="edit-factura-modal" style={{ maxWidth: '850px', width: '90%' }}>
-                        <div className="edit-factura-header">
-                            <h3>Editar Factura #{editModal.id_manual || editModal.id}</h3>
-                            <button className="fact-modal-close" onClick={() => setEditModal(null)}>×</button>
-                        </div>
-                        <div className="edit-factura-body" style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div className="edit-factura-field">
-                                    <label>No. Factura Manual</label>
-                                    <input 
-                                        type="text" 
-                                        className="ifg-input"
-                                        value={editModal.id_manual || ''} 
-                                        onChange={e => setEditModal(prev => ({ ...prev, id_manual: e.target.value }))}
-                                        placeholder="Ej: FCT-999"
-                                    />
-                                </div>
-                                <div className="edit-factura-field">
-                                    <label>Estado de la Factura</label>
-                                    {editModal.comprobante_egreso ? (
-                                        <div className="edit-estado-locked">
-                                            <FaLock />
-                                            <span>
-                                                <strong>{getEstadoLabel(getEfectiveEstado(editModal))}</strong> — vinculada al Comprobante de Egreso #{editModal.comprobante_egreso}. El estado se actualiza automáticamente al confirmar el pago del comprobante.
-                                            </span>
-                                        </div>
-                                    ) : (
-                                    <div className="edit-estado-options" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
-                                        {(() => {
-                                            const todayStr = getTodayStr();
-                                            const fechaPagoStr = editModal.fecha_pago || '';
-                                            let dynamicOption = { value: 'pendiente', label: 'Pendiente', badgeClass: 'status-pendiente' };
-
-                                            if (fechaPagoStr) {
-                                                if (fechaPagoStr > todayStr) {
-                                                    dynamicOption = { value: 'pendiente', label: 'Pendiente', badgeClass: 'status-pendiente' };
-                                                } else if (fechaPagoStr === todayStr) {
-                                                    dynamicOption = { value: 'por_pagar', label: 'Por pagar', badgeClass: 'status-por-pagar' };
-                                                } else {
-                                                    dynamicOption = { value: 'atrasado', label: 'Atrasado', badgeClass: 'status-atrasado' };
-                                                }
-                                            }
-                                            const isPagado = editModal.estado === 'pagada' || editModal.estado === 'pagado';
-
-                                            return (
-                                                <>
-                                                    <button
-                                                        type="button"
-                                                        className={`estado-option-btn ${dynamicOption.badgeClass} ${!isPagado ? 'selected' : ''}`}
-                                                        onClick={() => setEditModal(prev => ({ ...prev, estado: 'pendiente' }))}
-                                                        style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}
-                                                    >
-                                                        {dynamicOption.label}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={`estado-option-btn status-pagado ${isPagado ? 'selected' : ''}`}
-                                                        onClick={() => setEditModal(prev => ({ ...prev, estado: 'pagada' }))}
-                                                        style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}
-                                                    >
-                                                        Pagada
-                                                    </button>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div className="edit-factura-field">
-                                    <label>Fecha Factura {!canEditFechas && <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 400 }}>(Lectura)</span>}</label>
-                                    <input 
-                                        type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} 
-                                        className="ifg-input"
-                                        value={editModal.fecha_factura || ''} 
-                                        onChange={e => setEditModal(prev => ({ ...prev, fecha_factura: e.target.value }))}
-                                        disabled={!canEditFechas}
-                                        style={{ cursor: canEditFechas ? 'pointer' : 'default' }}
-                                    />
-                                </div>
-                                <div className="edit-factura-field">
-                                    <label>Fecha Pago {!canEditFechas && <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 400 }}>(Lectura)</span>}</label>
-                                    <input 
-                                        type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} 
-                                        className="ifg-input"
-                                        value={editModal.fecha_pago || ''} 
-                                        onChange={e => setEditModal(prev => ({ ...prev, fecha_pago: e.target.value }))}
-                                        disabled={!canEditFechas}
-                                        style={{ cursor: canEditFechas ? 'pointer' : 'default' }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="edit-factura-field" style={{ marginBottom: '1.25rem' }}>
-                                <label>Observaciones Generales</label>
-                                <textarea
-                                    className="ifg-textarea"
-                                    rows="2"
-                                    placeholder="Escribe la observación de la factura..."
-                                    value={editModal.observaciones || ''}
-                                    onChange={e => setEditModal(prev => ({ ...prev, observaciones: e.target.value }))}
-                                />
-                            </div>
-
-                            {/* SECCIÓN DE PRODUCTOS Y TELAS / COSTOS ADICIONALES */}
-                            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-                                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <FaBoxOpen style={{ color: '#0284c7' }} />
-                                    Referencias y Parámetros de Tela ({editModal.productos?.length || 0})
-                                </h4>
-
-                                {(editModal.productos || []).map((p, idx) => (
-                                    <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '0.75rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
-                                                #{p.id || `Ref ${idx+1}`} — {p.referencia_nombre}
-                                            </span>
-                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                                Costo base: {formatCOP(p.costo)}
-                                            </span>
-                                        </div>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <div>
-                                                <label style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569' }}>Variación</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="ifg-input"
-                                                    value={p.variacion || ''} 
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        setEditModal(prev => {
-                                                            const prods = [...prev.productos];
-                                                            prods[idx] = { ...prods[idx], variacion: val };
-                                                            return { ...prev, productos: prods };
-                                                        });
-                                                    }}
-                                                    placeholder="Variación / Especificaciones"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569' }}>Observación del Ítem</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="ifg-input"
-                                                    value={p.observacion || ''} 
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        setEditModal(prev => {
-                                                            const prods = [...prev.productos];
-                                                            prods[idx] = { ...prods[idx], observacion: val };
-                                                            return { ...prev, productos: prods };
-                                                        });
-                                                    }}
-                                                    placeholder="Nota opcional..."
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* SECCIÓN COSTO ADICIONAL / TELA */}
-                                        <div style={{ background: p.lleva_tela ? '#f0f9ff' : '#ffffff', border: `1px solid ${p.lleva_tela ? '#bae6fd' : '#cbd5e1'}`, borderRadius: '6px', padding: '0.5rem 0.75rem', marginTop: '0.5rem' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, cursor: 'pointer', margin: 0, color: p.lleva_tela ? '#0369a1' : '#475569', fontSize: '0.75rem' }}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={p.lleva_tela || false} 
-                                                    onChange={e => {
-                                                        const checked = e.target.checked;
-                                                        setEditModal(prev => {
-                                                            const prods = [...prev.productos];
-                                                            prods[idx] = { ...prods[idx], lleva_tela: checked };
-                                                            return { ...prev, productos: prods };
-                                                        });
-                                                    }}
-                                                    style={{ accentColor: '#0284c7' }}
-                                                />
-                                                ¿Lleva Tela / Costo Adicional de Tela?
-                                            </label>
-
-                                            {p.lleva_tela && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Referencia de Tela</label>
-                                                        <input 
-                                                            type="text" 
-                                                            className="ifg-input"
-                                                            placeholder="Ej: Jacquard, Lino..." 
-                                                            value={p.tela_referencia || ''} 
-                                                            onChange={e => {
-                                                                const val = e.target.value;
-                                                                setEditModal(prev => {
-                                                                    const prods = [...prev.productos];
-                                                                    prods[idx] = { ...prods[idx], tela_referencia: val };
-                                                                    return { ...prev, productos: prods };
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Color de Tela</label>
-                                                        <input 
-                                                            type="text" 
-                                                            className="ifg-input"
-                                                            placeholder="Ej: Verde, Azul..." 
-                                                            value={p.tela_color || ''} 
-                                                            onChange={e => {
-                                                                const val = e.target.value;
-                                                                setEditModal(prev => {
-                                                                    const prods = [...prev.productos];
-                                                                    prods[idx] = { ...prods[idx], tela_color: val };
-                                                                    return { ...prev, productos: prods };
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Costo/m</label>
-                                                        <input 
-                                                            type="text" 
-                                                            className="ifg-input"
-                                                            placeholder="$0" 
-                                                            value={p.tela_costo_metro ? formatCOP(parseInt(p.tela_costo_metro)) : ''} 
-                                                            onChange={e => {
-                                                                const raw = e.target.value.replace(/[^0-9]/g, '');
-                                                                setEditModal(prev => {
-                                                                    const prods = [...prev.productos];
-                                                                    prods[idx] = { ...prods[idx], tela_costo_metro: raw };
-                                                                    return { ...prev, productos: prods };
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label style={{ fontSize: '0.6rem', color: '#0369a1', fontWeight: 600 }}>Metros</label>
-                                                        <input 
-                                                            type="number" 
-                                                            step="0.1"
-                                                            min="0"
-                                                            className="ifg-input"
-                                                            placeholder="0" 
-                                                            value={p.tela_cantidad_metros || ''} 
-                                                            onChange={e => {
-                                                                const val = e.target.value;
-                                                                setEditModal(prev => {
-                                                                    const prods = [...prev.productos];
-                                                                    prods[idx] = { ...prods[idx], tela_cantidad_metros: val };
-                                                                    return { ...prev, productos: prods };
-                                                                });
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="edit-factura-footer">
-                            <button className="fact-btn-secondary" onClick={() => setEditModal(null)} disabled={isSavingEdit}>Cancelar</button>
-                            <button className="fact-btn-primary" onClick={saveEditModal} disabled={isSavingEdit}>
-                                <FaSave /> {isSavingEdit ? 'Guardando...' : 'Guardar cambios'}
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
             {/* ===== MODAL NUEVA FACTURA ===== */}
             {showModal && createPortal(
                 <div className="fct-overlay">
-                    <div className="fct-modal">
+                    <div className="fct-modal" ref={facturaDialogoRef} role="dialog" aria-modal="true" aria-label="Nueva factura de proveedor" tabIndex={-1}>
                         <div className="fct-header">
                             <h3>Nueva Factura de Proveedor</h3>
-                            <button className="fct-close" onClick={resetModal}>&times;</button>
+                            <button className="fct-close" onClick={resetModal} aria-label="Cerrar" data-dialogo-cerrar="">&times;</button>
                         </div>
 
                         <form onSubmit={handleSubmit}>
@@ -1793,12 +1432,12 @@ function FacturasProveedorPage() {
                                 <div className="fct-row-3col">
                                     <div className="fct-field">
                                         <label>Fecha Factura</label>
-                                        <input required type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={form.fechaFactura}
+                                        <input required type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={form.fechaFactura}
                                             onChange={e => handleField('fechaFactura', e.target.value)} />
                                     </div>
                                     <div className="fct-field">
-                                        <label>Fecha de Pago</label>
-                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={form.fechaPago}
+                                        <label>Fecha límite de pago</label>
+                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={form.fechaPago}
                                             onChange={e => handleField('fechaPago', e.target.value)} />
                                     </div>
                                     <div className="fct-field">
@@ -1817,7 +1456,7 @@ function FacturasProveedorPage() {
                                             <span className="fct-grupos-empty">Sin grupos nuevos — puedes asignar ítems a grupos existentes desde el select de cada referencia</span>
                                         ) : form.grupoInstances.map(gi => (
                                             <div key={gi.localId} className="fct-grupo-chip">
-                                                <FaLayerGroup style={{ fontSize: '0.75rem', color: '#2563eb', flexShrink: 0 }} />
+                                                <FaLayerGroup style={{ fontSize: '0.75rem', color: '#171815', flexShrink: 0 }} />
                                                 <input
                                                     type="text"
                                                     className="fct-grupo-chip-name"
@@ -1976,7 +1615,7 @@ function FacturasProveedorPage() {
 
                                                 {/* Variación */}
                                                 <div className="fct-field">
-                                                    <label>Variación</label>
+                                                    <label>Detalle</label>
                                                     <input type="text" placeholder="Ej: Color, tamaño"
                                                         value={row.variacion} onChange={e => handleRefRow(index, 'variacion', e.target.value)} />
                                                 </div>
@@ -2053,7 +1692,7 @@ function FacturasProveedorPage() {
                                                             {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
                                                         </select>
                                                         {row.grupoLocalId && (
-                                                            <small style={{ color: '#f59e0b', display: 'block', marginTop: '0.2rem', fontSize: '0.7rem', lineHeight: '1.2' }}>
+                                                            <small style={{ color: '#a8732b', display: 'block', marginTop: '0.2rem', fontSize: '0.7rem', lineHeight: '1.2' }}>
                                                                 Hereda la venta del grupo asignado.
                                                             </small>
                                                         )}
@@ -2104,7 +1743,7 @@ function FacturasProveedorPage() {
                                                     <div className="fct-img-zone">
                                                         {row.imagen ? (
                                                             <div className="fct-img-preview">
-                                                                <FaImage style={{ fontSize: '0.9rem', color: '#3b82f6', flexShrink: 0 }} />
+                                                                <FaImage style={{ fontSize: '0.9rem', color: '#171815', flexShrink: 0 }} />
                                                                 <span className="fct-img-name">{row.imagen.name}</span>
                                                                 <button type="button" className="fct-img-remove" onClick={() => handleRefRow(index, 'imagen', null)}>&times;</button>
                                                             </div>
@@ -2130,25 +1769,25 @@ function FacturasProveedorPage() {
                                             </div>
 
                                             {/* Sub-sección Dinámica: Telas y Cueros */}
-                                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
+                                            <div style={{ background: '#faf9f5', border: '1px solid #e4e3dc', borderRadius: '8px', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3e3e37', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                                         🧵 Telas y Cueros (Costos Adicionales)
-                                                        <span style={{ fontSize: '0.68rem', fontWeight: 400, color: '#64748b', fontStyle: 'italic', marginLeft: '0.2rem' }}>
+                                                        <span style={{ fontSize: '0.68rem', fontWeight: 400, color: '#72726a', fontStyle: 'italic', marginLeft: '0.2rem' }}>
                                                             — Usar punto (.) para decimales, ej: 2.5
                                                         </span>
                                                     </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => addTelaCueroToRow(index)}
-                                                        style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                        style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                                                     >
                                                         <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
                                                     </button>
                                                 </div>
 
                                                 {(!row.telas_cueros || row.telas_cueros.length === 0) ? (
-                                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>Sin telas o cueros asignados a este producto.</div>
+                                                    <div style={{ fontSize: '0.7rem', color: '#a3a398', fontStyle: 'italic' }}>Sin telas o cueros asignados a este producto.</div>
                                                 ) : (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                                         {row.telas_cueros.map((tc, tcIdx) => {
@@ -2156,11 +1795,11 @@ function FacturasProveedorPage() {
                                                             const unitLabel = isCuero ? 'dm' : 'm';
                                                             const tcSubtotal = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
                                                             return (
-                                                                <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', padding: '0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                                                <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', padding: '0.35rem', borderRadius: '6px', border: '1px solid #d0cfc6' }}>
                                                                     <select
                                                                         value={tc.tipo || 'tela'}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'tipo', e.target.value)}
-                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}
+                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6', fontWeight: 700, color: isCuero ? '#a8732b' : '#4f6a7f', background: isCuero ? '#f8f0e0' : '#eaeff1', flexShrink: 0 }}
                                                                     >
                                                                         <option value="tela">Tela (m)</option>
                                                                         <option value="cuero">Cuero (dm)</option>
@@ -2171,7 +1810,7 @@ function FacturasProveedorPage() {
                                                                         placeholder={isCuero ? "Ref. Cuero" : "Ref. Tela"}
                                                                         value={tc.referencia || ''}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'referencia', e.target.value)}
-                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
                                                                     />
 
                                                                     <input
@@ -2179,11 +1818,11 @@ function FacturasProveedorPage() {
                                                                         placeholder="Color"
                                                                         value={tc.color || ''}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'color', e.target.value)}
-                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
                                                                     />
 
                                                                     <div style={{ position: 'relative', flex: '1 1 0%', minWidth: 0 }}>
-                                                                        <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.7rem' }}>$</span>
+                                                                        <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#a3a398', fontSize: '0.7rem' }}>$</span>
                                                                         <input
                                                                             type="text"
                                                                             placeholder={isCuero ? "$/dm" : "$/m"}
@@ -2192,7 +1831,7 @@ function FacturasProveedorPage() {
                                                                                 const raw = e.target.value.replace(/[^0-9]/g, '');
                                                                                 updateTelaCueroInRow(index, tcIdx, 'costo_unidad', raw);
                                                                             }}
-                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
                                                                         />
                                                                     </div>
 
@@ -2207,13 +1846,13 @@ function FacturasProveedorPage() {
                                                                                 const val = e.target.value.replace(',', '.');
                                                                                 updateTelaCueroInRow(index, tcIdx, 'cantidad', val);
                                                                             }}
-                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
                                                                         />
-                                                                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>{unitLabel}</span>
+                                                                        <span style={{ fontSize: '0.7rem', color: '#72726a', fontWeight: 600 }}>{unitLabel}</span>
                                                                     </div>
 
                                                                     {tcSubtotal > 0 && (
-                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', padding: '0 0.3rem', flexShrink: 0 }}>
+                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#171815', whiteSpace: 'nowrap', padding: '0 0.3rem', flexShrink: 0 }}>
                                                                             = {formatCOP(tcSubtotal)}
                                                                         </span>
                                                                     )}
@@ -2221,7 +1860,7 @@ function FacturasProveedorPage() {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => removeTelaCueroFromRow(index, tcIdx)}
-                                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem', flexShrink: 0 }}
+                                                                        style={{ background: 'transparent', border: 'none', color: '#a8432f', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem', flexShrink: 0 }}
                                                                         title="Quitar esta tela/cuero"
                                                                     >
                                                                         <FaTrashAlt />
@@ -2247,7 +1886,7 @@ function FacturasProveedorPage() {
                             <div className="fct-footer">
                                 <button type="button" className="fact-btn-secondary" onClick={resetModal} disabled={isCreating}>Cancelar</button>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto', marginRight: '1rem' }}>
-                                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Total Productos:</span>
+                                    <span style={{ fontSize: '0.85rem', color: '#72726a', fontWeight: 600 }}>Total Productos:</span>
                                     <span className={`total-costos-label ${totalCostos === valorFactura && valorFactura > 0 ? 'total-match' : totalCostos > 0 ? 'total-mismatch' : ''}`}>
                                         {formatCOPInt(totalCostos)}
                                     </span>

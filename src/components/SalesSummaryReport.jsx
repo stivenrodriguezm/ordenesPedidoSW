@@ -1,3 +1,4 @@
+import { fraccionVenta, numeroParticipantes, participantesVenta } from '../utils/ventasCompartidas';
 import React, { useMemo, useContext, lazy, Suspense } from 'react';
 import { AppContext } from '../AppContext';
 import {
@@ -21,7 +22,9 @@ const Line = lazy(() => import('./charts').then(m => ({ default: m.Line })));
 const Doughnut = lazy(() => import('./charts').then(m => ({ default: m.Doughnut })));
 const Bar = lazy(() => import('./charts').then(m => ({ default: m.Bar })));
 
-const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurrency }) => {
+// cuentaParticipante(id) → si ese vendedor entra en el filtro actual; null = empresa
+// completa (100 % de cada venta). Sin la prop, un vendedor cuenta solo su parte.
+const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurrency, cuentaParticipante }) => {
     const { usuario } = useContext(AppContext);
 
     const {
@@ -55,6 +58,11 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         }
 
         const isVendorRole = usuario?.role === 'vendedor';
+        // Ventas compartidas: al filtrar por vendedores, cada venta suma solo la parte de
+        // los vendedores elegidos (1.000.000 entre dos → 500.000 por cada uno).
+        const cuenta = cuentaParticipante !== undefined
+            ? cuentaParticipante
+            : (isVendorRole ? (id => id === String(usuario?.id)) : null);
 
         ventas.forEach(venta => {
             const statusRaw = venta.estado ? venta.estado.toLowerCase() : 'pendiente';
@@ -74,17 +82,17 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
 
             salesCount++; // Contar solo no anuladas
 
-            const numSellers = 1 + (venta.vendedores_compartidos ? venta.vendedores_compartidos.length : 0);
+            // Participantes únicos: el principal repetido entre compartidos no cuenta doble (H13).
+            const numSellers = numeroParticipantes(venta);
             const valorFull = parseFloat(venta.valor_total) || 0;
             const valorPerSeller = valorFull / numSellers;
             const abonoFull = parseFloat(venta.abono) || 0;
-            const abonoPerSeller = abonoFull / numSellers;
             const saldoFull = parseFloat(venta.saldo) || 0;
-            const saldoPerSeller = saldoFull / numSellers;
 
-            const valToAdd = isVendorRole ? valorPerSeller : valorFull;
-            const abonoToAdd = isVendorRole ? abonoPerSeller : abonoFull;
-            const saldoToAdd = isVendorRole ? saldoPerSeller : saldoFull;
+            const fraccion = fraccionVenta(venta, cuenta);
+            const valToAdd = valorFull * fraccion;
+            const abonoToAdd = abonoFull * fraccion;
+            const saldoToAdd = saldoFull * fraccion;
 
             totalSales += valToAdd;
             totalRecaudo += abonoToAdd;
@@ -107,39 +115,25 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 // por completo del desglose por sede (ni siquiera cuentan como "Sin Sede")
                 // y se contabilizan únicamente en su propia tarjeta.
                 salesFeria += valToAdd;
-                salesCountFeria += (isVendorRole ? (1 / numSellers) : 1);
+                salesCountFeria += fraccion;
             } else {
                 const sedeName = venta.sede || 'Sin Sede';
                 salesBySede[sedeName] = (salesBySede[sedeName] || 0) + valToAdd;
-                salesCountBySede[sedeName] = (salesCountBySede[sedeName] || 0) + (isVendorRole ? (1 / numSellers) : 1);
+                salesCountBySede[sedeName] = (salesCountBySede[sedeName] || 0) + fraccion;
             }
 
-            let primaryVendorId = null;
-            if (venta.vendedor_nombre && Array.isArray(vendedores)) {
-                const match = vendedores.find(v => v.first_name && v.first_name.toLowerCase() === venta.vendedor_nombre.toLowerCase());
-                if (match) primaryVendorId = match.id;
-            }
-
-            if (primaryVendorId && salesByVendedorMap[primaryVendorId]) {
-                salesByVendedorMap[primaryVendorId].total += valorPerSeller;
-                salesByVendedorMap[primaryVendorId].count += (1 / numSellers);
-            } else if (venta.vendedor_nombre) {
-                const key = venta.vendedor_nombre;
-                if (!salesByVendedorMap[key]) {
-                    salesByVendedorMap[key] = { id: key, name: venta.vendedor_nombre, total: 0, count: 0 };
+            // Ranking: cada participante recibe su parte; con filtro, solo los elegidos.
+            const compartidos = venta.vendedores_compartidos || [];
+            participantesVenta(venta).forEach(id => {
+                if (cuenta && !cuenta(id)) return;
+                if (!salesByVendedorMap[id]) {
+                    const pos = compartidos.findIndex(vc => String(vc) === id);
+                    const nombre = id === String(venta.vendedor) ? venta.vendedor_nombre : venta.vendedores_compartidos_nombres?.[pos];
+                    salesByVendedorMap[id] = { id, name: nombre || `Usuario ${id}`, total: 0, count: 0 };
                 }
-                salesByVendedorMap[key].total += valorPerSeller;
-                salesByVendedorMap[key].count += (1 / numSellers);
-            }
-
-            if (venta.vendedores_compartidos) {
-                venta.vendedores_compartidos.forEach(vId => {
-                    if (salesByVendedorMap[vId]) {
-                        salesByVendedorMap[vId].total += valorPerSeller;
-                        salesByVendedorMap[vId].count += (1 / numSellers);
-                    }
-                });
-            }
+                salesByVendedorMap[id].total += valorPerSeller;
+                salesByVendedorMap[id].count += (1 / numSellers);
+            });
         });
 
         const ticketPromedio = salesCount > 0 ? totalSales / salesCount : 0;
@@ -265,14 +259,14 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {
                     label: 'Ventas Diarias',
                     data: sortedDates.map(d => salesByDate[d]),
-                    borderColor: '#0e9f6e',
-                    backgroundColor: 'rgba(39, 67, 133, 0.08)',
+                    borderColor: '#4c7a4f',
+                    backgroundColor: 'rgba(164, 141, 102, 0.08)',
                     tension: 0.35,
                     fill: true,
-                    pointBackgroundColor: '#0e9f6e',
+                    pointBackgroundColor: '#4c7a4f',
                     pointBorderColor: '#fff',
                     pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#0e9f6e',
+                    pointHoverBorderColor: '#4c7a4f',
                 }
             ]
         };
@@ -282,7 +276,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             datasets: [
                 {
                     data: [salesByStatus.entregado, salesByStatus.pendiente, salesByStatus.anulado],
-                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                    backgroundColor: ['#4c7a4f', '#a8732b', '#a8432f'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }
@@ -296,7 +290,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {
                     label: 'Total Vendido',
                     data: top5Vendors.map(v => v.total),
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: '#171815',
                     borderRadius: 4,
                 }
             ]
@@ -348,7 +342,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             allVendorsList: vendorsList
         };
 
-    }, [ventas, vendedores, selectedMonthYear]);
+    }, [ventas, vendedores, selectedMonthYear, cuentaParticipante, usuario]);
 
     const commonOptions = {
         responsive: true,
@@ -356,7 +350,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                backgroundColor: 'rgba(23, 24, 21, 0.9)',
                 titleColor: '#fff',
                 bodyColor: '#fff',
                 padding: 8,
@@ -377,7 +371,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         scales: {
             x: { grid: { display: false }, ticks: { font: { size: 10 } } },
             y: {
-                grid: { borderDash: [3, 3], color: '#f1f5f9' },
+                grid: { borderDash: [3, 3], color: '#f2f1eb' },
                 ticks: { display: false }
             }
         }
@@ -399,7 +393,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {/* Ventas Mes Hero Pill */}
                 <div className="compact-hero-card">
                     <div className="c-hero-header">
-                        <div className="c-badge"><FaFireAlt style={{ color: '#f59e0b', fontSize: '0.75rem' }} /> VENTAS DEL MES</div>
+                        <div className="c-badge"><FaFireAlt style={{ color: '#a8732b', fontSize: '0.75rem' }} /> VENTAS DEL MES</div>
                         <span className="c-cycle-tag">Ciclo: {kpis.cycleInfo.startDateStr} - {kpis.cycleInfo.endDateStr} ({kpis.cycleInfo.pctCycle}%)</span>
                     </div>
                     <div className="c-hero-body">
@@ -434,7 +428,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 <div className="compact-sede-card indigo">
                     <div className="c-sede-header">
                         <div className="c-sede-title">
-                            <FaStore style={{ color: '#4338ca' }} />
+                            <FaStore style={{ color: '#171815' }} />
                             <span>Lottus 2</span>
                         </div>
                         <span className="c-pct-pill indigo">{kpis.pctSede2}%</span>
@@ -451,7 +445,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                     <div className="compact-sede-card amber">
                         <div className="c-sede-header">
                             <div className="c-sede-title">
-                                <FaHome style={{ color: '#b45309' }} />
+                                <FaHome style={{ color: '#a8732b' }} />
                                 <span>Feria del Hogar</span>
                             </div>
                             <span className="c-pct-pill amber">{kpis.pctFeria}%</span>
@@ -565,7 +559,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 <div className="compact-vendor-section">
                     <div className="c-vendor-header">
                         <div className="c-vtitle">
-                            <FaTrophy style={{ color: '#f59e0b' }} />
+                            <FaTrophy style={{ color: '#a8732b' }} />
                             <span>Desempeño de Vendedores</span>
                         </div>
                         <span className="c-vsub">Venta real ($ COP), pedidos y proyección</span>

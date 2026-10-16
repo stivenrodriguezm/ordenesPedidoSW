@@ -1,0 +1,136 @@
+.ia-acceso { position:fixed; right:18px; bottom:max(18px,env(safe-area-inset-bottom)); z-index:1020; display:flex; align-items:center; gap:10px; }
+.ia-acceso button { display:flex; align-items:center; gap:7px; min-height:40px; padding:8px 12px; border:1px solid #c8c1b5; border-radius:22px; background:#f7f4ee; color:#625c50; box-shadow:0 2px 8px #15130f12; font-size:12px; cursor:pointer; }
+.ia-acceso button:hover { background:#eae4d8; color:#27231e; }
+.ia-acceso button:focus-visible { outline:2px solid #8e7549; outline-offset:3px; }
+.ia-acceso button:disabled { cursor:wait; }
+.ia-acceso p { max-width:260px; margin:0; padding:10px; border:1px solid #c8c1b5; border-radius:8px; background:#fff; color:#75402f; font-size:12px; }
+
+/* Barra flotante de chat minimizado (conserva el estado actual) */
+.ia-chat-minimizado {
+    position: fixed;
+    right: 18px;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    z-index: 1035;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 280px;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 9px 12px 9px 14px;
+    background: #171614;
+    color: #ede9df;
+    border: 1px solid #4a4539;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    animation: ia-minimizado-entrar 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ia-chat-minimizado:hover {
+    transform: translateY(-2px);
+    border-color: #796f5c;
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45), 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+.ia-chat-minimizado__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+.ia-chat-minimizado__punto {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3ecf8e;
+    box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.25);
+    flex-shrink: 0;
+    animation: ia-punto-pulso 2s infinite;
+}
+.ia-chat-minimizado__icono {
+    color: #c7a96a;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.ia-chat-minimizado__texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+}
+.ia-chat-minimizado__texto strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f7f4ee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ia-chat-minimizado__texto small {
+    font-size: 11px;
+    color: #a49c8e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ia-chat-minimizado__acciones {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.ia-chat-minimizado__btn {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #443f34;
+    border-radius: 7px;
+    background: #27251f;
+    color: #ede9df;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.ia-chat-minimizado__btn:hover {
+    background: #423d32;
+    border-color: #6d6453;
+    color: #fff;
+}
+.ia-chat-minimizado__btn:active {
+    transform: scale(0.92);
+}
+.ia-chat-minimizado__btn--cerrar:hover {
+    background: #5f221c;
+    border-color: #8c362d;
+    color: #ffd8d4;
+}
+
+@keyframes ia-minimizado-entrar {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes ia-punto-pulso {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.9); }
+}
+@media (max-width: 480px) {
+    .ia-chat-minimizado {
+        min-width: 0;
+        right: 12px;
+        left: 12px;
+        max-width: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ia-chat-minimizado { animation: none; }
+    .ia-chat-minimizado__punto { animation: none; }
+}

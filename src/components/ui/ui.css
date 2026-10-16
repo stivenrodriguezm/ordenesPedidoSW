@@ -78,7 +78,7 @@
 }
 
 .ds-btn--danger:hover:not(:disabled) {
-  background: #b91c1c;
+  background: var(--danger);
 }
 
 .ds-btn--danger-soft {
@@ -138,16 +138,19 @@
   border-radius: var(--r-md);
   display: grid;
   place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 1.25rem;
+  background: #24241f;
+  border: 1px solid rgba(164, 141, 102, 0.35);
+  color: var(--gold-light);
+  font-size: 1.15rem;
 }
 
 .ds-page-header__title {
-  font-size: var(--fs-xl);
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 650;
   color: var(--text);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 
 .ds-page-header__subtitle {
@@ -198,7 +201,7 @@
 .ds-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(23, 24, 21, 0.5);
   backdrop-filter: blur(3px);
   display: flex;
   align-items: flex-start;
@@ -629,4 +632,18 @@
 @media (max-width: 640px) {
   .long-text { display: none; }
   .short-text { display: inline; }
+}
+
+/* El contenedor recibe foco solo como respaldo (P08-07): sin borde. */
+.ds-modal:focus { outline: none; }
+
+/* Total del conjunto filtrado (P08-08): cifras coherentes con los filtros. */
+.ds-totales-filtrados {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-sm);
+  padding: 0.45rem 0.9rem;
 }

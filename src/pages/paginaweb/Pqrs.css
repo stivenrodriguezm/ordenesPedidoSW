@@ -8,7 +8,7 @@
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--gray-700, #334155);
+  color: var(--gray-700);
 }
 
 .pqrs-client-cell {
@@ -19,12 +19,12 @@
 
 .pqrs-client-email {
   font-size: 0.78rem;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
 }
 
 .pqrs-date-cell {
   font-size: 0.82rem;
-  color: var(--gray-500, #64748b);
+  color: var(--gray-500);
   white-space: nowrap;
 }
 
@@ -39,7 +39,7 @@
   flex-wrap: wrap;
   gap: 0.75rem 1.5rem;
   padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
 }
 
 .pqrs-meta-item {
@@ -47,11 +47,11 @@
   align-items: center;
   gap: 0.45rem;
   font-size: 0.85rem;
-  color: var(--gray-700, #334155);
+  color: var(--gray-700);
 }
 
 .pqrs-meta-item a {
-  color: var(--accent, #1e3a8a);
+  color: var(--accent);
   text-decoration: none;
 }
 .pqrs-meta-item a:hover {
@@ -60,7 +60,7 @@
 
 .pqrs-asunto-tag {
   font-size: 0.8rem;
-  color: var(--gray-500, #64748b);
+  color: var(--gray-500);
   margin-left: 0.5rem;
 }
 
@@ -93,8 +93,8 @@
 }
 
 .pqrs-thread-bubble--client {
-  background: var(--gray-50, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
+  background: var(--gray-50);
+  border: 1px solid var(--border);
 }
 
 .pqrs-thread-bubble--admin {
@@ -105,7 +105,7 @@
 
 .pqrs-thread-date {
   font-size: 0.72rem;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
 }
 
 .pqrs-send-row {

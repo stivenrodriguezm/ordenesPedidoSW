@@ -1,37 +1,34 @@
+import { useExportacion } from '../hooks/useExportacion';
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { imprimirEtiquetaQR } from '../utils/printQR';
 import API from '../services/api';
+import { mensajeDeError } from '../services/errores';
 import { usePendientesIds } from '../hooks/useSharedData';
 import { formatCOP } from '../utils/formatCOP';
 import {
-    FaSearch, FaFileExport, FaTimes, FaPlus, FaImage, FaCamera, FaUpload,
+    FaSearch, FaFileExport, FaTimes, FaPlus, FaImage,
     FaLayerGroup, FaEdit, FaSave, FaChevronDown, FaChevronUp,
     FaSort, FaSortUp, FaSortDown, FaTable, FaList, FaDollarSign, FaFilter, FaQrcode, FaExchangeAlt, FaCheckCircle,
-    FaTrashAlt, FaBoxOpen
+    FaTrashAlt, FaBoxOpen, FaHistory
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import { AppContext, usePermissions } from '../AppContext';
-import { Button, PageHeader, Badge, Modal, ErrorState } from '../components/ui';
+import { confirmarDescarte, useDialogo } from '../hooks/useDialogo';
+import { useFiltrosUrl } from '../hooks/useFiltrosUrl';
+import { Button, PageHeader, Badge, ErrorState } from '../components/ui';
+import MovimientosUnidad from '../components/inventario/MovimientosUnidad';
+import { DISPONIBILIDAD_LABELS } from '../utils/inventario';
 import './InventarioPage.css';
 
 const CATEGORY_COLORS = [
-    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899',
+    '#171815', '#4c7a4f', '#a8732b', '#8b5cf6', '#a8432f', '#4f6a7f', '#ec4899',
 ];
 
 function getCatColor(catId) {
-    return CATEGORY_COLORS[(catId - 1) % CATEGORY_COLORS.length] || '#94a3b8';
+    return CATEGORY_COLORS[(catId - 1) % CATEGORY_COLORS.length] || '#a3a398';
 }
 
-const DISPONIBILIDAD_LABELS = {
-    exhibicion: 'Exhibición',
-    cliente: 'Cliente',
-    por_despachar: 'Por Despachar',
-    despachado: 'Despachado',
-    entregado: 'Entregado',
-    por_reparar: 'Por Reparar',
-    consignacion: 'Consignación',
-    no_venta: 'No a la venta',
-};
 
 const DISPONIBILIDAD_OPTIONS = [
     { key: 'exhibicion',    label: 'Exhibición' },
@@ -53,7 +50,8 @@ const dispTone = (disp) => {
         case 'por_despachar': return 'info';
         case 'consignacion':
         case 'despachado':    return 'accent';
-        case 'no_venta':      return 'danger';
+        case 'no_venta':
+        case 'devuelto_proveedor': return 'danger';
         default:              return 'neutral';
     }
 };
@@ -82,11 +80,12 @@ function ObsCell({ text }) {
 
 // ── Lightbox ─────────────────────────────────────────────────────────────────
 function ImagePreviewModal({ isOpen, onClose, imageUrl }) {
+    const dialogoRef = useDialogo(isOpen, onClose);
     if (!isOpen) return null;
     return (
         <div className="img-lightbox-overlay" onClick={onClose}>
-            <div className="img-lightbox-content" onClick={e => e.stopPropagation()}>
-                <button className="img-lightbox-close" onClick={onClose}>&times;</button>
+            <div className="img-lightbox-content" onClick={e => e.stopPropagation()} ref={dialogoRef} role="dialog" aria-modal="true" aria-label="Vista previa de la imagen" tabIndex={-1}>
+                <button className="img-lightbox-close" onClick={onClose} aria-label="Cerrar">&times;</button>
                 <img src={imageUrl} alt="Vista previa del producto" className="img-lightbox-main" />
             </div>
         </div>
@@ -127,6 +126,13 @@ const emptyForm = () => ({
     grupoInstances: [],  // { localId, nombre, categoriaId, subcategoriaId, observacion }
 });
 
+// Campos editables del modal de grupo, para detectar cambios sin guardar.
+const camposGrupo = (g) => ({
+    nombre: g.nombre, disponibilidad: g.disponibilidad, estadoFisico: g.estadoFisico, zonaId: g.zonaId,
+    categoriaId: g.categoriaId, subcategoriaId: g.subcategoriaId, descripcion: g.descripcion,
+    observacion: g.observacion, ventaId: g.ventaId,
+});
+
 let _grupoCounter = 0;
 const newGrupoLocalId = () => `g_${++_grupoCounter}_${Date.now()}`;
 const isExistingGrupoId = (localId) => localId && !String(localId).startsWith('g_') && !isNaN(parseInt(localId));
@@ -135,6 +141,8 @@ const isExistingGrupoId = (localId) => localId && !String(localId).startsWith('g
 function InventarioPage() {
     const { proveedores } = useContext(AppContext);
     const hasPermission = usePermissions();
+
+    const { exportar, exportando } = useExportacion('inventario', 'Inventario_Lottus.xlsx', aviso => showToast(aviso.message, aviso.type));
 
     // ── Data ──────────────────────────────────────────────────────────────────
     const [inventario, setInventario]           = useState([]);
@@ -147,16 +155,31 @@ function InventarioPage() {
     const [isLoading, setIsLoading]             = useState(true);
 
     // ── Filters ───────────────────────────────────────────────────────────────
-    const [filterProveedor, setFilterProveedor]         = useState('');
-    const [filterSearch, setFilterSearch]               = useState('');
-    const [filterCategoria, setFilterCategoria]         = useState('');
-    const [filterSubcategoria, setFilterSubcategoria]   = useState('');
-    const [filterDisponibilidad, setFilterDisponibilidad] = useState('');
-    const [filterSede, setFilterSede]                   = useState('');
-    const [filterZona, setFilterZona]                   = useState('');
-    const [filterEstadoFisico, setFilterEstadoFisico]   = useState('');
-    const [filterFechaInicio, setFilterFechaInicio]     = useState('');
-    const [filterFechaFin, setFilterFechaFin]           = useState('');
+    // Persisten en la URL (P08-08): atrás/recarga/compartir conserva el conjunto.
+    const [filtros, setFiltros] = useFiltrosUrl({
+        proveedor: '', q: '', categoria: '', subcategoria: '', disponibilidad: '',
+        sede: '', zona: '', estado_fisico: '', fecha_inicio: '', fecha_fin: '',
+    });
+    const filterProveedor       = filtros.proveedor;
+    const filterSearch          = filtros.q;
+    const filterCategoria       = filtros.categoria;
+    const filterSubcategoria    = filtros.subcategoria;
+    const filterDisponibilidad  = filtros.disponibilidad;
+    const filterSede            = filtros.sede;
+    const filterZona            = filtros.zona;
+    const filterEstadoFisico    = filtros.estado_fisico;
+    const filterFechaInicio     = filtros.fecha_inicio;
+    const filterFechaFin        = filtros.fecha_fin;
+    const setFilterProveedor       = (v) => setFiltros(f => ({ ...f, proveedor: v }));
+    const setFilterSearch          = (v) => setFiltros(f => ({ ...f, q: v }));
+    const setFilterCategoria       = (v) => setFiltros(f => ({ ...f, categoria: v }));
+    const setFilterSubcategoria    = (v) => setFiltros(f => ({ ...f, subcategoria: v }));
+    const setFilterDisponibilidad  = (v) => setFiltros(f => ({ ...f, disponibilidad: v }));
+    const setFilterSede            = (v) => setFiltros(f => ({ ...f, sede: v }));
+    const setFilterZona            = (v) => setFiltros(f => ({ ...f, zona: v }));
+    const setFilterEstadoFisico    = (v) => setFiltros(f => ({ ...f, estado_fisico: v }));
+    const setFilterFechaInicio     = (v) => setFiltros(f => ({ ...f, fecha_inicio: v }));
+    const setFilterFechaFin        = (v) => setFiltros(f => ({ ...f, fecha_fin: v }));
     const [showFiltersMenu, setShowFiltersMenu]         = useState(false);
 
     // ── View / Display ────────────────────────────────────────────────────────
@@ -167,7 +190,7 @@ function InventarioPage() {
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
 
     // ── Inline disp edit (C) ──────────────────────────────────────────────────
-    const [inlineEditItem, setInlineEditItem] = useState(null); // dbId
+     // dbId
     const [inlineEditVenta, setInlineEditVenta] = useState(null); // dbId
 
     // ── Modal / Form ──────────────────────────────────────────────────────────
@@ -198,6 +221,7 @@ function InventarioPage() {
     // ── QR & Traslado Modals ──────────────────────────────────────────────────
     const [qrModal, setQrModal] = useState({ open: false, item: null });
     const [trasladoModal, setTrasladoModal] = useState({ open: false, item: null, zonaId: '', observacion: '', saving: false });
+    const [historialItem, setHistorialItem] = useState(null);
 
     // ── Toast Notification ────────────────────────────────────────────────────
     const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
@@ -206,7 +230,8 @@ function InventarioPage() {
     const showToast = useCallback((message, type = 'success') => {
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         setToast({ visible: true, message, type });
-        toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 4000);
+        // Errores 8 s (suelen traer el motivo del servidor), resto 4 s (U10).
+        toastTimerRef.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), type === 'error' ? 8000 : 4000);
     }, []);
 
     // ── Fetch ─────────────────────────────────────────────────────────────────
@@ -247,7 +272,7 @@ function InventarioPage() {
 
     const CATEGORIAS    = categorias;
     const SUBCATEGORIAS = subcategorias;
-    const PRODUCTOS     = productos;
+    
     const getCategoria  = (id) => categorias.find(c => c.id === id);
 
     // ── Modal helpers ─────────────────────────────────────────────────────────
@@ -266,13 +291,7 @@ function InventarioPage() {
 
     const handleField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
-    const handleTelaChange = (index, field, value) => {
-        setForm(prev => {
-            const prods = [...prev.productos];
-            prods[index] = { ...prods[index], [field]: value };
-            return { ...prev, productos: prods };
-        });
-    };
+    
 
     const handleRefRow = (index, field, value) => {
         setForm(prev => {
@@ -453,17 +472,7 @@ function InventarioPage() {
     };
 
     // ── Inline disp handler (C) ───────────────────────────────────────────────
-    const handleInlineDisp = async (dbId, newDisp) => {
-        try {
-            await API.patch(`/suministros/inventario/${dbId}/`, { disponibilidad: newDisp });
-            setInventario(prev => prev.map(i => i.id === dbId ? { ...i, disponibilidad: newDisp } : i));
-            showToast('Disponibilidad actualizada.', 'success');
-        } catch (e) {
-            console.error('Error updating disponibilidad:', e);
-            showToast('Error al actualizar disponibilidad.', 'error');
-        }
-        setInlineEditItem(null);
-    };
+    
 
     const handleInlineVenta = async (dbId, newVentaId) => {
         try {
@@ -473,7 +482,7 @@ function InventarioPage() {
             showToast('Venta actualizada.', 'success');
         } catch (e) {
             console.error('Error updating venta:', e);
-            showToast('Error al actualizar venta.', 'error');
+            showToast(`Error al actualizar venta: ${mensajeDeError(e, 'intenta de nuevo.')}`, 'error');
         }
         setInlineEditVenta(null);
     };
@@ -496,7 +505,8 @@ function InventarioPage() {
             costo_total: grupo.costo_total || 0,
             items: [...grupoItems], 
             removedDbIds: [], 
-            addedItems: [] 
+            addedItems: [],
+            _inicial: JSON.stringify(camposGrupo({ nombre: grupo.nombre, disponibilidad: '', estadoFisico: '', zonaId: '', categoriaId: grupo.categoria_id || '', subcategoriaId: grupo.subcategoria_id || '', descripcion: grupo.descripcion || '', observacion: grupo.observacion || '', ventaId: grupo.venta || grupo.venta_id || '' })),
         });
     };
     const closeGrupoEdit = () => setGrupoEditModal(null);
@@ -570,11 +580,7 @@ function InventarioPage() {
             telasInit = [{ tipo: 'tela', referencia: item.tela_referencia || '', color: item.tela_color || '', unidad_medida: 'metro', costo_unidad: item.tela_costo_metro || '', cantidad: item.tela_cantidad_metros || '' }];
         }
 
-        setItemEditModal({
-            open: true,
-            item,
-            saving: false,
-            form: {
+        const formInicial = {
                 variacion: item.variacion || '',
                 costo: item.costo_especifico ? Math.floor(parseFloat(item.costo_especifico)) : '',
                 observacion: item.observacion || '',
@@ -590,8 +596,8 @@ function InventarioPage() {
                 factura_manual: item.factura_manual || '',
                 imagen: item.imagen || '',
                 telas_cueros: telasInit,
-            }
-        });
+        };
+        setItemEditModal({ open: true, item, saving: false, form: formInicial, inicial: JSON.stringify(formInicial) });
         // Load existing costos adicionales for this item
         setCostosList(item.costos_adicionales || []);
         setNewCosto({ descripcion: '', valor: '' });
@@ -627,7 +633,7 @@ function InventarioPage() {
                     ? { ...i, costos_adicionales: [...(i.costos_adicionales || []), res.data], costo_total: (parseFloat(i.costo_especifico || 0) + [...(i.costos_adicionales || []), res.data].reduce((s, c) => s + parseFloat(c.valor), 0)) }
                     : i
             ));
-        } catch (err) {
+        } catch {
             showToast('Error al agregar costo adicional.', 'error');
         }
     };
@@ -642,7 +648,7 @@ function InventarioPage() {
                     ? { ...i, costos_adicionales: (i.costos_adicionales || []).filter(c => c.id !== costoId) }
                     : i
             ));
-        } catch (err) {
+        } catch {
             showToast('Error al eliminar costo adicional.', 'error');
         }
     };
@@ -717,8 +723,7 @@ function InventarioPage() {
             closeItemEdit();
         } catch (err) {
             console.error('Error updating item:', err);
-            const backendMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-            showToast(`Error al actualizar: ${backendMsg}`, 'error');
+            showToast(`Error al actualizar: ${mensajeDeError(err, 'intenta de nuevo.')}`, 'error');
             setItemEditModal(prev => ({ ...prev, saving: false }));
         }
     };
@@ -781,12 +786,27 @@ function InventarioPage() {
             closeGrupoEdit();
         } catch (err) {
             console.error('Error guardando grupo:', err);
-            const backendMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-            showToast(`Error al guardar grupo: ${backendMsg}`, 'error');
+            showToast(`Error al guardar grupo: ${mensajeDeError(err, 'intenta de nuevo.')}`, 'error');
         } finally {
             setGrupoEditSaving(false);
         }
     };
+
+    // ── Diálogos accesibles (P08-07): foco, Tab, Escape y aviso de cambios ──
+    const cerrarNuevoGrupo = () => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' });
+    const cerrarQr = () => setQrModal({ open: false, item: null });
+    const cerrarTraslado = () => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false });
+    const cambiosEntrada = showModal && (JSON.stringify(form) !== JSON.stringify(emptyForm()) || Boolean(newGrupoName || newGrupoObservacion));
+    const cambiosNuevoGrupo = Boolean(nuevoGrupoModal.nombre || nuevoGrupoModal.descripcion || nuevoGrupoModal.observacion || nuevoGrupoModal.categoriaId || nuevoGrupoModal.subcategoriaId || nuevoGrupoModal.ventaId);
+    const cambiosGrupo = Boolean(grupoEditModal) && (grupoEditModal.removedDbIds.length > 0 || grupoEditModal.addedItems.length > 0 || JSON.stringify(camposGrupo(grupoEditModal)) !== grupoEditModal._inicial);
+    const cambiosItem = Boolean(itemEditModal.open && itemEditModal.form) && JSON.stringify(itemEditModal.form) !== itemEditModal.inicial;
+    const cambiosTraslado = Boolean(trasladoModal.zonaId || trasladoModal.observacion);
+    const entradaRef = useDialogo(showModal, closeModal, { hayCambios: cambiosEntrada });
+    const nuevoGrupoRef = useDialogo(nuevoGrupoModal.open, cerrarNuevoGrupo, { hayCambios: cambiosNuevoGrupo });
+    const grupoEditRef = useDialogo(Boolean(grupoEditModal), closeGrupoEdit, { hayCambios: cambiosGrupo });
+    const itemEditRef = useDialogo(Boolean(itemEditModal.open && itemEditModal.item), closeItemEdit, { hayCambios: cambiosItem });
+    const qrRef = useDialogo(Boolean(qrModal.open && qrModal.item), cerrarQr);
+    const trasladoRef = useDialogo(Boolean(trasladoModal.open && trasladoModal.item), cerrarTraslado, { hayCambios: cambiosTraslado });
 
     // ── Enriched items ────────────────────────────────────────────────────────
     const items = inventario.map(inv => {
@@ -928,14 +948,15 @@ function InventarioPage() {
         });
     };
 
-    // ── Summary stats (B) ─────────────────────────────────────────────────────
+    // ── Summary stats (B): del conjunto filtrado (P08-08, U05); los grupos
+    // activos son un dato global del catálogo.
     const stats = {
-        total:      items.length,
-        venta:      items.filter(i => i.disponibilidad === 'venta').length,
-        exhibicion: items.filter(i => i.disponibilidad === 'exhibicion').length,
+        total:      filtered.length,
+        venta:      filtered.filter(i => i.disponibilidad === 'venta').length,
+        exhibicion: filtered.filter(i => i.disponibilidad === 'exhibicion').length,
         grupos:     grupos.length,
-        conGrupo:   items.filter(i => i.grupoId).length,
-        sinGrupo:   items.filter(i => !i.grupoId).length,
+        conGrupo:   filtered.filter(i => i.grupoId).length,
+        sinGrupo:   filtered.filter(i => !i.grupoId).length,
     };
 
     // ── Dropdown helpers ──────────────────────────────────────────────────────
@@ -943,8 +964,8 @@ function InventarioPage() {
         ? SUBCATEGORIAS.filter(s => String(s.categoria) === filterCategoria)
         : SUBCATEGORIAS;
 
-    const formSubcats  = form.categoriaId ? SUBCATEGORIAS.filter(s => s.categoria === parseInt(form.categoriaId)) : [];
-    const formProducts = form.proveedorId ? PRODUCTOS.filter(p => p.proveedor === parseInt(form.proveedorId)) : [];
+    
+    
 
     const sedes = Array.from(new Set(zonas.map(z => JSON.stringify({ id: z.sede, nombre: z.sede_nombre })))).map(s => JSON.parse(s));
 
@@ -956,27 +977,7 @@ function InventarioPage() {
         setFilterFechaInicio(''); setFilterFechaFin('');
     };
 
-    const handleExport = async () => {
-        const XLSX = await import('xlsx');
-        const dataToExport = filtered.map(item => ({
-            'ID Producto': item.id,
-            'Proveedor': item.proveedorNombre,
-            'Factura': item.facturaManual || '',
-            'Venta': item.venta || '',
-            'Disponibilidad': DISPONIBILIDAD_LABELS[item.disponibilidad] || '—',
-            'F. Ingreso': item.fechaIngreso ? new Date(item.fechaIngreso).toLocaleDateString('es-ES') : '—',
-            'Producto': item.prod?.nombre || '',
-            'Categoría': item.cat?.nombre || '',
-            'Subcategoría': item.subcat?.nombre || '',
-            'Variación': item.variacion || '',
-            'Costo': item.costo_especifico || '',
-            'Observación': item.observacion || '',
-        }));
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
-        XLSX.writeFile(wb, 'Inventario_Lottus.xlsx');
-    };
+    const handleExport = () => exportar({ ...filtros, search: filterSearch });
 
     // ── Inline disponibilidad badge (C) ───────────────────────────────────────
     const renderDispBadge = (inv) => {
@@ -1081,6 +1082,10 @@ function InventarioPage() {
                             <button className="inv-group-edit-btn" title="Trasladar"
                                 onClick={e => { e.stopPropagation(); setTrasladoModal({ open: true, item: inv, zonaId: '', observacion: '', saving: false }); }}>
                                 <FaExchangeAlt />
+                            </button>
+                            <button className="inv-group-edit-btn" title="Historial y devolución al proveedor" aria-label={`Historial de ${inv.id}`}
+                                onClick={e => { e.stopPropagation(); setHistorialItem(inv); }}>
+                                <FaHistory />
                             </button>
                             {inv.imagen && (
                                 <button className="btn-view-img" title="Ver imagen"
@@ -1303,22 +1308,9 @@ function InventarioPage() {
     const handlePrintQR = () => {
         const svg = document.getElementById('qr-code-svg');
         if (!svg) return;
-        const svgData = new XMLSerializer().serializeToString(svg);
-        const windowPrint = window.open('', '', 'width=400,height=400');
-        windowPrint.document.write(`
-            <html>
-                <head><title>Imprimir QR</title></head>
-                <body style="display:flex; justify-content:center; align-items:center; height:100vh; margin:0; font-family: sans-serif;">
-                    <div style="text-align:center;">
-                        ${svgData}
-                        <p style="margin-top: 10px; font-weight: bold; font-size: 14px;">ID: ${qrModal.item?.id}</p>
-                        <p style="font-size: 12px; color: #555;">${qrModal.item?.prod?.nombre || ''}</p>
-                    </div>
-                    <script>setTimeout(() => { window.print(); window.close(); }, 500);</script>
-                </body>
-            </html>
-        `);
-        windowPrint.document.close();
+        if (!imprimirEtiquetaQR({ svg, id: qrModal.item?.id, nombre: qrModal.item?.prod?.nombre })) {
+            showToast('El navegador bloqueó la ventana de impresión.', 'error');
+        }
     };
 
     const handleTrasladoSubmit = async (e) => {
@@ -1336,7 +1328,7 @@ function InventarioPage() {
             showToast('Traslado realizado exitosamente', 'success');
         } catch (err) {
             console.error('Error al trasladar:', err);
-            showToast('Error al realizar el traslado', 'error');
+            showToast(`Error al realizar el traslado: ${mensajeDeError(err, 'intenta de nuevo.')}`, 'error');
             setTrasladoModal(prev => ({ ...prev, saving: false }));
         }
     };
@@ -1357,7 +1349,7 @@ function InventarioPage() {
             <PageHeader
                 icon={FaBoxOpen}
                 title="Inventario"
-                subtitle={`${stats.total} ítems registrados · ${grupos.length} grupos activos`}
+                subtitle={hasFilters ? `${stats.total} de ${items.length} ítems (filtros activos) · ${grupos.length} grupos activos` : `${stats.total} ítems registrados · ${grupos.length} grupos activos`}
                 actions={
                     <>
                         <Button variant="secondary" icon={FaLayerGroup}
@@ -1468,11 +1460,11 @@ function InventarioPage() {
                                     </div>
                                     <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                         <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Fecha Ingreso (Desde)</label>
-                                        <input type="date" className="ds-input" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaInicio} onChange={e => setFilterFechaInicio(e.target.value)} />
+                                        <input type="date" className="ds-input" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={filterFechaInicio} onChange={e => setFilterFechaInicio(e.target.value)} />
                                     </div>
                                     <div className="inv-filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                         <label className="ds-label" style={{ fontSize: '0.75rem', margin: 0, color: 'var(--gray-500)', fontWeight: 700 }}>Fecha Ingreso (Hasta)</label>
-                                        <input type="date" className="ds-input" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} value={filterFechaFin} onChange={e => setFilterFechaFin(e.target.value)} />
+                                        <input type="date" className="ds-input" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={filterFechaFin} onChange={e => setFilterFechaFin(e.target.value)} />
                                     </div>
                                 </div>
                             </div>
@@ -1513,7 +1505,7 @@ function InventarioPage() {
                         />
                     )}
 
-                    <Button variant="ghost" icon={FaFileExport} onClick={handleExport} title="Exportar a Excel" />
+                    <Button variant="ghost" icon={FaFileExport} onClick={handleExport} loading={exportando} disabled={isLoading} aria-label="Exportar Excel" title="Exportar a Excel" />
                 </div>
             </div>
 
@@ -1563,7 +1555,7 @@ function InventarioPage() {
                                     {sortTh('subcat', 'Subcategoría', 'col-subcat')}
                                     {sortTh('telaNombre', 'Tela', 'col-tela')}
                                     {sortTh('telaColor', 'Color', 'col-color')}
-                                    {sortTh('variacion', 'Variación', 'col-var')}
+                                    {sortTh('variacion', 'Detalle', 'col-var')}
                                     {sortTh('estado_fisico', 'Estado', 'col-est')}
                                     {sortTh('sede_nombre', 'Sede', 'col-sede')}
                                     {sortTh('zona_nombre', 'Zona', 'col-zona')}
@@ -1585,14 +1577,14 @@ function InventarioPage() {
 
             {/* ── MODAL: AGREGAR ENTRADA ──────────────────────────────────── */}
             {showModal && createPortal(
-                <div className={`inv-overlay${modalVisible ? ' inv-overlay-visible' : ''}`} onMouseDown={e => { if (e.target === e.currentTarget) closeModal(); }}>
-                    <div className={`inv-modal${modalVisible ? ' inv-modal-visible' : ''}`} onClick={e => e.stopPropagation()}>
+                <div className={`inv-overlay${modalVisible ? ' inv-overlay-visible' : ''}`} onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(cambiosEntrada)) closeModal(); }}>
+                    <div className={`inv-modal${modalVisible ? ' inv-modal-visible' : ''}`} onClick={e => e.stopPropagation()} ref={entradaRef} role="dialog" aria-modal="true" aria-label="Nueva entrada de inventario" tabIndex={-1}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
                                 <FaPlus className="inv-modal-icon" />
                                 <h3>Nueva Entrada de Inventario</h3>
                             </div>
-                            <button className="inv-modal-close" onClick={closeModal}>&times;</button>
+                            <button className="inv-modal-close" aria-label="Cerrar" data-dialogo-cerrar="" onClick={closeModal}>&times;</button>
                         </div>
 
                         <form className="inv-form" onSubmit={handleSubmit}>
@@ -1612,8 +1604,8 @@ function InventarioPage() {
                                     </div>
 
                                     {/* CREAR GRUPO RAPIDO */}
-                                    <div className="inv-section" style={{ flex: '2 1 500px', background: '#f0f9ff', borderColor: '#bae6fd', padding: '0.75rem 1rem' }}>
-                                        <div className="inv-section-title" style={{ color: '#0284c7', marginBottom: '0.4rem', fontSize: '0.65rem' }}>Crear Nuevo Grupo (Opcional)</div>
+                                    <div className="inv-section" style={{ flex: '2 1 500px', background: '#eaeff1', borderColor: '#c9d5dc', padding: '0.75rem 1rem' }}>
+                                        <div className="inv-section-title" style={{ color: '#4f6a7f', marginBottom: '0.4rem', fontSize: '0.65rem' }}>Crear Nuevo Grupo (Opcional)</div>
                                         <div className="ifg-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end', gap: '0.5rem' }}>
                                             <div className="ifg-group">
                                                 <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Nombre</label>
@@ -1692,7 +1684,7 @@ function InventarioPage() {
                                                         </select>
                                                     </div>
                                                     <div className="ifg-group" style={{ gridColumn: 'span 2' }}>
-                                                        <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Variación</label>
+                                                        <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Detalle</label>
                                                         <input className="ifg-input" type="text" placeholder="Ej: Color..." value={row.variacion} onChange={e => handleRefRow(index, 'variacion', e.target.value)} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
                                                     </div>
 
@@ -1780,7 +1772,7 @@ function InventarioPage() {
                                                                     prods[index] = { ...prods[index], telas_cueros: [...tcs, { tipo: 'tela', referencia: '', color: '', costo_unidad: '', cantidad: '' }] };
                                                                     return { ...prev, productos: prods };
                                                                 })}
-                                                                style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                                                style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
                                                             >
                                                                 <FaPlus style={{ fontSize: '0.6rem' }} /> Agregar
                                                             </button>
@@ -1797,7 +1789,7 @@ function InventarioPage() {
                                                                         <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#fff', padding: '0.3rem', borderRadius: '5px', border: '1px solid var(--gray-300)' }}>
                                                                             <select value={tc.tipo || 'tela'}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
-                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}>
+                                                                                style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#a8732b' : '#4f6a7f', background: isCuero ? '#f8f0e0' : '#eaeff1', flexShrink: 0 }}>
                                                                                 <option value="tela">Tela (m)</option>
                                                                                 <option value="cuero">Cuero (dm)</option>
                                                                             </select>
@@ -1852,14 +1844,14 @@ function InventarioPage() {
             {/* ── MODAL: NUEVO GRUPO ──────────────────────────────────────── */}
             {nuevoGrupoModal.open && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onMouseDown={e => { if (e.target === e.currentTarget) setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' }); }}>
-                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                    onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(cambiosNuevoGrupo)) cerrarNuevoGrupo(); }}>
+                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }} ref={nuevoGrupoRef} role="dialog" aria-modal="true" aria-label="Nuevo grupo" tabIndex={-1}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
                                 <FaLayerGroup className="inv-modal-icon" />
                                 <h3>Nuevo Grupo</h3>
                             </div>
-                            <button className="inv-modal-close" onClick={() => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>&times;</button>
+                            <button className="inv-modal-close" aria-label="Cerrar" data-dialogo-cerrar="" onClick={() => setNuevoGrupoModal({ open: false, nombre: '', categoriaId: '', subcategoriaId: '', descripcion: '', observacion: '', ventaId: '' })}>&times;</button>
                         </div>
                         <div className="inv-grupo-edit-body">
                             <div className="inv-grupo-field">
@@ -1920,14 +1912,14 @@ function InventarioPage() {
             {/* ── MODAL: EDITAR GRUPO ─────────────────────────────────────── */}
             {grupoEditModal && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onMouseDown={e => { if (e.target === e.currentTarget) closeGrupoEdit(); }}>
-                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()}>
+                    onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(cambiosGrupo)) closeGrupoEdit(); }}>
+                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} ref={grupoEditRef} role="dialog" aria-modal="true" aria-label="Editar grupo" tabIndex={-1}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
                                 <span className="inv-group-id-badge">G{String(grupoEditModal.grupo.id).padStart(3, '0')}</span>
                                 <h3>Editar Grupo</h3>
                             </div>
-                            <button className="inv-modal-close" onClick={closeGrupoEdit}>&times;</button>
+                            <button className="inv-modal-close" aria-label="Cerrar" data-dialogo-cerrar="" onClick={closeGrupoEdit}>&times;</button>
                         </div>
 
                         <div className="inv-grupo-edit-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
@@ -2089,14 +2081,14 @@ function InventarioPage() {
             {/* ── MODAL: EDITAR ÍTEM INDIVIDUAL ────────────────────────────── */}
             {itemEditModal.open && itemEditModal.item && createPortal(
                 <div className="inv-overlay inv-overlay-visible inv-overlay-grupo"
-                    onMouseDown={e => { if (e.target === e.currentTarget) closeItemEdit(); }}>
-                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                    onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(cambiosItem)) closeItemEdit(); }}>
+                    <div className="inv-grupo-edit-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }} ref={itemEditRef} role="dialog" aria-modal="true" aria-label={`Editar ítem ${itemEditModal.item.id_referencia}`} tabIndex={-1}>
                         <div className="inv-modal-header">
                             <div className="inv-modal-header-left">
                                 <FaEdit className="inv-modal-icon" />
                                 <h3>Editar Ítem: {itemEditModal.item.id_referencia}</h3>
                             </div>
-                            <button className="inv-modal-close" onClick={closeItemEdit}>&times;</button>
+                            <button className="inv-modal-close" aria-label="Cerrar" data-dialogo-cerrar="" onClick={closeItemEdit}>&times;</button>
                         </div>
                         <form className="inv-form" onSubmit={saveItemEdit}>
                             <div className="inv-grupo-edit-body" style={{ padding: '1.5rem 1rem' }}>
@@ -2110,7 +2102,7 @@ function InventarioPage() {
                                         </select>
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 4' }}>
-                                        <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Variación</label>
+                                        <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Detalle</label>
                                         <input type="text" className="ifg-input" value={itemEditModal.form.variacion} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, variacion: e.target.value } }))} placeholder="Ej: Color, tamaño..." style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 4' }}>
@@ -2202,7 +2194,7 @@ function InventarioPage() {
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 3' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Fecha Ingreso</label>
-                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="ifg-input" value={itemEditModal.form.fecha_ingreso} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, fecha_ingreso: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
+                                        <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} className="ifg-input" value={itemEditModal.form.fecha_ingreso} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, fecha_ingreso: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} />
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 6' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Observación</label>
@@ -2211,7 +2203,7 @@ function InventarioPage() {
                                 </div>{/* end ifg-grid */}
 
                                 {itemEditModal.form.grupoId && (
-                                    <div style={{ marginTop: '0.8rem', padding: '0.6rem', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                                    <div style={{ marginTop: '0.8rem', padding: '0.6rem', background: '#f8f0e0', borderRadius: '6px', border: '1px solid #e9d3a9' }}>
                                         <small style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
                                             <span style={{ fontSize: '1rem' }}>⚠️</span> 
                                             Al pertenecer a un grupo, este ítem hereda su categoría y venta automáticamente. Para cambiarlas, debes removerlo del grupo o editar el grupo entero.
@@ -2222,7 +2214,7 @@ function InventarioPage() {
                                     {/* ── TELAS Y CUEROS ─────────────────────────────────── */}
                                     <div style={{ marginTop: '1rem', borderTop: '1px solid var(--gray-200)', paddingTop: '0.8rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.3rem' }}>
-                                            <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                            <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#4f6a7f', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                                 🧵 Telas y Cueros (Costos Adicionales)
                                                 <span style={{ fontSize: '0.65rem', fontWeight: '400', textTransform: 'none', color: 'var(--gray-500)', fontStyle: 'italic' }}>
                                                     — Usar punto (.) para decimales, ej: 2.5
@@ -2231,7 +2223,7 @@ function InventarioPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, telas_cueros: [...(prev.form.telas_cueros || []), { tipo: 'tela', referencia: '', color: '', unidad_medida: 'metro', costo_unidad: '', cantidad: '' }] } }))}
-                                                style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                                             >
                                                 <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
                                             </button>
@@ -2250,7 +2242,7 @@ function InventarioPage() {
                                                             <select
                                                                 value={tc.tipo || 'tela'}
                                                                 onChange={e => setItemEditModal(prev => { const tcs = [...prev.form.telas_cueros]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; return { ...prev, form: { ...prev.form, telas_cueros: tcs } }; })}
-                                                                style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#c2410c' : '#0369a1', background: isCuero ? '#fff7ed' : '#f0f9ff', flexShrink: 0 }}
+                                                                style={{ padding: '0.28rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#a8732b' : '#4f6a7f', background: isCuero ? '#f8f0e0' : '#eaeff1', flexShrink: 0 }}
                                                             >
                                                                 <option value="tela">Tela (m)</option>
                                                                 <option value="cuero">Cuero (dm)</option>
@@ -2337,9 +2329,9 @@ function InventarioPage() {
                                     </div>
                                     {/* Resumen costo total */}
                                     {(parseFloat(itemEditModal.form?.costo || 0) > 0 || costosList.length > 0) && (
-                                        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: '600' }}>Costo Total Real:</span>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#15803d' }}>
+                                        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: '#edf3e9', borderRadius: '6px', border: '1px solid #c9dbc2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.72rem', color: '#4c7a4f', fontWeight: '600' }}>Costo Total Real:</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#4c7a4f' }}>
                                                 {formatCOP((parseFloat(itemEditModal.form?.costo || 0)) + costosList.reduce((s, c) => s + parseFloat(c.valor), 0))}
                                             </span>
                                         </div>
@@ -2361,9 +2353,17 @@ function InventarioPage() {
             )}
 
             {/* ── MODAL: QR ──────────────────────────────────────────────────────── */}
+            {historialItem && (
+                <MovimientosUnidad item={historialItem} zonas={zonas} cerrar={() => setHistorialItem(null)}
+                    alCambiar={async () => {
+                        const invRes = await API.get('/suministros/inventario/');
+                        setInventario(invRes.data.results || invRes.data);
+                        showToast('Devolución al proveedor registrada', 'success');
+                    }} />
+            )}
             {qrModal.open && qrModal.item && createPortal(
-                <div className="inv-overlay inv-overlay-visible" onClick={() => setQrModal({ open: false, item: null })}>
-                    <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                <div className="inv-overlay inv-overlay-visible" onClick={cerrarQr}>
+                    <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }} ref={qrRef} role="dialog" aria-modal="true" aria-label="Código QR" tabIndex={-1}>
                         <h3 style={{ marginBottom: '1.5rem', color: 'var(--gray-800)', fontWeight: 800, fontSize: '1.5rem' }}>Código QR</h3>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                             <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
@@ -2390,11 +2390,11 @@ function InventarioPage() {
 
             {/* ── MODAL: TRASLADO ────────────────────────────────────────────────── */}
             {trasladoModal.open && trasladoModal.item && createPortal(
-                <div className="inv-overlay inv-overlay-visible" onMouseDown={e => { if (e.target === e.currentTarget) setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false }); }}>
-                    <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+                <div className="inv-overlay inv-overlay-visible" onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(cambiosTraslado)) cerrarTraslado(); }}>
+                    <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }} ref={trasladoRef} role="dialog" aria-modal="true" aria-label="Trasladar ítem" tabIndex={-1}>
                         <div className="inv-modal-header">
                             <h3 style={{ margin: 0 }}>Trasladar Ítem</h3>
-                            <button className="inv-modal-close" onClick={() => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false })}>&times;</button>
+                            <button className="inv-modal-close" aria-label="Cerrar" data-dialogo-cerrar="" onClick={() => setTrasladoModal({ open: false, item: null, zonaId: '', observacion: '', saving: false })}>&times;</button>
                         </div>
                         <form onSubmit={handleTrasladoSubmit} style={{ padding: '1.5rem' }}>
                             <div style={{ marginBottom: '1rem' }}>
@@ -2435,11 +2435,11 @@ function InventarioPage() {
             )}
             
             {/* ===== TOAST NOTIFICATION ===== */}
-            <div className={`inv-toast inv-toast--${toast.type}${toast.visible ? ' inv-toast--visible' : ''}`}>
-                {toast.type === 'success' ? <FaCheckCircle className="inv-toast-icon" /> : <FaTimes className="inv-toast-icon" />}
+            <div className={`inv-toast inv-toast--${toast.type}${toast.visible ? ' inv-toast--visible' : ''}`} role="status" aria-live={toast.type === 'error' ? 'assertive' : 'polite'}>
+                {toast.type === 'success' ? <FaCheckCircle className="inv-toast-icon" aria-hidden="true" /> : <FaTimes className="inv-toast-icon" aria-hidden="true" />}
                 <span className="inv-toast-msg">{toast.message}</span>
-                <button className="inv-toast-close" onClick={() => setToast(t => ({ ...t, visible: false }))}>
-                    <FaTimes />
+                <button className="inv-toast-close" onClick={() => setToast(t => ({ ...t, visible: false }))} aria-label="Cerrar aviso">
+                    <FaTimes aria-hidden="true" />
                 </button>
             </div>
         </div>

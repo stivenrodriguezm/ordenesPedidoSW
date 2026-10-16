@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaFileInvoiceDollar } from 'react-icons/fa';
 import API from '../services/api';
+import { mensajeDeError } from '../services/errores';
 import { useVendedores } from '../hooks/useSharedData';
 import AppNotification from '../components/AppNotification';
 import { PageHeader, Button, LoadingBlock, ErrorState } from '../components/ui';
@@ -160,11 +161,7 @@ const EditarVenta = () => {
       showNotification('Venta actualizada exitosamente.', 'success');
       navigate('/ventas');
     } catch (error) {
-      if (error.response && error.response.data) {
-        setErrorMessage(`Error al actualizar la venta: ${JSON.stringify(error.response.data)}`);
-      } else {
-        setErrorMessage('Error al actualizar la venta.');
-      }
+      setErrorMessage(`Error al actualizar la venta: ${mensajeDeError(error, 'intenta de nuevo.')}`);
     } finally {
       setIsLoading(false);
     }
@@ -304,7 +301,7 @@ const EditarVenta = () => {
             <div className="form-group">
               <label>Fecha de Venta:</label>
               <input
-                type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
                 name="fecha_venta"
                 value={ventaData.fecha_venta}
                 onChange={handleVentaChange}
@@ -314,7 +311,7 @@ const EditarVenta = () => {
             <div className="form-group">
               <label>Fecha de Entrega:</label>
               <input
-                type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
                 name="fecha_entrega"
                 value={ventaData.fecha_entrega}
                 onChange={handleVentaChange}
@@ -331,14 +328,14 @@ const EditarVenta = () => {
               />
             </div>
             <div className="form-group">
-              <label>Estado de Pedidos:</label>
+              <label title="Ajuste manual; lo normal es finalizarla desde Productos de la venta">Gestión de la venta:</label>
               <select
                 name="estado_pedidos"
                 value={ventaData.estado_pedidos ? 'true' : 'false'}
                 onChange={(e) => setVentaData(prev => ({ ...prev, estado_pedidos: e.target.value === 'true' }))}
               >
                 <option value="false">Pendiente</option>
-                <option value="true">Pedido</option>
+                <option value="true">Finalizada</option>
               </select>
             </div>
             <div className="form-group">
@@ -350,8 +347,8 @@ const EditarVenta = () => {
               >
                 <option value="pendiente">Pendiente</option>
                 <option value="entregado">Entregado</option>
-                {(canAnularOrden || (ventaData.estado || '').toLowerCase() === 'anulado') && (
-                  <option value="anulado">Anulado</option>
+                {(canAnularOrden || (ventaData.estado || '').toLowerCase().startsWith('anulad')) && (
+                  <option value="anulada">Anulado</option>
                 )}
               </select>
             </div>

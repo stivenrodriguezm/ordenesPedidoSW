@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChevronDown, FaFileExport, FaPlus, FaEdit, FaClipboardList } from 'react-icons/fa';
+import { FaChevronDown, FaFileExport, FaPlus, FaEdit, FaClipboardList, FaImage } from 'react-icons/fa';
 import './OrdenesPage.css';
 import './VentasImprovements.css';
 import { AppContext, usePermissions } from '../AppContext';
@@ -14,7 +14,7 @@ import useDebounce from '../hooks/useDebounce';
 import { FaSearch } from 'react-icons/fa';
 
 // El componente OrdenModal no necesita cambios. Se deja por contexto.
-const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading, userRole }) => {
+const OrdenModal = ({ isOpen, onClose, onSave, orden, estados, isLoading, userRole }) => {
   const hasPermission = usePermissions();
   const [formState, setFormState] = useState({ costo: '', estado: '', tela: '' });
   const [costoDisplay, setCostoDisplay] = useState('');
@@ -159,7 +159,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, telas, estados, isLoading,
 
 // Componente principal con las correcciones
 const OrdenesPage = () => {
-  const { proveedores, usuario: user, isLoadingProveedores } = useContext(AppContext);
+  const { proveedores, usuario: user } = useContext(AppContext);
   const hasPermission = usePermissions();
   const navigate = useNavigate();
 
@@ -195,7 +195,6 @@ const OrdenesPage = () => {
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderTelas, setOrderTelas] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [mostrarBuscador, setMostrarBuscador] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
 
   const showNotification = (message, type = 'success') => {
@@ -267,7 +266,7 @@ const OrdenesPage = () => {
       try {
         const response = await API.get('vendedores/');
         setVendedores(response.data.filter(v => v.first_name && v.first_name.trim() !== ''));
-      } catch (error) {
+      } catch {
         setErrorMessage('Error al cargar los vendedores.');
       }
     };
@@ -335,7 +334,7 @@ const OrdenesPage = () => {
         let fetchedOrdenes = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
         setFilteredOrdenes(fetchedOrdenes);
 
-      } catch (error) {
+      } catch {
         setErrorMessage('Error al cargar las órdenes.');
         setFilteredOrdenes([]);
       } finally {
@@ -441,7 +440,7 @@ const OrdenesPage = () => {
       await API.patch(`ordenes-pedido/${id}/`, updates);
       setFilteredOrdenes(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
       setIsEditModalOpen(false); // Cierra el modal en caso de éxito
-    } catch (error) {
+    } catch {
       setErrorMessage('Error al actualizar el pedido.');
     } finally {
       setIsUpdating(false); // Finaliza el estado de carga
@@ -529,7 +528,7 @@ const OrdenesPage = () => {
     }
     return capitalizeEstado(estado);
   };
-  const getTelaClass = (tela) => tela?.toLowerCase().replace(/ /g, '-') || 'default';
+  
 
   // Tono del Badge según la clase de estado calculada por getEstadoClass
   const estadoTone = (estadoClass) => {
@@ -782,6 +781,16 @@ const OrdenesPage = () => {
                                     <span className="label">O.C. / Venta:</span>
                                     <span className="value font-mono">{orden.venta || orden.orden_venta || (orden.es_feria_hogar ? 'FH' : '—')}</span>
                                   </div>
+                                  {orden.es_feria_hogar && orden.imagen_feria_hogar && (
+                                    <div className="info-item">
+                                      <span className="label">Foto Feria:</span>
+                                      <span className="value">
+                                        <a href={orden.imagen_feria_hogar} target="_blank" rel="noopener noreferrer">
+                                          <FaImage /> Ver imagen
+                                        </a>
+                                      </span>
+                                    </div>
+                                  )}
                                   <div className="info-item">
                                     <span className="label">Fecha Pedido:</span>
                                     <span className="value">{formatDate(orden.fecha_pedido)}</span>
@@ -821,6 +830,12 @@ const OrdenesPage = () => {
                                           <tr key={i}>
                                             <td className="text-center">
                                               <span className="product-qty-badge">x{p.cantidad}</span>
+                                              {p.recibidas > 0 && (
+                                                <div className={`recibidas-linea${p.recibidas >= p.cantidad ? ' is-completa' : ''}`}>
+                                                  {p.recibidas >= p.cantidad ? 'Recibida' : `Recibidas ${p.recibidas}/${p.cantidad}`}
+                                                </div>
+                                              )}
+                                              {p.rechazadas > 0 && <div className="rechazadas-linea">Rechazadas {p.rechazadas}</div>}
                                             </td>
                                             <td>
                                               <span className="product-ref-pill">{p.referencia}</span>
@@ -964,6 +979,14 @@ const OrdenesPage = () => {
                         <div className="orden-card">
                           <h4>Información</h4>
                           <p><strong>Venta:</strong> {orden.venta || orden.orden_venta || (orden.es_feria_hogar ? 'FH' : '—')}</p>
+                          {orden.es_feria_hogar && orden.imagen_feria_hogar && (
+                            <p>
+                              <strong>Foto Feria:</strong>{' '}
+                              <a href={orden.imagen_feria_hogar} target="_blank" rel="noopener noreferrer">
+                                <FaImage /> Ver imagen
+                              </a>
+                            </p>
+                          )}
                           <p><strong>Observación:</strong> {orden.observacion || 'Ninguna'}</p>
                           {hasPermission('VER_COSTOS_ORDEN') && (
                             <p><strong>Costo:</strong> <span className="font-mono text-primary">{formatNumber(orden.costo)}</span></p>

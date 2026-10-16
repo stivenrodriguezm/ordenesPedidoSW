@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
 import './OrdenesPage.css';
@@ -8,17 +8,17 @@ import './TelasPage.css';
 import './VentasImprovements.css';
 import { usePageRefresh } from '../hooks/usePageRefresh';
 import useDebounce from '../hooks/useDebounce';
+import { useDialogo } from '../hooks/useDialogo';
 import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport, FaSearch, FaLayerGroup, FaEdit } from 'react-icons/fa';
-import logoFinal from '../assets/logoFinal.png';
+import '../assets/logoFinal.png';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
 import AppNotification from '../components/AppNotification';
-import { PageHeader, Button, Badge, Modal, Skeleton, EmptyState, ErrorState } from '../components/ui';
+import { PageHeader, Button, Modal } from '../components/ui';
 
 const TelasPage = () => {
     const { usuario } = useContext(AppContext);
     const hasPermission = usePermissions();
     const [pedidos, setPedidos] = useState([]);
-    const [ordenes, setOrdenes] = useState([]);
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
     
     const [selectedProveedores, setSelectedProveedores] = useState([]);
@@ -44,15 +44,15 @@ const TelasPage = () => {
     const [showProveedorModal, setShowProveedorModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [createdPedidoId, setCreatedPedidoId] = useState(null);
-    const [pdfData, setPdfData] = useState(null);
     const [editEstadoModal, setEditEstadoModal] = useState({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
     const [notification, setNotification] = useState({ message: '', type: '' });
+    const showNotification = (message, type) => setNotification({ message, type });
     const previewRef = useRef(null);
 
     // Direcciones de Entrega state
     const [direcciones, setDirecciones] = useState([]);
     const [showDireccionModal, setShowDireccionModal] = useState(false);
-    const [isOtraDireccion, setIsOtraDireccion] = useState(false);
+    const [, setIsOtraDireccion] = useState(false);
     const [newDireccion, setNewDireccion] = useState({ nombre: '', detalles: '' });
 
     // New Order Form State
@@ -75,16 +75,25 @@ const TelasPage = () => {
         setLoading(true);
         try {
             let query = '?';
-            if (selectedProveedores.length > 0) {
-                query += `proveedor=${encodeURIComponent(selectedProveedores.join(','))}&`;
-            } else if (hasInitializedProveedores) {
-                query += `proveedor=ninguno_imposible&`;
-            }
 
-            if (selectedEstados.length > 0) {
-                query += `estado=${encodeURIComponent(selectedEstados.join(','))}&`;
+            // Con búsqueda activa, el backend ignora los filtros de Proveedor/Estado
+            // y busca en TODO lo que el usuario puede ver — así "buscar" siempre
+            // encuentra lo que existe, sin depender de qué haya quedado marcado en
+            // esos popovers. page_size más alto para no truncar resultados de búsqueda.
+            if (debouncedSearchTerm) {
+                query += `search=${encodeURIComponent(debouncedSearchTerm)}&page_size=100&`;
             } else {
-                query += `estado=ninguno_imposible&`;
+                if (selectedProveedores.length > 0) {
+                    query += `proveedor=${encodeURIComponent(selectedProveedores.join(','))}&`;
+                } else if (hasInitializedProveedores) {
+                    query += `proveedor=ninguno_imposible&`;
+                }
+
+                if (selectedEstados.length > 0) {
+                    query += `estado=${encodeURIComponent(selectedEstados.join(','))}&`;
+                } else {
+                    query += `estado=ninguno_imposible&`;
+                }
             }
 
             const response = await API.get(`pedidos-telas/${query}`);
@@ -98,32 +107,21 @@ const TelasPage = () => {
 
     useEffect(() => {
         // Only fetch data once providers have been initialized (or if filters change after that)
-        if (hasInitializedProveedores) {
+        if (hasInitializedProveedores || debouncedSearchTerm) {
             fetchData();
         }
-    }, [selectedProveedores, selectedEstados, hasInitializedProveedores]);
+    }, [selectedProveedores, selectedEstados, hasInitializedProveedores, debouncedSearchTerm]);
 
     const fetchInit = useCallback(async () => {
-        await Promise.allSettled([fetchProveedoresTelas(), fetchDirecciones(), fetchOrdenes()]);
+        await Promise.allSettled([fetchProveedoresTelas(), fetchDirecciones()]);
     }, []);
 
     usePageRefresh(fetchInit);
 
-    const fetchOrdenes = async () => {
-        try {
-            const response = await API.get('ordenes-pedido/');
-            const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
-            setOrdenes(data);
-        } catch (error) {
-            try {
-                const response = await API.get('listar-pedidos/');
-                const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
-                setOrdenes(data);
-            } catch (err) {
-                console.error("Error fetching ordenes:", err);
-            }
-        }
-    };
+    const proveedorDialogoRef = useDialogo(showProveedorModal, () => setShowProveedorModal(false), {
+        hayCambios: Boolean(newProveedor.nombre_empresa || newProveedor.nombre_encargado || newProveedor.contacto),
+    });
+    const direccionDialogoRef = useDialogo(showDireccionModal, () => setShowDireccionModal(false));
 
     useEffect(() => {
         if (proveedoresTelas.length > 0 && !hasInitializedProveedores) {
@@ -159,14 +157,7 @@ const TelasPage = () => {
 
     // --- Permisos y edición de estado de PedidoTela ---
     // Devuelve true si el usuario puede VER el botón de editar (acceso al pedido)
-    const canAccessPedidoTela = (pedido) => {
-        if (!usuario) return false;
-        const role = usuario.role?.toLowerCase();
-        if (role === 'administrador' || role === 'auxiliar') return true;
-        // Vendedor: solo sus propios pedidos (backend ya filtra, pero doble check)
-        if (role === 'vendedor') return pedido.usuario === usuario.id;
-        return false;
-    };
+    
 
     // Devuelve true si el select de estado debe estar habilitado
     const canEditEstado = (currentEstado) => {
@@ -297,133 +288,36 @@ const TelasPage = () => {
         }
     };
 
-    const handlePedidoChange = (e) => {
-        const { name, value } = e.target;
-        if (name === 'direccion_entrega') {
-            setIsOtraDireccion(value === 'OTRA');
-            if (value !== 'OTRA') {
-                setNewPedido(prev => ({ ...prev, [name]: value, direccion_entrega_custom: '' }));
-                return;
-            }
-        }
-        setNewPedido(prev => ({ ...prev, [name]: value }));
-    };
+    
 
-    const handleDetalleChange = (index, field, value) => {
-        const newDetalles = [...newPedido.detalles];
-        newDetalles[index][field] = value;
-        setNewPedido(prev => ({ ...prev, detalles: newDetalles }));
-    };
+    
 
-    const addDetalle = () => {
-        setNewPedido(prev => ({
-            ...prev,
-            detalles: [...prev.detalles, { tela: '', cantidad: '' }]
-        }));
-    };
+    
 
-    const removeDetalle = (index) => {
-        const newDetalles = newPedido.detalles.filter((_, i) => i !== index);
-        setNewPedido(prev => ({ ...prev, detalles: newDetalles }));
-    };
+    
 
-    const handleCreatePedido = async (e) => {
-        e.preventDefault();
+    
 
-        // Si es CUSTOM, nos aseguramos que el textbox tenga contenido
-        let dirFila = newPedido.direccion_entrega;
-        if (isOtraDireccion) {
-            if (!newPedido.direccion_entrega_custom.trim()) {
-                showNotification("Por favor escriba la dirección de entrega.", 'error');
-                return;
-            }
-            dirFila = newPedido.direccion_entrega_custom;
-        } else {
-            // Buscamos los detalles de la dirección predefinida
-            const addr = direcciones.find(d => String(d.id) === String(newPedido.direccion_entrega));
-            if (addr) dirFila = `${addr.nombre} - ${addr.detalles}`;
-        }
+    
 
-        try {
-            const payload = {
-                proveedor: parseInt(newPedido.proveedor),
-                direccion_entrega: dirFila,
-                estado: 'Pendiente', // Always Pendiente
-                orden_asociada_id: newPedido.orden_asociada_id ? parseInt(newPedido.orden_asociada_id) : null,
-                detalles: newPedido.detalles.filter(d => d.tela && d.cantidad)
-            };
+    
 
-            const response = await API.post('pedidos-telas/', payload);
-
-            // Save data for PDF generation BEFORE clearing the form
-            setPdfData({
-                proveedor: newPedido.proveedor,
-                direccion_entrega: dirFila,
-                orden_asociada_id: newPedido.orden_asociada_id,
-                detalles: newPedido.detalles.filter(d => d.tela && d.cantidad)
-            });
-
-            setCreatedPedidoId(response.data.id);
-            setShowPedidoModal(false);
-            setNewPedido({
-                proveedor: '',
-                direccion_entrega: '',
-                direccion_entrega_custom: '',
-                orden_asociada_id: '',
-                detalles: [{ tela: '', cantidad: '' }]
-            });
-            setIsOtraDireccion(false);
-            fetchData();
-        } catch (error) {
-            console.error("Error creating pedido tela:", error);
-            setNotification({ message: 'Error al crear pedido de tela', type: 'error' });
-        }
-    };
-
-    const getFormattedDate = () => {
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-        const month = monthNames[today.getMonth()];
-        const year = today.getFullYear();
-        return `${day}-${month}-${year}`;
-    };
-
-    const getOrdenId = (id) => {
-        const orden = ordenes.find(o => o.id === parseInt(id));
-        return orden ? orden.id : id;
-    };
-
-    const getVentaId = (ordenAsociadaId) => {
-        if (pdfData?.venta_id) return pdfData.venta_id;
-        if (!ordenAsociadaId) return null;
-        const orden = ordenes.find(o => String(o.id) === String(ordenAsociadaId));
-        return orden ? (orden.venta || orden.orden_venta || null) : null;
-    };
+    
 
     const getFabricante = (pedido) => {
         if (pedido.orden_proveedor_nombre && pedido.orden_proveedor_nombre !== '-' && pedido.orden_proveedor_nombre !== 'N/A') {
             return pedido.orden_proveedor_nombre;
         }
-        if (pedido.orden_id) {
-            const orden = ordenes.find(o => String(o.id) === String(pedido.orden_id));
-            if (orden && orden.proveedor_nombre && orden.proveedor_nombre !== 'N/A') {
-                return orden.proveedor_nombre;
-            }
-        }
+        // El backend ya resuelve el fabricante de la orden asociada; antes se
+        // descargaba la primera página de órdenes solo como respaldo (P08-03).
         return '-';
     };
 
-    const displayedPedidos = useMemo(() => {
-        if (!debouncedSearchTerm) return pedidos;
-        const term = debouncedSearchTerm.toLowerCase();
-        return pedidos.filter(pedido => 
-            pedido.id?.toString().includes(term) || 
-            pedido.usuario_nombre?.toLowerCase().includes(term) ||
-            pedido.proveedor_nombre?.toLowerCase().includes(term) ||
-            pedido.orden_id?.toString().includes(term)
-        );
-    }, [pedidos, debouncedSearchTerm]);
+    // El filtrado (por proveedor/estado O por búsqueda de texto) ya lo hace
+    // el backend en fetchData — re-filtrar acá en cliente con una lista
+    // reducida de campos (sin fabricante/vendedor/venta) era lo que borraba
+    // resultados válidos que el servidor sí encontraba correctamente.
+    const displayedPedidos = pedidos;
 
     const exportPedidos = async () => {
         const XLSX = await import('xlsx');
@@ -510,7 +404,7 @@ const TelasPage = () => {
                                     </button>
                                 </div>
                                 {proveedoresTelas.length === 0 ? (
-                                    <div style={{ padding: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>No hay proveedores</div>
+                                    <div style={{ padding: '0.5rem', fontSize: '0.8rem', color: '#72726a' }}>No hay proveedores</div>
                                 ) : (
                                     proveedoresTelas.map(p => (
                                         <label key={p.id} className="v-popover-item">
@@ -584,7 +478,7 @@ const TelasPage = () => {
                                         </tr>
                                     ))
                                 ) : displayedPedidos.length === 0 ? (
-                                    <tr><td colSpan="11" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No hay pedidos registrados</td></tr>
+                                    <tr><td colSpan="11" style={{ textAlign: 'center', color: '#72726a', padding: '2rem' }}>No hay pedidos registrados</td></tr>
                                 ) : (
                                     displayedPedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
@@ -592,24 +486,24 @@ const TelasPage = () => {
                                             <td className="font-mono" style={{ fontWeight: '600' }}>#{pedido.id}</td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>
+                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e4e3dc', color: '#57574f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>
                                                         {pedido.usuario_nombre ? pedido.usuario_nombre.substring(0, 2).toUpperCase() : 'U'}
                                                     </div>
                                                     <span style={{ fontWeight: '500' }}>{pedido.usuario_nombre}</span>
                                                 </div>
                                             </td>
-                                            <td><span style={{ fontWeight: '600', color: '#0f172a' }}>{pedido.proveedor_nombre}</span></td>
-                                            <td><span style={{ fontWeight: '500', color: '#475569' }}>{getFabricante(pedido)}</span></td>
-                                            <td style={{ color: '#64748b', fontSize: '0.8rem' }}>{pedido.fecha_creacion}</td>
+                                            <td><span style={{ fontWeight: '600', color: '#171815' }}>{pedido.proveedor_nombre}</span></td>
+                                            <td><span style={{ fontWeight: '500', color: '#57574f' }}>{getFabricante(pedido)}</span></td>
+                                            <td style={{ color: '#72726a', fontSize: '0.8rem' }}>{pedido.fecha_creacion}</td>
                                             <td>
                                                 <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
                                                     {pedido.estado}
                                                 </span>
                                             </td>
-                                            <td>{pedido.orden_id ? <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#3b82f6' }}>#{pedido.orden_id}</span> : '-'}</td>
-                                            <td>{pedido.venta_id ? <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#0d9488' }}>#{pedido.venta_id}</span> : '-'}</td>
-                                            <td><span style={{ fontWeight: '500', color: '#475569' }}>{pedido.venta_vendedor_nombre || '-'}</span></td>
-                                            <td className="truncate-text" style={{ maxWidth: '350px', fontSize: '0.85rem', color: '#334155' }} title={pedido.direccion_entrega}>{pedido.direccion_entrega}</td>
+                                            <td>{pedido.orden_id ? <span style={{ backgroundColor: '#f2f1eb', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#171815' }}>#{pedido.orden_id}</span> : '-'}</td>
+                                            <td>{pedido.venta_id ? <span style={{ backgroundColor: '#f2f1eb', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#0d9488' }}>#{pedido.venta_id}</span> : '-'}</td>
+                                            <td><span style={{ fontWeight: '500', color: '#57574f' }}>{pedido.venta_vendedor_nombre || '-'}</span></td>
+                                            <td className="truncate-text" style={{ maxWidth: '350px', fontSize: '0.85rem', color: '#3e3e37' }} title={pedido.direccion_entrega}>{pedido.direccion_entrega}</td>
                                             <td style={{ width: '50px', textAlign: 'right' }}>
                                                 <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(pedido.id); }} style={{ marginLeft: 'auto' }}>
                                                     {expandedPedidoId === pedido.id ? <FaChevronUp /> : <FaChevronDown />}
@@ -696,7 +590,7 @@ const TelasPage = () => {
                                                                                      <td style={{ textAlign: 'right', fontWeight: '600' }}>{detalle.cantidad}</td>
                                                                                  </tr>
                                                                              ))
-                                                                             : <tr><td colSpan="2" style={{ color: 'var(--text-muted, #94a3b8)', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles registrados.</td></tr>
+                                                                             : <tr><td colSpan="2" style={{ color: 'var(--text-muted, #a3a398)', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles registrados.</td></tr>
                                                                          }
                                                                      </tbody>
                                                                  </table>
@@ -717,7 +611,7 @@ const TelasPage = () => {
                 <div className="mobile-view">
                     {loading ? (
                         Array.from({ length: 5 }).map((_, index) => (
-                            <div key={`skeleton-card-${index}`} className="mobile-card skeleton-item" style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+                            <div key={`skeleton-card-${index}`} className="mobile-card skeleton-item" style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e4e3dc', backgroundColor: '#fff' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <div className="skeleton skeleton-text" style={{ width: '50px' }}></div>
                                     <div className="skeleton skeleton-badge" style={{ width: '80px' }}></div>
@@ -728,36 +622,36 @@ const TelasPage = () => {
                         ))
                     ) : displayedPedidos.length > 0 ? (
                         displayedPedidos.map(pedido => (
-                            <div className="mobile-card" key={pedido.id} style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                            <div className="mobile-card" key={pedido.id} style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e4e3dc', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                 <div className="mobile-card-header" onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
                                     <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                        <span className="card-id" style={{ fontWeight: 'bold', color: '#0f172a' }}>PT #{pedido.id}</span>
+                                        <span className="card-id" style={{ fontWeight: 'bold', color: '#171815' }}>PT #{pedido.id}</span>
                                         <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
                                             {pedido.estado}
                                         </span>
                                     </div>
                                     <div className="header-main" style={{ marginBottom: '0.5rem' }}>
-                                        <div style={{ fontWeight: '600', fontSize: '1rem', color: '#1e293b' }}>
+                                        <div style={{ fontWeight: '600', fontSize: '1rem', color: '#2a2a25' }}>
                                             {pedido.proveedor_nombre}
                                         </div>
-                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                            Fabricante: <span style={{ fontWeight: '500', color: '#475569' }}>{getFabricante(pedido)}</span>
+                                        <div style={{ fontSize: '0.85rem', color: '#72726a' }}>
+                                            Fabricante: <span style={{ fontWeight: '500', color: '#57574f' }}>{getFabricante(pedido)}</span>
                                         </div>
                                     </div>
-                                    <div className="header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#64748b' }}>
+                                    <div className="header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#72726a' }}>
                                         <span>{pedido.fecha_creacion}</span>
-                                        <span style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                                        <span style={{ backgroundColor: '#f2f1eb', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
                                             {pedido.orden_id ? `Ord #${pedido.orden_id}` : 'Sin Orden'}
                                         </span>
                                     </div>
                                 </div>
                                 
                                 {expandedPedidoId === pedido.id && (
-                                    <div className="mobile-card-expanded" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                                    <div className="mobile-card-expanded" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e4e3dc' }}>
                                         <div style={{ marginBottom: '1rem' }}>
-                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Usuario Creador</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#72726a', marginBottom: '0.25rem' }}>Usuario Creador</div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#e4e3dc', color: '#57574f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
                                                     {pedido.usuario_nombre ? pedido.usuario_nombre.substring(0, 2).toUpperCase() : 'U'}
                                                 </div>
                                                 <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{pedido.usuario_nombre}</span>
@@ -765,14 +659,14 @@ const TelasPage = () => {
                                         </div>
                                         
                                         <div style={{ marginBottom: '1rem' }}>
-                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Dirección de Entrega</div>
-                                            <div style={{ fontSize: '0.9rem', color: '#334155' }}>{pedido.direccion_entrega}</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#72726a', marginBottom: '0.25rem' }}>Dirección de Entrega</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#3e3e37' }}>{pedido.direccion_entrega}</div>
                                         </div>
 
                                         {pedido.observacion && (
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>Observación</div>
-                                                <div style={{ fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-line' }}>{pedido.observacion}</div>
+                                                <div style={{ fontSize: '0.85rem', color: '#72726a', marginBottom: '0.25rem' }}>Observación</div>
+                                                <div style={{ fontSize: '0.9rem', color: '#3e3e37', whiteSpace: 'pre-line' }}>{pedido.observacion}</div>
                                             </div>
                                         )}
 
@@ -794,7 +688,7 @@ const TelasPage = () => {
                                         )}
 
                                         <div className="tela-expanded-body" style={{ padding: '0' }}>
-                                            <h4 style={{ fontSize: '0.9rem', color: '#0f172a', marginBottom: '0.5rem' }}>Detalles de Telas</h4>
+                                            <h4 style={{ fontSize: '0.9rem', color: '#171815', marginBottom: '0.5rem' }}>Detalles de Telas</h4>
                                             <table className="details-table" style={{ width: '100%' }}>
                                                 <thead>
                                                     <tr>
@@ -810,7 +704,7 @@ const TelasPage = () => {
                                                                 <td style={{ fontSize: '0.85rem' }}>{detalle.cantidad}</td>
                                                             </tr>
                                                         ))
-                                                        : <tr><td colSpan="2" style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles.</td></tr>
+                                                        : <tr><td colSpan="2" style={{ color: '#a3a398', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles.</td></tr>
                                                     }
                                                 </tbody>
                                             </table>
@@ -820,7 +714,7 @@ const TelasPage = () => {
                             </div>
                         ))
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#72726a', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e4e3dc' }}>
                             No hay pedidos registrados
                         </div>
                     )}
@@ -853,7 +747,7 @@ const TelasPage = () => {
             >
                 <div className="ds-field">
                     <label className="ds-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                        PT #{editEstadoModal.pedidoId} &mdash; Estado actual: <strong style={{ color: 'var(--accent, #1e3a8a)' }}>{editEstadoModal.currentEstado}</strong>
+                        PT #{editEstadoModal.pedidoId} &mdash; Estado actual: <strong style={{ color: 'var(--accent, #171815)' }}>{editEstadoModal.currentEstado}</strong>
                     </label>
                     <select
                         className="ds-select"
@@ -866,7 +760,7 @@ const TelasPage = () => {
                         <option value="En Lottus">En Lottus</option>
                     </select>
                     {!canEditEstado(editEstadoModal.currentEstado) && (
-                        <p className="ds-field__hint" style={{ color: 'var(--danger, #ef4444)', marginTop: '0.5rem' }}>
+                        <p className="ds-field__hint" style={{ color: 'var(--danger, #a8432f)', marginTop: '0.5rem' }}>
                             🔒 No se puede editar un pedido en estado "En fabrica".
                         </p>
                     )}
@@ -876,7 +770,7 @@ const TelasPage = () => {
             {/* Modal Crear Proveedor */}
             {showProveedorModal && createPortal(
                 <div className="modal-overlay">
-                    <div className="modal-content">
+                    <div className="modal-content" ref={proveedorDialogoRef} role="dialog" aria-modal="true" aria-label="Nuevo proveedor de telas" tabIndex={-1}>
                         <h3>Nuevo Proveedor de Telas</h3>
                         <form onSubmit={handleCreateProveedor}>
                             <div className="form-group">
@@ -904,21 +798,21 @@ const TelasPage = () => {
             {/* Modal Crear Dirección (Solo admin o auxiliar) */}
             {showDireccionModal && createPortal(
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
+                    <div className="modal-content" style={{ maxWidth: '500px' }} ref={direccionDialogoRef} role="dialog" aria-modal="true" aria-label="Gestionar direcciones de entrega" tabIndex={-1}>
                         <div className="modal-header">
                             <h3>Gestionar Direcciones de Entrega</h3>
-                            <button className="modal-close" type="button" onClick={() => setShowDireccionModal(false)}>×</button>
+                            <button className="modal-close" type="button" onClick={() => setShowDireccionModal(false)} aria-label="Cerrar" data-dialogo-cerrar="">×</button>
                         </div>
 
                         <div className="direcciones-list" style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                             {direcciones.length === 0 ? (
-                                <p style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>No hay direcciones registradas.</p>
+                                <p style={{ color: '#72726a', fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>No hay direcciones registradas.</p>
                             ) : (
                                 direcciones.map(d => (
-                                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: '6px', marginBottom: '0.5rem' }}>
+                                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem', borderBottom: '1px solid #e4e3dc', background: '#faf9f5', borderRadius: '6px', marginBottom: '0.5rem' }}>
                                         <div>
-                                            <strong style={{ fontSize: '0.9rem', color: '#1e293b', display: 'block' }}>{d.nombre}</strong>
-                                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{d.detalles}</span>
+                                            <strong style={{ fontSize: '0.9rem', color: '#2a2a25', display: 'block' }}>{d.nombre}</strong>
+                                            <span style={{ fontSize: '0.8rem', color: '#72726a' }}>{d.detalles}</span>
                                         </div>
                                         <button type="button" className="btn-icon btn-remove" onClick={() => handleDeleteDireccion(d.id)} title="Eliminar dirección" style={{ padding: '0.25rem' }}>
                                             <FaTrashAlt />
@@ -928,9 +822,9 @@ const TelasPage = () => {
                             )}
                         </div>
 
-                        <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '1.5rem 0' }} />
+                        <hr style={{ border: 'none', borderTop: '1px solid #e4e3dc', margin: '1.5rem 0' }} />
 
-                        <h4 style={{ fontSize: '1rem', color: '#1e293b', marginBottom: '1rem' }}>Agregar Nueva Dirección</h4>
+                        <h4 style={{ fontSize: '1rem', color: '#2a2a25', marginBottom: '1rem' }}>Agregar Nueva Dirección</h4>
                         <form onSubmit={handleCreateDireccion}>
                             <div className="form-group">
                                 <label>Nombre Corto (Ej. "Bodega Principal")</label>

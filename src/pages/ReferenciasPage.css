@@ -36,7 +36,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1.25rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     font-weight: 600;
     font-size: 0.9rem;
     cursor: pointer;
@@ -61,7 +61,7 @@
     font-size: 0.78rem;
     font-weight: 600;
     background: linear-gradient(135deg, #ede9fe, #ddd6fe);
-    color: #4f46e5;
+    color: var(--accent);
     border: 1px solid #c4b5fd;
     white-space: nowrap;
 }
@@ -83,7 +83,7 @@
 .mgmt-input {
     padding: 0.65rem 0.9rem;
     border: 1px solid var(--gray-200);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     font-size: 0.9rem;
     background: var(--gray-50);
     color: var(--gray-700);
@@ -93,7 +93,7 @@
 
 .mgmt-input:focus {
     border-color: var(--info);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.1);
     background: var(--surface);
 }
 
@@ -112,7 +112,7 @@
     justify-content: space-between;
     padding: 0.6rem 1rem;
     background: var(--gray-50);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-200);
 }
 
@@ -122,19 +122,19 @@
     color: var(--danger);
     cursor: pointer;
     padding: 0.3rem;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     transition: background 0.2s;
     display: flex;
     align-items: center;
 }
 
 .delete-btn:hover {
-    background: #fee2e2;
+    background: var(--danger-soft);
 }
 
 .ordenes-container {
     background-color: var(--surface);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
     overflow: hidden;
     border: 1px solid var(--gray-200);
@@ -236,7 +236,7 @@
     color: var(--gray-400);
     cursor: pointer;
     padding: 0.4rem;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -263,7 +263,7 @@
 
 .ref-modal-content {
     background: white;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     width: 90%;
     max-width: 600px;
     max-height: 90vh;
@@ -332,7 +332,7 @@
     width: 100%;
     padding: 0.75rem;
     border: 1px solid var(--gray-200);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     font-size: 0.9rem;
     transition: all 0.2s;
     background-color: var(--gray-50);
@@ -345,7 +345,7 @@
 .form-group textarea:focus {
     outline: none;
     border-color: var(--info);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.1);
     background-color: var(--surface);
 }
 
@@ -399,7 +399,7 @@
    ========================================================================== */
 .subcat-modal {
     background: var(--surface);
-    border-radius: 16px;
+    border-radius: var(--r-xl);
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     width: 95%;
     max-width: 640px;
@@ -428,8 +428,8 @@
 .subcat-modal__header-icon {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
-    background: rgba(37, 99, 235, 0.1);
+    border-radius: var(--r-sm);
+    background: rgba(164, 141, 102, 0.1);
     color: var(--info);
     display: flex;
     align-items: center;
@@ -478,7 +478,7 @@
 
 .subcat-notif {
     padding: 0.6rem 0.85rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     font-size: 0.8rem;
     font-weight: 500;
     display: flex;
@@ -487,15 +487,15 @@
 }
 
 .subcat-notif--success {
-    background: #dcfce7;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+    background: var(--success-soft);
+    color: var(--success);
+    border: 1px solid var(--success-line);
 }
 
 .subcat-notif--error {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger-line);
 }
 
 .subcat-section {
@@ -504,7 +504,7 @@
     gap: 0.6rem;
     background: var(--gray-50);
     padding: 0.85rem 1rem;
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     border: 1px solid var(--gray-200);
 }
 
@@ -552,7 +552,7 @@
 .subcat-form__input {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--gray-300);
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     font-size: 0.85rem;
     background: var(--surface);
     color: var(--gray-800);
@@ -565,7 +565,7 @@
 .subcat-form__select:focus,
 .subcat-form__input:focus {
     border-color: var(--info);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.12);
 }
 
 .subcat-form__submit {
@@ -573,7 +573,7 @@
     align-items: center;
     justify-content: center;
     padding: 0.5rem 1rem;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     font-weight: 600;
     font-size: 0.8rem;
     cursor: pointer;
@@ -622,13 +622,13 @@
 .subcat-chip--active {
     background: linear-gradient(135deg, #ede9fe, #ddd6fe);
     border-color: #c4b5fd;
-    color: #4f46e5;
+    color: var(--accent);
 }
 
 .subcat-list-wrap {
     max-height: 420px;
     overflow-y: auto;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-200);
     background: var(--surface);
     flex: 1;
@@ -684,7 +684,7 @@
 
 .subcat-list__cat {
     font-size: 0.68rem;
-    color: #828fa3;
+    color: var(--gray-500);
     background: var(--gray-100);
     padding: 0.1rem 0.35rem;
     border-radius: 4px;
@@ -713,7 +713,7 @@
     background: white;
     color: var(--gray-600);
     padding: 0.65rem 1.25rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     font-weight: 600;
     border: 1px solid var(--gray-300);
     cursor: pointer;

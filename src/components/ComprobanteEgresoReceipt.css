@@ -12,6 +12,8 @@
   font-family: "Segoe UI", Arial, sans-serif;
   padding: 2.5rem 2.75rem;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .cer-header {
@@ -66,6 +68,23 @@
   color: #475569;
   font-weight: 600;
   margin-top: 0.1rem;
+}
+
+.cer-doc-status-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  background: #f1f5f9;
+  border: 1.5px solid #0f172a;
+  border-radius: 3px;
+}
+
+.cer-status-text {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08rem;
+  color: #0f172a;
 }
 
 .cer-meta-grid {
@@ -306,6 +325,17 @@
   margin-top: 0.1rem;
 }
 
+.cer-semantica-nota {
+  margin-top: 1rem;
+  font-size: 0.62rem;
+  color: #475569;
+  line-height: 1.4;
+  font-style: italic;
+  padding: 0.45rem 0.65rem;
+  background: #f8fafc;
+  border-left: 2.5px solid #0f172a;
+}
+
 .cer-footer {
   margin-top: 1.5rem;
   padding-top: 0.5rem;
@@ -316,3 +346,34 @@
   text-transform: uppercase;
   letter-spacing: 0.05rem;
 }
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: letter portrait;
+    margin: 12mm;
+  }
+  body, .cer-page {
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    background: transparent !important;
+  }
+  .cer-table tr,
+  .cer-factura-row,
+  .cer-productos-row,
+  .cer-total-card,
+  .cer-firma-box,
+  .cer-meta-grid,
+  .cer-concepto,
+  .cer-notas,
+  .cer-semantica-nota,
+  .cer-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+

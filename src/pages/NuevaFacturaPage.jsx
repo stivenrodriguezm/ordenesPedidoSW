@@ -1,20 +1,21 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import API from '../services/api';
-import { usePendientesIds } from '../hooks/useSharedData';
-import { AppContext, usePermissions } from '../AppContext';
+
+import { AppContext } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
 import { getTodayStr } from '../utils/dates';
-import { 
-    FaPlus, FaTrashAlt, FaTimes, FaBoxOpen, FaImage, FaCamera, FaUpload, 
-    FaLayerGroup, FaCheckCircle, FaExclamationCircle, FaFileInvoiceDollar, 
-    FaClipboardList, FaBuilding, FaCalendarAlt, FaArrowLeft, FaDollarSign, 
-    FaStickyNote, FaTag, FaBoxes, FaMapMarkerAlt, FaShoppingCart, FaUserCheck,
-    FaChevronDown, FaSearch
+import {
+    FaPlus, FaTrashAlt, FaTimes,
+    FaLayerGroup, FaExclamationCircle, FaFileInvoiceDollar,
+    FaClipboardList, FaBuilding, FaCalendarAlt, FaDollarSign,
+    FaStickyNote, FaTag, FaBoxes,
+    FaChevronDown, FaSearch, FaLock, FaSpinner
 } from 'react-icons/fa';
-import AppNotification from '../components/AppNotification';
+import '../components/AppNotification';
 import { PageHeader, Button } from '../components/ui';
+import PedidosPorFacturar from '../components/facturas/PedidosPorFacturar';
 import './NuevaFacturaPage.css';
 
 const emptyRef = () => ({ 
@@ -32,6 +33,8 @@ const emptyRef = () => ({
     zonaId: '',
     ventaId: '', 
     opId: '',
+    // Línea de la OP que se recibe con esta fila (P11-01): descuenta lo pendiente.
+    detallePedidoId: '',
     imagen: null, 
     visible: true,
     telas_cueros: [], 
@@ -45,9 +48,73 @@ const emptyForm = () => ({
     fechaPago: '',
     proveedorId: '',
     observaciones: '',
+    estado: 'pendiente',
     productos: [{ ...emptyRef() }],
-    grupoInstances: [], 
+    grupoInstances: [],
 });
+
+// Reconstruye una fila de "producto" del formulario a partir de un ítem de
+// Inventario ya existente (para precargar el modo edición).
+const buildRowFromItem = (it) => ({
+    // Unidades de inventario que representa la fila: al guardar se envían para
+    // que el backend las actualice en sitio (mismo ID/QR/historial) en vez de
+    // borrarlas y recrearlas.
+    itemIds: [it.id_referencia],
+    referenciaId: it.referencia ? String(it.referencia) : '',
+    categoriaId: it.categoria ? String(it.categoria) : '',
+    subcategoriaId: it.subcategoria ? String(it.subcategoria) : '',
+    variacion: it.variacion || '',
+    costo: it.costo_especifico != null ? String(parseInt(it.costo_especifico)) : '',
+    costoDisplay: it.costo_especifico ? formatCOP(parseInt(it.costo_especifico)) : '',
+    cantidad: 1,
+    grupoLocalId: it.grupo_id ? String(it.grupo_id) : '',
+    observacion: it.observacion || '',
+    disponibilidad: it.disponibilidad || 'exhibicion',
+    estado_fisico: it.estado_fisico || 'buen_estado',
+    zonaId: it.zona ? String(it.zona) : '',
+    ventaId: it.venta_id ? String(it.venta_id) : (it.venta ? String(it.venta) : ''),
+    opId: it.pedido ? String(it.pedido) : '',
+    detallePedidoId: it.detalle_pedido ? String(it.detalle_pedido) : '',
+    imagen: it.imagen || null,
+    visible: true,
+    telas_cueros: (it.telas_cueros || []).map(tc => ({
+        tipo: tc.tipo || 'tela',
+        referencia: tc.referencia || '',
+        color: tc.color || '',
+        costo_unidad: tc.costo_unidad != null ? String(parseInt(tc.costo_unidad)) : '',
+        cantidad: tc.cantidad != null ? String(tc.cantidad) : '',
+    })),
+});
+
+// Agrupa los ítems de inventario editables (aún no entregados) en filas de
+// "producto + cantidad" iguales al shape que usa el formulario de creación.
+// Los ítems con telas/cueros, o ya asociados a una venta, nunca se fusionan
+// entre sí (cada uno es único) — fusionarlos colapsaría su `ventaId`
+// individual en una sola fila y perdería el vínculo con su venta al guardar.
+const buildEditableRows = (items) => {
+    const groups = new Map();
+    items.forEach(it => {
+        const row = buildRowFromItem(it);
+        const isUnique = (it.telas_cueros && it.telas_cueros.length > 0) || Boolean(it.venta_id || it.venta);
+        const key = isUnique
+            ? `unique-${it.id_referencia}`
+            : [it.referencia, it.categoria, it.subcategoria, it.variacion, it.costo_especifico, it.grupo_id, it.disponibilidad, it.estado_fisico, it.zona, it.observacion || '', it.detalle_pedido || ''].join('||');
+        if (!isUnique && groups.has(key)) {
+            const fila = groups.get(key);
+            fila.cantidad += 1;
+            fila.itemIds.push(it.id_referencia);
+        } else {
+            groups.set(key, row);
+        }
+    });
+    return Array.from(groups.values());
+};
+
+const ESTADO_LABELS = {
+    pendiente: 'Pendiente',
+    pagada: 'Pagada',
+    anulada: 'Anulada',
+};
 
 let _grupoCounter = 0;
 const newGrupoLocalId = () => `g_${++_grupoCounter}_${Date.now()}`;
@@ -93,13 +160,19 @@ const extractErrorMessage = (data) => {
 };
 
 export default function NuevaFacturaPage() {
-    const { proveedores, usuario, notify } = useContext(AppContext);
-    const hasPermission = usePermissions();
+    const { proveedores, notify } = useContext(AppContext);
+    
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { id: facturaId } = useParams();
+    const isEditMode = !!facturaId;
 
     const [isCreating, setIsCreating] = useState(false);
     const [submitError, setSubmitError] = useState(null);
+    const [isLoadingFactura, setIsLoadingFactura] = useState(isEditMode);
+    const [loadError, setLoadError] = useState(null);
+    const [lockedItems, setLockedItems] = useState([]);
+    const [extraGrupos, setExtraGrupos] = useState([]);
 
     // Use global notification
     const showToast = (message, type = 'success') => {
@@ -123,7 +196,7 @@ export default function NuevaFacturaPage() {
         }
     });
 
-    const { data: ordenesPendientes = [] } = usePendientesIds();
+    
 
     const { data: gruposActivosRaw = [] } = useQuery({
         queryKey: ['suministros-grupos'],
@@ -160,11 +233,112 @@ export default function NuevaFacturaPage() {
 
     // Form state
     const [form, setForm] = useState(emptyForm());
+    const [searchParams] = useSearchParams();
+    const pedidoOrigen = searchParams.get('pedido');
+    const [errorPedidoOrigen, setErrorPedidoOrigen] = useState('');
+    const [cargandoPedidoOrigen, setCargandoPedidoOrigen] = useState(false);
+    // Producto pedido al proveedor → fila de la factura (2026-10-15): referencia, cantidad
+    // pendiente, venta, pedido, detalle, telas y el costo sugerido desde la lista de precios.
+    const filaDesdePedido = (p) => {
+        const ref = referencias.find(r => String(r.id) === String(p.referencia));
+        const categoriaOk = p.categoria && (!ref || !ref.categorias?.length || ref.categorias.map(String).includes(String(p.categoria)));
+        const subOk = categoriaOk && p.subcategoria && (!ref || !ref.subcategorias?.length || ref.subcategorias.map(String).includes(String(p.subcategoria)));
+        const costo = p.costo_sugerido ? String(parseInt(p.costo_sugerido.valor, 10) || '') : '';
+        return {
+            ...emptyRef(), referenciaId: String(p.referencia || ''), cantidad: p.cantidad,
+            categoriaId: categoriaOk ? String(p.categoria) : '', subcategoriaId: subOk ? String(p.subcategoria) : '',
+            variacion: p.detalle || '', costo, costoDisplay: costo ? formatCOP(parseInt(costo, 10)) : '',
+            ventaId: String(p.venta || ''), opId: String(p.pedido), detallePedidoId: String(p.detalle_pedido),
+            observacion: p.descripcion && p.descripcion !== '-' ? p.descripcion : '', disponibilidad: p.venta ? 'cliente' : 'exhibicion',
+            telas_cueros: (p.telas || []).map(t => ({ tipo: t.tipo || 'tela', referencia: t.referencia || '', color: t.color || '',
+                cantidad: t.cantidad || '', costo_unidad: t.costo_unidad ? String(parseInt(t.costo_unidad, 10)) : '' })),
+            _sugerido: p.costo_sugerido || null,
+        };
+    };
+    const agregarDesdePedidos = (filas) => setForm(prev => {
+        // Las filas vacías (sin referencia ni costo) se reemplazan por los productos elegidos.
+        const conDatos = prev.productos.filter(r => r.referenciaId || r.costo);
+        return { ...prev, productos: [...conDatos, ...filas.map(filaDesdePedido)] };
+    });
+    const agregadosDePedido = new Set(form.productos.map(r => r.detallePedidoId).filter(Boolean));
+
+    useEffect(() => {
+        if (isEditMode || !pedidoOrigen) return;
+        let activa = true;
+        setCargandoPedidoOrigen(true);
+        API.get(`/productos-venta/pedidos/${pedidoOrigen}/recepcion/`).then(r => {
+            if (!activa) return;
+            if (!r.data.productos.length) { setErrorPedidoOrigen('Este pedido ya está recibido. No hay unidades pendientes.'); return; }
+            setForm(prev => ({ ...prev, proveedorId: String(r.data.proveedor), productos: r.data.productos.map(filaDesdePedido) }));
+        }).catch(e => { if (activa) setErrorPedidoOrigen(e.response?.data?.error || 'No se pudo cargar el pedido de origen.'); })
+            .finally(() => { if (activa) setCargandoPedidoOrigen(false); });
+        return () => { activa = false; };
+    }, [pedidoOrigen, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const [newGrupoName, setNewGrupoName] = useState('');
     const [newGrupoCategoria, setNewGrupoCategoria] = useState('');
     const [newGrupoSubcategoria, setNewGrupoSubcategoria] = useState('');
 
-    const { data: ordenesProveedor = [], refetch: refetchOrdenesProveedor } = useQuery({
+    // Modo edición: precarga la factura existente y separa sus ítems en
+    // "editables" (aún no entregados, se muestran como filas normales del
+    // formulario) y "bloqueados" (ya entregados — el backend los preserva
+    // intactos y este formulario solo los muestra en modo lectura). Estar
+    // asociado a una venta NO bloquea el ítem: puede llevar tiempo en bodega
+    // antes de entregarse, y en ese lapso debe seguir siendo editable por si
+    // hay un error. Solo `disponibilidad === 'entregado'` bloquea.
+    useEffect(() => {
+        if (!isEditMode) return;
+        let cancelled = false;
+        setIsLoadingFactura(true);
+        setLoadError(null);
+        API.get(`/suministros/facturas/${facturaId}/`).then(res => {
+            if (cancelled) return;
+            const fData = res.data;
+            const items = fData.items_inventario || [];
+            const locked = items.filter(it => it.disponibilidad === 'entregado');
+            const editable = items.filter(it => it.disponibilidad !== 'entregado');
+            const rows = buildEditableRows(editable);
+
+            const extraGruposMap = new Map();
+            items.forEach(it => {
+                if (it.grupo_id && it.grupo_nombre) extraGruposMap.set(String(it.grupo_id), it.grupo_nombre);
+            });
+
+            setLockedItems(locked);
+            setExtraGrupos(Array.from(extraGruposMap, ([gId, nombre]) => ({ id: gId, nombre })));
+            // Órdenes de pedido de las unidades ya ligadas, para mostrar su línea.
+            const pedidos = [...new Set(editable.map(it => it.pedido).filter(Boolean))];
+            Promise.all(pedidos.map(id => API.get(`/ordenes-pedido/${id}/completo/`).then(r => r.data).catch(() => null)))
+                .then(ordenes => {
+                    if (cancelled) return;
+                    setOrdenesCompletasMap(prev => ({
+                        ...prev,
+                        ...Object.fromEntries(ordenes.filter(Boolean).map(o => [String(o.id), o])),
+                    }));
+                });
+            setForm({
+                idManual: fData.id_manual || '',
+                valor: fData.valor ? String(parseInt(fData.valor)) : '',
+                valorDisplay: fData.valor ? formatCOP(parseInt(fData.valor)) : '',
+                fechaFactura: (fData.fecha_factura || '').slice(0, 10) || getTodayStr(),
+                fechaPago: fData.fecha_pago || '',
+                proveedorId: fData.proveedor ? String(fData.proveedor) : '',
+                observaciones: fData.observaciones || '',
+                estado: fData.estado || 'pendiente',
+                productos: rows.length > 0 ? rows : [emptyRef()],
+                grupoInstances: [],
+            });
+        }).catch(err => {
+            if (cancelled) return;
+            console.error('Error cargando factura para editar:', err);
+            setLoadError('No se pudo cargar la factura. Intenta de nuevo o vuelve al listado.');
+        }).finally(() => {
+            if (!cancelled) setIsLoadingFactura(false);
+        });
+        return () => { cancelled = true; };
+    }, [facturaId, isEditMode]);
+
+    const { data: ordenesProveedor = [] } = useQuery({
         queryKey: ['ordenes-proveedor', form.proveedorId],
         queryFn: async () => {
             if (!form.proveedorId) return [];
@@ -172,7 +346,7 @@ export default function NuevaFacturaPage() {
             const res = await API.get(`/listar-pedidos/`, {
                 params: {
                     id_proveedor: form.proveedorId,
-                    estado: 'en_proceso,pendiente',
+                    estado: 'en_proceso,pendiente,finalizado',
                     ordering: '-id',
                     page_size: 500,
                 }
@@ -184,6 +358,17 @@ export default function NuevaFacturaPage() {
 
     // Mapa mutable de OP completas (detalles cargados lazy) — no viene de useQuery
     const [ordenesCompletasMap, setOrdenesCompletasMap] = useState({});
+
+    // Filas que llegan con su OP (desde «Pedidos de este proveedor» o desde un pedido):
+    // se carga la orden para mostrar sus líneas pendientes.
+    const ordenesPedidas = React.useRef(new Set());
+    useEffect(() => {
+        const faltan = [...new Set(form.productos.map(p => p.opId).filter(id => id && !ordenesCompletasMap[id] && !ordenesPedidas.current.has(id)))];
+        faltan.forEach(id => {
+            ordenesPedidas.current.add(id);
+            API.get(`/ordenes-pedido/${id}/completo/`).then(r => setOrdenesCompletasMap(prev => ({ ...prev, [String(r.data.id)]: r.data }))).catch(() => {});
+        });
+    }, [form.productos, ordenesCompletasMap]);
 
     // Estado de buscador de OP por fila
     const [opSearchState, setOpSearchState] = useState({});
@@ -254,9 +439,12 @@ export default function NuevaFacturaPage() {
                 const ventaId = ordenCompleta.venta ? String(ordenCompleta.venta) : '';
                 // Guardar la orden completa en el mapa local para la tarjeta informativa
                 setOrdenesCompletasMap(prev => ({ ...prev, [String(ordenCompleta.id)]: ordenCompleta }));
+                // Si solo una línea tiene pendiente, se elige sola; si hay varias, la elige el usuario.
+                const conPendiente = (ordenCompleta.detalles || []).filter(d => (d.recibidas ?? 0) < d.cantidad);
                 prods[index] = {
                     ...prods[index],
                     opId: String(ordenCompleta.id),
+                    detallePedidoId: conPendiente.length === 1 ? String(conPendiente[0].id) : '',
                     ventaId: ventaId,
                     disponibilidad: ventaId ? 'cliente' : prods[index].disponibilidad,
                     telas_cueros: nuevasTelas.length > 0 ? nuevasTelas : prods[index].telas_cueros,
@@ -446,10 +634,12 @@ export default function NuevaFacturaPage() {
         }));
     };
 
-    const totalCostos = form.productos.reduce((acc, p) => {
+    const totalCostosEditable = form.productos.reduce((acc, p) => {
         const prodCosto = parseInt(p.costo) || 0;
         return acc + (prodCosto * (parseInt(p.cantidad) || 1));
     }, 0);
+    const totalCostosBloqueados = lockedItems.reduce((acc, it) => acc + (parseInt(it.costo_especifico) || 0), 0);
+    const totalCostos = totalCostosEditable + totalCostosBloqueados;
     const valorFactura = parseInt(form.valor) || 0;
     const isTotalMatching = valorFactura > 0 && totalCostos === valorFactura;
 
@@ -501,9 +691,12 @@ export default function NuevaFacturaPage() {
             fecha_factura: fechaConHora,
             fecha_pago: form.fechaPago || null,
             proveedor: form.proveedorId ? parseInt(form.proveedorId) : null,
-            estado: 'pendiente',
+            estado: isEditMode ? form.estado : 'pendiente',
             observaciones: form.observaciones,
             productos: form.productos.filter(p => p.referenciaId).map(p => ({
+                // Si la cantidad bajó, las unidades sobrantes se omiten y el
+                // backend solo las quita si no tienen entregas ni historial.
+                id_referencias: (p.itemIds || []).slice(0, parseInt(p.cantidad) || 1),
                 referencia: parseInt(p.referenciaId),
                 categoria: p.categoriaId ? parseInt(p.categoriaId) : null,
                 subcategoria: p.subcategoriaId ? parseInt(p.subcategoriaId) : null,
@@ -520,6 +713,7 @@ export default function NuevaFacturaPage() {
                 estado_fisico: p.estado_fisico,
                 zona: p.zonaId ? parseInt(p.zonaId) : null,
                 venta_id: p.ventaId,
+                detalle_pedido: p.detallePedidoId ? parseInt(p.detallePedidoId) : null,
                 telas_cueros: (p.telas_cueros || []).map(tc => ({
                     tipo: tc.tipo || 'tela',
                     referencia: (tc.referencia || '').trim(),
@@ -532,11 +726,20 @@ export default function NuevaFacturaPage() {
         };
         
         try {
-            await API.post('/suministros/facturas/', payload);
+            if (isEditMode) {
+                await API.patch(`/suministros/facturas/${facturaId}/`, payload);
+            } else {
+                await API.post('/suministros/facturas/', payload);
+            }
             queryClient.invalidateQueries({ queryKey: ['suministros-facturas'] });
-            navigate('/suministros/facturas', { state: { toastMessage: 'Factura creada exitosamente.', toastType: 'success' } });
+            navigate('/suministros/facturas', {
+                state: {
+                    toastMessage: isEditMode ? 'Factura actualizada exitosamente.' : 'Factura creada exitosamente.',
+                    toastType: 'success',
+                },
+            });
         } catch (error) {
-            console.error("Error creating factura:", error);
+            console.error("Error guardando factura:", error);
             const message = extractErrorMessage(error.response?.data) || 'No se pudo guardar la factura. Intenta de nuevo.';
             setSubmitError(message);
         } finally {
@@ -544,12 +747,45 @@ export default function NuevaFacturaPage() {
         }
     };
 
+    if (isEditMode && isLoadingFactura) {
+        return (
+            <div className="ds-page nueva-factura-page ds-fade-in">
+                {pedidoOrigen && <div role={errorPedidoOrigen ? 'alert' : 'status'} style={{ padding: '1rem', background: '#f2f1eb', marginBottom: '1rem' }}>
+                {errorPedidoOrigen || (cargandoPedidoOrigen ? 'Cargando unidades pendientes…' : `Recepción de OP ${pedidoOrigen}: revisa cantidades y registra los costos reales, el número y el valor de la factura del proveedor.`)}
+            </div>}
+            <PageHeader
+                    icon={FaFileInvoiceDollar}
+                    title="Editar Factura de Proveedor"
+                    subtitle="Cargando datos de la factura..."
+                />
+                <div className="nf-loading-state">
+                    <FaSpinner className="fa-spin" /> Cargando factura...
+                </div>
+            </div>
+        );
+    }
+
+    if (isEditMode && loadError) {
+        return (
+            <div className="ds-page nueva-factura-page ds-fade-in">
+                <PageHeader icon={FaFileInvoiceDollar} title="Editar Factura de Proveedor" subtitle="Ocurrió un error." />
+                <div className="nf-error-banner">
+                    <FaExclamationCircle />
+                    <span>{loadError}</span>
+                </div>
+                <Button variant="secondary" onClick={() => navigate('/suministros/facturas')}>Volver al listado</Button>
+            </div>
+        );
+    }
+
     return (
         <div className="ds-page nueva-factura-page ds-fade-in">
             <PageHeader
                 icon={FaFileInvoiceDollar}
-                title="Registrar Factura de Proveedor"
-                subtitle="Ingresa los datos generales, grupos y referencias de mercancía recibida."
+                title={isEditMode ? 'Editar Factura de Proveedor' : 'Registrar Factura de Proveedor'}
+                subtitle={isEditMode
+                    ? 'Modifica los datos generales, grupos y referencias de esta factura.'
+                    : 'Ingresa los datos generales, grupos y referencias de mercancía recibida.'}
                 actions={
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                         <div className="nf-footer-summary" style={{ background: 'transparent', padding: 0, border: 'none', boxShadow: 'none' }}>
@@ -564,8 +800,8 @@ export default function NuevaFacturaPage() {
                         <Button variant="secondary" onClick={() => navigate('/suministros/facturas')} disabled={isCreating}>
                             Cancelar
                         </Button>
-                        <Button variant="primary" type="submit" form="nueva-factura-form" loading={isCreating} disabled={!isTotalMatching || isCreating}>
-                            {isCreating ? 'Registrando...' : 'Registrar Factura'}
+                        <Button variant="primary" type="submit" form="nueva-factura-form" loading={isCreating} disabled={!isTotalMatching || isCreating || cargandoPedidoOrigen || !!errorPedidoOrigen}>
+                            {isCreating ? (isEditMode ? 'Guardando...' : 'Registrando...') : (isEditMode ? 'Guardar Cambios' : 'Registrar Factura')}
                         </Button>
                     </div>
                 }
@@ -637,13 +873,28 @@ export default function NuevaFacturaPage() {
                                 </select>
                             </div>
 
+                            {isEditMode && (
+                                <div className="nf-form-group">
+                                    <label><FaTag /> Estado <span className="nf-req">*</span></label>
+                                    <select
+                                        required
+                                        value={form.estado}
+                                        onChange={e => handleField('estado', e.target.value)}
+                                    >
+                                        {Object.entries(ESTADO_LABELS).map(([value, label]) => (
+                                            <option key={value} value={value}>{label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="nf-grid-2">
                                 <div className="nf-form-group">
                                     <label><FaCalendarAlt /> Fecha Factura <span className="nf-req">*</span></label>
                                     <input 
                                         required 
                                         type="date" 
-                                        onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} 
+                                        onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} 
                                         value={form.fechaFactura}
                                         onChange={e => handleField('fechaFactura', e.target.value)} 
                                     />
@@ -652,7 +903,7 @@ export default function NuevaFacturaPage() {
                                     <label><FaCalendarAlt /> Fecha de Pago</label>
                                     <input 
                                         type="date" 
-                                        onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} 
+                                        onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} 
                                         value={form.fechaPago}
                                         onChange={e => handleField('fechaPago', e.target.value)} 
                                     />
@@ -765,6 +1016,44 @@ export default function NuevaFacturaPage() {
 
                 {/* COLUMNA DERECHA: Referencias e Ítems */}
                 <div className="nf-right-column">
+                    {isEditMode && lockedItems.length > 0 && (
+                        <div className="nf-card nf-locked-card">
+                            <div className="nf-card-header">
+                                <div className="nf-header-title-flex">
+                                    <div className="nf-card-icon-badge badge-locked">
+                                        <FaLock />
+                                    </div>
+                                    <div>
+                                        <h3 className="nf-card-title">Productos ya Entregados</h3>
+                                        <p className="nf-card-desc">
+                                            Estos ítems ya fueron entregados y no se pueden modificar desde aquí. Se conservan tal cual al guardar.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="nf-card-body">
+                                <div className="nf-locked-list">
+                                    {lockedItems.map(it => (
+                                        <div key={it.id_referencia} className="nf-locked-row">
+                                            <FaLock className="nf-locked-icon" />
+                                            <div className="nf-locked-info">
+                                                <span className="nf-locked-name">
+                                                    {it.referencia_nombre || `Ref. #${it.referencia}`}
+                                                    {it.variacion ? ` — ${it.variacion}` : ''}
+                                                </span>
+                                                <span className="nf-locked-meta">
+                                                    {it.id_referencia} · Entregado
+                                                    {(it.venta_id || it.venta) ? ` · Venta #${it.venta_id || it.venta}` : ''}
+                                                    {' · '}{formatCOPInt(it.costo_especifico)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="nf-card">
                         <div className="nf-card-header">
                             <div className="nf-header-title-flex">
@@ -779,6 +1068,9 @@ export default function NuevaFacturaPage() {
                         </div>
 
                         <div className="nf-card-body">
+                            {!isEditMode && form.proveedorId && (
+                                <PedidosPorFacturar proveedorId={form.proveedorId} agregados={agregadosDePedido} onAgregar={agregarDesdePedidos} />
+                            )}
                             {form.productos.map((row, index) => {
                                 const providerRefs = referencias.filter(r => String(r.proveedor) === String(form.proveedorId));
                                 const subcatsFiltered = row.categoriaId
@@ -875,10 +1167,10 @@ export default function NuevaFacturaPage() {
                                             </div>
 
                                             <div className="nf-form-group">
-                                                <label>Variación</label>
+                                                <label>Detalle</label>
                                                 <input 
                                                     type="text" 
-                                                    placeholder="Ej: Color, tamaño"
+                                                    placeholder="Ej: Mesa de 6, color, tamaño"
                                                     value={row.variacion} 
                                                     onChange={e => handleRefRow(index, 'variacion', e.target.value)} 
                                                 />
@@ -900,6 +1192,13 @@ export default function NuevaFacturaPage() {
                                                         onChange={e => handleRefRow(index, 'costoDisplay', e.target.value)}
                                                     />
                                                 </div>
+                                                {row._sugerido && (
+                                                    <small className={`nf-sugerido${String(parseInt(row._sugerido.valor, 10)) !== String(row.costo) ? ' is-cambiado' : ''}`}>
+                                                        Sugerido {formatCOPInt(row._sugerido.valor)}: lista {formatCOPInt(row._sugerido.lista)} ÷ {String(row._sugerido.multiplicador).replace('.', ',')}
+                                                        {row._sugerido.tela_descontada ? ` − tela ${formatCOPInt(row._sugerido.tela_descontada)}` : ''}.
+                                                        {String(parseInt(row._sugerido.valor, 10)) !== String(row.costo) ? ' Lo cambiaste a mano.' : ' Revísalo contra la factura.'}
+                                                    </small>
+                                                )}
                                             </div>
 
                                             <div className="nf-form-group">
@@ -950,7 +1249,7 @@ export default function NuevaFacturaPage() {
                                             {(() => {
                                                 const { query: opQ, open: opOpen } = getOpSearch(index);
                                                 const filteredOPs = ordenesProveedor.filter(o => {
-                                                    const isPending = o.estado === 'pendiente' || o.estado === 'en_proceso';
+                                                    const isPending = ['pendiente', 'en_proceso', 'finalizado'].includes(o.estado);
                                                     if (!isPending) return false;
                                                     return String(o.id).includes(opQ) ||
                                                         (o.proveedor_nombre || '').toLowerCase().includes(opQ.toLowerCase());
@@ -964,7 +1263,7 @@ export default function NuevaFacturaPage() {
                                                             className="nf-select"
                                                             style={{ 
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                                cursor: 'pointer', color: selectedOp ? '#1e293b' : '#94a3b8', userSelect: 'none',
+                                                                cursor: 'pointer', color: selectedOp ? '#2a2a25' : '#a3a398', userSelect: 'none',
                                                                 padding: '0.45rem 0.65rem'
                                                             }}
                                                         >
@@ -974,57 +1273,57 @@ export default function NuevaFacturaPage() {
                                                             <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                                 {row.opId && (
                                                                     <span
-                                                                        onClick={e => { e.stopPropagation(); handleRefRow(index, 'opId', ''); }}
-                                                                        style={{ marginRight: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}
+                                                                        onClick={e => { e.stopPropagation(); handleRefRow(index, 'opId', ''); handleRefRow(index, 'detallePedidoId', ''); }}
+                                                                        style={{ marginRight: '6px', color: '#a3a398', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}
                                                                         title="Quitar OP"
                                                                     >×</span>
                                                                 )}
-                                                                <FaChevronDown size={10} style={{ color: '#94a3b8' }} />
+                                                                <FaChevronDown size={10} style={{ color: '#a3a398' }} />
                                                             </div>
                                                         </div>
                                                         {opOpen && (
                                                             <div style={{
                                                                 position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
-                                                                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                                                background: '#fff', border: '1px solid #e4e3dc', borderRadius: '8px',
                                                                 marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
                                                                 display: 'flex', flexDirection: 'column'
                                                             }}>
-                                                                <div style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px 8px 0 0' }}>
+                                                                <div style={{ padding: '8px', borderBottom: '1px solid #e4e3dc', background: '#fff', borderRadius: '8px 8px 0 0' }}>
                                                                     <div style={{ position: 'relative' }}>
-                                                                        <FaSearch size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                                                        <FaSearch size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#a3a398' }} />
                                                                         <input
                                                                             type="text"
                                                                             placeholder="Buscar OP por número..."
                                                                             value={opQ}
                                                                             onChange={e => setOpSearch(index, { query: e.target.value })}
                                                                             onClick={e => e.stopPropagation()}
-                                                                            style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 1.75rem', border: '1px solid #e2e8f0', borderRadius: '5px', background: '#f8fafc', color: '#1e293b', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                                                                            style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 1.75rem', border: '1px solid #e4e3dc', borderRadius: '5px', background: '#faf9f5', color: '#2a2a25', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
                                                                             autoFocus
                                                                         />
                                                                     </div>
                                                                 </div>
                                                                 <div style={{ overflowY: 'auto', maxHeight: '200px' }}>
                                                                     {!form.proveedorId ? (
-                                                                        <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Selecciona un proveedor primero</div>
+                                                                        <div style={{ padding: '10px 12px', color: '#a3a398', fontSize: '0.85rem', textAlign: 'center' }}>Selecciona un proveedor primero</div>
                                                                     ) : filteredOPs.length === 0 ? (
-                                                                        <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes pendientes para este proveedor</div>
+                                                                        <div style={{ padding: '10px 12px', color: '#a3a398', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes pendientes para este proveedor</div>
                                                                     ) : filteredOPs.map(orden => (
                                                                         <div
                                                                             key={orden.id}
                                                                             onClick={() => handleSelectOp(index, orden)}
                                                                             style={{
-                                                                                padding: '9px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9',
-                                                                                background: String(row.opId) === String(orden.id) ? '#eff6ff' : 'transparent',
+                                                                                padding: '9px 12px', cursor: 'pointer', borderBottom: '1px solid #f2f1eb',
+                                                                                background: String(row.opId) === String(orden.id) ? '#f2efe7' : 'transparent',
                                                                                 transition: 'background 0.15s'
                                                                             }}
-                                                                            onMouseEnter={e => { if (String(row.opId) !== String(orden.id)) e.currentTarget.style.background = '#f8fafc'; }}
+                                                                            onMouseEnter={e => { if (String(row.opId) !== String(orden.id)) e.currentTarget.style.background = '#faf9f5'; }}
                                                                             onMouseLeave={e => { if (String(row.opId) !== String(orden.id)) e.currentTarget.style.background = 'transparent'; }}
                                                                         >
                                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                                <span style={{ fontWeight: 600, color: '#1e40af', fontSize: '0.85rem' }}>OP #{orden.id}</span>
-                                                                                {orden.venta && <span style={{ fontSize: '0.75rem', color: '#059669', background: '#d1fae5', padding: '1px 6px', borderRadius: '4px' }}>Venta #{orden.venta}</span>}
+                                                                                <span style={{ fontWeight: 600, color: '#171815', fontSize: '0.85rem' }}>OP #{orden.id}</span>
+                                                                                {orden.venta && <span style={{ fontSize: '0.75rem', color: '#4c7a4f', background: '#edf3e9', padding: '1px 6px', borderRadius: '4px' }}>Venta #{orden.venta}</span>}
                                                                             </div>
-                                                                            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                                                                            <div style={{ fontSize: '0.78rem', color: '#72726a', marginTop: '2px' }}>
                                                                                 {orden.estado} {orden.fecha_esperada ? `• Esperada: ${orden.fecha_esperada}` : ''}
                                                                             </div>
                                                                             {orden.observacion && (
@@ -1033,7 +1332,7 @@ export default function NuevaFacturaPage() {
                                                                                 </div>
                                                                             )}
                                                                             {orden.detalles && orden.detalles.length > 0 && (
-                                                                                <div style={{ fontSize: '0.75rem', color: '#334155', marginTop: '2px' }}>
+                                                                                <div style={{ fontSize: '0.75rem', color: '#3e3e37', marginTop: '2px' }}>
                                                                                     📦 {orden.detalles.map(d => `${d.cantidad}x ${d.referencia_nombre || ''}`).join(', ')}
                                                                                 </div>
                                                                             )}
@@ -1058,16 +1357,16 @@ export default function NuevaFacturaPage() {
                                                             style={{
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                                                 padding: '0.4rem 0.75rem',
-                                                                background: '#e0f2fe', border: '1px solid #bae6fd',
+                                                                background: '#eaeff1', border: '1px solid #c9d5dc',
                                                                 borderRadius: opDetailOpen ? '7px 7px 0 0' : '7px',
-                                                                fontSize: '0.8rem', fontWeight: 600, color: '#0369a1',
+                                                                fontSize: '0.8rem', fontWeight: 600, color: '#4f6a7f',
                                                                 cursor: 'pointer', userSelect: 'none', marginTop: '6px'
                                                             }}
                                                         >
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                 📦 Contenido OP #{selectedOp.id}
                                                                 {selectedOp.vendedor && <span style={{ fontWeight: 400, fontSize: '0.75rem' }}>• {selectedOp.vendedor}</span>}
-                                                                {selectedOp.venta && <span style={{ background: '#bae6fd', color: '#0c4a6e', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
+                                                                {selectedOp.venta && <span style={{ background: '#c9d5dc', color: '#4f6a7f', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
                                                             </span>
                                                             <span style={{ fontSize: '0.75rem' }}>{opDetailOpen ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
                                                         </div>
@@ -1075,32 +1374,65 @@ export default function NuevaFacturaPage() {
                                                         {opDetailOpen && (
                                                             <div style={{
                                                                 padding: '0.65rem 0.85rem',
-                                                                background: '#f0f9ff', border: '1px solid #bae6fd',
+                                                                background: '#eaeff1', border: '1px solid #c9d5dc',
                                                                 borderTop: 'none', borderRadius: '0 0 7px 7px',
-                                                                fontSize: '0.82rem', color: '#0369a1'
+                                                                fontSize: '0.82rem', color: '#4f6a7f'
                                                             }}>
                                                                 {selectedOp.observacion && (
-                                                                    <div style={{ marginBottom: '6px', color: '#0f766e', background: '#f0fdf4', padding: '4px 8px', borderRadius: '4px', border: '1px solid #bbf7d0', fontSize: '0.8rem' }}>
+                                                                    <div style={{ marginBottom: '6px', color: '#0f766e', background: '#edf3e9', padding: '4px 8px', borderRadius: '4px', border: '1px solid #c9dbc2', fontSize: '0.8rem' }}>
                                                                         📝 <strong>Observación del Pedido:</strong> {selectedOp.observacion}
                                                                     </div>
                                                                 )}
                                                                 {selectedOp.detalles && selectedOp.detalles.length > 0 ? (
                                                                     <div>
-                                                                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0284c7', marginBottom: '3px' }}>Productos del Pedido:</div>
+                                                                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#4f6a7f', marginBottom: '3px' }}>Productos del Pedido:</div>
                                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                                                             {selectedOp.detalles.map((d, dIdx) => (
-                                                                                <div key={dIdx} style={{ background: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e0f2fe', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
-                                                                                    <span style={{ fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px' }}>{d.cantidad}x</span>
-                                                                                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{d.referencia_nombre || 'Referencia'}</span>
-                                                                                    {d.especificaciones && <span style={{ color: '#64748b', fontSize: '0.78rem' }}>({d.especificaciones})</span>}
+                                                                                <div key={dIdx} style={{ background: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #eaeff1', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                                                                                    <span style={{ fontWeight: 700, color: '#4f6a7f', background: '#eaeff1', padding: '1px 6px', borderRadius: '4px' }}>{d.cantidad}x</span>
+                                                                                    <span style={{ fontWeight: 600, color: '#2a2a25' }}>{d.referencia_nombre || 'Referencia'}</span>
+                                                                                    {d.especificaciones && <span style={{ color: '#72726a', fontSize: '0.78rem' }}>({d.especificaciones})</span>}
                                                                                 </div>
                                                                             ))}
                                                                         </div>
                                                                     </div>
                                                                 ) : (
-                                                                    <div style={{ color: '#64748b', fontSize: '0.78rem', fontStyle: 'italic' }}>(Sin detalles de productos en esta OP)</div>
+                                                                    <div style={{ color: '#72726a', fontSize: '0.78rem', fontStyle: 'italic' }}>(Sin detalles de productos en esta OP)</div>
                                                                 )}
                                                             </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* Línea de la OP que se recibe (P11-01) */}
+                                            {row.opId && (() => {
+                                                const op = ordenesCompletasMap[String(row.opId)];
+                                                const detalles = op?.detalles || [];
+                                                const elegida = detalles.find(d => String(d.id) === String(row.detallePedidoId));
+                                                const pendiente = elegida ? Math.max(elegida.cantidad - (elegida.recibidas ?? 0), 0) : null;
+                                                return (
+                                                    <div className="nf-form-group" style={{ gridColumn: '1 / -1' }}>
+                                                        <label htmlFor={`nf-linea-${index}`}>Línea del pedido que llega <span className="nf-optional">(descuenta lo pendiente)</span></label>
+                                                        <select
+                                                            id={`nf-linea-${index}`}
+                                                            className="nf-select"
+                                                            value={row.detallePedidoId}
+                                                            disabled={!op}
+                                                            onChange={e => handleRefRow(index, 'detallePedidoId', e.target.value)}
+                                                        >
+                                                            <option value="">{op ? 'Sin indicar' : 'Cargando la orden…'}</option>
+                                                            {detalles.map(d => (
+                                                                <option key={d.id} value={d.id}>
+                                                                    {d.referencia_nombre} · recibidas {d.recibidas ?? 0} de {d.cantidad}
+                                                                    {d.especificaciones && d.especificaciones !== '-' ? ` · ${d.especificaciones.slice(0, 60)}` : ''}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        {elegida && !row.itemIds?.length && (parseInt(row.cantidad) || 1) > pendiente && (
+                                                            <small role="alert" style={{ color: '#a8432f' }}>
+                                                                Esta línea tiene {pendiente} pendiente{pendiente === 1 ? '' : 's'}: la cantidad de la fila no puede ser mayor.
+                                                            </small>
                                                         )}
                                                     </div>
                                                 );
@@ -1138,6 +1470,15 @@ export default function NuevaFacturaPage() {
                                                         <optgroup label="── Grupos existentes ──">
                                                             {gruposActivos.map(g => (
                                                                 <option key={`existing-${g.id}`} value={String(g.id)}>
+                                                                    G{String(g.id).padStart(3, '0')} — {g.nombre}
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
+                                                    )}
+                                                    {extraGrupos.filter(g => !gruposActivos.some(ga => String(ga.id) === String(g.id))).length > 0 && (
+                                                        <optgroup label="── Grupo de esta factura ──">
+                                                            {extraGrupos.filter(g => !gruposActivos.some(ga => String(ga.id) === String(g.id))).map(g => (
+                                                                <option key={`extra-${g.id}`} value={String(g.id)}>
                                                                     G{String(g.id).padStart(3, '0')} — {g.nombre}
                                                                 </option>
                                                             ))}

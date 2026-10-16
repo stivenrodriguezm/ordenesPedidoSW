@@ -5,6 +5,9 @@ import API_BASE_URL from '../apiConfig'; // Importar desde apiConfig.js
 // Crear instancia de Axios para las solicitudes
 const API = axios.create({
   baseURL: API_BASE_URL,
+  // Sin límite, una red caída dejaba cargas eternas (H28). Las subidas de
+  // archivos grandes pueden pasar un timeout propio por petición.
+  timeout: 60000,
 });
 
 // Interceptor para agregar el token de autorización en cada solicitud
@@ -88,6 +91,16 @@ API.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.access}`;
         return API(originalRequest);
       } catch (refreshError) {
+        // Dos pestañas: otra renovó primero con el mismo refresh, que el servidor
+        // revocó al rotarlo (P02-05). Si ya hay tokens nuevos guardados, se usan en
+        // vez de cerrar la sesión de todas las pestañas (P14-02).
+        const actual = localStorage.getItem("refreshToken");
+        const accessNuevo = localStorage.getItem("accessToken");
+        if (actual && actual !== refreshToken && accessNuevo) {
+          processQueue(null, accessNuevo);
+          originalRequest.headers.Authorization = `Bearer ${accessNuevo}`;
+          return API(originalRequest);
+        }
         processQueue(refreshError, null);
         forceLogout();
         return Promise.reject(refreshError);

@@ -5,7 +5,7 @@
 
 .lottus-form-modal {
   background: var(--surface);
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   width: 100%;
   max-width: 460px;
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -19,8 +19,8 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e8edf3;
-  background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
+  border-bottom: 1px solid var(--gray-200);
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--accent-soft) 100%);
 }
 
 .lottus-modal-title-wrap {
@@ -32,23 +32,23 @@
 .lottus-modal-icon-badge {
   width: 38px;
   height: 38px;
-  background: #dbeafe;
+  background: var(--accent-soft);
   color: var(--info);
-  border-radius: 9px;
+  border-radius: var(--r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
   flex-shrink: 0;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--accent-line);
 }
 
 .lottus-modal-type-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -56,7 +56,7 @@
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   margin-bottom: 0.15rem;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--accent-soft);
 }
 
 .lottus-badge-dot {
@@ -85,7 +85,7 @@
   border: 1px solid var(--gray-300);
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   font-size: 1.2rem;
   line-height: 1;
   color: var(--gray-500);
@@ -146,10 +146,10 @@
   font-size: 0.78rem;
   font-weight: 800;
   color: var(--info);
-  background: #eff6ff;
+  background: var(--accent-soft);
   padding: 0.1rem 0.45rem;
   border-radius: 5px;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--accent-soft);
 }
 
 .lottus-input,
@@ -157,7 +157,7 @@
   width: 100%;
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--gray-300);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 0.82rem;
   color: var(--gray-800);
   background: var(--surface);
@@ -170,7 +170,7 @@
 .lottus-input:focus,
 .lottus-select:focus {
   border-color: var(--info);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 2px rgba(164, 141, 102, 0.15);
 }
 
 .lottus-input-icon {
@@ -198,7 +198,7 @@
   display: flex;
   gap: 0.35rem;
   background: var(--gray-100);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 3px;
   border: 1px solid var(--gray-200);
 }
@@ -207,7 +207,7 @@
   flex: 1;
   padding: 0.38rem 0.65rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -219,7 +219,7 @@
 
 .lottus-toggle-btn.active {
   background: var(--surface);
-  color: #1d4ed8;
+  color: var(--accent);
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -239,7 +239,7 @@
   color: var(--gray-600);
   border: 1px solid var(--gray-300);
   padding: 0.45rem 0.95rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;
@@ -253,21 +253,21 @@
 }
 
 .lottus-btn-submit {
-  background: linear-gradient(135deg, var(--info) 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--info) 0%, var(--accent) 100%);
   color: var(--surface);
   border: none;
   padding: 0.45rem 1.1rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 6px rgba(164, 141, 102, 0.25);
 }
 
 .lottus-btn-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 10px rgba(164, 141, 102, 0.35);
 }
 
 .lottus-btn-submit:disabled {

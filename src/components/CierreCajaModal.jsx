@@ -37,6 +37,7 @@ const CierreCajaModal = ({ isOpen, onClose, onSave, isLoading }) => {
     <Modal
       open={isOpen}
       onClose={onClose}
+      hayCambios={Boolean(descuadre)}
       title="Cierre de Caja"
       size="sm"
       footer={

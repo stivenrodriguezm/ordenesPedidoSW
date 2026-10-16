@@ -5,10 +5,10 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    background: var(--danger-soft, #fef2f2);
-    border: 1px solid var(--danger, #dc2626);
-    color: var(--danger, #991b1b);
-    border-radius: 10px;
+    background: var(--danger-soft);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: var(--r-lg);
     padding: 0.75rem 1rem;
     margin-bottom: 1rem;
     font-size: 0.88rem;
@@ -68,8 +68,8 @@
 /* --- Cards --- */
 .nf-card {
     background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid #e8edf3;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--gray-200);
     box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
 
@@ -79,7 +79,7 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    background: #fafcfd;
+    background: var(--gray-50);
     border-radius: 11px 11px 0 0;
 }
 
@@ -97,7 +97,7 @@
 .nf-card-icon-badge {
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -105,9 +105,66 @@
     flex-shrink: 0;
 }
 
-.badge-blue { background: #eff6ff; color: var(--info); }
+.badge-blue { background: var(--accent-soft); color: var(--info); }
 .badge-purple { background: #f3e8ff; color: #9333ea; }
-.badge-indigo { background: #e0e7ff; color: #4f46e5; }
+.badge-indigo { background: var(--accent-soft); color: var(--accent); }
+.badge-locked { background: var(--warning-soft); color: var(--warning); }
+
+/* --- Estado de carga (modo edición) --- */
+.nf-loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 4rem 1rem;
+    color: var(--gray-500);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+/* --- Card de productos bloqueados (ya vendidos) en modo edición --- */
+.nf-locked-card {
+    border-color: var(--warning-line);
+}
+
+.nf-locked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nf-locked-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--warning-soft);
+    border: 1px solid var(--warning-line);
+    border-radius: var(--r-sm);
+}
+
+.nf-locked-icon {
+    color: var(--warning);
+    flex-shrink: 0;
+}
+
+.nf-locked-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.nf-locked-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--gray-900);
+}
+
+.nf-locked-meta {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
 
 .nf-card-title {
     font-size: 0.92rem;
@@ -166,7 +223,7 @@
 .nf-select {
     width: 100%;
     padding: 0.45rem 0.65rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-300);
     font-size: 0.82rem;
     color: var(--gray-800);
@@ -182,7 +239,7 @@
 .nf-input:focus,
 .nf-select:focus {
     border-color: var(--info);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 2px rgba(164, 141, 102, 0.15);
 }
 
 .nf-prefix-wrap {
@@ -203,7 +260,7 @@
 .nf-prefix-input {
     padding-left: 1.6rem !important;
     font-weight: 700;
-    color: #059669 !important;
+    color: var(--success) !important;
 }
 
 .nf-grid-2 {
@@ -226,7 +283,7 @@
     font-style: italic;
     background: var(--gray-50);
     border: 1px dashed var(--gray-300);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     padding: 0.6rem;
     text-align: center;
     width: 100%;
@@ -237,7 +294,7 @@
     align-items: center;
     gap: 0.35rem;
     background: var(--accent-soft);
-    border: 1px solid #bae6fd;
+    border: 1px solid var(--info-line);
     padding: 0.25rem 0.6rem;
     border-radius: 999px;
     font-size: 0.78rem;
@@ -284,7 +341,7 @@
 .nf-grupo-create-box {
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     padding: 0.75rem;
 }
 
@@ -309,7 +366,7 @@
     color: var(--surface);
     border: none;
     padding: 0.45rem 0.75rem;
-    border-radius: 7px;
+    border-radius: var(--r-sm);
     font-weight: 700;
     font-size: 0.78rem;
     cursor: pointer;
@@ -331,11 +388,11 @@
 
 /* --- Referencias / Items Section --- */
 .nf-btn-add-ref {
-    background: #e0e7ff;
-    color: #4338ca;
-    border: 1px solid #c7d2fe;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent-line);
     padding: 0.35rem 0.75rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     font-weight: 700;
     font-size: 0.78rem;
     cursor: pointer;
@@ -346,7 +403,7 @@
 }
 
 .nf-btn-add-ref:hover {
-    background: #4338ca;
+    background: var(--accent);
     color: var(--surface);
 }
 
@@ -356,7 +413,7 @@
     border: 2px dashed var(--gray-300);
     color: var(--gray-600);
     padding: 0.6rem;
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     font-weight: 700;
     font-size: 0.82rem;
     cursor: pointer;
@@ -378,7 +435,7 @@
 .nf-ref-card {
     background: var(--surface);
     border: 1px solid var(--gray-200);
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     padding: 0.85rem;
     margin-bottom: 0.75rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
@@ -409,12 +466,12 @@
 }
 
 .nf-ref-remove-btn {
-    background: #fef2f2;
+    background: var(--danger-soft);
     color: var(--danger);
-    border: 1px solid #fecaca;
+    border: 1px solid var(--danger-line);
     width: 26px;
     height: 26px;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -467,7 +524,7 @@
 
 .nf-subtotal-hint {
     font-size: 0.68rem;
-    color: #059669;
+    color: var(--success);
     font-weight: 700;
     margin-top: 0.15rem;
     display: block;
@@ -484,7 +541,7 @@
 .nf-tc-section {
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     padding: 0.6rem;
     margin-top: 0.5rem;
 }
@@ -512,9 +569,9 @@
 }
 
 .nf-tc-add-btn {
-    background: #f0f9ff;
+    background: var(--info-soft);
     color: var(--accent);
-    border: 1px solid #bae6fd;
+    border: 1px solid var(--info-line);
     padding: 0.2rem 0.5rem;
     border-radius: 5px;
     font-size: 0.68rem;
@@ -549,7 +606,7 @@
     gap: 0.4rem;
     background: var(--surface);
     padding: 0.4rem 0.6rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-300);
 }
 
@@ -563,20 +620,20 @@
     width: 100%;
     padding: 0.35rem 0.4rem;
     font-size: 0.75rem;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-300);
     font-weight: 700;
     outline: none;
 }
 
-.nf-tc-tela { background: #f0f9ff; color: var(--accent-hover); }
-.nf-tc-cuero { background: #fff7ed; color: #c2410c; }
+.nf-tc-tela { background: var(--info-soft); color: var(--accent-hover); }
+.nf-tc-cuero { background: var(--warning-soft); color: var(--warning); }
 
 .nf-tc-input {
     width: 100%;
     padding: 0.35rem 0.5rem;
     font-size: 0.78rem;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-300);
     color: var(--gray-800);
     outline: none;
@@ -610,8 +667,8 @@
     padding: 0.35rem 0.5rem 0.35rem 1.35rem;
     font-size: 0.78rem;
     font-weight: 700;
-    color: #059669;
-    border-radius: 6px;
+    color: var(--success);
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-300);
     outline: none;
     background: var(--surface);
@@ -629,7 +686,7 @@
     padding: 0.35rem 0.4rem;
     font-size: 0.78rem;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-300);
     outline: none;
 }
@@ -644,7 +701,7 @@
 .nf-tc-subtotal-box {
     font-size: 0.78rem;
     font-weight: 800;
-    color: #059669;
+    color: var(--success);
     white-space: nowrap;
     text-align: right;
     padding-right: 0.25rem;
@@ -665,7 +722,7 @@
 }
 
 .nf-tc-remove:hover {
-    background: #fef2f2;
+    background: var(--danger-soft);
     color: var(--danger);
 }
 
@@ -701,13 +758,13 @@
 }
 
 .total-match {
-    color: #059669;
-    background: #ecfdf5;
+    color: var(--success);
+    background: var(--success-soft);
 }
 
 .total-mismatch {
     color: var(--danger);
-    background: #fef2f2;
+    background: var(--danger-soft);
 }
 
 .nf-summary-sep {

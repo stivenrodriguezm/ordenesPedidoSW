@@ -5,20 +5,20 @@
   height: 48px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid var(--border, #e2e8f0);
-  background-color: #f1f5f9;
+  border: 1px solid var(--border);
+  background-color: var(--gray-100);
 }
 
 .pw-avatar-noimage {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: var(--gray-100, #f1f5f9);
-  border: 1px dashed var(--border, #cbd5e1);
+  background-color: var(--gray-100);
+  border: 1px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
   font-weight: 700;
   font-size: 0.8rem;
 }
@@ -31,18 +31,18 @@
 
 .pw-advisor-username {
   font-size: 0.75rem;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
 }
 
 .pw-whatsapp-cell {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--gray-700, #334155);
+  color: var(--gray-700);
 }
 
 .pw-whatsapp-missing {
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
   font-style: italic;
   font-size: 0.8rem;
 }
@@ -67,7 +67,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--border-strong, #cbd5e1);
+  background-color: var(--border-strong, var(--gray-300));
   transition: var(--t-base, 0.2s ease);
   border-radius: var(--r-full, 999px);
 }
@@ -78,13 +78,13 @@
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: var(--surface, #ffffff);
+  background-color: var(--surface);
   transition: var(--t-base, 0.2s ease);
   border-radius: 50%;
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
 }
 .pw-switch input:checked + .pw-slider {
-  background-color: var(--success, #16a34a);
+  background-color: var(--success);
 }
 .pw-switch input:checked + .pw-slider:before {
   transform: translateX(20px);
@@ -107,12 +107,12 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  background-color: var(--gray-100, #f1f5f9);
-  border: 1px solid var(--border, #e2e8f0);
+  background-color: var(--gray-100);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
   font-weight: 700;
   font-size: 1.1rem;
 }
@@ -132,13 +132,13 @@
 
 .pw-field-hint {
   font-size: 0.75rem;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
 }
 
 .pw-char-counter {
   align-self: flex-end;
   font-size: 0.72rem;
-  color: var(--gray-400, #94a3b8);
+  color: var(--gray-400);
 }
 
 .pw-modal-toggle-row {
@@ -146,9 +146,9 @@
   align-items: center;
   gap: 0.85rem;
   padding: 0.85rem 1rem;
-  background-color: var(--gray-50, #f8fafc);
+  background-color: var(--gray-50);
   border-radius: var(--r-md, 8px);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 1px solid var(--border);
 }
 
 .pw-modal-toggle-text {
@@ -160,12 +160,12 @@
 .pw-modal-toggle-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--gray-800, #1e293b);
+  color: var(--gray-800);
 }
 
 .pw-modal-toggle-sub {
   font-size: 0.75rem;
-  color: var(--gray-500, #64748b);
+  color: var(--gray-500);
 }
 
 .pw-profile-link {
@@ -173,7 +173,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.8rem;
-  color: var(--accent, #1e3a8a);
+  color: var(--accent);
   text-decoration: none;
 }
 .pw-profile-link:hover {

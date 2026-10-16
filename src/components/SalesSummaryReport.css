@@ -18,14 +18,14 @@
 
 .compact-hero-card {
     background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     padding: 0.85rem 1rem;
     color: var(--surface);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 0.5rem;
-    box-shadow: 0 4px 12px rgba(39, 67, 133, 0.15);
+    box-shadow: 0 4px 12px rgba(164, 141, 102, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -47,7 +47,7 @@
 
 .c-cycle-tag {
     font-size: 0.7rem;
-    color: #93c5fd;
+    color: var(--accent-line);
     font-weight: 500;
 }
 
@@ -76,7 +76,7 @@
     font-size: 0.72rem;
     font-weight: 600;
     padding: 0.2rem 0.55rem;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
@@ -84,7 +84,7 @@
 
 .c-pill.orange {
     background: rgba(249, 115, 22, 0.25);
-    color: #fdba74;
+    color: var(--warning-line);
 }
 
 .c-pill.purple {
@@ -102,14 +102,14 @@
 
 .c-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
+    background: linear-gradient(90deg, var(--info) 0%, #818cf8 100%);
     border-radius: 9999px;
 }
 
 /* Sede Cards */
 .compact-sede-card {
     background: var(--surface);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     padding: 0.85rem 1rem;
     border: 1px solid var(--gray-200);
     display: flex;
@@ -153,13 +153,13 @@
 }
 
 .c-pct-pill.indigo {
-    background: #e0e7ff;
-    color: #3730a3;
+    background: var(--accent-soft);
+    color: var(--accent);
 }
 
 .c-pct-pill.amber {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--warning-soft);
+    color: var(--warning);
 }
 
 .c-sede-val {
@@ -187,7 +187,7 @@
 .c-kpi-item {
     background: var(--surface);
     border: 1px solid var(--gray-200);
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     padding: 0.6rem 0.8rem;
     display: flex;
     align-items: center;
@@ -197,7 +197,7 @@
 .c-kpi-icon {
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -205,11 +205,11 @@
     flex-shrink: 0;
 }
 
-.c-kpi-icon.blue { background: #eff6ff; color: var(--info); }
-.c-kpi-icon.green { background: #ecfdf5; color: #10b981; }
-.c-kpi-icon.red { background: #fef2f2; color: var(--danger); }
+.c-kpi-icon.blue { background: var(--accent-soft); color: var(--info); }
+.c-kpi-icon.green { background: var(--success-soft); color: var(--success); }
+.c-kpi-icon.red { background: var(--danger-soft); color: var(--danger); }
 .c-kpi-icon.purple { background: #f5f3ff; color: #8b5cf6; }
-.c-kpi-icon.cyan { background: #cffafe; color: #0891b2; }
+.c-kpi-icon.cyan { background: var(--info-soft); color: var(--info); }
 
 .c-kpi-lbl {
     display: block;
@@ -237,7 +237,7 @@
 
 .chart-card {
     background: var(--surface);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     padding: 0.85rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     border: 1px solid var(--gray-200);
@@ -269,7 +269,7 @@
 /* === 4. COMPACT MINIMALIST VENDOR LEADERBOARD === */
 .compact-vendor-section {
     background: var(--surface);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     padding: 0.85rem 1rem;
     border: 1px solid var(--gray-200);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
@@ -313,7 +313,7 @@
     gap: 0.75rem;
     padding: 0.45rem 0.75rem;
     background: var(--gray-50);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--gray-100);
     transition: background 0.15s ease;
 }
@@ -345,7 +345,7 @@
 
 .c-v-rank.r1 { background: #fef9c3; border-color: #fde047; }
 .c-v-rank.r2 { background: var(--gray-100); border-color: var(--gray-300); }
-.c-v-rank.r3 { background: #fffbeb; border-color: #fed7aa; }
+.c-v-rank.r3 { background: var(--warning-soft); border-color: var(--warning-line); }
 
 .c-v-name-box {
     display: flex;

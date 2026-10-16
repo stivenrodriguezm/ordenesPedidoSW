@@ -58,7 +58,7 @@
     height: 48px;
     background-color: var(--accent-soft);
     color: var(--accent);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     font-size: 1.5rem;
     flex-shrink: 0;
 }
@@ -158,7 +158,7 @@
 }
 
 .notification-box.error {
-    background-color: #fef2f2;
+    background-color: var(--danger-soft);
     color: var(--danger);
-    border: 1px solid #fecaca;
+    border: 1px solid var(--danger-line);
 }

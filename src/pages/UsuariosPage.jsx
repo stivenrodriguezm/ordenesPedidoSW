@@ -16,8 +16,8 @@ const ToastNotification = ({ notification }) => {
   if (!notification.message) return null;
   const isSuccess = notification.type === 'success';
   return (
-    <div className={`toast-notification ${isSuccess ? 'toast-success' : 'toast-error'}`}>
-      {isSuccess ? <FaCheckCircle size={20} /> : <FaExclamationCircle size={20} />}
+    <div className={`toast-notification ${isSuccess ? 'toast-success' : 'toast-error'}`} role={isSuccess ? 'status' : 'alert'}>
+      {isSuccess ? <FaCheckCircle size={20} aria-hidden="true" /> : <FaExclamationCircle size={20} aria-hidden="true" />}
       <span>{notification.message}</span>
     </div>
   );
@@ -28,6 +28,7 @@ const roleTone = (role) => {
   if (r === 'administrador') return 'accent';
   if (r === 'vendedor') return 'info';
   if (r === 'auxiliar') return 'warning';
+  if (r === 'marketing') return 'success';
   return 'neutral';
 };
 
@@ -36,6 +37,8 @@ const roleTone = (role) => {
 // ==========================================
 const UserModal = ({ isOpen, onClose, user, isEditing }) => {
   const queryClient = useQueryClient();
+  const { usuario, reloadUser } = useContext(AppContext);
+  const esAdministrador = usuario?.role === 'administrador';
   const [formData, setFormData] = useState({
     username: '', first_name: '', last_name: '', role: 'vendedor', is_active: true, password: ''
   });
@@ -44,9 +47,9 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
   useEffect(() => {
     if (isOpen) {
       if (isEditing && user) {
-        setFormData({ username: user.username || '', first_name: user.first_name || '', last_name: user.last_name || '', role: user.role || 'vendedor', is_active: user.is_active, password: '' });
+        setFormData({ username: user.username || '', first_name: user.first_name || '', last_name: user.last_name || '', role: user.role || 'vendedor', is_active: user.is_active, password: '', acceso_rapido_ia: !!user.acceso_rapido_ia });
       } else {
-        setFormData({ username: '', first_name: '', last_name: '', role: 'vendedor', is_active: true, password: '' });
+        setFormData({ username: '', first_name: '', last_name: '', role: 'vendedor', is_active: true, password: '', acceso_rapido_ia: false });
       }
       setErrorObj(null);
     }
@@ -56,11 +59,13 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
     mutationFn: async (dataToSubmit) => {
       const url = isEditing ? `/usuarios/${user.id}/` : `/usuarios/`;
       let payload = { ...dataToSubmit };
+      if (!esAdministrador) delete payload.acceso_rapido_ia;
       if (isEditing && !payload.password) delete payload.password;
       return isEditing ? (await API.put(url, payload)).data : (await API.post(url, payload)).data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["usuarios-list"]);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["usuarios-list"] });
+      if (user?.id === usuario?.id) await reloadUser();
       onClose(true);
     },
     onError: (err) => {
@@ -117,6 +122,7 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
               <option value="vendedor">Vendedor</option>
               <option value="auxiliar">Auxiliar</option>
               <option value="transportador">Transportador</option>
+              <option value="marketing">Marketing</option>
               <option value="administrador">Administrador</option>
             </select>
           </div>
@@ -128,6 +134,14 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
             <input className="ds-input" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!isEditing} placeholder={isEditing ? "••••••••" : "Introduce contraseña"} autoComplete="new-password" />
           </div>
         </div>
+
+        {esAdministrador && <div className="checkbox-card">
+          <input type="checkbox" id="acceso_rapido_ia" checked={!!formData.acceso_rapido_ia} onChange={e => setFormData({...formData, acceso_rapido_ia: e.target.checked})} />
+          <label htmlFor="acceso_rapido_ia" style={{ cursor: 'pointer', margin: 0, width: '100%' }}>
+            <span style={{ display: 'block', fontWeight: 600, color: 'var(--text)' }}>Botón de acceso rápido al chat de IA</span>
+            <span className="ds-field__hint">Muestra el botón discreto de IA en toda la plataforma para esta cuenta. Requiere permiso de uso de IA. Solo los administradores pueden cambiarlo.</span>
+          </label>
+        </div>}
 
         <div className="checkbox-card">
           <input type="checkbox" id="is_active" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
@@ -145,15 +159,23 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
 // SECCIÓN: EDITOR DE PERMISOS DE ROLES
 // ==========================================
 const FEATURES_CATALOG = [
-  { module: "Vista Principal", features: [{ code: "VER_INICIO", label: "Ver Inicio / Dashboard" }] },
+  { module: "Vista Principal", features: [
+      { code: "VER_INICIO", label: "Ver Inicio / Dashboard" },
+      { code: "VER_DASHBOARD_PERSONAL", label: "Dashboard personal (propias ventas y pedidos)" },
+      { code: "VER_DASHBOARD_GENERAL", label: "Dashboard general (cifras globales del negocio)" },
+    ]
+  },
   { module: "Ventas", features: [
       { code: "VER_TODAS_VENTAS", label: "Ver ventas de todos los usuarios" },
       { code: "VER_PROPIAS_VENTAS", label: "Ver solo ventas del vendedor" },
       { code: "CREAR_VENTA", label: "Habilitar creación de ventas" },
+      { code: "EDITAR_PRODUCTOS_VENTA", label: "Completar productos y confirmar precios de lista de ventas" },
+      { code: "AJUSTAR_PRECIO_LISTA_VENTA", label: "Autorizar productos especiales y ajustes de precio de lista con motivo" },
       { code: "EDITAR_VENTA", label: "Habilitar edición de ventas (monto, cliente, etc.)" },
       { code: "EDITAR_ESTADO_VENTA", label: "Editar estado de venta (Pendiente, Entregado, Anulada)" },
       { code: "EDITAR_ESTADO_PEDIDOS_VENTA", label: "Editar estado de pedidos" },
-      { code: "VER_PRECIOS_VENTA", label: "Ver montos y precios de la venta" }
+      { code: "VER_PRECIOS_VENTA", label: "Ver montos y precios de la venta" },
+      { code: "VER_MARGENES", label: "Ver márgenes y costos de venta" }
     ] 
   },
   { module: "Inventario", features: [
@@ -162,7 +184,7 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_ITEM_INVENTARIO", label: "Habilitar edición de ítems" },
       { code: "EDITAR_ESTADO_ITEM", label: "Cambiar estado físico y disponibilidad" },
       { code: "VER_COSTOS_INVENTARIO", label: "Ver costos y totales del ítem" },
-      { code: "CREAR_GRUPO_INVENTARIO", label: "Administrar grupos de inventario" }
+      { code: "CREAR_GRUPO_INVENTARIO", label: "Administrar grupos de inventario" },
     ] 
   },
   { module: "Facturas Proveedor", features: [
@@ -198,9 +220,15 @@ const FEATURES_CATALOG = [
     ]
   },
   { module: "Remisiones", features: [
-      { code: "VER_REMISIONES", label: "Acceso a Remisiones" },
-      { code: "CREAR_REMISION", label: "Habilitar creación de remisiones" },
-      { code: "DESCARGAR_REMISION", label: "Habilitar descarga de PDF" }
+      { code: "VER_REMISIONES", label: "Acceso a Remisiones (solo las de sus ventas)" },
+      { code: "VER_TODAS_REMISIONES", label: "Ver remisiones de todos los usuarios" },
+      { code: "CREAR_REMISION", label: "Crear remisiones de sus ventas (propias o compartidas)" },
+      { code: "CREAR_REMISION_TODAS_VENTAS", label: "Crear remisiones de cualquier venta sin entregar (y sin venta asociada)" },
+      { code: "EDITAR_REMISION", label: "Editar y reprogramar remisiones (fecha, dirección, transportador, cobro)" },
+      { code: "CAMBIAR_ESTADO_REMISION", label: "Marcar despachada, entregada o devuelta" },
+      { code: "ANULAR_REMISION", label: "Anular remisiones" },
+      { code: "DESCARGAR_REMISION", label: "Imprimir y reimprimir remisiones" },
+      { code: "VER_COSTO_ENTREGA_REMISION", label: "Ver y registrar el costo del flete" }
     ]
   },
   { module: "Comprobantes de Egreso", features: [
@@ -208,17 +236,27 @@ const FEATURES_CATALOG = [
       { code: "VER_TODOS_EGRESOS", label: "Ver comprobantes de todos los usuarios" },
       { code: "VER_PROPIOS_EGRESOS", label: "Ver solo comprobantes propios" },
       { code: "CREAR_COMPROBANTE_EGRESO", label: "Crear nuevos comprobantes de egreso" },
+      { code: "EDITAR_COMPROBANTE_EGRESO", label: "Editar comprobantes de egreso (incluye revertir pagos)" },
       { code: "APROBAR_EGRESO", label: "Confirmar transferencias de egreso (Pago)" },
       { code: "EXPORTAR_EGRESOS", label: "Exportar comprobantes de egreso a Excel" }
     ] 
   },
+  { module: "Gerencia", features: [
+      { code: "USAR_ASISTENTE_IA", label: "IA Lottus: chat gerencial con IA (consulta datos de toda la empresa: ventas, asesores, cobros, caja, nómina)" },
+      { code: "GESTIONAR_PERFILES_IA", label: "IA Lottus: crear y editar perfiles de IA (rol, instrucciones, acceso a datos y documentos)" }
+    ]
+  },
   { module: "Finanzas", features: [
       { code: "ACCESO_CAJA", label: "Acceso a Caja Principal" },
+      { code: "CERRAR_CAJA", label: "Abrir y cerrar turnos de caja" },
       { code: "CREAR_INGRESO_CAJA", label: "Registrar ingresos manuales" },
       { code: "CREAR_EGRESO_CAJA", label: "Registrar egresos manuales" },
       { code: "ACCESO_RECIBOS", label: "Acceso a Recibos de Caja" },
       { code: "CREAR_RECIBO", label: "Crear Recibo de Caja" },
-      { code: "APROBAR_RECIBO", label: "Confirmar Recibo de Caja" }
+      { code: "EDITAR_RECIBO", label: "Editar Recibo de Caja" },
+      { code: "APROBAR_RECIBO", label: "Confirmar Recibo de Caja" },
+      { code: "VER_NOMINA", label: "Consultar la nómina de asesores (comisiones, bonificaciones, básicos)" },
+      { code: "GESTIONAR_NOMINA", label: "Crear, editar y cerrar la nómina y sus reglas" }
     ] 
   },
   { module: "Bases de Datos", features: [
@@ -226,6 +264,8 @@ const FEATURES_CATALOG = [
       { code: "VER_CLIENTES", label: "Ver Clientes" },
       { code: "CREAR_CLIENTE", label: "Crear Clientes" },
       { code: "EDITAR_CLIENTE", label: "Editar Clientes" },
+      { code: "VER_CALIDAD_CLIENTES", label: "Revisar posibles duplicados y formato (requiere Ver Clientes)" },
+      { code: "NORMALIZAR_CLIENTES", label: "Aplicar correcciones de formato con historial (requiere editar y revisar calidad)" },
       { code: "EXPORTAR_CLIENTES", label: "Exportar Clientes a Excel" },
       { code: "VER_FINANZAS_CLIENTE", label: "Ver finanzas del cliente" },
       { code: "ADMINISTRAR_PROVEEDORES", label: "Administrar Proveedores" },
@@ -240,11 +280,23 @@ const FEATURES_CATALOG = [
     ]
   },
   { module: "Página Web", features: [
-      { code: "GESTION_WEB", label: "Acceso a Gestión Web (Productos, Banner, Asesores)" }
+      { code: "GESTION_WEB", label: "Acceso a Gestión Web (ver y gestionar productos)" },
+      { code: "CREAR_PRODUCTO_WEB", label: "Crear productos" },
+      { code: "EDITAR_PRODUCTO_WEB", label: "Editar productos existentes" },
+      { code: "ELIMINAR_PRODUCTO_WEB", label: "Eliminar productos" },
+      { code: "EDITAR_CONFIGURACION_WEB", label: "Editar configuración del sitio (banner, textos)" },
+      { code: "ADMINISTRAR_ASESORES_WEB", label: "Ver y administrar la Paleta de Vendedores (asesores)" },
+      { code: "RESPONDER_PQRS", label: "Ver y responder tickets PQRS" }
     ]
   },
   { module: "Catálogos Adicionales", features: [
       { code: "ADMINISTRAR_TELAS", label: "Administrar Telas" }
+    ]
+  },
+  { module: "Lista de Precios", features: [
+      { code: "VER_LISTA_PRECIOS", label: "Acceso a Lista de Precios (catálogo de venta)" },
+      { code: "VER_COSTOS_LISTA_PRECIOS", label: "Ver costos, cargos y matriz de margen" },
+      { code: "EDITAR_LISTA_PRECIOS", label: "Editar líneas, precios, multiplicadores y fotos" }
     ]
   }
 ];
@@ -478,13 +530,14 @@ const UsuariosPage = () => {
                       <th>Nombres</th>
                       <th>Rol de Sistema</th>
                       <th>Estado</th>
+                      <th>Acceso rápido IA</th>
                       <th style={{ textAlign: 'right' }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {usuarios.length === 0 ? (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                           No se encontraron usuarios en esta página.
                         </td>
                       </tr>
@@ -505,6 +558,7 @@ const UsuariosPage = () => {
                               {u.is_active ? 'Activo' : 'Bloqueado'}
                             </Badge>
                           </td>
+                          <td><Badge tone={u.acceso_rapido_ia ? 'success' : 'neutral'}>{u.acceso_rapido_ia ? 'Activado' : 'Desactivado'}</Badge></td>
                           <td style={{ textAlign: 'right' }}>
                             <Button
                               variant="ghost"

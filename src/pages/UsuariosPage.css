@@ -86,7 +86,7 @@
 .role-btn.active {
   background-color: var(--accent-soft);
   color: var(--accent);
-  border-left-color: var(--accent);
+  border-left-color: var(--gold);
 }
 
 .permissions-editor {

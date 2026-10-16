@@ -1,0 +1,261 @@
+/* Cotización — plantilla imprimible/vista previa. Mismo lenguaje visual que
+   ComprobanteEgresoReceipt.css (negro/blanco corporativo) para que todos los
+   documentos impresos del ERP se vean consistentes. */
+
+.cot-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: "Segoe UI", Arial, sans-serif;
+  padding: 2.5rem 2.75rem;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.cot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cot-logo {
+  background: #000000;
+  padding: 0.65rem 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cot-logo span {
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: 0.25rem;
+  font-family: "Audiowide", cursive, sans-serif;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.cot-doc-title { text-align: right; }
+
+.cot-doc-kicker {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12rem;
+  margin-bottom: 0.15rem;
+}
+
+.cot-doc-number {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.cot-doc-date {
+  font-size: 0.68rem;
+  color: #475569;
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
+.cot-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 1.25rem;
+}
+
+.cot-meta-box { padding: 0.75rem 1rem; }
+.cot-meta-box:first-child { border-right: 1px solid #cbd5e1; }
+
+.cot-meta-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.06rem;
+  margin-bottom: 0.25rem;
+}
+
+.cot-meta-value {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cot-meta-sub {
+  font-size: 0.68rem;
+  color: #475569;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.cot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 1.25rem;
+}
+
+.cot-table thead tr { background: #0f172a; }
+
+.cot-table thead th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.05rem;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.cot-table tbody td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.cot-center { text-align: center; }
+.cot-right { text-align: right; }
+.cot-bold { font-weight: 700; }
+
+.cot-item-nombre { font-weight: 700; color: #0f172a; }
+
+.cot-item-detalle {
+  font-size: 0.68rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-top: 0.1rem;
+}
+
+.cot-item-opcionales {
+  font-size: 0.7rem;
+  color: #334155;
+  margin-top: 0.2rem;
+}
+
+.cot-item-notas {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin-top: 0.15rem;
+}
+
+.cot-total-card {
+  margin-left: auto;
+  width: 300px;
+  border: 1px solid #cbd5e1;
+  border-top: 3px solid #0f172a;
+  border-radius: 3px;
+  background: #ffffff;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.cot-total-final {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.65rem 1rem;
+}
+
+.cot-total-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04rem;
+  text-transform: uppercase;
+}
+
+.cot-total-value {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.cot-condiciones {
+  margin-bottom: 1.25rem;
+}
+
+.cot-condiciones ul {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.68rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.cot-firma-box {
+  border: 1px solid #cbd5e1;
+  padding: 1rem 1.1rem;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cot-firma-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.05rem;
+}
+
+.cot-firma-line {
+  border-top: 1.5px solid #0f172a;
+  padding-top: 0.45rem;
+}
+
+.cot-firma-sub {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cot-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+  font-size: 0.56rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: letter portrait;
+    margin: 12mm;
+  }
+  body, .cot-page {
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    background: transparent !important;
+  }
+  .cot-table tr,
+  .cot-total-card,
+  .cot-firma-box,
+  .cot-condiciones,
+  .cot-meta-grid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+

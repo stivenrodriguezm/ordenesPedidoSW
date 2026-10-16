@@ -2,10 +2,11 @@ import { Navigate } from "react-router-dom";
 import { useContext } from "react";
 import { AppContext, usePermissions } from "./AppContext";
 import LottusLoader from "./components/LottusLoader";
+import { ErrorState } from "./components/ui";
 
 function PrivateRoute({ children, roles, feature }) {
   const token = localStorage.getItem("accessToken");
-  const { usuario, isLoading } = useContext(AppContext);
+  const { usuario, isLoading, sessionError, retrySession } = useContext(AppContext);
   const hasPermission = usePermissions();
 
   // Show loader while verifying session
@@ -16,6 +17,11 @@ function PrivateRoute({ children, roles, feature }) {
   // No token → go to login
   if (!token) {
     return <Navigate to="/login" />;
+  }
+
+  // La carga de la sesión falló por red/servidor: salida visible con reintento.
+  if (!usuario && sessionError) {
+    return <ErrorState message={sessionError} onRetry={retrySession} />;
   }
 
   // Still waiting for user data with a valid token → show loader

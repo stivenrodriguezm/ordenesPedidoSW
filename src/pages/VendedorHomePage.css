@@ -17,13 +17,13 @@
   height: 56px;
   flex-shrink: 0;
   border-radius: var(--r-full);
-  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--gray-900) 100%);
   color: #fff;
   font-size: 1.5rem;
   font-weight: 700;
   display: grid;
   place-items: center;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3);
+  box-shadow: 0 4px 14px rgba(23, 24, 21, 0.3);
 }
 
 .vendedor-hero__greeting {

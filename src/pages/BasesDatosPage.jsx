@@ -4,7 +4,8 @@ import Clientes from './Clientes';
 import ProveedoresPage from './ProveedoresPage';
 import ReferenciasPage from './ReferenciasPage';
 import SedesZonasPage from './SedesZonasPage';
-import { FaUsers, FaWarehouse, FaMapMarkerAlt, FaBoxes } from 'react-icons/fa';
+import CalidadClientesTab from '../components/clientes/CalidadClientesTab';
+import { FaUsers, FaWarehouse, FaMapMarkerAlt, FaBoxes, FaUserCheck } from 'react-icons/fa';
 import { Tabs, EmptyState } from '../components/ui';
 import './BasesDatosPage.css';
 
@@ -13,6 +14,7 @@ function BasesDatosPage() {
 
   const tabs = [];
   if (hasPermission('VER_CLIENTES')) tabs.push({ id: 'clientes', label: <><FaUsers /> Clientes</>, component: <Clientes /> });
+  if (hasPermission('VER_CLIENTES') && hasPermission('VER_CALIDAD_CLIENTES')) tabs.push({ id: 'calidad', label: <><FaUserCheck /> Calidad de clientes</>, component: <CalidadClientesTab /> });
   if (hasPermission('ADMINISTRAR_PROVEEDORES')) tabs.push({ id: 'proveedores', label: <><FaWarehouse /> Proveedores</>, component: <ProveedoresPage /> });
   if (hasPermission('ADMINISTRAR_REFERENCIAS')) tabs.push({ id: 'referencias', label: <><FaBoxes /> Referencias</>, component: <ReferenciasPage /> });
   if (hasPermission('ADMINISTRAR_SEDES')) tabs.push({ id: 'zonas', label: <><FaMapMarkerAlt /> Zonas y Sedes</>, component: <SedesZonasPage /> });

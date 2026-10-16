@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import './Clientes.css';
 import { usePermissions } from '../AppContext';
 import { FaChevronDown, FaEdit, FaPlus, FaFileExport, FaSearch, FaUsers } from 'react-icons/fa';
 import API from '../services/api';
+import { exportarClientes } from '../services/clientesService';
+import { mensajeDeError } from '../services/errores';
 import AppNotification from '../components/AppNotification';
 import { Button, PageHeader, Badge, Modal, LoadingBlock, Skeleton } from '../components/ui';
 
@@ -140,6 +143,24 @@ const Clientes = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [exportacion, setExportacion] = useState(null);
+  const [errorListado, setErrorListado] = useState(false);
+  const solicitudListado = useRef(0);
+
+  const descarga = useMutation({
+    mutationFn: exportarClientes,
+    retry: false,
+    onSuccess: blob => {
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = 'Clientes.xlsx';
+      document.body.appendChild(enlace);
+      try { enlace.click(); } finally { enlace.remove(); URL.revokeObjectURL(url); }
+      setNotification({ message: 'Archivo generado con todas las filas del filtro dentro de tu alcance comercial. La generación quedó registrada.', type: 'success' });
+    },
+    onError: error => setNotification({ message: mensajeDeError(error), type: 'error' }),
+  });
 
   const pageSize = 30;
 
@@ -148,7 +169,9 @@ const Clientes = () => {
   }, []);
 
   const fetchClientes = useCallback(async (page, search) => {
+    const solicitud = ++solicitudListado.current;
     setIsLoading(true);
+    setErrorListado(false);
     try {
       const params = {
         page: page,
@@ -156,14 +179,18 @@ const Clientes = () => {
         search: search
       };
       const response = await API.get('/clientes/', { params });
+      if (solicitud !== solicitudListado.current) return;
       setClientesData(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
+      setExportacion(response.data.exportacion || null);
     } catch (error) {
+      if (solicitud !== solicitudListado.current) return;
       console.error("Error fetching clientes:", error);
       setNotification({ message: 'Error al cargar clientes.', type: 'error' });
       setClientesData([]);
+      setErrorListado(true);
     } finally {
-      setIsLoading(false);
+      if (solicitud === solicitudListado.current) setIsLoading(false);
     }
   }, []);
 
@@ -206,49 +233,20 @@ const Clientes = () => {
       const mergedData = {
         ...clienteRes.data,
         ventas: detailsRes.data.ventas,
-        observaciones_cliente: detailsRes.data.observaciones_cliente
+        observaciones_cliente: detailsRes.data.observaciones_cliente,
+        puede_agregar_observaciones: detailsRes.data.puede_agregar_observaciones,
+        historial_limitado: detailsRes.data.historial_limitado,
       };
 
       setExpandedData(mergedData);
 
-    } catch (error) {
+    } catch {
       if (activeClienteIdRef.current !== clienteId) return;
       setNotification({ message: 'Error al cargar los detalles del cliente.', type: 'error' });
     } finally {
       if (activeClienteIdRef.current === clienteId) {
         setLoadingDetails(false);
       }
-    }
-  };
-
-  const exportClientes = async () => {
-    try {
-      const XLSX = await import('xlsx');
-      const response = await API.get('/clientes/', {
-        params: {
-          search: searchTerm,
-          page_size: 9999
-        }
-      });
-
-      const dataToExport = (response.data.results || []).map(cliente => ({
-        'ID': cliente.id,
-        'Nombre': cliente.nombre,
-        'Cédula': cliente.cedula,
-        'Correo': cliente.correo,
-        'Dirección': cliente.direccion,
-        'Ciudad': cliente.ciudad,
-        'Teléfono 1': cliente.telefono1,
-        'Teléfono 2': cliente.telefono2,
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(dataToExport);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
-      XLSX.writeFile(wb, 'Clientes.xlsx');
-      setNotification({ message: 'Exportación exitosa.', type: 'success' });
-    } catch (error) {
-      setNotification({ message: 'Error al exportar clientes.', type: 'error' });
     }
   };
 
@@ -277,7 +275,7 @@ const Clientes = () => {
       }));
       setShowObservationModal(false);
       setNotification({ message: 'Observación agregada.', type: 'success' });
-    } catch (error) {
+    } catch {
       setNotification({ message: 'Error al agregar la observación.', type: 'error' });
     }
   };
@@ -305,15 +303,21 @@ const Clientes = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            {hasPermission('EXPORTAR_CLIENTES') && (
-              <Button variant="secondary" icon={FaFileExport} onClick={exportClientes} title="Exportar">
-                Exportar
+            {hasPermission('EXPORTAR_CLIENTES') && exportacion?.permitida && (
+              <Button variant="secondary" icon={FaFileExport} onClick={() => descarga.mutate({ search: debouncedSearch })}
+                disabled={isLoading || errorListado || searchTerm !== debouncedSearch || descarga.isPending} loading={descarga.isPending} title="Exportar todas las páginas del filtro dentro de tu alcance comercial">
+                Exportar Excel
               </Button>
             )}
           </>
         }
       />
 
+      {hasPermission('EXPORTAR_CLIENTES') && exportacion?.permitida && <p>
+        {exportacion.alcance === 'global'
+          ? 'El Excel incluye todas las fichas de la búsqueda, de todas sus páginas.'
+          : 'El Excel incluye solo clientes de tus ventas propias o compartidas que coincidan con la búsqueda. El directorio básico puede mostrar otras fichas.'}
+      </p>}
       <div className="clientes-container">
         <div className="desktop-view ds-table-wrap">
           <div className="ds-table-scroll">
@@ -388,12 +392,13 @@ const Clientes = () => {
                                       {hasPermission('EDITAR_CLIENTE') && (
                                         <Button variant="secondary" size="sm" icon={FaEdit} onClick={() => setShowEditModal(true)}>Editar</Button>
                                       )}
-                                      <Button size="sm" icon={FaPlus} onClick={() => setShowObservationModal(true)}>Observación</Button>
+                                      {expandedData.puede_agregar_observaciones && <Button size="sm" icon={FaPlus} onClick={() => setShowObservationModal(true)}>Observación</Button>}
                                     </div>
                                   </div>
                                   <div className="cli-right-col">
                                     <div className="cli-section">
                                       <h4 className="cli-section-title">Compras Recientes</h4>
+                                      {expandedData.historial_limitado && <p>Solo se muestra el historial autorizado para tu usuario; una lista vacía no significa que el cliente no tenga otras compras.</p>}
                                       <div className="cli-ventas-list">
                                         {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
                                           <div key={venta.id} className="cli-venta-row">
@@ -471,6 +476,7 @@ const Clientes = () => {
                         </div>
                         <div className="details-section">
                           <h4>Compras Recientes</h4>
+                                      {expandedData.historial_limitado && <p>Solo se muestra el historial autorizado para tu usuario; una lista vacía no significa que el cliente no tenga otras compras.</p>}
                           <ul>
                             {expandedData.ventas && expandedData.ventas.length > 0 ? expandedData.ventas.map((venta) => (
                               <li key={venta.id}>Venta #{venta.id} - {venta.estado}</li>
@@ -489,7 +495,7 @@ const Clientes = () => {
                           {hasPermission('EDITAR_CLIENTE') && (
                             <Button variant="secondary" icon={FaEdit} onClick={() => setShowEditModal(true)}>Editar Cliente</Button>
                           )}
-                          <Button icon={FaPlus} onClick={() => setShowObservationModal(true)}>Agregar Observación</Button>
+                          {expandedData.puede_agregar_observaciones && <Button icon={FaPlus} onClick={() => setShowObservationModal(true)}>Agregar Observación</Button>}
                         </div>
                       </div>
                     ) : null}

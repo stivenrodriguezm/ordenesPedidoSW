@@ -1,0 +1,2 @@
+export const errorOficina=e=>{const d=e?.response?.data;const campo=d&&typeof d==='object'&&!Array.isArray(d)?Object.values(d).find(v=>Array.isArray(v)&&typeof v[0]==='string'):null;return campo?campo[0]:typeof d?.detail==='string'?d.detail:Array.isArray(d)?d[0]:typeof d?.error==='string'?d.error:'No se pudo completar. Revisa los datos e intenta de nuevo.';};
+export const nombreEstado=p=>!p.en_oficina?'Fuera de la oficina':({disponible:'Disponible',ocupado:'Ocupado',ausente:'Ausente'}[p.estado]||'Disponible');

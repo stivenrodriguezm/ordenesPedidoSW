@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { useLocation } from 'react-router-dom';
+
 import { AppContext, usePermissions } from '../AppContext';
 import './Caja.css';
+import { useIdempotencia, mensajeDeError } from '../hooks/useIdempotencia';
+import { useFiltrosUrl } from '../hooks/useFiltrosUrl';
 import API from '../services/api';
+import { ListadoDemasiadoGrande, obtenerTodasLasPaginas } from '../services/paginacion';
 import {
   FaFileExport,
   FaPlus,
-  FaUndo,
   FaLock,
   FaSearch,
   FaArrowUp,
@@ -70,6 +72,7 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, saldoActual, isLoading }) =>
     <Modal
       open={isOpen}
       onClose={onClose}
+      hayCambios={Boolean(formState.concepto || formState.valor)}
       title="Nuevo Movimiento"
       footer={
         <>
@@ -89,7 +92,7 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, saldoActual, isLoading }) =>
     >
       <p className="caja-form-subtitle ds-muted">Registra un egreso o ingreso directo en caja general.</p>
       {formState.tipo === 'egreso' && isExcedingBalance && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ background: '#f9ece7', border: '1px solid #e8c3b8', color: '#a8432f', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span>⚠️</span>
           <span>Saldo insuficiente en caja. Saldo disponible en efectivo: {formatCOP(saldoActual || 0)}.</span>
         </div>
@@ -162,19 +165,21 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, saldoActual, isLoading }) =>
 };
 
 const Caja = () => {
+  const idempotencia = useIdempotencia();
   const { usuario } = useContext(AppContext);
   const hasPermission = usePermissions();
-  const location = useLocation();
+  
   const [cajaData, setCajaData] = useState([]);
   const [stats, setStats] = useState({ ingresos_hoy: 0, egresos_hoy: 0, saldo_actual: 0 });
-  const [filters, setFilters] = useState({ fecha_inicio: '', fecha_fin: '', query: '' });
+  const [totalesFiltrados, setTotalesFiltrados] = useState({ ingresos: 0, egresos: 0 });
+  const [filters, setFilters] = useFiltrosUrl({ fecha_inicio: '', fecha_fin: '', query: '' });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCierreModalOpen, setIsCierreModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 30;
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCierreModalOpen, setIsCierreModalOpen] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
 
   const formatCurrency = (value) => {
@@ -209,9 +214,10 @@ const Caja = () => {
     try {
       const response = await API.get(`/caja/`, { params });
       setStats(response.data.stats);
+      setTotalesFiltrados(response.data.totales_filtrados || { ingresos: 0, egresos: 0 });
       setCajaData(response.data.movimientos.results || []);
       setTotalPages(Math.ceil(response.data.movimientos.count / pageSize) || 1);
-    } catch (error) {
+    } catch {
       setNotification({ message: 'Error al cargar datos.', type: 'error' });
     } finally {
       setIsLoading(false);
@@ -236,12 +242,14 @@ const Caja = () => {
   const handleCreateMovimiento = async (movimientoData) => {
     setIsSubmitting(true);
     try {
-      await API.post(`/caja/`, movimientoData);
+      await API.post(`/caja/`, movimientoData, { headers: idempotencia.cabeceras(movimientoData) });
+      idempotencia.confirmar();
       setNotification({ message: 'Movimiento registrado.', type: 'success' });
       setIsCreateModalOpen(false);
       fetchData(1, filters);
     } catch (error) {
-      setNotification({ message: 'Error al crear movimiento.', type: 'error' });
+      // El servidor explica el rechazo (p. ej. saldo insuficiente); el modal conserva los datos.
+      setNotification({ message: mensajeDeError(error, 'Error al crear movimiento.'), type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -255,20 +263,21 @@ const Caja = () => {
       setIsCierreModalOpen(false);
       fetchData(1, filters);
     } catch (error) {
-      setNotification({ message: 'Error al realizar cierre.', type: 'error' });
+      setNotification({ message: `Error al realizar el cierre: ${mensajeDeError(error)}`, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const exportData = async () => {
-    const params = { page_size: 9999, ...filters };
+    const params = { ...filters };
     Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
 
     try {
       const XLSX = await import('xlsx');
-      const response = await API.get(`/caja/`, { params });
-      const dataToExport = (response.data.movimientos.results || []).map(item => ({
+      // Todas las páginas del filtro, no solo las 100 primeras (P08-03).
+      const movimientos = await obtenerTodasLasPaginas(API, '/caja/', params, { extraer: (d) => d.movimientos, estricto: true, maxPaginas: 200 });
+      const dataToExport = movimientos.map(item => ({
         ID: item.id,
         Usuario: item.usuario_nombre,
         'Fecha': formatDateTime(item.fecha_hora),
@@ -284,7 +293,7 @@ const Caja = () => {
       XLSX.writeFile(workbook, 'Caja_Movimientos.xlsx');
       setNotification({ message: 'Exportación exitosa.', type: 'success' });
     } catch (error) {
-      setNotification({ message: 'Error al exportar.', type: 'error' });
+      setNotification({ message: error instanceof ListadoDemasiadoGrande ? error.message : 'Error al exportar.', type: 'error' });
     }
   };
 
@@ -307,9 +316,11 @@ const Caja = () => {
                 Exportar
               </Button>
             )}
-            <Button variant="secondary" icon={FaLock} onClick={() => setIsCierreModalOpen(true)}>
-              Cierre de Caja
-            </Button>
+            {hasPermission('CERRAR_CAJA') && (
+              <Button variant="secondary" icon={FaLock} onClick={() => setIsCierreModalOpen(true)}>
+                Cierre de Caja
+              </Button>
+            )}
             {(hasPermission('CREAR_INGRESO_CAJA') || hasPermission('CREAR_EGRESO_CAJA')) && (
               <Button icon={FaPlus} onClick={() => setIsCreateModalOpen(true)}>
                 Nuevo Movimiento
@@ -346,7 +357,7 @@ const Caja = () => {
               name="fecha_inicio"
               value={filters.fecha_inicio}
               onChange={handleFilterChange}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
@@ -357,7 +368,7 @@ const Caja = () => {
               name="fecha_fin"
               value={filters.fecha_fin}
               onChange={handleFilterChange}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
@@ -370,6 +381,12 @@ const Caja = () => {
       </div>
 
       <div className="caja-content">
+        {(filters.query || filters.fecha_inicio || filters.fecha_fin) && (
+          <div className="ds-totales-filtrados" role="status">
+            Con estos filtros: <strong>ingresos {formatCurrency(totalesFiltrados.ingresos)}</strong>
+            {' · '}<strong>egresos {formatCurrency(totalesFiltrados.egresos)}</strong>
+          </div>
+        )}
         {/* Desktop Table View */}
         <div className="caja-table-desktop ds-table-wrap">
           <div className="ds-table-scroll">

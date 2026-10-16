@@ -33,7 +33,7 @@
     justify-content: space-between;
     align-items: baseline;
     padding-bottom: 0.45rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--gray-100);
 }
 
 .cliente-info .info-row:last-child {
@@ -70,7 +70,7 @@
 .orders-table-wrapper {
     margin: 0;
     overflow-x: auto;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
 }
 
@@ -88,8 +88,8 @@
     gap: 1rem;
     padding: 1rem;
     background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--gray-200);
     transition: all 0.2s ease;
     animation: fadeInUp 0.3s ease;
 }
@@ -108,7 +108,7 @@
 
 .observacion-card:hover {
     border-color: var(--ventas-primary-soft);
-    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 4px 8px rgba(164, 141, 102, 0.1);
     transform: translateX(4px);
 }
 
@@ -155,9 +155,9 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-    border-radius: 10px;
-    border: 1px solid #86efac;
+    background: linear-gradient(135deg, var(--success-soft) 0%, var(--success-soft) 100%);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--success-line);
     transition: all 0.2s ease;
     animation: fadeInUp 0.3s ease;
 }
@@ -172,7 +172,7 @@
     min-width: 48px;
     height: 48px;
     background: white;
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -201,7 +201,7 @@
 }
 
 .remision-date {
-    color: #059669;
+    color: var(--success);
     font-size: 0.8rem;
 }
 
@@ -209,7 +209,7 @@
 .remision-date strong {
     font-weight: 700;
     margin-right: 0.5rem;
-    color: #047857;
+    color: var(--success);
 }
 
 /* Multi-Select Dropdown Popover */
@@ -239,14 +239,14 @@
 .v-multi-select-btn:hover, .v-multi-select-btn.active-filter {
   border-color: var(--primary, var(--info));
   color: var(--primary, var(--info));
-  background-color: var(--primary-50, #eff6ff);
+  background-color: var(--primary-50, var(--accent-soft));
 }
 
 .v-date-input {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid var(--slate-200, var(--gray-200));
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.85rem;
   color: var(--slate-700, var(--gray-700));
   background-color: var(--surface, var(--surface));
@@ -257,13 +257,13 @@
 
 .v-date-input:focus {
   border-color: var(--primary, var(--info));
-  box-shadow: 0 0 0 2px var(--primary-100, #dbeafe);
+  box-shadow: 0 0 0 2px var(--primary-100, var(--accent-soft));
 }
 
 .v-multi-select-btn.active-filter {
-  background: #f0f9ff;
-  border-color: #0284c7;
-  color: #0369a1;
+  background: var(--gold-soft);
+    border-color: var(--gold);
+    color: var(--accent);
   font-weight: 600;
 }
 
@@ -275,7 +275,7 @@
   min-width: 170px;
   background: var(--surface);
   border: 1px solid var(--gray-200);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   padding: 0.5rem;
   display: flex;
@@ -303,7 +303,7 @@
 .v-popover-action-btn {
   background: none;
   border: none;
-  color: #0284c7;
+  color: var(--info);
   font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
@@ -319,7 +319,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.5rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   font-size: 0.82rem;
   color: var(--gray-700);
@@ -346,16 +346,16 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   padding: 0.9rem 1.25rem;
   margin-bottom: 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  box-shadow: 0 4px 20px -2px rgba(23, 24, 21, 0.04), 0 2px 6px -1px rgba(23, 24, 21, 0.02);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sales-summary-report-wrapper:hover {
   border-color: rgba(199, 210, 254, 0.9);
-  box-shadow: 0 8px 25px -4px rgba(39, 67, 133, 0.08), 0 3px 8px -2px rgba(39, 67, 133, 0.04);
+  box-shadow: 0 8px 25px -4px rgba(164, 141, 102, 0.08), 0 3px 8px -2px rgba(164, 141, 102, 0.04);
 }
 
 .report-header {
@@ -376,14 +376,14 @@
 .report-header-icon-badge {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.15rem;
-  box-shadow: 0 4px 10px rgba(39, 67, 133, 0.25);
+  box-shadow: 0 4px 10px rgba(164, 141, 102, 0.25);
   flex-shrink: 0;
   transition: transform 0.2s ease;
 }
@@ -437,14 +437,14 @@
 }
 
 .report-header-toggle-btn.active {
-  background: #eff6ff;
+  background: var(--accent-soft);
   color: var(--info);
-  border-color: #bfdbfe;
+  border-color: var(--accent-line);
 }
 
 .report-header-toggle-btn.active:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
 }
 
 .report-header-toggle-btn .toggle-arrow {
@@ -549,9 +549,9 @@
 }
 
 .fct-clear-pill {
-    background: #fef2f2;
-    color: #ef4444;
-    border: 1px solid #fecaca;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger-line);
     width: 34px;
     height: 34px;
     border-radius: 50%;
@@ -563,13 +563,13 @@
 }
 
 .fct-clear-pill:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #b91c1c;
+    background: var(--danger-soft);
+    border-color: var(--danger-line);
+    color: var(--danger);
 }
 
 .v-btn-primary-glow {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, var(--info) 0%, var(--info) 100%);
     color: white;
     border: none;
     border-radius: 9999px;

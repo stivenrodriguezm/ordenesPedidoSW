@@ -8,13 +8,18 @@
   left: 0;
   width: var(--sidebar-w);
   height: 100vh;
+  /* 100vh en móvil se calcula con la barra del navegador oculta (el valor
+     más grande posible) — cuando la barra está visible, el final del
+     sidebar queda tapado detrás de ella. 100dvh sigue el viewport
+     realmente visible y se actualiza al mostrarse/ocultarse la barra. */
+  height: 100dvh;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   display: flex;
   flex-direction: column;
   z-index: 1002;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 4px 0 22px rgba(23, 24, 21, 0.18);
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
@@ -29,11 +34,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--header-h);
+  height: var(--sidebar-brand-h);
   padding: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: relative;
   flex-shrink: 0;
+  background: #000;
+}
+
+/* Línea dorada que se desvanece, como en la cabecera de la Oficina IA */
+.sidebar-header::after {
+  content: '';
+  position: absolute;
+  left: 1.35rem;
+  right: 1.35rem;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #b7a076, transparent 80%);
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -55,16 +71,15 @@
   letter-spacing: 5px;
   color: #ffffff;
   text-transform: uppercase;
-  font-weight: 500;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+  font-weight: 400;
 }
 
 .sidebar.collapsed .logo-text {
   margin-left: 0;
   letter-spacing: 0;
   font-size: 1.8rem;
-  font-weight: 600;
-  color: #3b82f6;
+  font-weight: 400;
+  color: #ffffff;
 }
 
 .sidebar-close {
@@ -82,9 +97,18 @@
 
 .sidebar-nav {
   padding: 1rem 0;
+  /* Espacio extra al final para que el último ítem no quede pegado al
+     borde ni tapado por la barra inferior del navegador/gestos del
+     celular (safe-area-inset-bottom = 0 en navegadores sin ese concepto,
+     así que no afecta desktop). */
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   flex-grow: 1;
+  /* Evita que, al llegar al final/inicio del scroll del menú, el gesto
+     "se pase" a hacer scroll de la página detrás — sin esto, scrollear el
+     sidebar hasta el fondo y seguir scrolleando mueve la página completa. */
+  overscroll-behavior: contain;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -108,18 +132,18 @@
 }
 
 .nav-subtitle {
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
-  font-weight: 700;
-  color: #64748b;
+  font-weight: 600;
+  color: #8b7756;
   padding: 0 1.35rem 0.55rem;
-  letter-spacing: 1.3px;
+  letter-spacing: 1.8px;
   white-space: nowrap;
 }
 
 .nav-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(200, 181, 143, 0.14);
   margin: 0.9rem 1.2rem;
 }
 
@@ -128,7 +152,7 @@
   align-items: center;
   padding: 0.7rem 1.1rem;
   margin: 0.15rem 0.7rem;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   color: var(--sidebar-text);
   text-decoration: none;
   font-size: 0.875rem;
@@ -145,8 +169,8 @@
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.04);
-  color: #f8fafc;
+  background-color: rgba(255, 255, 255, 0.045);
+  color: #f2efe7;
   transform: translateX(3px);
 }
 
@@ -158,10 +182,9 @@
   background: var(--sidebar-active-bg);
   color: var(--sidebar-text-active);
   font-weight: 600;
-  box-shadow: inset 0 0 12px rgba(59, 130, 246, 0.08);
 }
 
-/* Barra de acento azul en el item activo */
+/* Barra de acento dorado en el item activo */
 .nav-link.active::before {
   content: '';
   position: absolute;
@@ -170,9 +193,8 @@
   transform: translateY(-50%);
   width: 3px;
   height: 60%;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 2px 2px 0;
   background: var(--sidebar-active-bar);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
 }
 
 .sidebar.collapsed .nav-link.active::before {
@@ -180,11 +202,11 @@
 }
 
 .sidebar.collapsed .nav-link.active {
-  background: rgba(59, 130, 246, 0.16);
+  background: rgba(200, 181, 143, 0.14);
 }
 
 .nav-link.active .nav-icon {
-  color: #3b82f6;
+  color: var(--gold-light);
 }
 
 .nav-icon {
@@ -202,18 +224,202 @@
   font-size: 1.25rem;
 }
 
-/* ---- Footer (colapsar) ---- */
+/* ---- Footer (perfil del usuario + colapsar) ---- */
 
 .sidebar-footer {
-  padding: 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.75rem 0.7rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(200, 181, 143, 0.14);
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 0.5rem;
   flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.28);
 }
 
 .sidebar.collapsed .sidebar-footer {
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar-user {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar.collapsed .sidebar-user {
+  flex: none;
+  width: 100%;
+}
+
+.sidebar-user__tarjeta {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: #f2efe7;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.sidebar-user__tarjeta:hover,
+.sidebar-user.is-abierto .sidebar-user__tarjeta {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(200, 181, 143, 0.22);
+}
+
+.sidebar-user__tarjeta:focus-visible,
+.sidebar-user__opcion:focus-visible,
+.collapse-btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 1px;
+}
+
+.sidebar.collapsed .sidebar-user__tarjeta {
   justify-content: center;
+  padding: 0.4rem 0;
+}
+
+.sidebar-user__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(200, 181, 143, 0.45);
+  background: #24241f;
+  color: var(--gold-light);
+  font-family: var(--font-brand);
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+}
+
+.sidebar-user__datos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.sidebar-user__datos strong {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f2efe7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user__datos small {
+  font-size: 0.62rem;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #bda983;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user__flecha {
+  font-size: 0.65rem;
+  color: #8f8d82;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.sidebar-user.is-abierto .sidebar-user__flecha {
+  transform: rotate(180deg);
+}
+
+.sidebar.collapsed .sidebar-user__datos,
+.sidebar.collapsed .sidebar-user__flecha {
+  display: none;
+}
+
+.sidebar-user__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 0.45rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(200, 181, 143, 0.2);
+  border-radius: var(--r-md);
+  background: #1b1b18;
+  animation: sidebar-user-in 0.18s ease both;
+}
+
+.sidebar-user__menu[hidden] {
+  display: none;
+}
+
+@keyframes sidebar-user-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.sidebar-user__opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: #d9d6cc;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-user__opcion svg {
+  font-size: 0.85rem;
+  color: #bda983;
+  flex-shrink: 0;
+}
+
+.sidebar-user__opcion:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.sidebar-user__opcion--salir {
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  padding-top: 0.65rem;
+  color: #e3b3a5;
+}
+
+.sidebar-user__opcion--salir svg {
+  color: #d98d78;
+}
+
+.sidebar-user__opcion--salir:hover {
+  background: rgba(168, 67, 47, 0.22);
+  color: #fff;
+}
+
+.sidebar.collapsed .sidebar-user__opcion {
+  justify-content: center;
+  padding: 0.6rem 0;
+}
+
+.sidebar.collapsed .sidebar-user__opcion span {
+  display: none;
 }
 
 .collapse-btn {
@@ -222,7 +428,9 @@
   color: var(--sidebar-text);
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  flex-shrink: 0;
+  margin-bottom: 0.3rem;
+  border-radius: var(--r-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -231,14 +439,18 @@
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(200, 181, 143, 0.16);
   color: #fff;
+}
+
+.sidebar.collapsed .collapse-btn {
+  margin-bottom: 0;
 }
 
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.55);
+  background-color: rgba(23, 24, 21, 0.55);
   backdrop-filter: blur(3px);
   z-index: 1001;
   display: none;
@@ -246,26 +458,82 @@
 
 /* ---- Responsive ---- */
 
+/* Celular y tablet (rediseño 2026-10-15): panel angosto que entra desde la izquierda,
+   cabecera con el logo y el botón de cerrar a la vista, opciones de 44 px (cómodas para
+   el dedo) y fondo oscurecido detrás. En computador no cambia nada. */
 @media (max-width: 992px) {
-  .sidebar {
-    transform: translateX(-100%);
-    width: var(--sidebar-w);
+  .sidebar,
+  .sidebar.collapsed {
+    width: min(84vw, 300px);
+    transform: translateX(-105%);
+    border-right: none;
+    box-shadow: none;
+    transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 14px 0 44px rgba(0, 0, 0, 0.45);
   }
 
-  .sidebar-close {
-    display: block;
+  .sidebar-header {
+    justify-content: space-between;
+    height: calc(58px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 0.6rem 0 1.25rem;
   }
+
+  .sidebar-header::after { left: 1.25rem; right: 1.25rem; }
+
+  .logo-text { font-size: 1.2rem; letter-spacing: 5px; }
+
+  .sidebar-close {
+    display: grid;
+    place-items: center;
+    position: static;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #e6e3da;
+    font-size: 1rem;
+  }
+
+  .sidebar-close:hover, .sidebar-close:focus-visible { background: rgba(200, 181, 143, 0.18); color: #fff; outline: none; }
+
+  .sidebar-nav { padding: 0.6rem 0; }
+
+  .nav-section { margin-bottom: 0.6rem; }
+
+  .nav-subtitle { padding: 0.5rem 1.35rem 0.35rem; font-size: 0.62rem; }
+
+  .nav-link {
+    min-height: 44px;
+    margin: 1px 0.6rem;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.93rem;
+  }
+
+  .nav-link:hover { transform: none; }
+
+  .nav-icon { font-size: 1.05rem; margin-right: 0.8rem; }
+
+  .sidebar-footer { padding: 0.6rem 0.6rem calc(0.6rem + env(safe-area-inset-bottom, 0px)); }
 
   .sidebar-backdrop {
     display: block;
+    background-color: rgba(12, 12, 10, 0.5);
+    backdrop-filter: blur(2px);
+    animation: sidebar-velo 0.2s ease;
   }
 
-  .sidebar-footer {
+  .collapse-btn {
     display: none;
   }
+}
+
+@keyframes sidebar-velo { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none; }
+  .sidebar-backdrop { animation: none; }
 }

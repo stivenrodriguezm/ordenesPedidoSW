@@ -1,7 +1,9 @@
+import { useExportacion } from '../hooks/useExportacion';
 import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
 import useDebounce from '../hooks/useDebounce';
+import { useFiltrosUrl } from '../hooks/useFiltrosUrl';
 import './ComprobantesEgreso.css';
 import './VentasImprovements.css';
 import API from '../services/api';
@@ -10,8 +12,6 @@ import {
   FaFileExport,
   FaPlus,
   FaSearch,
-  FaUndo,
-  FaArrowDown,
   FaMoneyBillWave,
   FaUniversity,
   FaCreditCard,
@@ -21,11 +21,11 @@ import {
   FaChevronRight,
   FaChevronDown,
   FaChevronUp,
-  FaBoxOpen,
   FaTimes,
   FaCheckCircle,
   FaPrint,
-  FaStickyNote
+  FaStickyNote,
+  FaEdit
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
@@ -43,11 +43,18 @@ const PaymentIcon = ({ method }) => {
   return <div className="payment-icon-wrapper other"><FaCreditCard /></div>;
 };
 
+// Estados del comprobante. 'Anulado' solo existe para abonos anulados (P10-02).
+const etiquetaEstadoEgreso = (estado) => (
+  estado === 'Pagado' ? '✓ Pagado' : estado === 'Anulado' ? 'Anulado' : 'Por Confirmar'
+);
+const claseEstadoEgreso = (estado) => (estado === 'Pagado' ? 'paid' : estado === 'Anulado' ? 'cancelled' : 'pending');
+
 const ComprobantesEgreso = () => {
-  const { proveedores, usuario } = useContext(AppContext);
+  const { proveedores } = useContext(AppContext);
   const navigate = useNavigate();
   const hasPermission = usePermissions();
   const [comprobantesData, setComprobantesData] = useState([]);
+  const [totalFiltrado, setTotalFiltrado] = useState(0);
   const [expandedCEIds, setExpandedCEIds] = useState([]);
 
   const toggleExpandCE = (id) => {
@@ -65,7 +72,7 @@ const ComprobantesEgreso = () => {
   const [isMediosOpen, setIsMediosOpen] = useState(false);
 
   // Search & date filters
-  const [filters, setFilters] = useState({ fecha_inicio: '', fecha_fin: '', query: '' });
+  const [filters, setFilters] = useFiltrosUrl({ fecha_inicio: '', fecha_fin: '', query: '' });
   const debouncedQuery = useDebounce(filters.query, 350);
 
   const filterBarRef = useRef(null);
@@ -75,6 +82,7 @@ const ComprobantesEgreso = () => {
   const pageSize = 30;
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const { exportar, exportando } = useExportacion('egresos', 'Comprobantes_Egreso.xlsx', setNotification);
   const [printPreviewItem, setPrintPreviewItem] = useState(null);
 
   const mediosPago = [
@@ -172,8 +180,9 @@ const ComprobantesEgreso = () => {
     try {
       const response = await API.get(`/comprobantes-egreso/`, { params });
       setComprobantesData(response.data.results || []);
+      setTotalFiltrado(response.data.totales_filtrados?.valor || 0);
       setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
-    } catch (error) {
+    } catch {
       setNotification({ message: 'Error al cargar datos.', type: 'error' });
     } finally {
       setIsLoading(false);
@@ -209,44 +218,15 @@ const ComprobantesEgreso = () => {
     }
   };
 
-  const exportData = async () => {
-    try {
-      const XLSX = await import('xlsx');
-      const params = {
-        page_size: 9999,
-        fecha_inicio: filters.fecha_inicio || undefined,
-        fecha_fin: filters.fecha_fin || undefined,
-        query: filters.query || undefined,
-      };
-      if (selectedProveedores.length > 0) params.proveedores = selectedProveedores.join(',');
-      if (selectedEstados.length > 0) params.estados = selectedEstados.join(',');
-      if (selectedMedios.length > 0) params.medio_pago = selectedMedios.join(',');
-
-      const response = await API.get(`/comprobantes-egreso/`, { params });
-      const dataToExport = (response.data.results || []).map(item => ({
-        ID: item.id,
-        Fecha: formatDate(item.fecha),
-        Proveedor: item.proveedor_nombre || '-',
-        'Medio de Pago': item.medio_pago,
-        Estado: item.estado || '-',
-        Valor: item.valor,
-        Concepto: item.concepto || '-',
-        Descripción: item.descripcion || '-'
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Egresos');
-      XLSX.writeFile(workbook, 'Comprobantes_Egreso.xlsx');
-      setNotification({ message: 'Exportación exitosa.', type: 'success' });
-    } catch (error) {
-      setNotification({ message: 'Error al exportar.', type: 'error' });
-    }
-  };
+  const exportData = () => exportar({
+    fecha_inicio: filters.fecha_inicio, fecha_fin: filters.fecha_fin, query: filters.query,
+    proveedores: selectedProveedores.join(','), estados: selectedEstados.join(','), medio_pago: selectedMedios.join(','),
+  });
 
   // Calculate stats for current view (unconfirmed transfer vouchers)
   const stats = useMemo(() => {
     const porConfirmarCount = comprobantesData.filter(
-      item => item.estado && item.estado !== 'Pagado'
+      item => item.estado === 'Por Confirmar Pago'
     ).length;
     return { porConfirmarCount };
   }, [comprobantesData]);
@@ -265,8 +245,8 @@ const ComprobantesEgreso = () => {
         subtitle="Registro de egresos y pagos a proveedores"
         actions={
           <>
-            {usuario?.role === 'administrador' && (
-              <Button variant="ghost" icon={FaFileExport} onClick={exportData} title="Exportar" />
+            {hasPermission('EXPORTAR_EGRESOS') && (
+              <Button variant="ghost" icon={FaFileExport} onClick={exportData} loading={exportando} disabled={isLoading} aria-label="Exportar Excel" title="Exportar" />
             )}
             {hasPermission('CREAR_COMPROBANTE_EGRESO') && (
               <Button variant="primary" icon={FaPlus} onClick={() => navigate('/comprobantes-egreso/nuevo')}>
@@ -308,7 +288,7 @@ const ComprobantesEgreso = () => {
               name="fecha_inicio"
               value={filters.fecha_inicio}
               onChange={handleFilterChange}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
@@ -319,7 +299,7 @@ const ComprobantesEgreso = () => {
               name="fecha_fin"
               value={filters.fecha_fin}
               onChange={handleFilterChange}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
@@ -471,6 +451,11 @@ const ComprobantesEgreso = () => {
       </div>
 
       <div className="content-area">
+        {(filters.query || filters.fecha_inicio || filters.fecha_fin || selectedProveedores.length > 0 || selectedEstados.length > 0 || selectedMedios.length > 0) && (
+          <div className="ds-totales-filtrados" role="status">
+            Con estos filtros: <strong>total {formatCurrency(totalFiltrado)}</strong>
+          </div>
+        )}
         {/* Desktop Table */}
         <div className="desktop-table-wrapper">
           <table className="modern-table">
@@ -523,18 +508,28 @@ const ComprobantesEgreso = () => {
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                            <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`}>
-                              {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
+                            <span className={`status-badge ${claseEstadoEgreso(item.estado)}`}>
+                              {etiquetaEstadoEgreso(item.estado)}
                             </span>
-                            {item.estado !== 'Pagado' && hasPermission('APROBAR_EGRESO') && (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
-                                className="ce-confirm-btn"
-                                title="Confirmar transferencia de egreso realizada"
-                              >
-                                <FaCheckCircle size={11} /> Confirmar
-                              </button>
+                            {item.estado === 'Por Confirmar Pago' && (
+                              hasPermission('APROBAR_EGRESO') ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
+                                  className="ce-confirm-btn"
+                                  title="Confirmar transferencia de egreso realizada"
+                                >
+                                  <FaCheckCircle size={11} /> Confirmar
+                                </button>
+                              ) : (
+                                <span
+                                  className="ce-confirm-btn disabled"
+                                  title="Solo usuarios con permiso de aprobación pueden confirmar transferencias"
+                                  style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                                >
+                                  <FaCheckCircle size={11} /> Confirmar
+                                </span>
+                              )
                             )}
                           </div>
                         </td>
@@ -542,7 +537,19 @@ const ComprobantesEgreso = () => {
                           -{formatCurrency(item.valor)}
                         </td>
                         <td className="ce-actions-cell">
-                          <button type="button" className="action-btn" title="Imprimir comprobante" onClick={(e) => { e.stopPropagation(); setPrintPreviewItem(item); }}>
+                          {hasPermission('EDITAR_COMPROBANTE_EGRESO') ? (
+                            <button type="button" className="action-btn" title="Editar comprobante" onClick={(e) => { e.stopPropagation(); navigate(`/comprobantes-egreso/${item.id}/editar`, { state: { comprobante: item } }); }}>
+                              <FaEdit />
+                            </button>
+                          ) : (
+                            <button type="button" className="action-btn" title="Sin permiso para editar comprobantes" disabled style={{ opacity: 0.35, cursor: 'not-allowed' }}>
+                              <FaEdit />
+                            </button>
+                          )}
+                          <button type="button" className="action-btn"
+                            title={item.estado === 'Anulado' ? 'Comprobante anulado: no se imprime (el PDF siempre indica "Pagado")' : 'Imprimir comprobante'}
+                            disabled={item.estado === 'Anulado'}
+                            onClick={(e) => { e.stopPropagation(); setPrintPreviewItem(item); }}>
                             <FaPrint />
                           </button>
                           <button type="button" className="action-btn" title={isExpanded ? 'Ocultar detalle' : 'Ver detalle'} onClick={(e) => { e.stopPropagation(); toggleExpandCE(item.id); }}>
@@ -571,7 +578,7 @@ const ComprobantesEgreso = () => {
                                   </div>
                                   <div className="ce-det-item">
                                     <span className="ce-det-label">Estado</span>
-                                    <span className="ce-det-valor">{item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}</span>
+                                    <span className="ce-det-valor">{etiquetaEstadoEgreso(item.estado)}</span>
                                   </div>
                                   <div className="ce-det-item ce-det-item-full">
                                     <span className="ce-det-label">Nota / Observación</span>
@@ -677,15 +684,15 @@ const ComprobantesEgreso = () => {
                       -{formatCurrency(item.valor)}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end', marginBottom: '4px' }}>
-                      <span className={`status-badge ${item.estado === 'Pagado' ? 'paid' : 'pending'}`} style={{ fontSize: '0.7rem' }}>
-                        {item.estado === 'Pagado' ? '✓ Pagado' : 'Por Confirmar'}
+                      <span className={`status-badge ${claseEstadoEgreso(item.estado)}`} style={{ fontSize: '0.7rem' }}>
+                        {etiquetaEstadoEgreso(item.estado)}
                       </span>
-                      {item.estado !== 'Pagado' && hasPermission('APROBAR_EGRESO') && (
+                      {item.estado === 'Por Confirmar Pago' && hasPermission('APROBAR_EGRESO') && (
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
                           style={{
-                            background: '#2563eb',
+                            background: '#171815',
                             color: '#ffffff',
                             border: 'none',
                             borderRadius: '6px',
@@ -702,11 +709,18 @@ const ComprobantesEgreso = () => {
                         </button>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <div className="card-id">#{item.id}</div>
-                      <button type="button" className="ce-mobile-expand-btn" onClick={() => setPrintPreviewItem(item)}>
-                        <FaPrint /> Imprimir
-                      </button>
+                      {hasPermission('EDITAR_COMPROBANTE_EGRESO') && (
+                        <button type="button" className="ce-mobile-expand-btn" onClick={() => navigate(`/comprobantes-egreso/${item.id}/editar`, { state: { comprobante: item } })}>
+                          <FaEdit /> Editar
+                        </button>
+                      )}
+                      {item.estado !== 'Anulado' && (
+                        <button type="button" className="ce-mobile-expand-btn" onClick={() => setPrintPreviewItem(item)}>
+                          <FaPrint /> Imprimir
+                        </button>
+                      )}
                       <button type="button" className={`ce-mobile-expand-btn ${isExpanded ? 'open' : ''}`} onClick={() => toggleExpandCE(item.id)}>
                         <FaChevronDown /> {isExpanded ? 'Ocultar' : hasFacturas ? `Facturas (${facturas.length})` : 'Ver detalle'}
                       </button>
@@ -793,19 +807,19 @@ const ComprobantesEgreso = () => {
           title="Confirmar Transferencia de Egreso"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', padding: '0.85rem 1.1rem', borderRadius: '10px', fontSize: '0.9rem' }}>
+            <div style={{ background: '#eaeff1', border: '1px solid #c9d5dc', color: '#4f6a7f', padding: '0.85rem 1.1rem', borderRadius: '10px', fontSize: '0.9rem' }}>
               <div style={{ fontWeight: '800', fontSize: '1rem', marginBottom: '0.3rem' }}>
                 Comprobante de Egreso #{ceToConfirm.id}
               </div>
-              <div style={{ color: '#0284c7', fontSize: '0.88rem' }}>
+              <div style={{ color: '#4f6a7f', fontSize: '0.88rem' }}>
                 Proveedor: <strong>{ceToConfirm.proveedor_nombre || 'N/A'}</strong> • Valor: <strong>{formatCOP(ceToConfirm.valor)}</strong>
               </div>
             </div>
-            <p style={{ fontSize: '0.88rem', color: '#334155', margin: 0, lineHeight: '1.4' }}>
+            <p style={{ fontSize: '0.88rem', color: '#3e3e37', margin: 0, lineHeight: '1.4' }}>
               ¿Confirmas que la transferencia bancaria correspondiente a este egreso ha sido procesada y verificada correctamente? El estado cambiará a <strong>Pagado</strong>.
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e4e3dc' }}>
               <button
                 type="button"
                 onClick={() => setCeToConfirm(null)}
@@ -813,9 +827,9 @@ const ComprobantesEgreso = () => {
                 style={{
                   padding: '0.55rem 1.1rem',
                   borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #d0cfc6',
                   background: '#ffffff',
-                  color: '#475569',
+                  color: '#57574f',
                   fontWeight: '600',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
@@ -831,12 +845,12 @@ const ComprobantesEgreso = () => {
                   padding: '0.55rem 1.25rem',
                   borderRadius: '8px',
                   border: 'none',
-                  background: '#2563eb',
+                  background: '#171815',
                   color: '#ffffff',
                   fontWeight: '700',
                   fontSize: '0.85rem',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(37,99,235,0.25)',
+                  boxShadow: '0 2px 4px rgba(164, 141, 102,0.25)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px'

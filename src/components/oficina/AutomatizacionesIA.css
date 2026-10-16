@@ -1,0 +1,68 @@
+.ai-auto { --of-ink:#26251f; font-size:12px; }
+.ai-auto .ds-modal__title { font-size:16px; }
+.ai-auto button,.ai-auto input,.ai-auto select,.ai-auto textarea { font:inherit; }
+.ai-auto button { cursor:pointer; }
+.ai-auto button:disabled { opacity:.45; cursor:default; }
+.ai-auto label { display:flex; flex-direction:column; gap:6px; color:#55534a; font-size:11px; }
+.ai-auto input:not([type=checkbox]),.ai-auto select,.ai-auto textarea { width:100%; min-height:33px; padding:7px 9px; border:1px solid #d9d6ca; border-radius:4px; background:#fff; color:#343229; }
+.ai-auto textarea { line-height:1.6; resize:vertical; }
+.ai-auto input:focus-visible,.ai-auto select:focus-visible,.ai-auto textarea:focus-visible,.ai-auto button:focus-visible { outline:2px solid #ac9268; outline-offset:2px; }
+.ai-auto label small { font-size:10px; color:#96907e; line-height:1.5; }
+.ai-auto__editor { display:flex; flex-direction:column; gap:16px; }
+.ai-auto__fila { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
+.ai-auto__plantillas { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding-bottom:12px; border-bottom:1px solid #e6e2d6; }
+.ai-auto__plantillas>span { width:100%; color:#92856d; font-size:10px; margin-bottom:3px; }
+.ai-auto__plantillas button { padding:6px 8px; background:#f5f3eb; border:1px solid #e2dccd; border-radius:3px; font-size:10px; color:#645840; }
+.ai-auto .ai-auto__check { display:flex; flex-direction:row; align-items:center; gap:7px; white-space:nowrap; }
+.ai-auto input[type=checkbox] { accent-color:#65593d; width:14px; height:14px; }
+.ai-auto__dias { border:0; padding:0; margin:0; display:flex; gap:7px; flex-wrap:wrap; }
+.ai-auto__dias legend { font-size:11px; color:#55534a; margin-bottom:7px; }
+.ai-auto__dias label { align-items:center; flex-direction:row; padding:7px 8px; border:1px solid #e1ddcf; border-radius:3px; background:#f9f8f4; }
+.ai-auto__ayuda { margin:0; padding:11px 13px; background:#f6f4ed; border-left:2px solid #b5a178; font-size:10px; color:#85806d; line-height:1.7; }
+.ai-auto__acciones { display:flex; justify-content:flex-end; gap:8px; margin-top:5px; }
+.ai-auto__error { padding:10px 12px; color:#984f36; background:#fff6ef; border:1px solid #eedbc8; border-radius:4px; font-size:11px; line-height:1.6; }
+.ai-auto__error button { border:0; background:transparent; color:inherit; text-decoration:underline; }
+.ai-auto__motor { display:flex; align-items:center; gap:6px; padding:10px 12px; border:1px solid #e5e0d3; background:#f7f5ed; border-radius:4px; font-size:10px; color:#80765e; margin-bottom:16px; }
+.ai-auto__motor small { font-size:9px; margin-left:auto; white-space:nowrap; }
+.ai-auto__motor .is-inactivo { background:#bcae91; }
+.ai-auto__toolbar { display:flex; align-items:flex-end; gap:15px; margin-bottom:15px; }
+.ai-auto__toolbar>label:first-child { flex:1; }
+.ai-auto__toolbar .ai-auto__check { padding-bottom:10px; }
+.ai-auto__toolbar .of-boton { white-space:nowrap; }
+.ai-auto__lista { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.ai-auto__lista>article { border:1px solid #e1ded1; border-radius:5px; padding:15px; background:#fff; }
+.ai-auto__lista>article.is-archivada { background:#f7f6f2; }
+.ai-auto__tarea-cab { display:flex; align-items:center; gap:8px; }
+.ai-auto__estado { display:inline-flex; padding:4px 6px; font-size:9px; color:#686b5a; background:#eef0e7; border-radius:3px; white-space:nowrap; }
+.ai-auto__estado.is-ejecutando,.ai-auto__estado.is-pendiente { color:#90702e; background:#f6efd8; }
+.ai-auto__estado.is-error { color:#9d5c3d; background:#fff0e6; }
+.ai-auto__tarea-cab small { color:#928b77; font-size:9px; }
+.ai-auto__tarea-cab>button { margin-left:auto; background:transparent; border:0; padding:4px; color:#a39576; }
+.ai-auto h3 { font-size:13px; color:#37372c; margin:12px 0 7px; font-weight:600; }
+.ai-auto__instrucciones { font-size:11px; line-height:1.6; color:#84806e; margin:0 0 12px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+.ai-auto__horario,.ai-auto__proxima { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:10px; color:#75735f; }
+.ai-auto__horario>span { display:block; width:100%; padding-left:16px; color:#a09a85; font-size:9px; }
+.ai-auto__proxima { margin:10px 0 0; font-size:9px; color:#8d876f; }
+.ai-auto__ultima { margin-top:13px; padding:10px; background:#f5f5ef; border-radius:3px; }
+.ai-auto__ultima>span { font-size:9px; color:#81836d; }
+.ai-auto__ultima p { font-size:10px; line-height:1.6; color:#767563; margin:6px 0 0; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+.ai-auto__ultima.is-error { background:#fff4eb; }
+.ai-auto__ultima.is-error p { color:#a16b46; }
+.ai-auto__ultima button,.ai-auto__historial article>button { display:flex; align-items:center; gap:7px; background:transparent; border:0; color:#76663f; padding:8px 0 0; font-size:10px; }
+.ai-auto__tarea-acciones { display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-top:1px solid #ede9dd; margin-top:13px; padding-top:10px; }
+.ai-auto__tarea-acciones button { display:inline-flex; align-items:center; gap:5px; padding:3px 0; border:0; background:transparent; font-size:9px; color:#8b7f5e; }
+.ai-auto__tarea-acciones b { padding:1px 4px; background:#eadab8; color:#86632a; border-radius:3px; font-weight:500; }
+.ai-auto__tarea-acciones button:last-child { margin-left:auto; }
+.ai-auto__vacio { grid-column:1/-1; padding:30px 20px; text-align:center; border:1px dashed #d7d0bf; border-radius:4px; color:#9d9073; background:#faf9f5; }
+.ai-auto__vacio>svg { font-size:24px; }
+.ai-auto__vacio p { font-size:11px; line-height:1.6; }
+.ai-auto__vacio .of-boton { margin-top:10px; }
+.ai-auto__volver { display:inline-flex; align-items:center; gap:8px; padding:0 0 15px; background:transparent; border:0; font-size:11px; color:#8f8060; }
+.ai-auto__historial { display:flex; flex-direction:column; gap:10px; }
+.ai-auto__historial article { padding:13px 15px; border:1px solid #e4decf; border-radius:4px; }
+.ai-auto__historial article>div { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.ai-auto__historial small { font-size:9px; color:#a09782; }
+.ai-auto__historial p { font-size:11px; line-height:1.7; color:#89816b; margin:8px 0 0; }
+.ai-auto__resultado pre { white-space:pre-wrap; word-break:break-word; font:inherit; line-height:1.8; padding:15px; color:#585341; background:#f8f6ee; border-radius:4px; }
+.ai-auto__resultado small { color:#a4987a; }
+@media(max-width:680px) { .ai-auto__fila,.ai-auto__lista{grid-template-columns:1fr;} .ai-auto__toolbar{flex-wrap:wrap;gap:10px;} .ai-auto__toolbar>label:first-child{width:100%;flex:auto;} .ai-auto__toolbar .ai-auto__check{padding-bottom:0;} .ai-auto__toolbar .of-boton{margin-left:auto;} .ai-auto__motor{align-items:flex-start;flex-wrap:wrap;} .ai-auto__motor small{margin-left:0;width:100%;padding-left:11px;} }

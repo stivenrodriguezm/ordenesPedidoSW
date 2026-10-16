@@ -1,25 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useId } from 'react';
 import ReactDOM from 'react-dom';
 import { FaTimes } from 'react-icons/fa';
+import { NO_FOCO_INICIAL, confirmarDescarte, useDialogo } from '../../hooks/useDialogo';
 import './ui.css';
 
 /**
  * Modal único del design system (reemplaza los overlays duplicados).
  * size: 'sm' | 'md' | 'lg' | 'xl'
+ * className: clase extra opcional para el contenedor del modal.
+ * Foco inicial, confinado y devuelto al cerrar; Escape cierra solo el de
+ * arriba; nombre accesible tomado del título (P08-07). Con hayCambios, Escape
+ * y el clic fuera piden confirmación antes de descartar.
  */
-const Modal = ({ open, onClose, title, size = 'md', footer, children }) => {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
-    };
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [open, onClose]);
+const Modal = ({ open, onClose, title, size = 'md', footer, className = '', hayCambios = false, children }) => {
+  const ref = useDialogo(open, onClose, { hayCambios });
+  const tituloId = useId();
 
   if (!open) return null;
 
@@ -27,13 +22,20 @@ const Modal = ({ open, onClose, title, size = 'md', footer, children }) => {
     <div
       className="ds-modal-overlay"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
+        if (e.target === e.currentTarget && confirmarDescarte(hayCambios)) onClose?.();
       }}
     >
-      <div className={`ds-modal ds-modal--${size}`} role="dialog" aria-modal="true">
+      <div
+        ref={ref}
+        className={`ds-modal ds-modal--${size}${className ? ` ${className}` : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? tituloId : undefined}
+        tabIndex={-1}
+      >
         <div className="ds-modal__header">
-          <h2 className="ds-modal__title">{title}</h2>
-          <button className="ds-modal__close" onClick={onClose} aria-label="Cerrar">
+          <h2 className="ds-modal__title" id={tituloId}>{title}</h2>
+          <button className="ds-modal__close" onClick={onClose} aria-label="Cerrar" {...{ [NO_FOCO_INICIAL]: '' }}>
             <FaTimes />
           </button>
         </div>

@@ -22,7 +22,7 @@
 .edit-sale-form .form-group select {
     padding: 0.4rem 0.6rem;
     border: 1px solid var(--ventas-border);
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     font-size: 0.85rem;
     color: var(--ventas-text-dark);
     background-color: var(--gray-50);
@@ -33,7 +33,7 @@
 .edit-sale-form .form-group select:focus {
     outline: none;
     border-color: var(--ventas-primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.1);
     background-color: var(--surface);
 }
 
@@ -66,7 +66,7 @@
     flex-wrap: wrap;
     padding: 0.75rem;
     background: var(--gray-100);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
 }
 
@@ -77,4 +77,12 @@
     margin-top: 1rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--ventas-border);
+}
+
+/* Explicación de campos bloqueados por estado/rol (U04) */
+.form-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--warning);
 }

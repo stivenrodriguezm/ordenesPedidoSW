@@ -1,0 +1,115 @@
+/* Tablas en celular y tablet (≤ 1024 px) — 2026-10-15.
+   En vez de convertir cada fila en una tarjeta, se ve la misma tabla del computador dentro
+   de un contenedor que se desliza de lado (como en Facturas de proveedor). Las celdas no se
+   parten ni se deforman, y lo que se expande en una fila queda fijo al ancho de la pantalla
+   mientras la tabla se desliza. En computador (> 1024 px) nada de esto aplica. */
+@media (max-width: 1024px) {
+  /* 1. Fuera las vistas en tarjetas… */
+  body .app-container .mobile-view,
+  body .app-container .caja-mobile-feed,
+  body .app-container .mobile-transaction-list,
+  body .app-container .mobile-transaction-feed {
+    display: none !important;
+  }
+
+  /* 2. …y la tabla de siempre, deslizable. */
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) {
+    display: block !important;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    container-type: inline-size;
+    scrollbar-width: thin;
+  }
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll {
+    overflow: visible;
+  }
+
+  /* Cada columna toma el ancho de su texto (en una línea) y la tabla se desliza: nada se
+     corta ni se aprieta, aunque en computador la tabla use columnas de ancho fijo. */
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > table,
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll > table {
+    table-layout: auto !important;
+    width: max-content !important;
+    min-width: 100% !important;
+  }
+
+  /* Textos en una sola línea (sin palabras partidas); los largos se cortan con «…». */
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > table > thead > tr > th,
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll > table > thead > tr > th,
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > table > tbody > tr > td:not([colspan]),
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll > table > tbody > tr > td:not([colspan]) {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    padding: 0.6rem 0.7rem;
+  }
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > table > tbody > tr > td:not([colspan]),
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll > table > tbody > tr > td:not([colspan]) {
+    max-width: 320px;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* 3. Lo expandido de una fila: del ancho de la pantalla y fijo a la izquierda. */
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > table > tbody > tr > td[colspan],
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll > table > tbody > tr > td[colspan] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    /* Algunas tablas ponen «sin saltos de línea» en todas sus celdas: lo expandido sí parte. */
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+  }
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > table > tbody > tr > td[colspan] > *,
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) > .ds-table-scroll > table > tbody > tr > td[colspan] > * {
+    position: sticky;
+    left: 0;
+    width: 100cqw;
+    max-width: 100cqw;
+    box-sizing: border-box;
+  }
+
+  /* Dentro de lo expandido nada impone un ancho mayor que la pantalla, y los detalles en
+     columnas (venta, pedido) quedan en una sola columna. */
+  body .app-container td[colspan] div { min-width: 0 !important; }
+  body .app-container td[colspan] :is(.venta-details-view, .orden-details-view) { grid-template-columns: minmax(0, 1fr) !important; }
+  body .app-container td[colspan] .obs-card { max-width: 100%; }
+  /* Cabeceras con botones dentro de lo expandido: bajan de línea en vez de salirse. */
+  body .app-container td[colspan] .pedidos-header { flex-wrap: wrap; gap: 0.5rem; }
+  body .app-container td[colspan] .pedidos-header > div { flex-wrap: wrap; }
+  /* Tablas dentro de lo expandido: se deslizan dentro de su recuadro. */
+  body .app-container td[colspan] table { display: block; max-width: 100%; overflow-x: auto; }
+
+  /* Filtros en píldora: nunca más anchos que la pantalla; el texto largo termina en «…». */
+  body .app-container .v-multi-select-container { max-width: 100%; }
+  body .app-container .v-multi-select-btn { max-width: 100%; min-width: 0; }
+  body .app-container .v-multi-select-btn > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Ventas quitaba el recuadro de la tabla para mostrar tarjetas: vuelve, como en Facturas. */
+  body .app-container .ventas-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+}
+
+/* Lo expandido en una fila usa el ancho del celular: un solo relleno delgado en vez de
+   varios anidados (contenedor → panel → tarjeta). */
+@media (max-width: 992px) {
+  body .app-container :is(.desktop-view, .caja-table-desktop, .desktop-table-wrapper) td[colspan] > * {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  body .app-container td[colspan] .pv { padding-left: 0.65rem; padding-right: 0.65rem; }
+  body .app-container td[colspan] :is(.orden-card, .invoice-item-card) { padding-left: 0.75rem; padding-right: 0.75rem; }
+}
+
+/* Buscadores en celular: a todo el ancho, para que el texto (16 px en iPhone) no se corte. */
+@media (max-width: 640px) {
+  body .app-container .v-search-pill { flex: 1 1 100%; width: 100%; max-width: 100%; }
+  body .app-container .v-search-pill input { flex: 1; width: auto; min-width: 0; }
+}

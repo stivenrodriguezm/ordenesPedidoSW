@@ -3,11 +3,11 @@
    ========================================================================== */
 :root {
   --ventas-primary: var(--accent);       /* Lottus Blue — alineado con --color-primary */
-  --ventas-primary-soft: #dbeafe;  /* Azul claro 100 */
-  --ventas-text-dark: #1f2937;
-  --ventas-text-medium: #4b5563;
-  --ventas-text-light: #9ca3af;
-  --ventas-border: #e5e7eb;
+  --ventas-primary-soft: var(--accent-soft);  /* Azul claro 100 */
+  --ventas-text-dark: var(--gray-800);
+  --ventas-text-medium: var(--gray-600);
+  --ventas-text-light: var(--gray-400);
+  --ventas-border: var(--gray-200);
   --ventas-bg: transparent;
   --ventas-surface: var(--surface);
   --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -60,7 +60,7 @@
   color: var(--ventas-text-medium);
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,7 +85,7 @@
   margin-bottom: 1.5rem;
   background-color: var(--surface);
   padding: 1rem 1.75rem;
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
   gap: 1.5rem;
   flex-wrap: wrap;
@@ -105,7 +105,7 @@
   align-items: center;
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   padding: 0.3rem 0.5rem;
   gap: 0.25rem;
   flex-wrap: nowrap;
@@ -204,7 +204,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   font-weight: 600;
   font-size: 0.95rem;
   border: none;
@@ -215,26 +215,26 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--ventas-primary) 0%, #4338ca 100%);
+  background: linear-gradient(135deg, var(--ventas-primary) 0%, var(--accent) 100%);
   color: white;
-  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(164, 141, 102, 0.2), 0 2px 4px -1px rgba(164, 141, 102, 0.1);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -2px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 10px 15px -3px rgba(164, 141, 102, 0.3), 0 4px 6px -2px rgba(164, 141, 102, 0.15);
 }
 
 .btn-secondary {
   background-color: white;
   color: var(--ventas-text-dark);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--gray-200);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-secondary:hover {
-  background-color: #f9fafb;
-  border-color: #d1d5db;
+  background-color: var(--gray-50);
+  border-color: var(--gray-300);
   color: var(--ventas-primary);
 }
 
@@ -245,7 +245,7 @@
 }
 
 .btn-secondary:hover {
-  background-color: #f9fafb;
+  background-color: var(--gray-50);
   border-color: var(--ventas-text-medium);
 }
 
@@ -281,7 +281,7 @@
    ========================================================================== */
 .ventas-container {
   background-color: var(--ventas-surface);
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   /* For rounded corners */
@@ -300,9 +300,9 @@
 }
 
 /* Specific Column Widths */
-.th-oc { width: 4.5%; min-width: 40px; text-align: center; }
+.th-oc { width: 6%; min-width: 40px; text-align: center; }
 .td-oc { text-align: center; }
-.th-fecha, .td-fecha { width: 10.5%; min-width: 95px; text-align: center; }
+.th-fecha, .td-fecha { width: 9.75%; min-width: 95px; text-align: center; }
 .th-vendedor { width: 9%; min-width: 80px; }
 .th-sede, .td-sede { width: 3.5%; min-width: 35px; text-align: center; }
 .th-traslado, .td-traslado { width: 3.5%; min-width: 35px; text-align: center; }
@@ -315,7 +315,7 @@
 .ventas-container .ventas-table th,
 .desktop-view .ventas-table th,
 .ventas-table th {
-  background-color: #f9fafb;
+  background-color: var(--gray-50);
   color: var(--ventas-text-medium);
   font-size: 0.75rem !important;
   font-weight: 700;
@@ -343,7 +343,7 @@
 }
 
 .ventas-table tbody tr:hover td {
-  background-color: #f3f4f6;
+  background-color: var(--gray-100);
   /* Gray 100 */
 }
 
@@ -355,7 +355,8 @@
 }
 
 .td-valor {
-  font-family: 'Roboto Mono', monospace;
+  /* Inter con cifras tabulares: alinea igual que la monoespaciada y cabe sin «…». */
+  font-family: inherit;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -411,7 +412,7 @@
    Expanded Row Details
    ========================================================================== */
 .expanded-row td {
-  background-color: #f9fafb;
+  background-color: var(--gray-50);
   padding: 0;
   box-shadow: inset 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
@@ -425,7 +426,7 @@
 
 .details-card {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   padding: 0.75rem 1rem;
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--ventas-border);
@@ -493,7 +494,7 @@
   padding: 0.75rem;
   background-color: var(--gray-50);
   border: 1px dashed var(--ventas-border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   color: var(--ventas-primary);
   font-weight: 600;
   cursor: pointer;
@@ -619,7 +620,7 @@
   /* Sale Item Container */
   .mobile-sale-item {
     background: white;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--ventas-border);
     overflow: hidden;
@@ -642,7 +643,7 @@
   }
 
   .mobile-sale-summary:active {
-    background-color: #f9fafb;
+    background-color: var(--gray-50);
   }
 
   .summary-row-top {
@@ -767,7 +768,7 @@
     gap: 1rem;
     background: white;
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
   }
 
@@ -784,7 +785,7 @@
   }
 
   .text-success {
-    color: #059669;
+    color: var(--success);
   }
 
   .text-danger {
@@ -796,7 +797,7 @@
   .mobile-order-compact {
     background: white;
     padding: 0.75rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
     margin-bottom: 0.5rem;
     display: flex;
@@ -847,7 +848,7 @@
   }
 
   .bg-success {
-    background-color: #10b981;
+    background-color: var(--success);
   }
 
   .bg-warning {
@@ -864,7 +865,7 @@
 
   .btn-action-mobile {
     padding: 0.75rem;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
     background: white;
     color: var(--ventas-text-dark);
@@ -932,7 +933,7 @@
    ========================================================================== */
 .orders-list-container {
   overflow-x: auto;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--ventas-border);
 }
 
@@ -972,7 +973,7 @@
 }
 
 .order-row.expanded {
-  background-color: #eff6ff;
+  background-color: var(--accent-soft);
   /* Light blue highlight */
 }
 
@@ -1062,7 +1063,7 @@
   gap: 0.4rem;
   padding: 0.4rem 0.6rem;
   background-color: var(--gray-50);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--ventas-border);
   transition: all 0.2s ease;
   min-width: 0;
@@ -1090,13 +1091,13 @@
 }
 
 .payment-status-dot.confirmed {
-  background-color: #10b981;
-  box-shadow: 0 0 0 2px #d1fae5;
+  background-color: var(--success);
+  box-shadow: 0 0 0 2px var(--success-soft);
 }
 
 .payment-status-dot.pending {
   background-color: var(--warning);
-  box-shadow: 0 0 0 2px #fef3c7;
+  box-shadow: 0 0 0 2px var(--warning-soft);
 }
 
 .payment-details {
@@ -1149,7 +1150,7 @@
 }
 
 .payment-status.text-green {
-  color: #059669;
+  color: var(--success);
   /* Emerald 600 */
   font-weight: 600;
 }
@@ -1175,7 +1176,7 @@
 .mobile-payment-item {
   background-color: var(--gray-50);
   border: 1px solid var(--ventas-border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.75rem;
 }
 
@@ -1216,7 +1217,7 @@
 }
 
 .mobile-payment-status.confirmed {
-  color: #059669;
+  color: var(--success);
 }
 
 .mobile-payment-status.pending {
@@ -1239,12 +1240,12 @@
   gap: 0.5rem;
   padding: 0.5rem;
   background: var(--gray-50);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 .order-card-v2 {
   background: white;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--gray-200);
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   transition: all 0.2s ease;
@@ -1312,11 +1313,11 @@
   white-space: nowrap;
 }
 
-.status-pill.pendiente { background-color: #fff7ed; color: #c2410c; border-color: #ffedd5; }
-.status-pill.en-proceso { background-color: #eff6ff; color: #1e40af; border-color: #dbeafe; }
-.status-pill.finalizado { background-color: #f0fdf4; color: #15803d; border-color: #dcfce7; }
-.status-pill.recibido { background-color: #ecfdf5; color: #047857; border-color: #d1fae5; }
-.status-pill.anulado { background-color: #fef2f2; color: #b91c1c; border-color: #fee2e2; }
+.status-pill.pendiente { background-color: var(--warning-soft); color: var(--warning); border-color: var(--warning-soft); }
+.status-pill.en-proceso { background-color: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
+.status-pill.finalizado { background-color: var(--success-soft); color: var(--success); border-color: var(--success-soft); }
+.status-pill.recibido { background-color: var(--success-soft); color: var(--success); border-color: var(--success-soft); }
+.status-pill.anulado { background-color: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
 
 .oc-v2-value.highlight {
   color: var(--ventas-primary);
@@ -1336,7 +1337,7 @@
 }
 
 .oc-v2-value.success {
-  color: #059669;
+  color: var(--success);
   font-weight: 700;
   font-family: 'Roboto Mono', monospace;
 }
@@ -1376,11 +1377,11 @@
   padding: 0.5rem 0.75rem;
   background: white;
   border: 1px solid var(--gray-200);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .pi-qty {
-  background: #eff6ff;
+  background: var(--accent-soft);
   color: var(--ventas-primary);
   font-weight: 700;
   font-size: 0.75rem;
@@ -1518,7 +1519,7 @@
   gap: 0.5rem;
   padding: 0.4rem 0.5rem;
   background-color: var(--gray-50);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--ventas-border);
   margin-bottom: 0.4rem;
 }
@@ -1557,7 +1558,7 @@
     gap: 0.6rem;
     padding: 0.6rem 0.75rem;
     background-color: var(--ventas-surface);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
     margin: 0;
     width: 100%;
@@ -1619,7 +1620,7 @@
   font-size: 0.85rem;
   font-weight: 500;
   background: var(--gray-50);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px dashed var(--gray-300);
 }
 
@@ -1642,3 +1643,41 @@
   padding: 0.75rem 1rem;
 }
 
+
+/* Pedidos de tela dentro de una orden expandida (2026-10-09) */
+.nested-telas { margin-top: 0.9rem; padding-top: 0.75rem; border-top: 1px dashed var(--gray-200); display: grid; gap: 0.5rem; }
+.nested-telas__titulo { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.62rem; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700; color: var(--gold-dark); }
+.nested-telas__vacio { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.nested-tela { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--r-sm); background: var(--surface); display: grid; gap: 0.35rem; }
+.nested-tela__cabeza { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; font-size: 0.82rem; }
+.nested-tela__cabeza strong { font-weight: 700; }
+.nested-tela__fecha { color: var(--text-secondary); font-size: 0.75rem; }
+.nested-tela__cabeza .status-pill { margin-left: auto; }
+.nested-tela__detalle { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.8rem; color: var(--gray-700); }
+.nested-tela__detalle small { color: var(--text-secondary); }
+.nested-tela__obs { margin: 0; font-size: 0.75rem; color: var(--text-secondary); font-style: italic; }
+
+/* Pantallas con zoom (≤ 1280 px útiles): la tabla ya se desplaza de lado, así que se
+   le da más ancho para que el número, las fechas y los valores no se corten con «…». */
+@media (min-width: 993px) and (max-width: 1280px) {
+  .ventas-table {
+    min-width: 1120px;
+  }
+}
+
+/* Más ventas que las cargadas: se piden de a 100 sin ocultar las ya visibles. */
+.ventas-ver-mas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ds-totales-filtrados__nota {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

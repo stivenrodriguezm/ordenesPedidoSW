@@ -1,0 +1,30 @@
+/* Cargos de un producto: detalle del producto y piezas de una agrupación. */
+.lpc { display: flex; flex-direction: column; min-width: 0; }
+.lpc-nota { margin: 0 0 4px; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+.lpc-nota svg { color: var(--gold); }
+.lpc-fila { display: grid; grid-template-columns: minmax(90px, 1fr) 108px 142px 24px; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--gray-100); }
+.lpc-fila--fijo { grid-template-columns: minmax(0, 1fr) auto 24px; }
+.lpc-nombre, .lpc-estado { width: 100%; min-width: 0; height: 30px; min-height: 30px; margin: 0; padding: 4px 8px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; }
+.lpc-estado { padding-right: 22px; cursor: pointer; }
+.lpc-nombre:focus, .lpc-estado:focus { outline: none; border-color: var(--gold-dark); box-shadow: 0 0 0 2px var(--accent-ring); }
+/* El estado se lee de un vistazo: borde de color según cómo aparece en la lista. */
+.lpc-fila[data-estado-cargo="habilitado"] .lpc-estado { border-color: var(--success, #2e7d4f); color: var(--success, #2e7d4f); font-weight: 600; }
+.lpc-fila[data-estado-cargo="deshabilitado"] .lpc-estado { color: var(--text-secondary); }
+.lpc-fila[data-estado-cargo="obligatorio"] .lpc-estado { border-color: var(--gold-dark, #8b7756); color: var(--text); font-weight: 600; }
+.lpc-fila .action-btn { padding: 4px; }
+.lpc-fila .lp-captura { min-width: 0; position: relative; }
+.lpc-fila .lp-captura > label, .lpc-fila .lp-captura-estado:empty { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.lpc-fila .lp-captura-control { display: flex; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.lpc-fila .lp-captura .lp-inline-input { width: 100%; min-width: 0; height: 30px; min-height: 30px; margin: 0; border: 0; padding: 4px 8px; background: transparent; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.lpc-fijo { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; font-weight: 600; }
+.lpc-fijo svg { color: #8b7756; }
+.lpc-fijo__detalle { padding: 2px 8px; border-radius: 999px; background: var(--gold-soft, #f4ecda); color: #6b5a2e; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+.lpc-acciones { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+@media (max-width: 640px) {
+  .lpc-fila { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px; row-gap: 4px; padding: 5px 0; }
+  .lpc-nombre { grid-column: 1 / 3; }
+  .lpc-fila > .action-btn { grid-column: 3; grid-row: 1; }
+  .lpc-fila--fijo { grid-template-columns: minmax(0, 1fr) auto 24px; }
+  .lpc-fila--fijo > .action-btn { grid-column: auto; grid-row: auto; }
+}

@@ -50,7 +50,7 @@ const RemisionModal = ({ isOpen, onClose, onSave, isLoading }) => {
             id="remision-fecha"
             className="ds-input"
             type="date"
-            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+            onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
             name="fecha"
             value={remisionData.fecha}
             onChange={handleChange}

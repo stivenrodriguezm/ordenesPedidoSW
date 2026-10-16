@@ -52,8 +52,8 @@
 /* --- Cards --- */
 .nce-card {
   background: var(--surface);
-  border-radius: 12px;
-  border: 1px solid #e8edf3;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--gray-200);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
@@ -63,14 +63,14 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: #fafcfd;
+  background: var(--gray-50);
   border-radius: 11px 11px 0 0;
 }
 
 .nce-card-icon-badge {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -78,9 +78,9 @@
   flex-shrink: 0;
 }
 
-.nce-card-icon-badge.badge-blue { background: #eff6ff; color: var(--info); }
-.nce-card-icon-badge.badge-green { background: #ecfdf5; color: #059669; }
-.nce-card-icon-badge.badge-indigo { background: #e0e7ff; color: #4f46e5; }
+.nce-card-icon-badge.badge-blue { background: var(--accent-soft); color: var(--info); }
+.nce-card-icon-badge.badge-green { background: var(--success-soft); color: var(--success); }
+.nce-card-icon-badge.badge-indigo { background: var(--accent-soft); color: var(--accent); }
 .nce-card-icon-badge.badge-purple { background: #f3e8ff; color: #9333ea; }
 
 .nce-card-title {
@@ -134,7 +134,7 @@
 .nce-card-body textarea {
   width: 100%;
   padding: 0.45rem 0.65rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--gray-300);
   font-size: 0.82rem;
   color: var(--gray-800);
@@ -149,7 +149,7 @@
 .nce-card-body select:focus,
 .nce-card-body textarea:focus {
   border-color: var(--info);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 2px rgba(164, 141, 102, 0.15);
 }
 
 .nce-grid-2 {
@@ -187,7 +187,7 @@
 .nce-prefix-input {
   padding-left: 1.6rem !important;
   font-weight: 700;
-  color: #059669 !important;
+  color: var(--success) !important;
 }
 
 /* --- Resumen de Pago --- */
@@ -202,7 +202,17 @@
   border-bottom: 1px solid var(--gray-100);
 }
 
-.nce-resumen-descuento { color: #b45309; }
+.nce-resumen-descuento { color: var(--warning); }
+
+.nce-resumen-redondeo { color: var(--info); }
+
+.nce-resumen-redondeo-hint {
+  margin-top: 0.5rem;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--gray-500);
+  font-style: italic;
+}
 
 .nce-resumen-sub {
   font-size: 0.76rem;
@@ -220,21 +230,36 @@
   padding: 0.65rem 0.75rem;
   background: var(--gray-900);
   color: #ffffff;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 0.95rem;
   font-weight: 800;
 }
 
 .nce-warning {
   margin-top: 0.75rem;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-  border-radius: 8px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  color: var(--danger);
+  border-radius: var(--r-sm);
   padding: 0.55rem 0.75rem;
   font-size: 0.78rem;
   font-weight: 600;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
 }
+.nce-warning svg { flex-shrink: 0; margin-top: 0.15rem; }
+
+.nce-status-mini {
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--r-lg);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.nce-status-mini.paid { background: var(--success-soft); color: var(--success); }
+.nce-status-mini.pending { background: var(--warning-soft); color: var(--warning); }
 
 /* --- Productos incluidos (resumen consolidado) --- */
 .nce-productos-incluidos {
@@ -269,7 +294,7 @@
   gap: 0.4rem;
   padding: 0.35rem 0.5rem;
   background: var(--gray-50);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.75rem;
 }
 
@@ -300,7 +325,7 @@
   display: flex;
   gap: 0.4rem;
   background: var(--gray-50);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 3px;
   border: 1px solid var(--gray-200);
   margin-bottom: 1rem;
@@ -310,7 +335,7 @@
   flex: 1;
   padding: 0.45rem 0.65rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
@@ -321,7 +346,7 @@
 
 .nce-toggle-btn.active {
   background: var(--surface);
-  color: #1d4ed8;
+  color: var(--accent);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -337,7 +362,7 @@
   font-style: italic;
   background: var(--gray-50);
   border: 1px dashed var(--gray-300);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 1.25rem;
   font-size: 0.82rem;
 }
@@ -348,7 +373,7 @@
   gap: 0.5rem;
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.4rem 0.65rem;
   margin-bottom: 0.65rem;
   color: var(--gray-400);
@@ -374,16 +399,16 @@
 
 .nce-factura-card {
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.6rem 0.75rem;
   background: var(--surface);
   transition: all 0.15s ease;
 }
 
 .nce-factura-card.selected {
-  border-color: #2563eb;
-  background: #f8fafc;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+  border-color: var(--accent);
+  background: var(--gray-50);
+  box-shadow: 0 1px 3px rgba(164, 141, 102, 0.08);
 }
 
 .nce-factura-card-header {
@@ -405,7 +430,7 @@
 .nce-factura-check-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #2563eb;
+  accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -442,7 +467,7 @@
 }
 
 .nce-dot { color: var(--gray-300); }
-.nce-factura-vence { font-weight: 600; color: #0284c7; }
+.nce-factura-vence { font-weight: 600; color: var(--info); }
 
 .nce-factura-valor {
   font-weight: 700;
@@ -468,13 +493,13 @@
   font-size: 0.73rem;
   font-weight: 600;
   cursor: pointer;
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #86efac;
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success-line);
 }
 
 .nce-descuento-btn.disabled {
-  background: #fff1f2;
+  background: var(--danger-soft);
   color: #e11d48;
   border-color: #fda4af;
 }
@@ -485,7 +510,7 @@
   gap: 0.3rem;
   background: transparent;
   border: none;
-  color: #2563eb;
+  color: var(--accent);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -493,13 +518,13 @@
   border-radius: 4px;
 }
 
-.nce-ver-productos-btn:hover { background: #eff6ff; }
+.nce-ver-productos-btn:hover { background: var(--accent-soft); }
 
 .nce-factura-productos {
   margin-top: 0.5rem;
   padding: 0.5rem 0.7rem;
   background: var(--gray-50);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--gray-200);
 }
 
@@ -529,11 +554,11 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #16a34a;
+  color: var(--success);
   font-weight: 700;
   margin-top: 0.3rem;
   padding-top: 0.3rem;
-  border-top: 1px solid #dcfce7;
+  border-top: 1px solid var(--success-soft);
 }
 
 .nce-concepto-preview {
@@ -541,7 +566,7 @@
   font-size: 0.78rem;
   color: var(--gray-600);
   background: var(--gray-50);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 0.5rem 0.65rem;
 }
 
@@ -576,7 +601,7 @@
   gap: 0.5rem;
   background: var(--surface);
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.5rem 0.6rem;
 }
 
@@ -598,12 +623,12 @@
 }
 
 .nce-otro-concepto-remove {
-  background: #fef2f2;
+  background: var(--danger-soft);
   color: var(--danger);
-  border: 1px solid #fecaca;
+  border: 1px solid var(--danger-line);
   width: 30px;
   height: 30px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -622,7 +647,7 @@
   border: 2px dashed var(--gray-300);
   color: var(--gray-600);
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-weight: 700;
   font-size: 0.8rem;
   cursor: pointer;
@@ -640,10 +665,10 @@
 }
 
 .nce-error-banner {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-  border-radius: 8px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  color: var(--danger);
+  border-radius: var(--r-sm);
   padding: 0.65rem 0.85rem;
   font-size: 0.85rem;
   font-weight: 600;

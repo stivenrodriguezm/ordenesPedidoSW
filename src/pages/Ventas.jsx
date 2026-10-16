@@ -1,15 +1,31 @@
+import { useExportacion } from '../hooks/useExportacion';
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import API from '../services/api';
+import { mensajeDeError } from '../services/errores';
 import { usePageRefresh } from '../hooks/usePageRefresh';
 import { useVendedores } from '../hooks/useSharedData';
-import { useNavigate } from 'react-router-dom';
-import { FaChevronDown, FaChevronUp, FaFileExport, FaPlus, FaSearch, FaEdit, FaLock, FaLockOpen, FaBoxOpen, FaChartBar, FaChartLine } from "react-icons/fa";
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FaChevronDown, FaFileExport, FaPlus, FaSearch, FaEdit, FaChartBar, FaChartLine, FaScroll } from "react-icons/fa";
 import Modal from '../components/Modal';
 import AppNotification from '../components/AppNotification';
 import EditSaleModal from '../components/EditSaleModal';
 import RemisionModal from '../components/RemisionModal';
 import SalesSummaryReport from '../components/SalesSummaryReport';
-import { PageHeader, Button, Badge, LoadingBlock, ErrorState } from '../components/ui';
+import ExpedienteVenta from '../components/ExpedienteVenta';
+import { ProductosEsqueleto } from '../components/ProductosVenta';
+import { fraccionVenta, participantesVenta } from '../utils/ventasCompartidas';
+
+// Gestión de la venta (2026-10-08): reemplaza a la columna "Pedidos".
+const GESTION_BADGE = { pendiente: ['Pendiente', 'warning'], atrasada: ['Atrasada', 'danger'], finalizada: ['Finalizada', 'success'] };
+
+// Esqueleto con la misma forma que la venta expandida: una sola transición al cargar.
+const DetalleEsqueleto = () => (
+    <div className="venta-details-view" aria-busy="true" aria-label="Cargando detalles de la venta">
+        <div className="details-full-width"><ProductosEsqueleto /></div>
+        {[0, 1, 2, 3].map(i => <div key={i} className="details-card"><Skeleton lines={4} /></div>)}
+    </div>
+);
+import { PageHeader, Button, Badge, ErrorState, Skeleton } from '../components/ui';
 import { AppContext, usePermissions } from '../AppContext';
 import './Ventas.css';
 import './VentasImprovements.css';
@@ -19,17 +35,33 @@ import '../components/AppNotification.css';
 
 import useDebounce from '../hooks/useDebounce';
 
+// Evita crear un arreglo nuevo en cada render mientras React Query aún carga o
+// si `/vendedores/` falla. Ese cambio de referencia hacía que el efecto que
+// sincroniza los filtros en la URL navegara otra vez en cada render y terminara
+// en "Maximum update depth exceeded".
+const EMPTY_ARRAY = Object.freeze([]);
+
 const Ventas = () => {
-    const { fetchClientes, usuario } = useContext(AppContext);
+    const { usuario } = useContext(AppContext);
     const hasPermission = usePermissions();
     const navigate = useNavigate();
     const [ventas, setVentas] = useState([]);
     const [reportSales, setReportSales] = useState([]);
-    const { data: vendedores = [], isError: isVendedoresError, error: vendedoresError, refetch: refetchVendedores } = useVendedores();
+    const { data: vendedoresData, isError: isVendedoresError, error: vendedoresError, refetch: refetchVendedores } = useVendedores();
+    const vendedores = vendedoresData ?? EMPTY_ARRAY;
     const [estados, setEstados] = useState([]);
     const [isReportVisible, setIsReportVisible] = useState(false);
 
-    const [searchTerm, setSearchTerm] = useState('');
+    // Filtros persistentes en la URL (P08-08): atrás/recarga/compartir
+    // conserva el conjunto. Los multi-select van como JSON.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const paramsIniciales = useRef(searchParams).current; // solo la primera carga
+    const leerArrParam = (k) => {
+        try { const v = JSON.parse(paramsIniciales.get(k) || 'null'); return Array.isArray(v) ? v : null; }
+        catch { return null; }
+    };
+
+    const [searchTerm, setSearchTerm] = useState(() => paramsIniciales.get('q') || '');
     const debouncedSearchTerm = useDebounce(searchTerm, 500); // Debounce for 500ms
 
     const getDefaultMonthYear = () => {
@@ -49,19 +81,22 @@ const Ventas = () => {
         return `${defaultMonth + 1}-${defaultYear}`;
     };
 
-    const [selectedDateFilter, setSelectedDateFilter] = useState({
-        mode: 'months',
-        periods: [getDefaultMonthYear()],
-        startDate: '',
-        endDate: ''
+    const [periodoDefecto] = useState(getDefaultMonthYear);
+    const [selectedDateFilter, setSelectedDateFilter] = useState(() => {
+        const modo = paramsIniciales.get('modo');
+        if (modo === 'range') {
+            return { mode: 'range', periods: [], startDate: paramsIniciales.get('desde') || '', endDate: paramsIniciales.get('hasta') || '' };
+        }
+        const periodos = modo === 'months' ? leerArrParam('periodos') : null;
+        return { mode: 'months', periods: periodos ?? [periodoDefecto], startDate: '', endDate: '' };
     });
     const [isDateOpen, setIsDateOpen] = useState(false);
     const dateRef = useRef(null);
-    const [selectedEstados, setSelectedEstados] = useState(['pendiente', 'entregado']);
+    const [selectedEstados, setSelectedEstados] = useState(() => leerArrParam('estados') ?? ['pendiente', 'entregado']);
     const [isEstadosOpen, setIsEstadosOpen] = useState(false);
     const estadosRef = useRef(null);
     
-    const [selectedSedes, setSelectedSedes] = useState(['Lottus 1', 'Lottus 2']);
+    const [selectedSedes, setSelectedSedes] = useState(() => leerArrParam('sedes') ?? ['Lottus 1', 'Lottus 2']);
     const [isSedesOpen, setIsSedesOpen] = useState(false);
     const sedesRef = useRef(null);
     const sedesOptions = ['Lottus 1', 'Lottus 2'];
@@ -69,29 +104,49 @@ const Ventas = () => {
     // El check "Feria del Hogar" vive dentro del propio filtro de Sede (las ventas de
     // feria no tienen sede, así que no son un valor más de selectedSedes, sino un
     // interruptor aparte que se muestra/oculta junto a las opciones de sede).
-    const [includeFeria, setIncludeFeria] = useState(true);
+    const [includeFeria, setIncludeFeria] = useState(() => paramsIniciales.get('feria') !== '0');
 
-    const [selectedVendedores, setSelectedVendedores] = useState([]);
+    // Filtro de vendedores por EXCLUSIÓN: por defecto entran todos los que vendieron en el
+    // periodo (también quienes ya no están activos) y solo se guardan los que el usuario
+    // desmarca. Así, al cambiar de mes nadie aparece desmarcado sin que el usuario lo
+    // haya hecho, y la tabla no depende de que la lista de vendedores ya haya cargado.
+    const [vendedoresExcluidos, setVendedoresExcluidos] = useState(() => (leerArrParam('sin_vendedores') ?? []).map(String));
     const [isVendedoresOpen, setIsVendedoresOpen] = useState(false);
-    const [hasInitializedVendedores, setHasInitializedVendedores] = useState(false);
     const vendedoresRef = useRef(null);
+    const excluidosSet = React.useMemo(() => new Set(vendedoresExcluidos), [vendedoresExcluidos]);
 
+    // Quienes vendieron en el periodo, con nombre aunque ya no estén activos (la lista de
+    // /vendedores/ solo trae usuarios activos; antes sus ventas desaparecían al filtrar).
     const vendedoresActivos = React.useMemo(() => {
-        const sellersMap = new Map();
+        const nombres = new Map(vendedores.map(v => [String(v.id), v.first_name]));
+        const enPeriodo = new Map();
+        const agregar = (id, nombre) => {
+            if (id == null || enPeriodo.has(String(id))) return;
+            enPeriodo.set(String(id), { id, first_name: nombres.get(String(id)) || nombre || `Usuario ${id}` });
+        };
         reportSales.forEach(venta => {
-            if (venta.vendedor) {
-                const vendId = typeof venta.vendedor === 'object' ? venta.vendedor.id : venta.vendedor;
-                if (vendId) sellersMap.set(vendId, true);
-            }
-            if (venta.vendedores_compartidos && venta.vendedores_compartidos.length > 0) {
-                venta.vendedores_compartidos.forEach(vc => {
-                    const vcId = typeof vc === 'object' ? vc.id : vc;
-                    if (vcId) sellersMap.set(vcId, true);
-                });
-            }
+            agregar(typeof venta.vendedor === 'object' ? venta.vendedor?.id : venta.vendedor, venta.vendedor_nombre);
+            (venta.vendedores_compartidos || []).forEach((vc, i) => agregar(typeof vc === 'object' ? vc.id : vc, venta.vendedores_compartidos_nombres?.[i]));
         });
-        return vendedores.filter(v => sellersMap.has(v.id));
+        return [...enPeriodo.values()].sort((a, b) => a.first_name.localeCompare(b.first_name, 'es'));
     }, [reportSales, vendedores]);
+
+    const selectedVendedores = React.useMemo(
+        () => vendedoresActivos.filter(v => !excluidosSet.has(String(v.id))).map(v => v.id),
+        [vendedoresActivos, excluidosSet]
+    );
+    const todosLosVendedores = selectedVendedores.length === vendedoresActivos.length;
+
+    const perms = usuario?.permissions || [];
+    const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+
+    // Quién cuenta para los totales: un vendedor, solo él; con vendedores desmarcados, solo
+    // los marcados; sin filtro, la empresa completa (100 % de cada venta).
+    const cuentaParticipante = React.useMemo(() => {
+        if (!canSeeAll) return id => id === String(usuario?.id);
+        if (vendedoresExcluidos.length === 0) return null;
+        return id => !excluidosSet.has(id);
+    }, [canSeeAll, usuario, vendedoresExcluidos, excluidosSet]);
 
     const hasFeriaInPeriod = React.useMemo(() => {
         return reportSales.some(venta => venta.es_feria_hogar);
@@ -116,37 +171,52 @@ const Ventas = () => {
 
             // Las ventas de Feria del Hogar no tienen sede (venta.sede === null) — el filtro
             // de Sede nunca debe ocultarlas, solo el check "Feria del Hogar" las controla.
-            if (!isFeria && !selectedSedes.includes(venta.sede)) return false;
+            // Igual que el backend: una venta normal sin sede tampoco se oculta por sede.
+            if (!isFeria && venta.sede && !selectedSedes.includes(venta.sede)) return false;
             if (isFeria && !includeFeria) return false;
 
-            if (hasInitializedVendedores) {
-                const vendId = typeof venta.vendedor === 'object' ? venta.vendedor?.id : venta.vendedor;
-                const compartidosIds = (venta.vendedores_compartidos || []).map(vc => typeof vc === 'object' ? vc.id : vc);
-                const matchesVendedor = selectedVendedores.includes(vendId) || compartidosIds.some(id => selectedVendedores.includes(id));
-                if (!matchesVendedor) return false;
-            }
+            // Una venta compartida sigue mientras alguno de sus participantes esté marcado.
+            if (excluidosSet.size > 0 && ![...participantesVenta(venta)].some(id => !excluidosSet.has(id))) return false;
 
             return true;
         });
-    }, [reportSales, selectedEstados, selectedSedes, includeFeria, selectedVendedores, hasInitializedVendedores]);
+    }, [reportSales, selectedEstados, selectedSedes, includeFeria, excluidosSet]);
 
+    const totalFiltrado = React.useMemo(
+        () => filteredReportSales.reduce((sum, v) => sum + (parseFloat(v.valor_total) || 0) * fraccionVenta(v, cuentaParticipante), 0),
+        [filteredReportSales, cuentaParticipante]
+    );
+    const hayPartesCompartidas = !!cuentaParticipante && filteredReportSales.some(v => fraccionVenta(v, cuentaParticipante) < 1);
+
+    // Sincroniza los filtros con la URL (replace: no ensucia el historial).
+    // Solo se escriben los que difieren del valor por defecto.
     useEffect(() => {
-        if (vendedoresActivos.length === 0) return;
-        if (!hasInitializedVendedores) {
-            setSelectedVendedores(vendedoresActivos.map(v => v.id));
-            setHasInitializedVendedores(true);
-        } else {
-            // Depura ids que ya no están activos (p. ej. al cambiar de mes y que un
-            // vendedor deje de tener ventas ese periodo) — si no, el botón Todos/Ninguno
-            // queda desincronizado porque selectedVendedores sigue siendo más grande que
-            // la lista de checkboxes realmente mostrada.
-            setSelectedVendedores(prev => {
-                const activeIds = new Set(vendedoresActivos.map(v => v.id));
-                const pruned = prev.filter(id => activeIds.has(id));
-                return pruned.length === prev.length ? prev : pruned;
-            });
-        }
-    }, [vendedoresActivos, hasInitializedVendedores]);
+        setSearchParams(prev => {
+            const params = new URLSearchParams(prev);
+            const escribir = (k, v) => { if (v) params.set(k, v); else params.delete(k); };
+            const esDefectoFecha = selectedDateFilter.mode === 'months'
+                && selectedDateFilter.periods.length === 1
+                && selectedDateFilter.periods[0] === periodoDefecto;
+            escribir('modo', esDefectoFecha ? '' : selectedDateFilter.mode);
+            escribir('periodos', !esDefectoFecha && selectedDateFilter.mode === 'months' ? JSON.stringify(selectedDateFilter.periods) : '');
+            escribir('desde', selectedDateFilter.mode === 'range' ? selectedDateFilter.startDate : '');
+            escribir('hasta', selectedDateFilter.mode === 'range' ? selectedDateFilter.endDate : '');
+            const estadosDefecto = ['pendiente', 'entregado'];
+            const estadosMod = selectedEstados.length !== estadosDefecto.length || !selectedEstados.every(e => estadosDefecto.includes(e));
+            escribir('estados', estadosMod ? JSON.stringify(selectedEstados) : '');
+            const sedesMod = !(selectedSedes.length === 2 && selectedSedes.includes('Lottus 1') && selectedSedes.includes('Lottus 2'));
+            escribir('sedes', sedesMod ? JSON.stringify(selectedSedes) : '');
+            escribir('feria', includeFeria ? '' : '0');
+            params.delete('vendedores'); // formato anterior (lista de marcados)
+            escribir('sin_vendedores', vendedoresExcluidos.length ? JSON.stringify(vendedoresExcluidos) : '');
+            escribir('q', searchTerm);
+            // React Router vuelve a renderizar si se devuelve siempre un objeto
+            // nuevo, aunque la URL no haya cambiado. Mantener la referencia
+            // anterior corta el ciclo cuando el backend está fallando o no hay
+            // vendedores todavía.
+            return params.toString() === prev.toString() ? prev : params;
+        }, { replace: true });
+    }, [selectedDateFilter, selectedEstados, selectedSedes, includeFeria, vendedoresExcluidos, searchTerm, periodoDefecto, setSearchParams]);
 
 
 
@@ -162,20 +232,26 @@ const Ventas = () => {
     const [expandedNestedOrderId, setExpandedNestedOrderId] = useState(null);
     const activeNestedOrderIdRef = useRef(null);
     const [nestedOrderDetails, setNestedOrderDetails] = useState(null);
+    const [nestedFabricOrders, setNestedFabricOrders] = useState([]);
     const [detailsError, setDetailsError] = useState(null);
     const [isPartialData, setIsPartialData] = useState(false);
 
     // Estados de Carga y Errores
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
+    const [, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const pageSize = 50;
+    // La tabla carga de a 100 y "Ver más ventas" trae las siguientes (antes solo se veían
+    // las primeras 50 y en meses grandes, como los de Feria del Hogar, faltaban ventas).
+    const pageSize = 100;
+    const paginaCargada = useRef(1);
+    const [cargandoMas, setCargandoMas] = useState(false);
 
     // Estados de Carga y Errores
     const [isLoading, setIsLoading] = useState(true);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [loadingNestedDetails, setLoadingNestedDetails] = useState(false);
     const [notification, setNotification] = useState({ message: '', type: '' });
+  const { exportar, exportando } = useExportacion('ventas', 'Ventas.xlsx', setNotification);
     const [showEditSaleModal, setShowEditSaleModal] = useState(false);
     const [editSaleData, setEditSaleData] = useState(null);
 
@@ -190,7 +266,6 @@ const Ventas = () => {
     const [isSubmittingObs, setIsSubmittingObs] = useState(false);
     const [isEditingObs, setIsEditingObs] = useState(false);
     const [selectedObsId, setSelectedObsId] = useState(null);
-    const [remisionData, setRemisionData] = useState({ codigo: '', fecha: '' });
 
     // --- Funciones de Formato ---
     const formatShortDate = (dateStr) => {
@@ -201,13 +276,7 @@ const Ventas = () => {
         return `${day}-${monthName}-${year}`;
     };
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '—';
-        const [year, month, day] = dateStr.split('-');
-        const monthNames = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-        const monthName = monthNames[parseInt(month, 10) - 1];
-        return `${day}-${monthName}-${year}`;
-    };
+    
 
     const formatCurrency = (value) => {
         if (value === null || value === undefined) return '$0';
@@ -216,7 +285,8 @@ const Ventas = () => {
 
         if (isNaN(num)) return '$0';
 
-        return `$${num.toLocaleString('es-CO')}`;
+        // Pesos sin decimales: las partes de ventas compartidas y los promedios pueden traer fracciones.
+        return `$${Math.round(num).toLocaleString('es-CO')}`;
     };
 
     const capitalizeEstado = (estado) => estado ? estado.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
@@ -265,18 +335,10 @@ const Ventas = () => {
     const monthOptions = generateMonthOptions();
 
     const requestCount = useRef(0);
+    const reportRequestCount = useRef(0);
 
-    const fetchVentas = useCallback(async (page = 1) => {
-        requestCount.current += 1;
-        const currentRequest = requestCount.current;
-
-        setIsLoading(true);
-        try {
-            const params = {
-                page: page,
-                page_size: pageSize,
-                ordering: '-fecha_venta,-id' // Ensure consistent ordering
-            };
+    const parametrosVentas = useCallback(() => {
+            const params = {};
             if (debouncedSearchTerm) {
                 params.search = debouncedSearchTerm;
             } else {
@@ -288,17 +350,8 @@ const Ventas = () => {
                     if (selectedDateFilter.startDate) params.start_date = selectedDateFilter.startDate;
                     if (selectedDateFilter.endDate) params.end_date = selectedDateFilter.endDate;
                 }
-                const perms = usuario?.permissions || [];
-                const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role?.toLowerCase() === 'administrador';
-                if (!canSeeAll) {
-                    params.vendedor = usuario.id;
-                } else {
-                    if (selectedVendedores.length > 0) {
-                        params.vendedor = selectedVendedores.join(',');
-                    } else if (hasInitializedVendedores) {
-                        params.vendedor = '-1';
-                    }
-                }
+                if (!canSeeAll) params.vendedor = usuario.id;
+                if (vendedoresExcluidos.length > 0) params.excluir_vendedores = vendedoresExcluidos.join(',');
                 if (selectedEstados.length > 0) {
                     params.estado = selectedEstados.join(',');
                 } else {
@@ -313,6 +366,17 @@ const Ventas = () => {
                 // Hogar" (dentro del filtro de Sede) solo decide si las de feria se incluyen.
                 params.es_feria_hogar = includeFeria ? 'true,false' : 'false';
             }
+            return params;
+    }, [debouncedSearchTerm, selectedDateFilter, vendedoresExcluidos, selectedEstados, selectedSedes, includeFeria, usuario, canSeeAll]);
+
+    const fetchVentas = useCallback(async (page = 1) => {
+        requestCount.current += 1;
+        const currentRequest = requestCount.current;
+
+        // "Ver más" no vuelve a mostrar el esqueleto: las ventas ya cargadas siguen visibles.
+        if (page > 1) setCargandoMas(true); else setIsLoading(true);
+        try {
+            const params = { ...parametrosVentas(), page, page_size: pageSize };
             const response = await API.get(`/ventas/`, { params });
             
             if (currentRequest !== requestCount.current) return;
@@ -332,9 +396,17 @@ const Ventas = () => {
 
             // Handle paginated response
             if (response.data.results) {
-                setVentas(fetchedVentas);
+                if (page > 1) {
+                    setVentas(prev => {
+                        const vistos = new Set(prev.map(v => v.id));
+                        return [...prev, ...fetchedVentas.filter(v => !vistos.has(v.id))];
+                    });
+                } else {
+                    setVentas(fetchedVentas);
+                }
                 setTotalCount(response.data.count);
                 setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
+                paginaCargada.current = page;
             } else {
                 // Fallback for non-paginated response
                 setVentas(fetchedVentas);
@@ -343,20 +415,31 @@ const Ventas = () => {
             }
             if (currentRequest === requestCount.current) {
                 setIsLoading(false);
+                setCargandoMas(false);
             }
         } catch (error) {
             if (currentRequest === requestCount.current) {
                 console.error('Error cargando ventas:', error);
                 setNotification({ message: 'Error al cargar las ventas.', type: 'error' });
+                setCargandoMas(false);
+                if (page > 1) return; // se conservan las ya cargadas
                 setVentas([]);
                 setTotalCount(0);
                 setTotalPages(1);
                 setIsLoading(false);
             }
         }
-    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, includeFeria, setNotification, usuario, hasInitializedVendedores]);
+    }, [parametrosVentas]);
 
     const fetchReportSales = useCallback(async () => {
+        // Mismo patrón anti-carrera que fetchVentas (requestCount): sin esto, cambiar de
+        // periodo varias veces rápido puede hacer que una respuesta vieja (de un periodo
+        // ya abandonado) llegue después que la nueva y sobreescriba reportSales con datos
+        // del periodo incorrecto — eso a su vez desincroniza el filtro de vendedores
+        // (vendedoresActivos), que es justamente el síntoma reportado ("los filtros se
+        // desconfiguran al cambiar de mes").
+        reportRequestCount.current += 1;
+        const currentRequest = reportRequestCount.current;
         try {
             const params = {};
             if (selectedDateFilter.mode === 'months') {
@@ -367,29 +450,29 @@ const Ventas = () => {
                 if (selectedDateFilter.startDate) params.start_date = selectedDateFilter.startDate;
                 if (selectedDateFilter.endDate) params.end_date = selectedDateFilter.endDate;
             }
-            const perms = usuario?.permissions || [];
-            const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role?.toLowerCase() === 'administrador';
             if (!canSeeAll) {
                 params.vendedor = usuario.id;
             }
             params.is_report = 'true';
             // Note: This might still fail if the dataset is huge, but it won't crash the main list
             const response = await API.get(`/ventas/`, { params });
-            // If response is paginated, we might only get the first page. 
+            if (currentRequest !== reportRequestCount.current) return; // respuesta obsoleta, ignorar
+            // If response is paginated, we might only get the first page.
             // Ideally, we need a summary endpoint. For now, we assume if it's paginated, we use results.
             const data = response.data.results || response.data;
             setReportSales(data || []);
         } catch (error) {
+            if (currentRequest !== reportRequestCount.current) return;
             console.error('Error cargando ventas para el informe:', error);
             // Fail silently for the report, so the user can still see the list
             setReportSales([]);
         }
-    }, [selectedDateFilter, usuario]);
+    }, [selectedDateFilter, usuario, canSeeAll]);
 
     // Effect for Filters (reset page to 1)
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearchTerm, selectedDateFilter, selectedVendedores, selectedEstados, selectedSedes, includeFeria]);
+    }, [debouncedSearchTerm, selectedDateFilter, vendedoresExcluidos, selectedEstados, selectedSedes, includeFeria]);
 
     // Effect for Page Change & Filter Changes (single unified trigger)
     useEffect(() => {
@@ -409,7 +492,10 @@ const Ventas = () => {
     usePageRefresh(refetchVendedores);
 
     useEffect(() => {
-        setEstados(["pendiente", "entregado", "anulado"]);
+        // 'anulada' (no 'anulado') — debe coincidir exactamente con Venta.ESTADO_CHOICES
+        // en el backend, ya que este valor se manda tal cual al elegir "Anulado" en el
+        // modal de edición (ver EditSaleModal.jsx) y al filtrar la lista.
+        setEstados(["pendiente", "entregado", "anulada"]);
     }, []);
 
     useEffect(() => {
@@ -471,7 +557,9 @@ const Ventas = () => {
         }
     };
 
+    // Cambiar el periodo vuelve a mostrar a todos los vendedores (sin esperar al informe).
     const togglePeriod = (periodVal) => {
+        setVendedoresExcluidos([]);
         setSelectedDateFilter(prev => {
             const newPeriods = prev.periods.includes(periodVal)
                 ? prev.periods.filter(p => p !== periodVal)
@@ -481,6 +569,7 @@ const Ventas = () => {
     };
 
     const selectAllPeriods = () => {
+        setVendedoresExcluidos([]);
         setSelectedDateFilter(prev => {
             if (prev.periods.length === monthOptions.length) {
                 return { ...prev, mode: 'months', periods: [] };
@@ -489,35 +578,29 @@ const Ventas = () => {
             }
         });
     };
-    
+
     const handleDateModeChange = (mode) => {
+        setVendedoresExcluidos([]);
         setSelectedDateFilter(prev => ({ ...prev, mode }));
     };
 
     const handleStartDateChange = (e) => {
+        setVendedoresExcluidos([]);
         setSelectedDateFilter(prev => ({ ...prev, startDate: e.target.value }));
     };
 
     const handleEndDateChange = (e) => {
+        setVendedoresExcluidos([]);
         setSelectedDateFilter(prev => ({ ...prev, endDate: e.target.value }));
     };
 
     const toggleVendedor = (vendId) => {
-        setSelectedVendedores(prev => {
-            if (prev.includes(vendId)) {
-                return prev.filter(id => id !== vendId);
-            } else {
-                return [...prev, vendId];
-            }
-        });
+        const id = String(vendId);
+        setVendedoresExcluidos(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     };
 
     const selectAllVendedores = () => {
-        if (selectedVendedores.length === vendedoresActivos.length) {
-            setSelectedVendedores([]);
-        } else {
-            setSelectedVendedores(vendedoresActivos.map(v => v.id));
-        }
+        setVendedoresExcluidos(todosLosVendedores ? vendedoresActivos.map(v => String(v.id)) : []);
     };
 
     // --- Handlers ---
@@ -599,6 +682,14 @@ const Ventas = () => {
     };
 
 
+    const refreshProductos = async (ventaId) => {
+        const response = await API.get(`/ventas/${ventaId}/`);
+        if (activeVentaIdRef.current === ventaId) setVentaDetails(prev => ({ ...prev, ...response.data }));
+        // La fila de la lista refleja la gestión al finalizarla o reabrirla.
+        const { gestion, estado_pedidos: estadoPedidos, valor_lista: valorLista } = response.data;
+        setVentas(vs => vs.map(v => (v.id === ventaId ? { ...v, gestion, estado_pedidos: estadoPedidos, valor_lista: valorLista } : v)));
+    };
+
     const refreshVentaDetails = async (ventaId) => {
         setLoadingDetails(true);
         setDetailsError(null);
@@ -625,6 +716,7 @@ const Ventas = () => {
         } else {
             activeNestedOrderIdRef.current = orderId;
             setExpandedNestedOrderId(orderId);
+            setNestedFabricOrders([]);
             const parsedInitial = Array.isArray(initialDetalles) ? initialDetalles : [];
             setNestedOrderDetails(parsedInitial);
             setLoadingNestedDetails(true);
@@ -639,6 +731,7 @@ const Ventas = () => {
                 } else if (Array.isArray(response.data)) {
                     data = response.data;
                 }
+                setNestedFabricOrders(Array.isArray(response.data?.pedidos_telas) ? response.data.pedidos_telas : []);
                 if (data && data.length > 0) {
                     setNestedOrderDetails(data);
                 } else if (parsedInitial.length > 0) {
@@ -658,7 +751,7 @@ const Ventas = () => {
         }
     };
 
-    const getStatusClass = (status) => status ? status.toLowerCase().replace(/ /g, '-') : '';
+    
 
     // Tono del Badge del UI kit según el estado de la venta
     const estadoTone = (status) => {
@@ -762,7 +855,7 @@ const Ventas = () => {
                 } else if (error.response.data.texto && error.response.data.texto.length > 0) {
                     friendlyError = `Error: ${error.response.data.texto[0]}`;
                 } else {
-                    friendlyError = JSON.stringify(error.response.data);
+                    friendlyError = mensajeDeError(error, friendlyError);
                 }
             }
             setNotification({ message: friendlyError, type: 'error' });
@@ -792,7 +885,7 @@ const Ventas = () => {
                 } else if (error.response.data.codigo && error.response.data.codigo.length > 0) {
                     friendlyError = `Error: ${error.response.data.codigo[0]}`;
                 } else {
-                    friendlyError = JSON.stringify(error.response.data);
+                    friendlyError = mensajeDeError(error, friendlyError);
                 }
             }
             setNotification({ message: friendlyError, type: 'error' });
@@ -801,34 +894,8 @@ const Ventas = () => {
         }
     };
 
-    const formatCurrencyForExport = (value) => {
-        if (value === null || value === undefined) return null;
-        const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
-        return isNaN(num) ? null : Math.round(num).toString();
-    };
 
-    const exportVentas = async () => {
-        const XLSX = await import('xlsx');
-        const dataToExport = ventas.map(venta => ({
-            'O.C.': venta.id,
-            'F. Venta': formatShortDate(venta.fecha_venta),
-            'F. Entrega': formatShortDate(venta.fecha_entrega),
-            'Vendedor': `${venta.vendedor_nombre}${venta.vendedores_compartidos_nombres ? `, ${venta.vendedores_compartidos_nombres}` : ''}`,
-            'Sede': venta.sede,
-            'Feria del Hogar': venta.es_feria_hogar ? 'Sí' : 'No',
-            'Traslado': venta.traslado ? 'Sí' : 'No',
-            'Cliente': venta.cliente_nombre,
-            'Abono': formatCurrencyForExport(venta.abono),
-            'Saldo': formatCurrencyForExport(venta.saldo),
-            'Valor': formatCurrencyForExport(venta.valor_total),
-            'Estado': capitalizeEstado(venta.estado),
-        }));
-
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
-        XLSX.writeFile(wb, 'Ventas.xlsx');
-    };
+    const exportVentas = () => exportar(parametrosVentas());
 
     const formatReportTitle = (dateFilter) => {
         if (!dateFilter) return 'Histórico de Ventas';
@@ -864,7 +931,7 @@ const Ventas = () => {
                 actions={
                     <>
                         {usuario?.role?.toLowerCase() === 'administrador' && (
-                            <Button variant="ghost" icon={FaFileExport} onClick={exportVentas} title="Exportar Excel" />
+                            <Button variant="ghost" icon={FaFileExport} onClick={exportVentas} loading={exportando} disabled={isLoading || searchTerm !== debouncedSearchTerm} aria-label="Exportar Excel" title="Exportar Excel" />
                         )}
                         {usuario && (
                             <Button 
@@ -891,7 +958,8 @@ const Ventas = () => {
                     <div className="report-content-body">
                         <SalesSummaryReport
                             ventas={filteredReportSales}
-                            vendedores={vendedores}
+                            vendedores={vendedoresActivos}
+                            cuentaParticipante={cuentaParticipante}
                             selectedMonthYear={selectedDateFilter.mode === 'months' && selectedDateFilter.periods.length === 1 ? selectedDateFilter.periods[0] : 'all'}
                             formatCurrency={formatCurrency}
                             capitalizeEstado={capitalizeEstado}
@@ -932,17 +1000,17 @@ const Ventas = () => {
                                 </button>
                                 {isDateOpen && (
                                     <div className="v-multi-select-popover" style={{ width: '280px' }}>
-                                        <div className="v-popover-tabs" style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '0.5rem' }}>
+                                        <div className="v-popover-tabs" style={{ display: 'flex', borderBottom: '1px solid #e4e3dc', marginBottom: '0.5rem' }}>
                                             <button 
                                                 type="button" 
-                                                style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'months' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'months' ? 'var(--primary)' : '#64748b', fontWeight: selectedDateFilter.mode === 'months' ? '600' : '400', cursor: 'pointer' }}
+                                                style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'months' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'months' ? 'var(--primary)' : '#72726a', fontWeight: selectedDateFilter.mode === 'months' ? '600' : '400', cursor: 'pointer' }}
                                                 onClick={() => handleDateModeChange('months')}
                                             >
                                                 Por Meses
                                             </button>
                                             <button 
                                                 type="button" 
-                                                style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'range' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'range' ? 'var(--primary)' : '#64748b', fontWeight: selectedDateFilter.mode === 'range' ? '600' : '400', cursor: 'pointer' }}
+                                                style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'range' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'range' ? 'var(--primary)' : '#72726a', fontWeight: selectedDateFilter.mode === 'range' ? '600' : '400', cursor: 'pointer' }}
                                                 onClick={() => handleDateModeChange('range')}
                                             >
                                                 Rango Manual
@@ -969,14 +1037,14 @@ const Ventas = () => {
                                         ) : (
                                             <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>Fecha de Inicio</label>
-                                                    <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="v-date-input" value={selectedDateFilter.startDate} onChange={handleStartDateChange} />
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#57574f' }}>Fecha de Inicio</label>
+                                                    <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} className="v-date-input" value={selectedDateFilter.startDate} onChange={handleStartDateChange} />
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>Fecha de Fin</label>
-                                                    <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} className="v-date-input" value={selectedDateFilter.endDate} onChange={handleEndDateChange} />
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#57574f' }}>Fecha de Fin</label>
+                                                    <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} className="v-date-input" value={selectedDateFilter.endDate} onChange={handleEndDateChange} />
                                                 </div>
-                                                <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, marginTop: '0.25rem', lineHeight: '1.2' }}>
+                                                <p style={{ fontSize: '0.7rem', color: '#a3a398', margin: 0, marginTop: '0.25rem', lineHeight: '1.2' }}>
                                                     * La búsqueda manual ignora la regla de facturación del día 6 al 5.
                                                 </p>
                                             </div>
@@ -1072,10 +1140,10 @@ const Ventas = () => {
                                         onClick={() => setIsVendedoresOpen(prev => !prev)}
                                     >
                                         <span>
-                                            {selectedVendedores.length === 0
-                                                ? 'Vendedor: Ninguno'
-                                                : selectedVendedores.length === vendedoresActivos.length
-                                                    ? 'Vendedor: Todos'
+                                            {todosLosVendedores
+                                                ? 'Vendedor: Todos'
+                                                : selectedVendedores.length === 0
+                                                    ? 'Vendedor: Ninguno'
                                                     : `Vendedores (${selectedVendedores.length})`}
                                         </span>
                                         <FaChevronDown style={{ fontSize: '0.65rem', opacity: 0.7 }} />
@@ -1085,11 +1153,11 @@ const Ventas = () => {
                                             <div className="v-popover-header">
                                                 <span className="v-popover-title">Filtrar Vendedor</span>
                                                 <button type="button" className="v-popover-action-btn" onClick={selectAllVendedores}>
-                                                    {selectedVendedores.length === vendedoresActivos.length ? 'Ninguno' : 'Todos'}
+                                                    {todosLosVendedores ? 'Ninguno' : 'Todos'}
                                                 </button>
                                             </div>
                                             {vendedoresActivos.length === 0 ? (
-                                                <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>No hay vendedores con ventas.</div>
+                                                <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: '#72726a' }}>No hay vendedores con ventas.</div>
                                             ) : (
                                                 vendedoresActivos.map(v => (
                                                     <label key={v.id} className="v-popover-item">
@@ -1108,6 +1176,11 @@ const Ventas = () => {
             </div>
 
             <div className="ventas-container">
+                {/* Total del conjunto filtrado (P08-08, U05) */}
+                <div className="ds-totales-filtrados" role="status">
+                    {filteredReportSales.length} ventas · <strong>{formatCurrency(totalFiltrado)}</strong>
+                    {hayPartesCompartidas && <span className="ds-totales-filtrados__nota"> · ventas compartidas sumadas por partes</span>}
+                </div>
                 {/* Desktop View */}
                 <div className="desktop-view">
                     <table className="ventas-table">
@@ -1127,7 +1200,7 @@ const Ventas = () => {
                                         <th className="th-valor">Total</th>
                                     </>
                                 )}
-                                <th className="th-pedidos">Pedidos</th>
+                                <th className="th-pedidos" title="Pendiente, atrasada o finalizada: finalizada = ya se pidió todo (productos y telas)">Gestión</th>
                                 <th className="th-estado">Estado</th>
                                 <th className="th-accion"></th>
                             </tr>
@@ -1198,9 +1271,9 @@ const Ventas = () => {
                                                 </>
                                             )}
                                             <td className="td-pedidos">
-                                                <Badge tone={venta.estado_pedidos ? 'success' : 'warning'}>
-                                                    {venta.estado_pedidos ? 'Pedido' : 'Pendiente'}
-                                                </Badge>
+                                                {GESTION_BADGE[venta.gestion] && (
+                                                    <Badge tone={GESTION_BADGE[venta.gestion][1]}>{GESTION_BADGE[venta.gestion][0]}</Badge>
+                                                )}
                                             </td>
                                             <td className="td-estado">
                                                 <Badge tone={estadoTone(venta.estado)}>
@@ -1223,16 +1296,27 @@ const Ventas = () => {
                                             <tr className="expanded-row">
                                                 <td colSpan="13" className="expanded-row-content">
                                                     {loadingDetails ? (
-                                                        <LoadingBlock message="Cargando detalles..." />
+                                                        <DetalleEsqueleto />
                                                     ) : detailsError ? (
                                                         <ErrorState message={detailsError} onRetry={() => handleExpandVenta(venta.id)} />
                                                     ) : ventaDetails ? (
                                                         <div className="venta-details-view">
                                                             {isPartialData && (
-                                                                <div className="alert-warning" style={{ gridColumn: '1 / -1', marginBottom: '0', padding: '0.75rem', backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <div className="alert-warning" style={{ gridColumn: '1 / -1', marginBottom: '0', padding: '0.75rem', backgroundColor: '#f8f0e0', border: '1px solid #e9d3a9', borderRadius: '8px', color: '#a8732b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                     <strong>Atención:</strong> No se pudieron cargar los productos de esta venta debido a un problema de conexión, pero aquí están los pagos y observaciones recuperados.
                                                                 </div>
                                                             )}
+
+                                                            {/* Expediente de Venta: Cotización de Origen, Milestones y Líneas de Producto (P09-05, P09-06, U01) */}
+                                                            <div className="details-full-width">
+                                                                <ExpedienteVenta
+                                                                    onActualizada={() => refreshProductos(ventaDetails.id)}
+                                                                    venta={ventaDetails}
+                                                                    hasPermission={hasPermission}
+                                                                    formatCurrency={formatCurrency}
+                                                                    formatShortDate={formatShortDate}
+                                                                />
+                                                            </div>
 
                                                             {/* Cliente Info */}
                                                             <div className="details-card cliente-info">
@@ -1393,7 +1477,14 @@ const Ventas = () => {
                                                                 <div className="pedidos-header">
                                                                     <h4>Órdenes de Pedido</h4>
                                                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                                        <Button variant="primary" size="sm" icon={FaPlus} onClick={() => navigate('/ordenes/nuevo', { state: { ventaId: venta.id } })}>
+                                                                        <Button
+                                                                            variant="primary"
+                                                                            size="sm"
+                                                                            icon={FaPlus}
+                                                                            disabled={ventaDetails?.estado === 'anulada'}
+                                                                            title={ventaDetails?.estado === 'anulada' ? 'No se pueden agregar pedidos a una venta anulada' : 'Agregar Pedido'}
+                                                                            onClick={() => navigate('/ordenes/nuevo', { state: { ventaId: venta.id } })}
+                                                                        >
                                                                             Agregar Pedido
                                                                         </Button>
                                                                         {(hasPermission('EDITAR_VENTA') || hasPermission('EDITAR_ESTADO_VENTA') || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA')) && (
@@ -1432,9 +1523,9 @@ const Ventas = () => {
                                                                                         <span className="oc-v2-label">Exhibición</span>
                                                                                         <span className="oc-v2-value">
                                                                                             {pedido.es_exhibicion ? (
-                                                                                                <span className="exh-badge exh-si" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#dcfce7', color: '#15803d' }}>Sí</span>
+                                                                                                <span className="exh-badge exh-si" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#edf3e9', color: '#4c7a4f' }}>Sí</span>
                                                                                             ) : (
-                                                                                                <span className="exh-badge exh-no" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#f1f5f9', color: '#94a3b8' }}>No</span>
+                                                                                                <span className="exh-badge exh-no" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#f2f1eb', color: '#a3a398' }}>No</span>
                                                                                             )}
                                                                                         </span>
                                                                                     </div>
@@ -1479,6 +1570,30 @@ const Ventas = () => {
                                                                                                 )}
                                                                                             </div>
                                                                                         ) : <div className="error-message">Error al cargar productos.</div>}
+                                                                                        {!loadingNestedDetails && (
+                                                                                            <div className="nested-telas">
+                                                                                                <span className="nested-telas__titulo"><FaScroll aria-hidden="true" /> Pedidos de tela</span>
+                                                                                                {nestedFabricOrders.length === 0 ? (
+                                                                                                    <p className="nested-telas__vacio">No hay pedidos de tela para esta orden.</p>
+                                                                                                ) : nestedFabricOrders.map(pt => (
+                                                                                                    <div key={pt.id} className="nested-tela">
+                                                                                                        <div className="nested-tela__cabeza">
+                                                                                                            <strong>PT #{pt.id}</strong>
+                                                                                                            <span>{pt.proveedor}</span>
+                                                                                                            {pt.fecha_creacion && <span className="nested-tela__fecha">{formatShortDate(pt.fecha_creacion)}</span>}
+                                                                                                            <span className={`status-pill ${(pt.estado || '').toLowerCase().replace(/\s+/g, '-')}`}>{pt.estado}</span>
+                                                                                                        </div>
+                                                                                                        {pt.detalles.map((d, i) => (
+                                                                                                            <div key={i} className="nested-tela__detalle">
+                                                                                                                <span className="pi-qty">{Number(d.cantidad).toLocaleString('es-CO')}</span>
+                                                                                                                <span>{d.tela}{d.observacion ? <small> · {d.observacion}</small> : null}</span>
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                        {pt.observacion && <p className="nested-tela__obs">{pt.observacion}</p>}
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
                                                                                 )}
                                                                             </div>
@@ -1553,7 +1668,7 @@ const Ventas = () => {
                                 {expandedVentaId === venta.id && (
                                     <div className="mobile-sale-details">
                                         {loadingDetails ? (
-                                            <div className="loading-container-small"><div className="loader-small"></div></div>
+                                            <DetalleEsqueleto />
                                         ) : detailsError ? (
                                             <div className="error-container-small">
                                                 <p className="error-text">{detailsError}</p>
@@ -1561,6 +1676,15 @@ const Ventas = () => {
                                             </div>
                                         ) : ventaDetails ? (
                                             <div className="mobile-details-content">
+                                                {/* Expediente de Venta (P09-05, P09-06, U01) */}
+                                                <ExpedienteVenta
+                                                                    onActualizada={() => refreshProductos(ventaDetails.id)}
+                                                    venta={ventaDetails}
+                                                    hasPermission={hasPermission}
+                                                    formatCurrency={formatCurrency}
+                                                    formatShortDate={formatShortDate}
+                                                />
+
                                                 <div className="mobile-detail-section">
                                                     <h4>Información del Cliente</h4>
                                                     <div className="detail-grid">
@@ -1688,6 +1812,14 @@ const Ventas = () => {
                         ))
                     )}
                 </div>
+                {!isLoading && ventas.length > 0 && ventas.length < totalCount && (
+                    <div className="ventas-ver-mas">
+                        <span>Mostrando {ventas.length} de {totalCount} ventas</span>
+                        <Button variant="secondary" onClick={() => fetchVentas(paginaCargada.current + 1)} disabled={cargandoMas}>
+                            {cargandoMas ? 'Cargando…' : `Ver más ventas (${Math.min(pageSize, totalCount - ventas.length)})`}
+                        </Button>
+                    </div>
+                )}
             </div>
 
 
@@ -1710,7 +1842,7 @@ const Ventas = () => {
                     </div>
                     <div className="modal-actions" style={{ justifyContent: isEditingObs ? 'space-between' : 'flex-end', width: '100%' }}>
                         {isEditingObs && (
-                            <button className="btn-danger-modal" onClick={() => handleDeleteObservacion('cliente')} disabled={isSubmittingObs} style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                            <button className="btn-danger-modal" onClick={() => handleDeleteObservacion('cliente')} disabled={isSubmittingObs} style={{ backgroundColor: '#a8432f', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
                                 Eliminar
                             </button>
                         )}
@@ -1741,7 +1873,7 @@ const Ventas = () => {
                     </div>
                     <div className="modal-actions" style={{ justifyContent: isEditingObs ? 'space-between' : 'flex-end', width: '100%' }}>
                         {isEditingObs && (
-                            <button className="btn-danger-modal" onClick={() => handleDeleteObservacion('venta')} disabled={isSubmittingObs} style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                            <button className="btn-danger-modal" onClick={() => handleDeleteObservacion('venta')} disabled={isSubmittingObs} style={{ backgroundColor: '#a8432f', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
                                 Eliminar
                             </button>
                         )}
@@ -1766,7 +1898,6 @@ const Ventas = () => {
                         setNotification={setNotification}
                         fetchVentas={fetchVentas}
                         fetchReportSales={fetchReportSales}
-                        fetchClientes={fetchClientes}
                         usuario={usuario}
                     />
                 )

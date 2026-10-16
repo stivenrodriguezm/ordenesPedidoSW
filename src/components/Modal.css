@@ -14,7 +14,7 @@
 .modal-content {
   background-color: white;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   width: 650px;
   max-width: 95%;
@@ -58,3 +58,6 @@
   margin-top: 16px;
   border-top: 1px solid #eee;
 }
+
+/* El contenedor recibe foco solo como respaldo (P08-07): sin borde. */
+.modal-content:focus { outline: none; }

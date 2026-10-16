@@ -20,7 +20,7 @@
   margin-bottom: 1rem;
   background: var(--surface);
   padding: 0.65rem 1.1rem;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--gray-100);
   width: fit-content;
@@ -35,7 +35,7 @@
 .stat-icon {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--rose-50);
   color: var(--rose-600);
   display: flex;
@@ -79,7 +79,7 @@
   border: 1px solid var(--gray-200);
   color: var(--gray-600);
   padding: 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -124,7 +124,7 @@
    ========================================================================== */
 .desktop-table-wrapper {
   background: var(--surface);
-  border-radius: 20px;
+  border-radius: var(--r-xl);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
   overflow-y: hidden;
@@ -186,10 +186,10 @@
 }
 
 .ce-confirm-btn {
-  background: #2563eb;
+  background: var(--accent);
   color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 0.22rem 0.5rem;
   font-size: 0.68rem;
   font-weight: 700;
@@ -198,7 +198,7 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 3px rgba(164, 141, 102, 0.2);
   transition: all 0.15s ease;
 }
 
@@ -210,7 +210,7 @@
 }
 
 .table-row-hover:hover {
-  background-color: #fff1f2;
+  background-color: var(--danger-soft);
   /* Light rose hover */
 }
 
@@ -271,7 +271,7 @@
 .payment-icon-wrapper {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,7 +285,7 @@
 }
 
 .payment-icon-wrapper.bank {
-  background: #eff6ff;
+  background: var(--accent-soft);
   color: var(--info);
 }
 
@@ -305,7 +305,7 @@
 
 .transaction-card {
   background: var(--surface);
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   padding: 1rem;
   display: flex;
   justify-content: space-between;
@@ -499,7 +499,7 @@
   color: var(--gray-600);
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -510,9 +510,9 @@
 }
 
 .ce-pagination-btn:hover:not(:disabled) {
-  background: #f0f9ff;
-  color: #0284c7;
-  border-color: #0284c7;
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: var(--info);
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -568,7 +568,7 @@
 
 .lottus-form-modal {
   background: var(--surface);
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   width: 100%;
   max-width: 720px;
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -582,8 +582,8 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e8edf3;
-  background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
+  border-bottom: 1px solid var(--gray-200);
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--accent-soft) 100%);
 }
 
 .lottus-modal-title-wrap {
@@ -595,23 +595,23 @@
 .lottus-modal-icon-badge {
   width: 38px;
   height: 38px;
-  background: #dbeafe;
+  background: var(--accent-soft);
   color: var(--info);
-  border-radius: 9px;
+  border-radius: var(--r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
   flex-shrink: 0;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--accent-line);
 }
 
 .lottus-modal-type-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -619,7 +619,7 @@
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   margin-bottom: 0.15rem;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--accent-soft);
 }
 
 .lottus-badge-dot {
@@ -648,7 +648,7 @@
   border: 1px solid var(--gray-300);
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   font-size: 1.2rem;
   line-height: 1;
   color: var(--gray-500);
@@ -721,10 +721,10 @@
   font-size: 0.78rem;
   font-weight: 800;
   color: var(--info);
-  background: #eff6ff;
+  background: var(--accent-soft);
   padding: 0.1rem 0.45rem;
   border-radius: 5px;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--accent-soft);
 }
 
 .lottus-input,
@@ -732,7 +732,7 @@
   width: 100%;
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--gray-300);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 0.82rem;
   color: var(--gray-800);
   background: var(--surface);
@@ -745,7 +745,7 @@
 .lottus-input:focus,
 .lottus-select:focus {
   border-color: var(--info);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 2px rgba(164, 141, 102, 0.15);
 }
 
 .lottus-input-icon {
@@ -774,7 +774,7 @@
   display: flex;
   gap: 0.35rem;
   background: var(--gray-100);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 3px;
   border: 1px solid var(--gray-200);
 }
@@ -783,7 +783,7 @@
   flex: 1;
   padding: 0.38rem 0.65rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -795,7 +795,7 @@
 
 .lottus-toggle-btn.active {
   background: var(--surface);
-  color: #1d4ed8;
+  color: var(--accent);
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
@@ -813,7 +813,7 @@
   max-height: 280px;
   overflow-y: auto;
   border: 1px solid var(--gray-300);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.35rem;
   background: var(--surface);
 }
@@ -825,7 +825,7 @@
   padding: 0.65rem;
   text-align: center;
   border: 1px dashed var(--gray-300);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--gray-50);
 }
 
@@ -834,7 +834,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.38rem 0.6rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   border: 1px solid var(--gray-200);
   background: var(--gray-50);
@@ -843,12 +843,12 @@
 }
 
 .lottus-factura-item:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
 }
 
 .lottus-factura-item.selected {
-  background: #eff6ff;
+  background: var(--accent-soft);
   border-color: var(--info);
 }
 
@@ -888,13 +888,13 @@
 }
 
 .lottus-factura-estado.pendiente {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .lottus-factura-estado.atrasada {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .lottus-concepto-preview {
@@ -902,7 +902,7 @@
   padding: 0.4rem 0.65rem;
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.75rem;
   color: var(--gray-600);
 }
@@ -927,7 +927,7 @@
   color: var(--gray-600);
   border: 1px solid var(--gray-300);
   padding: 0.45rem 0.95rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;
@@ -941,21 +941,21 @@
 }
 
 .lottus-btn-submit {
-  background: linear-gradient(135deg, var(--info) 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--info) 0%, var(--accent) 100%);
   color: var(--surface);
   border: none;
   padding: 0.45rem 1.1rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 6px rgba(164, 141, 102, 0.25);
 }
 
 .lottus-btn-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 10px rgba(164, 141, 102, 0.35);
 }
 
 .lottus-btn-submit:disabled {
@@ -996,7 +996,7 @@
 .lottus-descuento-summary {
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.65rem 0.9rem;
   margin-bottom: 0.5rem;
   display: flex;
@@ -1012,7 +1012,7 @@
 }
 
 .lottus-descuento-row.descuento span:last-child {
-  color: #dc2626;
+  color: var(--danger);
   font-weight: 700;
 }
 
@@ -1026,17 +1026,17 @@
 
 /* Readonly Input for Automatic Valor Bruto */
 .lottus-input-readonly {
-  background-color: #f3f4f6 !important;
-  color: #374151 !important;
+  background-color: var(--gray-100) !important;
+  color: var(--gray-700) !important;
   font-weight: 700 !important;
   cursor: not-allowed !important;
-  border-color: #e5e7eb !important;
+  border-color: var(--gray-200) !important;
 }
 
 /* Factura Card and Actions */
 .lottus-factura-card {
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   margin-bottom: 0.55rem;
   background: var(--gray-50);
   transition: all 0.15s ease;
@@ -1045,8 +1045,8 @@
 
 .lottus-factura-card.selected {
   border-color: var(--info);
-  background: #eff6ff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+  background: var(--accent-soft);
+  box-shadow: 0 2px 6px rgba(164, 141, 102, 0.08);
 }
 
 .lottus-factura-header {
@@ -1072,7 +1072,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   padding: 0.25rem 0.55rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
@@ -1080,24 +1080,24 @@
 }
 
 .lottus-dcto-btn.active {
-  background: #dcfce7;
-  color: #15803d;
-  border-color: #86efac;
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success-line);
 }
 
 .lottus-dcto-btn.active:hover {
-  background: #bbf7d0;
+  background: var(--success-line);
 }
 
 .lottus-dcto-btn.disabled {
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: #fca5a5;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger-line);
 }
 
 .lottus-dcto-btn.disabled:hover {
-  background: #fca5a5;
-  color: #991b1b;
+  background: var(--danger-line);
+  color: var(--danger);
 }
 
 .lottus-expand-btn {
@@ -1107,7 +1107,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.25rem 0.55rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--gray-300);
   background: #ffffff;
   color: var(--gray-700);
@@ -1124,7 +1124,7 @@
 /* Expanded Products Summary */
 .lottus-factura-items-summary {
   padding: 0.65rem 0.85rem;
-  border-top: 1px dashed #bfdbfe;
+  border-top: 1px dashed var(--accent-line);
   background: #ffffff;
 }
 
@@ -1154,16 +1154,16 @@
 .lottus-items-table th {
   text-align: left;
   padding: 0.3rem 0.45rem;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--gray-100);
+  color: var(--gray-600);
   font-weight: 700;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .lottus-items-table td {
   padding: 0.35rem 0.45rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-800);
 }
 
 .lottus-items-table tr:last-child td {
@@ -1179,7 +1179,7 @@
   border: none;
   color: var(--text-muted);
   padding: 0.4rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1212,7 +1212,7 @@
   gap: 1.5rem;
   padding: 1.25rem 1.75rem 1.5rem;
   background: var(--surface-muted);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--gold);
   animation: ceSlideDown 0.2s ease;
 }
 
@@ -1321,20 +1321,20 @@
   align-items: center;
   gap: 4px;
   padding: 0.15rem 0.5rem;
-  border-radius: 20px;
+  border-radius: var(--r-xl);
   font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .ce-factura-estado.pagada {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .ce-factura-estado.en-proceso {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .ce-factura-estado.pendiente {
@@ -1461,14 +1461,14 @@
   gap: 0.5rem;
   background: var(--surface);
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.6rem 0.75rem;
 }
 
 .ce-mobile-factura {
   background: var(--surface);
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.6rem 0.75rem;
 }
 
@@ -1495,3 +1495,6 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* Abono anulado (P10-02): se conserva en el historial, sin acción pendiente. */
+.status-badge.cancelled { background: var(--gray-100); color: var(--gray-600); text-decoration: line-through; }

@@ -1,0 +1,455 @@
+/* Remisión de entrega — plantilla imprimible.
+   Misma línea gráfica que el Comprobante de Egreso (negro/blanco corporativo).
+   Este CSS vive solo dentro del iframe de RemisionPrintModal, que sirve a la vez
+   de vista previa y de documento a imprimir: debe ser autosuficiente (sin
+   variables del design system). Los márgenes de la hoja los pone @page / body. */
+
+.rr-page {
+  position: relative;
+  width: 100%;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: "Segoe UI", Arial, sans-serif;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.rr-page * {
+  box-sizing: border-box;
+}
+
+.rr-watermark {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-24deg);
+  font-size: 5.5rem;
+  font-weight: 900;
+  letter-spacing: 0.5rem;
+  text-transform: uppercase;
+  color: rgba(220, 38, 38, 0.13);
+  border: 8px solid rgba(220, 38, 38, 0.13);
+  padding: 0.25rem 1.5rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Encabezado ── */
+.rr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 0.9rem;
+  margin-bottom: 1.1rem;
+}
+
+.rr-logo {
+  background: #000000;
+  padding: 0.6rem 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rr-logo span {
+  color: #ffffff;
+  font-size: 1.35rem;
+  letter-spacing: 0.25rem;
+  font-family: "Audiowide", cursive, sans-serif;
+  line-height: 1;
+}
+
+.rr-company {
+  margin-top: 0.45rem;
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.rr-doc-title {
+  text-align: right;
+}
+
+.rr-doc-kicker {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12rem;
+  margin-bottom: 0.15rem;
+}
+
+.rr-doc-number {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.02rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rr-doc-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 0.1rem;
+}
+
+/* ── Datos ── */
+.rr-meta-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 0.9rem;
+}
+
+.rr-meta-box {
+  padding: 0.8rem 1rem;
+}
+
+.rr-meta-box:first-child {
+  border-right: 1px solid #cbd5e1;
+}
+
+.rr-label {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.06rem;
+  margin-bottom: 0.2rem;
+}
+
+.rr-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.rr-value--lg {
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.rr-sub {
+  font-size: 0.72rem;
+  color: #334155;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
+.rr-address {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.rr-address span {
+  display: block;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.72rem;
+}
+
+.rr-pairs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.rr-pairs .rr-label {
+  margin-bottom: 0.1rem;
+}
+
+.rr-indicaciones {
+  font-size: 0.76rem;
+  color: #334155;
+  margin-bottom: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border-left: 3px solid #0f172a;
+  line-height: 1.45;
+}
+
+.rr-indicaciones-label {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* ── Productos ── */
+.rr-section {
+  margin-bottom: 0.9rem;
+}
+
+.rr-section-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06rem;
+  color: #475569;
+  margin-bottom: 0.35rem;
+}
+
+.rr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  border: 1px solid #cbd5e1;
+}
+
+.rr-table thead tr {
+  background: #0f172a;
+}
+
+.rr-table th {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.6rem;
+  letter-spacing: 0.05rem;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.rr-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.rr-table tbody tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.rr-col-num {
+  width: 30px;
+  color: #64748b;
+  text-align: center;
+}
+
+.rr-table th.rr-col-num,
+.rr-table th.rr-col-check {
+  text-align: center;
+}
+
+.rr-col-cant {
+  width: 48px;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rr-col-cat {
+  width: 80px;
+}
+
+.rr-col-sub {
+  width: 100px;
+}
+
+.rr-col-ref {
+  width: 118px;
+}
+
+.rr-col-cat,
+.rr-col-sub,
+.rr-col-desc {
+  color: #334155;
+}
+
+.rr-col-desc {
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.rr-col-check {
+  width: 34px;
+  text-align: center;
+}
+
+.rr-checkbox {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #64748b;
+  border-radius: 2px;
+  margin-top: 0.1rem;
+}
+
+.rr-prod-name {
+  font-weight: 700;
+}
+
+.rr-prod-code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.64rem;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
+
+.rr-group-row td {
+  background: #f1f5f9;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  color: #0f172a;
+  padding: 0.35rem 0.6rem;
+}
+
+.rr-group-obs {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #475569;
+}
+
+.rr-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 1rem !important;
+}
+
+/* ── Novedades + cobro ── */
+.rr-bottom {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.rr-novedades {
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 0.8rem;
+}
+
+.rr-novedades-text {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #0f172a;
+  white-space: pre-wrap;
+  margin-top: 0.1rem;
+}
+
+.rr-lines span {
+  display: block;
+  height: 1.35rem;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.rr-cobro {
+  border: 1px solid #cbd5e1;
+  border-top: 3px solid #0f172a;
+  display: flex;
+  flex-direction: column;
+}
+
+.rr-cobro-head {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06rem;
+  color: #475569;
+  padding: 0.55rem 0.8rem 0;
+}
+
+.rr-cobro-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.35rem 0.8rem 0.65rem;
+}
+
+.rr-cobro:not(.rr-cobro--none) .rr-cobro-body {
+  background: #0f172a;
+  color: #ffffff;
+  margin-top: 0.45rem;
+  padding-top: 0.6rem;
+}
+
+.rr-cobro-value {
+  font-size: 1.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.rr-cobro-value--sm {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.rr-cobro-sub {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-top: 0.1rem;
+}
+
+/* ── Firmas ── */
+.rr-firmas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.rr-firma {
+  border: 1px solid #cbd5e1;
+  padding: 0.65rem 0.9rem 0.7rem;
+}
+
+.rr-firma-title {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  color: #475569;
+}
+
+.rr-firma-line {
+  margin-top: 1.55rem;
+  border-top: 1.25px solid #0f172a;
+  padding-top: 0.2rem;
+  font-size: 0.6rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.rr-legal {
+  margin: 0.75rem 0 0;
+  font-size: 0.64rem;
+  font-style: italic;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.rr-footer {
+  margin-top: 0.9rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+  font-size: 0.56rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+}
+
+/* Tapizado del producto (material, referencia y color). */
+.rr-tela { margin-top: 2px; }
+.rr-tela strong { font-weight: 700; }

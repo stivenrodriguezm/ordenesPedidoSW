@@ -1,0 +1,37 @@
+name: CI frontend
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint JS/JSX
+        run: npm run lint
+      - name: Pruebas de interacción
+        run: npm run test
+      - name: Build
+        run: npx vite build --outDir .build-check --emptyOutDir
+        env:
+          VITE_API_BASE_URL: https://api.invalid/api
+
+  secretos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

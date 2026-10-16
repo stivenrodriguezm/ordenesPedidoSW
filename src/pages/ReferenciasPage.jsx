@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
+import { useDialogo } from "../hooks/useDialogo";
 import "./ReferenciasPage.css";
 import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaTags, FaTrash, FaSearch, FaTimes, FaSitemap, FaSave } from "react-icons/fa";
 import { AppContext } from "../AppContext";
@@ -16,8 +17,8 @@ const InlineNotif = ({ message, type }) => {
       borderRadius: 8,
       marginBottom: '1rem',
       fontSize: '0.85rem',
-      background: type === 'success' ? '#dcfce7' : '#fee2e2',
-      color: type === 'success' ? '#166534' : '#991b1b',
+      background: type === 'success' ? '#edf3e9' : '#f9ece7',
+      color: type === 'success' ? '#4c7a4f' : '#a8432f',
     }}>
       {message}
     </div>
@@ -73,15 +74,17 @@ const CategoriasModal = ({ isOpen, onClose }) => {
     },
   });
 
+  const dialogoRef = useDialogo(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="ref-modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="ref-modal-content" style={{ maxWidth: 480 }}>
+      <div className="ref-modal-content" style={{ maxWidth: 480 }} ref={dialogoRef} role="dialog" aria-modal="true" aria-label="Gestionar categorías" tabIndex={-1}>
         <InlineNotif {...notif} />
         <div className="ref-modal-header">
-          <h3><FaTags style={{ marginRight: 8, color: '#475569' }} />Gestionar Categorías</h3>
-          <button className="ref-modal-close" onClick={onClose}>×</button>
+          <h3><FaTags style={{ marginRight: 8, color: '#57574f' }} />Gestionar Categorías</h3>
+          <button className="ref-modal-close" onClick={onClose} aria-label="Cerrar" data-dialogo-cerrar="">×</button>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); if (nombre.trim()) createMutation.mutate({ nombre: nombre.trim() }); }}
@@ -103,12 +106,12 @@ const CategoriasModal = ({ isOpen, onClose }) => {
           {isLoading ? (
             <div className="loading-container"><div className="loader" /></div>
           ) : categorias.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>No hay categorías registradas.</p>
+            <p style={{ textAlign: 'center', color: '#a3a398', fontSize: '0.875rem' }}>No hay categorías registradas.</p>
           ) : (
             <ul className="mgmt-list">
               {categorias.map((cat) => (
                 <li key={cat.id} className="mgmt-list-item">
-                  <span style={{ fontWeight: 500, color: '#1e293b', fontSize: '0.9rem' }}>{cat.nombre}</span>
+                  <span style={{ fontWeight: 500, color: '#2a2a25', fontSize: '0.9rem' }}>{cat.nombre}</span>
                   <button
                     onClick={() => { if (window.confirm(`¿Eliminar la categoría "${cat.nombre}"?`)) deleteMutation.mutate(cat.id); }}
                     className="delete-btn"
@@ -210,7 +213,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => API.delete(`/suministros/subcategorias/${id}/`),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['referencias'] });
       setNotif({ message: 'Subcategoría eliminada.', type: 'success' });
@@ -227,11 +230,13 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
     ? subcategorias.filter(s => String(s.categoria) === String(filterCatId))
     : subcategorias;
 
+  const dialogoRef = useDialogo(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="ref-modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="subcat-modal">
+      <div className="subcat-modal" ref={dialogoRef} role="dialog" aria-modal="true" aria-label="Gestionar subcategorías" tabIndex={-1}>
 
         {/* ── Header ── */}
         <div className="subcat-modal__header">
@@ -810,7 +815,7 @@ function ReferenciasPage() {
                             <span key={idx} className="categoria-badge">{cName}</span>
                           ))
                         ) : (
-                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
+                          <span style={{ color: '#d0cfc6', fontSize: '0.8rem' }}>—</span>
                         )}
                       </div>
                     </td>
@@ -821,7 +826,7 @@ function ReferenciasPage() {
                             <span key={idx} className="subcategoria-badge">{sName}</span>
                           ))
                         ) : (
-                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>—</span>
+                          <span style={{ color: '#d0cfc6', fontSize: '0.8rem' }}>—</span>
                         )}
                       </div>
                     </td>

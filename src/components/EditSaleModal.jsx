@@ -5,11 +5,14 @@ import { Button } from './ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppContext, usePermissions } from '../AppContext';
 import API from '../services/api';
+import { mensajeDeError } from '../services/errores';
 
-const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchReportSales, fetchClientes }) => {
+const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchReportSales }) => {
   const { usuario } = useContext(AppContext);
   const queryClient = useQueryClient();
   const [showSharedVendors, setShowSharedVendors] = useState(false);
+  // Copia del estado cargado, para avisar antes de descartar cambios (U02).
+  const [formInicial, setFormInicial] = useState('');
   const [formData, setFormData] = useState({
     id: '',
     cliente_id: '',
@@ -19,6 +22,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
     traslado: false,
     sede: 'Lottus 1',
     es_feria_hogar: false,
+    es_postferia: false,
     valor_total: '',
     estado: '',
     estado_pedidos: false,
@@ -26,7 +30,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
   useEffect(() => {
     if (saleData) {
-      setFormData({
+      const inicial = {
         id: saleData.id,
         cliente_id: saleData.cliente?.id || '',
         fecha_venta: saleData.fecha_venta,
@@ -36,12 +40,16 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         traslado: saleData.traslado || false,
         sede: saleData.sede || '',
         es_feria_hogar: saleData.es_feria_hogar || false,
+        es_postferia: saleData.es_postferia || false,
         valor_total: Number.isFinite(Number(saleData.valor_total)) ? Number(saleData.valor_total) : 0,
         estado: saleData.estado,
         estado_pedidos: saleData.estado_pedidos,
-      });
+      };
+      setFormData(inicial);
+      setFormInicial(JSON.stringify(inicial));
     }
   }, [saleData]);
+  const hayCambios = Boolean(formInicial) && JSON.stringify(formData) !== formInicial;
 
   // --- Permissions Logic ---
   const hasPermission = usePermissions();
@@ -55,8 +63,11 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
   const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
 
-  const availableEstados = (!canAnularOrden && (formData.estado || '').toLowerCase() !== 'anulado')
-    ? (estados || []).filter(e => e !== 'anulado')
+  // Nota: el valor real en BD para una venta anulada es 'anulada' (Venta.ESTADO_CHOICES).
+  // Se compara con startsWith('anulad') en vez de una igualdad exacta para no romper
+  // de nuevo si alguna vez aparece un dato legado con la forma 'anulado'.
+  const availableEstados = (!canAnularOrden && !(formData.estado || '').toLowerCase().startsWith('anulad'))
+    ? (estados || []).filter(e => !e.toLowerCase().startsWith('anulad'))
     : estados;
 
   const handleChange = (e) => {
@@ -80,7 +91,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
         vendedores_compartidos: formData.vendedores_compartidos,
         traslado: formData.traslado,
         sede: formData.es_feria_hogar ? null : (formData.sede || null),
+        // Feria del Hogar ya no se marca desde Ventas: se conserva el valor de ventas antiguas.
         es_feria_hogar: formData.es_feria_hogar,
+        es_postferia: formData.es_postferia,
         valor_total: parseFloat(formData.valor_total),
         estado: formData.estado,
         estado_pedidos: formData.estado_pedidos,
@@ -107,17 +120,15 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
       onSaleUpdated(formData.id);
       fetchVentas();
       fetchReportSales();
-      fetchClientes();
       queryClient.invalidateQueries({ queryKey: ['ventasPendientes'] });
     } catch (error) {
       console.error('Error al editar la venta:', error);
-      const friendlyError = error.response?.data?.error || JSON.stringify(error.response?.data) || 'Error al editar la venta.';
-      setNotification({ message: friendlyError, type: 'error' });
+      setNotification({ message: mensajeDeError(error, 'Error al editar la venta.'), type: 'error' });
     }
   };
 
   return (
-    <Modal show={show} onClose={onClose} title="Editar Venta">
+    <Modal show={show} onClose={onClose} hayCambios={hayCambios} title="Editar Venta">
       <form onSubmit={handleSubmit} className="edit-sale-form">
         <div className="form-group">
           <label>ID Venta:</label>
@@ -132,11 +143,11 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <>
             <div className="form-group">
               <label>Fecha de Venta:</label>
-              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required />
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} name="fecha_venta" value={formData.fecha_venta} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label>Fecha de Entrega:</label>
-              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} />
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} name="fecha_entrega" value={formData.fecha_entrega} onChange={handleChange} />
             </div>
 
             <div className="form-group">
@@ -207,8 +218,8 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
               <label htmlFor="traslado">¿Incluye Traslado?</label>
             </div>
             <div className="form-group checkbox-inline">
-              <input type="checkbox" id="es_feria_hogar" name="es_feria_hogar" checked={formData.es_feria_hogar} onChange={handleChange} />
-              <label htmlFor="es_feria_hogar">¿Venta de Feria del Hogar?</label>
+              <input type="checkbox" id="es_postferia" name="es_postferia" checked={formData.es_postferia} onChange={handleChange} />
+              <label htmlFor="es_postferia">Postferia</label>
             </div>
 
             <div className="form-group">
@@ -220,7 +231,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
 
         {canEditEstadoPedidos && (
           <div className="form-group">
-            <label>Estado de Pedidos:</label>
+            <label title="Ajuste manual; lo normal es finalizarla desde Productos de la venta">Gestión de la venta:</label>
             <select
               name="estado_pedidos"
               value={formData.estado_pedidos ? 'true' : 'false'}
@@ -228,8 +239,11 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
               disabled={isEstadoPedidosDisabled}
             >
               <option value="false">Pendiente</option>
-              <option value="true">Pedido</option>
+              <option value="true">Finalizada</option>
             </select>
+            {isEstadoPedidosDisabled && (
+              <small className="form-hint">Ya está marcado como pedido; revertirlo requiere un rol con edición completa.</small>
+            )}
           </div>
         )}
 
@@ -247,6 +261,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
                 <option key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1).replace(/_/g, ' ')}</option>
               ))}
             </select>
+            {isEstadoDisabled && (
+              <small className="form-hint">Una venta entregada solo la puede cambiar de estado un rol con edición completa.</small>
+            )}
           </div>
         )}
 

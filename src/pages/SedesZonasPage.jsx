@@ -120,7 +120,7 @@ export default function SedesZonasPage() {
       ]);
       setSedes(resSedes.data.results || resSedes.data || []);
       setZonas(resZonas.data.results || resZonas.data || []);
-    } catch (err) {
+    } catch {
       setNotification({ message: 'Error cargando sedes y zonas.', type: 'error' });
     } finally {
       setLoading(false);
@@ -142,7 +142,7 @@ export default function SedesZonasPage() {
       }
       fetchData();
       setSedeModal({ isOpen: false, data: null, isLoading: false });
-    } catch (err) {
+    } catch {
       setNotification({ message: 'Error guardando sede.', type: 'error' });
       setSedeModal(prev => ({ ...prev, isLoading: false }));
     }
@@ -154,7 +154,7 @@ export default function SedesZonasPage() {
       await API.delete(`/suministros/sedes/${id}/`);
       setNotification({ message: 'Sede eliminada.', type: 'success' });
       fetchData();
-    } catch (err) {
+    } catch {
       setNotification({ message: 'Error al eliminar sede.', type: 'error' });
     }
   };
@@ -172,7 +172,7 @@ export default function SedesZonasPage() {
       }
       fetchData();
       setZonaModal({ isOpen: false, data: null, isLoading: false });
-    } catch (err) {
+    } catch {
       setNotification({ message: 'Error guardando zona.', type: 'error' });
       setZonaModal(prev => ({ ...prev, isLoading: false }));
     }
@@ -184,7 +184,7 @@ export default function SedesZonasPage() {
       await API.delete(`/suministros/zonas/${id}/`);
       setNotification({ message: 'Zona eliminada.', type: 'success' });
       fetchData();
-    } catch (err) {
+    } catch {
       setNotification({ message: 'Error al eliminar zona.', type: 'error' });
     }
   };

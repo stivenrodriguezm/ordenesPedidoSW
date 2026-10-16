@@ -37,7 +37,7 @@
 }
 
 .desktop-view .proveedores-table th {
-  background-color: #f8f9fa;
+  background-color: var(--gray-50);
   color: var(--color-text-secondary);
   font-weight: 600;
   font-size: 0.75rem;

@@ -5,6 +5,9 @@ import {
   FaStickyNote, FaChevronDown, FaChevronUp, FaSearch, FaBoxOpen, FaFileInvoiceDollar,
   FaPlus, FaTrashAlt,
 } from 'react-icons/fa';
+import { useIdempotencia } from '../hooks/useIdempotencia';
+import { useBorrador } from '../hooks/useBorrador';
+import { describirError } from '../services/errores';
 import API from '../services/api';
 import { AppContext } from '../AppContext';
 import { getTodayStr } from '../utils/dates';
@@ -31,8 +34,14 @@ const formatDateShort = (str) => {
 let _otroConceptoCounter = 0;
 const newOtroConceptoId = () => `oc_${++_otroConceptoCounter}_${Date.now()}`;
 
+// En Colombia el efectivo físico solo existe en múltiplos de $50 (moneda de
+// menor denominación) — un pago en efectivo nunca puede ser, por ejemplo,
+// $2.750.780. Facturas/transferencias sí pueden llevar el valor exacto.
+const roundToNearest50 = (value) => Math.round(value / 50) * 50;
+
 export default function NuevaComprobanteEgresoPage() {
-  const { proveedores, notify } = useContext(AppContext);
+  const idempotencia = useIdempotencia();
+  const { proveedores, notify, usuario } = useContext(AppContext);
   const navigate = useNavigate();
   const todayStr = getTodayStr();
 
@@ -62,6 +71,58 @@ export default function NuevaComprobanteEgresoPage() {
   const [printPreview, setPrintPreview] = useState(null); // comprobante recién creado
 
   const isProveedorOtro = proveedor === PROVEEDOR_OTRO;
+
+  const hayContenidoEgreso = Boolean(
+    (proveedor && proveedor !== PROVEEDOR_OTRO) ||
+    proveedorOtroNombre ||
+    recibidoPor ||
+    medioPago ||
+    descripcion ||
+    otrosConceptos.length > 0
+  );
+
+  const borrador = useBorrador({
+    clave: 'nuevo-egreso',
+    dueno: usuario?.id ?? usuario?.username ?? null,
+    version: 1,
+    datos: {
+      fecha,
+      proveedor,
+      proveedorOtroNombre,
+      recibidoPor,
+      medioPago,
+      motivoOtro,
+      porcentajeDescuento,
+      descripcion,
+      otrosConceptos,
+    },
+    hayContenido: hayContenidoEgreso,
+    restaurar: (d) => {
+      if (!d) return;
+      if (d.fecha) setFecha(d.fecha);
+      if (d.proveedor) setProveedor(d.proveedor);
+      if (d.proveedorOtroNombre) setProveedorOtroNombre(d.proveedorOtroNombre);
+      if (d.recibidoPor) setRecibidoPor(d.recibidoPor);
+      if (d.medioPago) setMedioPago(d.medioPago);
+      if (d.motivoOtro) setMotivoOtro(d.motivoOtro);
+      if (d.porcentajeDescuento !== undefined) setPorcentajeDescuento(d.porcentajeDescuento);
+      if (d.descripcion) setDescripcion(d.descripcion);
+      if (Array.isArray(d.otrosConceptos)) setOtrosConceptos(d.otrosConceptos);
+    },
+  });
+
+  const descartarBorrador = () => {
+    borrador.descartar();
+    setFecha(todayStr);
+    setProveedor('');
+    setProveedorOtroNombre('');
+    setRecibidoPor('');
+    setMedioPago('');
+    setMotivoOtro('');
+    setPorcentajeDescuento(0);
+    setDescripcion('');
+    setOtrosConceptos([]);
+  };
 
   useEffect(() => {
     API.get('/caja/')
@@ -161,6 +222,14 @@ export default function NuevaComprobanteEgresoPage() {
 
   const valorFinal = numericVal - descuentoMonto;
 
+  const isEfectivo = medioPago === 'Efectivo';
+  // El valor que realmente se cobra/paga y el que alimenta Caja: si es
+  // efectivo, se redondea al múltiplo de $50 más cercano (nunca se puede
+  // pagar, p.ej., $80 o $75 en monedas). La factura del proveedor conserva
+  // siempre su valor exacto — este ajuste vive solo en el comprobante.
+  const montoRedondeo = isEfectivo ? roundToNearest50(valorFinal) - valorFinal : 0;
+  const valorAPagar = valorFinal + montoRedondeo;
+
   // Productos consolidados de todas las facturas seleccionadas — la vista
   // "fácil" de ver qué se está pagando, sin tener que abrir factura por factura.
   const productosIncluidos = useMemo(() => {
@@ -192,8 +261,7 @@ export default function NuevaComprobanteEgresoPage() {
     return [facturasPart, otrosPart].filter(Boolean).join(' + ') || null;
   }, [facturasSeleccionadas, facturasDisponibles, otrosConceptosValidos]);
 
-  const isEfectivo = medioPago === 'Efectivo';
-  const isExceedingCash = isEfectivo && saldoCaja !== null && valorFinal > saldoCaja;
+  const isExceedingCash = isEfectivo && saldoCaja !== null && valorAPagar > saldoCaja;
 
   const proveedorInvalido = !proveedor || (isProveedorOtro && !proveedorOtroNombre.trim());
   const tieneAlgoQuePagar = facturasSeleccionadas.length > 0
@@ -202,7 +270,7 @@ export default function NuevaComprobanteEgresoPage() {
     || !medioPago
     || (medioPago === 'Otro' && !motivoOtro.trim())
     || !recibidoPor.trim()
-    || valorFinal <= 0
+    || valorAPagar <= 0
     || isExceedingCash
     || !tieneAlgoQuePagar;
 
@@ -212,13 +280,17 @@ export default function NuevaComprobanteEgresoPage() {
     setSubmitError(null);
     setIsSubmitting(true);
 
-    const otrosBreakdown = otrosConceptos
+    // El desglose de "otros conceptos" ya no se concatena en `descripcion` —
+    // se manda estructurado en `otros_conceptos` para que el imprimible lo
+    // pueda mostrar como lista/tabla en vez de texto plano.
+    const otrosConceptosPayload = otrosConceptos
       .filter(o => o.descripcion.trim() && (parseInt(o.valor) || 0) > 0)
-      .map(o => `${o.descripcion.trim()}: ${formatCOP(parseInt(o.valor))}`)
-      .join('; ');
+      .map(o => ({ descripcion: o.descripcion.trim(), valor: parseInt(o.valor) || 0 }));
 
     const notasFinal = [
-      otrosBreakdown ? `Conceptos adicionales — ${otrosBreakdown}.` : '',
+      montoRedondeo !== 0
+        ? `Ajuste por redondeo a efectivo: ${montoRedondeo > 0 ? '+' : '-'}${formatCOP(Math.abs(montoRedondeo))} (valor real: ${formatCOP(valorFinal)} → pagado en efectivo: ${formatCOP(valorAPagar)}).`
+        : '',
       medioPago === 'Otro' && motivoOtro ? `(Medio de pago: ${motivoOtro})` : '',
       descripcion || '',
     ].filter(Boolean).join(' ').trim();
@@ -229,25 +301,25 @@ export default function NuevaComprobanteEgresoPage() {
       proveedor_otro_nombre: isProveedorOtro ? proveedorOtroNombre : '',
       recibido_por: recibidoPor,
       medio_pago: medioPago,
-      valor: String(valorFinal),
+      valor: String(valorAPagar),
       concepto: conceptoPreview || 'Pago a proveedor',
       descripcion: notasFinal,
+      otros_conceptos: otrosConceptosPayload,
     };
     if (facturasSeleccionadas.length > 0) {
       payload.facturas_ids = facturasSeleccionadas;
     }
 
     try {
-      const res = await API.post('/comprobantes-egreso/crear/', payload);
+      const res = await API.post('/comprobantes-egreso/crear/', payload, { headers: idempotencia.cabeceras(payload) });
+      idempotencia.confirmar();
+      borrador.limpiarTrasGuardar();
       notify('Comprobante creado exitosamente.', 'success');
       setPrintPreview(res.data);
     } catch (err) {
       console.error('Error creando comprobante de egreso:', err);
-      const data = err?.response?.data;
-      const message = typeof data?.detail === 'string'
-        ? data.detail
-        : (data && typeof data === 'object' ? Object.values(data).flat().filter(Boolean).join(' ') : null);
-      setSubmitError(message || 'No se pudo crear el comprobante. Intenta de nuevo.');
+      const desc = describirError(err, 'No se pudo crear el comprobante. Intenta de nuevo.');
+      setSubmitError(desc.mensaje);
     } finally {
       setIsSubmitting(false);
     }
@@ -266,10 +338,10 @@ export default function NuevaComprobanteEgresoPage() {
         subtitle="Registra un pago realizado a un proveedor."
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            {valorFinal > 0 && (
+            {valorAPagar > 0 && (
               <div className="nce-header-total">
                 <span className="nce-header-total-label">Total a Pagar</span>
-                <span className="nce-header-total-value">{formatCOP(valorFinal)}</span>
+                <span className="nce-header-total-value">{formatCOP(valorAPagar)}</span>
               </div>
             )}
             <Button variant="secondary" onClick={() => navigate('/comprobantes-egreso')} disabled={isSubmitting}>
@@ -281,6 +353,16 @@ export default function NuevaComprobanteEgresoPage() {
           </div>
         }
       />
+
+      {borrador.restaurado && (
+        <div className="nv-borrador-banner" role="status" style={{ marginBottom: '1.25rem' }}>
+          <span>
+            Se recuperó un borrador de egreso guardado el{' '}
+            {new Date(borrador.restaurado.guardadoAt).toLocaleString('es-CO')}.
+          </span>
+          <Button variant="ghost" onClick={descartarBorrador}>Descartar borrador</Button>
+        </div>
+      )}
 
       <form id="nueva-ce-form" onSubmit={handleSubmit} className="nce-form-layout">
         {/* COLUMNA IZQUIERDA */}
@@ -296,7 +378,7 @@ export default function NuevaComprobanteEgresoPage() {
             <div className="nce-card-body">
               <div className="nce-form-group">
                 <label><FaCalendarDay /> Fecha <span className="nce-req">*</span></label>
-                <input type="date" required value={fecha} onClick={e => { try { e.target.showPicker(); } catch (err) {} }} onChange={e => setFecha(e.target.value)} />
+                <input type="date" required value={fecha} onClick={e => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} onChange={e => setFecha(e.target.value)} />
               </div>
 
               <div className="nce-form-group">
@@ -386,10 +468,21 @@ export default function NuevaComprobanteEgresoPage() {
                   <span>-{formatCOP(descuentoMonto)}</span>
                 </div>
               )}
+              {montoRedondeo !== 0 && (
+                <div className="nce-resumen-row nce-resumen-redondeo">
+                  <span>Ajuste por redondeo (efectivo)</span>
+                  <span>{montoRedondeo > 0 ? '+' : '-'}{formatCOP(Math.abs(montoRedondeo))}</span>
+                </div>
+              )}
               <div className="nce-resumen-total">
                 <span>Neto a Pagar</span>
-                <span>{formatCOP(valorFinal)}</span>
+                <span>{formatCOP(valorAPagar)}</span>
               </div>
+              {montoRedondeo !== 0 && (
+                <div className="nce-resumen-redondeo-hint">
+                  El valor real de lo pagado es {formatCOP(valorFinal)}; en efectivo solo se puede pagar en múltiplos de $50, así que se redondea a {formatCOP(valorAPagar)}. La(s) factura(s) conservan su valor exacto.
+                </div>
+              )}
 
               {isExceedingCash && (
                 <div className="nce-warning">

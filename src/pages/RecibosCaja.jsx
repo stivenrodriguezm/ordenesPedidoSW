@@ -1,14 +1,17 @@
+import { useExportacion } from '../hooks/useExportacion';
 import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
 import './RecibosCaja.css';
+import { useIdempotencia } from '../hooks/useIdempotencia';
+import { confirmarDescarte, useDialogo } from '../hooks/useDialogo';
+import { useFiltrosUrl } from '../hooks/useFiltrosUrl';
 import API from '../services/api';
 import { getTodayStr } from '../utils/dates';
 import {
   FaFileExport,
   FaPlus,
-  FaUndo,
   FaTimes,
   FaCheckCircle,
   FaSearch,
@@ -16,13 +19,16 @@ import {
   FaCreditCard,
   FaUniversity,
   FaMobileAlt,
-  FaEllipsisH,
   FaCalendarDay,
   FaWallet,
   FaChevronLeft,
   FaChevronRight,
   FaChevronDown,
-  FaCalculator
+  FaCalculator,
+  FaEdit,
+  FaLock,
+  FaBan,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
@@ -52,7 +58,7 @@ const PAYMENT_METHODS = [
 
 const emptyPago = () => ({ metodo_pago: '', valor: '' });
 
-const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading }) => {
+const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
   const todayStr = getTodayStr();
 
   const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', nota: '', pagos: [emptyPago()] });
@@ -93,6 +99,9 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
     });
   };
 
+  const hayCambios = Boolean(newRC.venta || newRC.nota || newRC.pagos.some(p => p.metodo_pago || p.valor));
+  const dialogoRef = useDialogo(isOpen, onClose, { hayCambios });
+
   if (!isOpen) return null;
 
   const totalVal = newRC.pagos.reduce((sum, p) => sum + (parseInt(p.valor) || 0), 0);
@@ -100,8 +109,8 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
   const filteredVentas = ventas.filter(v => v.id_venta.toString().includes(ventaSearch));
 
   return createPortal(
-    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="lottus-form-modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(hayCambios)) onClose(); }}>
+      <div className="lottus-form-modal" onClick={e => e.stopPropagation()} ref={dialogoRef} role="dialog" aria-modal="true" aria-label={"Nuevo recibo de caja"} tabIndex={-1}>
         {/* Header */}
         <div className="lottus-modal-header">
           <div className="lottus-modal-title-wrap">
@@ -116,7 +125,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
               <p className="lottus-modal-subtitle">Ingresa los datos generales del recibo de ingreso.</p>
             </div>
           </div>
-          <button type="button" className="lottus-close-btn" onClick={onClose} title="Cerrar">×</button>
+          <button type="button" className="lottus-close-btn" onClick={onClose} title="Cerrar" aria-label="Cerrar" data-dialogo-cerrar="">×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="lottus-modal-form">
@@ -128,7 +137,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
             </div>
             <div className="lottus-form-group">
               <label>Fecha <span className="lottus-req">*</span></label>
-              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }} name="fecha" value={newRC.fecha} onChange={handleChange} required className="lottus-input" />
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} name="fecha" value={newRC.fecha} onChange={handleChange} required className="lottus-input" />
             </div>
           </div>
 
@@ -146,15 +155,15 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
             </div>
 
             {showVentaDropdown && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '8px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #e4e3dc', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid #e4e3dc', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
                   <input 
                     type="text" 
                     placeholder="Buscar # de venta..." 
                     value={ventaSearch}
                     onChange={(e) => setVentaSearch(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: '#f8fafc', color: '#1e293b', fontSize: '0.9rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #d0cfc6', borderRadius: '6px', background: '#faf9f5', color: '#2a2a25', fontSize: '0.9rem', outline: 'none' }}
                     autoFocus
                   />
                 </div>
@@ -167,14 +176,14 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
                         setShowVentaDropdown(false);
                         setVentaSearch('');
                       }}
-                      style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: newRC.venta === venta.id_venta ? '#ecfdf5' : 'transparent', color: newRC.venta === venta.id_venta ? '#059669' : '#334155', fontWeight: newRC.venta === venta.id_venta ? '600' : '400', transition: 'background 0.2s, color 0.2s' }}
-                      onMouseEnter={(e) => { if(newRC.venta !== venta.id_venta) e.target.style.background = '#f8fafc' }}
+                      style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f2f1eb', background: newRC.venta === venta.id_venta ? '#edf3e9' : 'transparent', color: newRC.venta === venta.id_venta ? '#4c7a4f' : '#3e3e37', fontWeight: newRC.venta === venta.id_venta ? '600' : '400', transition: 'background 0.2s, color 0.2s' }}
+                      onMouseEnter={(e) => { if(newRC.venta !== venta.id_venta) e.target.style.background = '#faf9f5' }}
                       onMouseLeave={(e) => { if(newRC.venta !== venta.id_venta) e.target.style.background = 'transparent' }}
                     >
                       Venta #{venta.id_venta}
                     </div>
                   )) : (
-                    <div style={{ padding: '12px', color: '#64748b', textAlign: 'center', fontSize: '0.9rem' }}>
+                    <div style={{ padding: '12px', color: '#72726a', textAlign: 'center', fontSize: '0.9rem' }}>
                       No se encontraron ventas
                     </div>
                   )}
@@ -253,6 +262,304 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, mediosPago, isLoading 
 };
 
 
+const estadoInicialEdicion = (recibo) => {
+  const pendientes = (recibo.pagos || [])
+    .filter(p => p.estado !== 'Confirmado')
+    .map(p => ({ id: p.id, metodo_pago: p.metodo_pago, valor: String(p.valor ?? '') }));
+  return {
+    fecha: recibo.fecha || '',
+    venta: recibo.venta || '',
+    nota: recibo.nota || '',
+    pagosPendientes: pendientes.length > 0 ? pendientes : [emptyPago()],
+  };
+};
+
+const EditRCModal = ({ isOpen, onClose, onSave, onAnular, recibo, ventas, isLoading }) => {
+  const [editRC, setEditRC] = useState({ fecha: '', venta: '', nota: '', pagosPendientes: [] });
+  const [ventaSearch, setVentaSearch] = useState('');
+  const [showVentaDropdown, setShowVentaDropdown] = useState(false);
+  const [confirmingAnular, setConfirmingAnular] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && recibo) {
+      setEditRC(estadoInicialEdicion(recibo));
+      setVentaSearch('');
+      setShowVentaDropdown(false);
+      setConfirmingAnular(false);
+    }
+  }, [isOpen, recibo]);
+
+  const hayCambios = Boolean(recibo) && JSON.stringify(editRC) !== JSON.stringify(estadoInicialEdicion(recibo));
+  const dialogoRef = useDialogo(Boolean(isOpen && recibo), onClose, { hayCambios });
+
+  if (!isOpen || !recibo) return null;
+
+  const isAnulado = recibo.estado === 'Anulado';
+  const pagosConfirmados = (recibo.pagos || []).filter(p => p.estado === 'Confirmado');
+  const hasConfirmados = pagosConfirmados.length > 0;
+  const totalReciboActual = (recibo.pagos || []).reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0);
+  const hasEfectivoConfirmado = pagosConfirmados.some(p => p.metodo_pago === 'Efectivo');
+
+  const handleChange = (e) => setEditRC({ ...editRC, [e.target.name]: e.target.value });
+
+  const handlePagoMetodo = (index, metodo) => {
+    const pagosPendientes = [...editRC.pagosPendientes];
+    pagosPendientes[index] = { ...pagosPendientes[index], metodo_pago: metodo };
+    setEditRC({ ...editRC, pagosPendientes });
+  };
+  const handlePagoValor = (index, e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    const pagosPendientes = [...editRC.pagosPendientes];
+    pagosPendientes[index] = { ...pagosPendientes[index], valor: raw };
+    setEditRC({ ...editRC, pagosPendientes });
+  };
+  const handleAddPago = () => setEditRC({ ...editRC, pagosPendientes: [...editRC.pagosPendientes, emptyPago()] });
+  const handleRemovePago = (index) => setEditRC({ ...editRC, pagosPendientes: editRC.pagosPendientes.filter((_, i) => i !== index) });
+
+  const pagosPendientesValidos = editRC.pagosPendientes.filter(p => p.metodo_pago && (parseInt(p.valor) || 0) > 0);
+  const totalConfirmado = pagosConfirmados.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0);
+  const totalPendiente = pagosPendientesValidos.reduce((sum, p) => sum + (parseInt(p.valor) || 0), 0);
+  const totalVal = totalConfirmado + totalPendiente;
+  const puedeGuardar = hasConfirmados || pagosPendientesValidos.length > 0;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!puedeGuardar) return;
+    onSave(recibo.id, {
+      fecha: editRC.fecha,
+      venta: editRC.venta,
+      nota: editRC.nota,
+      pagos_pendientes: pagosPendientesValidos.map(p => ({
+        ...(p.id ? { id: p.id } : {}),
+        metodo_pago: p.metodo_pago,
+        valor: parseInt(p.valor) || 0,
+      })),
+    });
+  };
+
+  const filteredVentas = ventas.filter(v => v.id_venta.toString().includes(ventaSearch));
+
+  return createPortal(
+    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget && confirmarDescarte(hayCambios)) onClose(); }}>
+      <div className="lottus-form-modal" onClick={e => e.stopPropagation()} ref={dialogoRef} role="dialog" aria-modal="true" aria-label={`Editar recibo ${recibo.id}`} tabIndex={-1}>
+        {/* Header */}
+        <div className="lottus-modal-header">
+          <div className="lottus-modal-title-wrap">
+            <div className="lottus-modal-icon-badge">
+              <FaWallet />
+            </div>
+            <div>
+              <div className="lottus-modal-type-badge">
+                <span className="lottus-badge-dot"></span> Recibo de Ingreso
+              </div>
+              <h3 className="lottus-modal-title">Editar Recibo de Caja #{recibo.id}</h3>
+              <p className="lottus-modal-subtitle">
+                {isAnulado ? 'Este recibo está anulado — solo lectura.' : 'Corrige los datos del recibo. Los pagos ya confirmados no se pueden modificar.'}
+              </p>
+            </div>
+          </div>
+          <button type="button" className="lottus-close-btn" onClick={onClose} title="Cerrar" aria-label="Cerrar" data-dialogo-cerrar="">×</button>
+        </div>
+
+        {isAnulado && (
+          <div className="rc-anulado-banner">
+            <FaBan /> Este recibo fue anulado y quedó bloqueado para edición. Los movimientos de caja y el abono a la venta ya fueron revertidos.
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="lottus-modal-form">
+        <fieldset
+          disabled={isAnulado}
+          style={{ border: 0, padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: isAnulado ? 0.55 : 1 }}
+        >
+          {/* Row: ID (fijo) + Fecha */}
+          <div className="lottus-form-row">
+            <div className="lottus-form-group">
+              <label>No. Recibo</label>
+              <input type="text" value={`#${recibo.id}`} disabled className="lottus-input" />
+            </div>
+            <div className="lottus-form-group">
+              <label>Fecha <span className="lottus-req">*</span></label>
+              <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} name="fecha" value={editRC.fecha} onChange={handleChange} required className="lottus-input" />
+            </div>
+          </div>
+
+          {/* Venta */}
+          <div className="lottus-form-group full" style={{ position: 'relative' }}>
+            <label>
+              Venta Asociada <span className="lottus-req">*</span>
+              {hasConfirmados && <span className="lottus-hint" style={{ marginLeft: '0.4rem' }}><FaLock size={10} /> Bloqueada (ya hay pagos confirmados)</span>}
+            </label>
+
+            <div
+              className="lottus-select"
+              onClick={() => !hasConfirmados && setShowVentaDropdown(!showVentaDropdown)}
+              style={{ cursor: hasConfirmados ? 'not-allowed' : 'pointer', opacity: hasConfirmados ? 0.6 : 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span>{editRC.venta ? `Venta #${editRC.venta}` : 'Seleccionar Venta...'}</span>
+              {!hasConfirmados && <FaChevronDown size={12} style={{ color: 'var(--text-muted)' }} />}
+            </div>
+
+            {!hasConfirmados && showVentaDropdown && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #e4e3dc', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid #e4e3dc', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar # de venta..."
+                    value={ventaSearch}
+                    onChange={(e) => setVentaSearch(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #d0cfc6', borderRadius: '6px', background: '#faf9f5', color: '#2a2a25', fontSize: '0.9rem', outline: 'none' }}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ overflowY: 'auto', flex: 1, maxHeight: '200px' }}>
+                  {filteredVentas.length > 0 ? filteredVentas.map(venta => (
+                    <div
+                      key={venta.id_venta}
+                      onClick={() => {
+                        setEditRC({ ...editRC, venta: venta.id_venta });
+                        setShowVentaDropdown(false);
+                        setVentaSearch('');
+                      }}
+                      style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f2f1eb', background: editRC.venta === venta.id_venta ? '#edf3e9' : 'transparent', color: editRC.venta === venta.id_venta ? '#4c7a4f' : '#3e3e37', fontWeight: editRC.venta === venta.id_venta ? '600' : '400', transition: 'background 0.2s, color 0.2s' }}
+                      onMouseEnter={(e) => { if(editRC.venta !== venta.id_venta) e.target.style.background = '#faf9f5' }}
+                      onMouseLeave={(e) => { if(editRC.venta !== venta.id_venta) e.target.style.background = 'transparent' }}
+                    >
+                      Venta #{venta.id_venta}
+                    </div>
+                  )) : (
+                    <div style={{ padding: '12px', color: '#72726a', textAlign: 'center', fontSize: '0.9rem' }}>
+                      No se encontraron ventas
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pagos confirmados: solo lectura */}
+          {hasConfirmados && (
+            <div className="lottus-form-group full">
+              <label>Pagos ya confirmados <FaLock size={10} /></label>
+              <div className="rc-pagos-list">
+                {pagosConfirmados.map(pago => (
+                  <div key={pago.id} className="rc-pago-row" style={{ opacity: 0.65 }}>
+                    <div className="lottus-select" style={{ pointerEvents: 'none' }}>{pago.metodo_pago}</div>
+                    <div className="lottus-input-icon rc-pago-valor-wrap">
+                      <span className="lottus-prefix">$</span>
+                      <input type="text" value={formatCOP(parseInt(pago.valor) || 0).replace('$', '').trim()} disabled className="lottus-input lottus-input-pl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pagos pendientes: editables */}
+          <div className="lottus-form-group full">
+            <div className="lottus-label-flex">
+              <label>Pagos pendientes / nuevos {!hasConfirmados && <span className="lottus-req">*</span>}</label>
+              {totalVal > 0 && (
+                <span className="lottus-val-preview">Total: {formatCOP(totalVal)}</span>
+              )}
+            </div>
+            <div className="rc-pagos-list">
+              {editRC.pagosPendientes.map((pago, index) => (
+                <div key={pago.id || `new-${index}`} className="rc-pago-row">
+                  <select
+                    className="lottus-select"
+                    value={pago.metodo_pago}
+                    onChange={(e) => handlePagoMetodo(index, e.target.value)}
+                  >
+                    <option value="">Método...</option>
+                    {PAYMENT_METHODS.map(m => (
+                      <option key={m.label} value={m.label}>{m.label}</option>
+                    ))}
+                  </select>
+                  <div className="lottus-input-icon rc-pago-valor-wrap">
+                    <span className="lottus-prefix">$</span>
+                    <input
+                      type="text"
+                      value={pago.valor ? formatCOP(parseInt(pago.valor) || 0).replace('$', '').trim() : ''}
+                      onChange={(e) => handlePagoValor(index, e)}
+                      placeholder="0"
+                      className="lottus-input lottus-input-pl"
+                    />
+                  </div>
+                  {editRC.pagosPendientes.length > 1 && (
+                    <button type="button" className="rc-pago-remove-btn" onClick={() => handleRemovePago(index)} title="Quitar este pago">
+                      <FaTimes />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button type="button" className="rc-btn-add-pago" onClick={handleAddPago}>
+              <FaPlus /> Agregar otro medio de pago
+            </button>
+            <p className="lottus-hint" style={{ marginTop: '0.15rem' }}>
+              Una línea nueva en Efectivo se confirma al instante, igual que al crear un recibo. Los demás medios quedan pendientes hasta que un administrador los confirme.
+            </p>
+          </div>
+
+          {/* Nota */}
+          <div className="lottus-form-group full">
+            <label>Notas / Observaciones <span className="lottus-hint">(opcional)</span></label>
+            <textarea name="nota" value={editRC.nota} onChange={handleChange} placeholder="Detalles o notas sobre el recibo..." rows="2" className="lottus-input" />
+          </div>
+        </fieldset>
+
+          {/* Anular recibo */}
+          {!isAnulado && onAnular && (
+            <div className="rc-anular-section">
+              {!confirmingAnular ? (
+                <button type="button" className="rc-btn-anular-trigger" onClick={() => setConfirmingAnular(true)} disabled={isLoading}>
+                  <FaBan /> Anular Recibo
+                </button>
+              ) : (
+                <div className="rc-anular-confirm">
+                  <p className="rc-anular-confirm-text">
+                    <FaExclamationTriangle />{' '}
+                    {hasEfectivoConfirmado
+                      ? 'Se revertirá el abono a la venta y se registrará un movimiento de egreso en Caja por los pagos en efectivo ya confirmados.'
+                      : hasConfirmados
+                        ? 'Se revertirá el abono ya aplicado a la venta por los pagos confirmados.'
+                        : `Este recibo (${formatCOP(totalReciboActual)}) quedará marcado como anulado.`}
+                    {' '}Esta acción no se puede deshacer.
+                  </p>
+                  <div className="rc-anular-confirm-actions">
+                    <button type="button" className="lottus-btn-cancel" onClick={() => setConfirmingAnular(false)} disabled={isLoading}>
+                      Volver
+                    </button>
+                    <button type="button" className="lottus-btn-danger" onClick={() => onAnular(recibo.id)} disabled={isLoading}>
+                      {isLoading ? 'Anulando...' : 'Sí, anular recibo'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Footer Actions */}
+          <div className="lottus-modal-actions">
+            <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
+              Cancelar
+            </button>
+            {!isAnulado && (
+              <button type="submit" className="lottus-btn-submit" disabled={isLoading || !puedeGuardar || !editRC.venta}>
+                {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }) => {
   if (!isOpen) return null;
   return (
@@ -273,19 +580,26 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, children, isLoading }
 };
 
 const RecibosCaja = () => {
+  const idempotencia = useIdempotencia();
   const { usuario } = useContext(AppContext);
   const hasPermission = usePermissions();
   const location = useLocation();
   const [recibosData, setRecibosData] = useState([]);
-  const [filters, setFilters] = useState({
+  const [totalFiltrado, setTotalFiltrado] = useState(0);
+  const [filters, setFilters] = useFiltrosUrl({
     fecha_inicio: '',
     fecha_fin: '',
     medio_pago: '',
     query: ''
   });
   const [isCreatingRC, setIsCreatingRC] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
   const { data: pendientesIds = [], isError: pendientesIdsError, error: pendientesIdsErr } = usePendientesIds();
   const ventas = useMemo(() => pendientesIds.map(id => ({ id_venta: id })), [pendientesIds]);
+  const editVentas = useMemo(() => {
+    if (!editTarget || ventas.some(v => v.id_venta === editTarget.venta)) return ventas;
+    return [...ventas, { id_venta: editTarget.venta }];
+  }, [ventas, editTarget]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null); // { recibo, pago }
   const [expandedReciboId, setExpandedReciboId] = useState(null);
@@ -295,6 +609,7 @@ const RecibosCaja = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const { exportar, exportando } = useExportacion('recibos', 'Recibos_Caja.xlsx', setNotification);
 
   const mediosPago = ['Efectivo', 'Davivienda', 'Bancolombia', 'Bold', 'Datafono Lottus', 'Otro'];
 
@@ -338,8 +653,9 @@ const RecibosCaja = () => {
     try {
       const response = await API.get(`/recibos-caja/`, { params });
       setRecibosData(response.data.results || []);
+      setTotalFiltrado(response.data.totales_filtrados?.valor || 0);
       setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
-    } catch (error) {
+    } catch {
       setNotification({ message: 'Error al cargar los recibos.', type: 'error' });
     } finally {
       setIsLoading(false);
@@ -378,13 +694,48 @@ const RecibosCaja = () => {
     setIsSubmitting(true);
     setNotification({ message: '', type: '' });
     try {
-      await API.post(`/recibos-caja/crear/`, rcData);
+      await API.post(`/recibos-caja/crear/`, rcData, { headers: idempotencia.cabeceras(rcData) });
+      idempotencia.confirmar();
       setNotification({ message: 'Recibo creado exitosamente.', type: 'success' });
       setIsCreatingRC(false);
       fetchData(filters, 1);
     } catch (error) {
       const data = error.response?.data;
       const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al crear el recibo.'));
+      setNotification({ message: errorMsg, type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditRC = async (reciboId, rcData) => {
+    setIsSubmitting(true);
+    setNotification({ message: '', type: '' });
+    try {
+      await API.put(`/recibos-caja/${reciboId}/editar/`, rcData);
+      setNotification({ message: 'Recibo actualizado exitosamente.', type: 'success' });
+      setEditTarget(null);
+      fetchData(filters, currentPage);
+    } catch (error) {
+      const data = error.response?.data;
+      const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al actualizar el recibo.'));
+      setNotification({ message: errorMsg, type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAnularRC = async (reciboId) => {
+    setIsSubmitting(true);
+    setNotification({ message: '', type: '' });
+    try {
+      await API.put(`/recibos-caja/${reciboId}/anular/`, {});
+      setNotification({ message: 'Recibo anulado exitosamente.', type: 'success' });
+      setEditTarget(null);
+      fetchData(filters, currentPage);
+    } catch (error) {
+      const data = error.response?.data;
+      const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al anular el recibo.'));
       setNotification({ message: errorMsg, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -408,34 +759,7 @@ const RecibosCaja = () => {
     }
   };
 
-  const exportData = async () => {
-    setIsLoading(true);
-    const params = { ...filters, page_size: 9999 };
-    Object.keys(params).forEach(key => (params[key] === '' || params[key] === null) && delete params[key]);
-
-    try {
-      const XLSX = await import('xlsx');
-      const response = await API.get(`/recibos-caja/`, { params });
-      const dataToExport = response.data.results.map(item => ({
-        'RC': item.id,
-        'Fecha': item.fecha,
-        'Venta': item.venta,
-        'Vendedor': item.vendedor_nombre || '-',
-        'Método': item.metodo_pago,
-        'Valor': item.valor,
-        'Nota': item.nota,
-        'Estado': item.estado,
-      }));
-      const ws = XLSX.utils.json_to_sheet(dataToExport);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Recibos');
-      XLSX.writeFile(wb, 'Recibos_Caja.xlsx');
-    } catch (error) {
-      setNotification({ message: 'Error al exportar.', type: 'error' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const exportData = () => exportar(filters);
 
   return (
     <div className="ds-page recibos-page ds-fade-in">
@@ -452,7 +776,7 @@ const RecibosCaja = () => {
         actions={
           <>
             {usuario?.role === 'administrador' && (
-              <Button variant="ghost" icon={FaFileExport} onClick={exportData} title="Exportar Excel" />
+              <Button variant="ghost" icon={FaFileExport} onClick={exportData} loading={exportando} disabled={isLoading} aria-label="Exportar Excel" title="Exportar Excel" />
             )}
             {hasPermission('CREAR_RECIBO') && (
               <Button variant="primary" icon={FaPlus} onClick={() => setIsCreatingRC(true)}>
@@ -495,7 +819,7 @@ const RecibosCaja = () => {
               name="fecha_inicio"
               value={filters.fecha_inicio}
               onChange={handleFilterChange}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
@@ -506,7 +830,7 @@ const RecibosCaja = () => {
               name="fecha_fin"
               value={filters.fecha_fin}
               onChange={handleFilterChange}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+              onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }}
               style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: 'var(--gray-700)', cursor: 'pointer', paddingRight: '0.8rem' }}
             />
           </div>
@@ -525,6 +849,11 @@ const RecibosCaja = () => {
       </div>
 
       <div className="content-area">
+        {(filters.query || filters.fecha_inicio || filters.fecha_fin || filters.medio_pago) && (
+          <div className="ds-totales-filtrados" role="status">
+            Con estos filtros: <strong>total {formatCOP(totalFiltrado)}</strong>
+          </div>
+        )}
         {/* Desktop Table View */}
         <div className="desktop-table-wrapper">
           <table className="modern-table">
@@ -586,6 +915,25 @@ const RecibosCaja = () => {
                           </Badge>
                         </td>
                         <td className="actions-cell">
+                          {hasPermission('EDITAR_RECIBO') && (
+                            item.estado === 'Anulado' ? (
+                              <button
+                                className="action-btn"
+                                disabled
+                                title="Este recibo está anulado y no se puede editar"
+                              >
+                                <FaEdit />
+                              </button>
+                            ) : (
+                              <button
+                                className="action-btn"
+                                onClick={(e) => { e.stopPropagation(); setEditTarget(item); }}
+                                title="Editar Recibo"
+                              >
+                                <FaEdit />
+                              </button>
+                            )
+                          )}
                           {singlePendingPago && hasPermission('APROBAR_RECIBO') && (
                             <button
                               className="action-btn confirm"
@@ -615,7 +963,7 @@ const RecibosCaja = () => {
                                   <PaymentIcon method={pago.metodo_pago} />
                                   <span className="rc-pago-detail-metodo">{pago.metodo_pago}</span>
                                   <span className="rc-pago-detail-valor font-mono">{formatCurrency(pago.valor)}</span>
-                                  <Badge tone={pago.estado === 'Confirmado' ? 'success' : 'warning'}>{pago.estado}</Badge>
+                                  <Badge tone={pago.estado === 'Confirmado' ? 'success' : pago.estado === 'Anulado' ? 'danger' : 'warning'}>{pago.estado}</Badge>
                                   {pago.estado === 'Pendiente' && hasPermission('APROBAR_RECIBO') && (
                                     <button
                                       className="action-btn confirm"
@@ -663,6 +1011,17 @@ const RecibosCaja = () => {
                     <div className="card-amount">{formatCurrency(item.valor)}</div>
                     <span className={`status-dot ${item.estado.toLowerCase()}`}></span>
                   </div>
+                  {hasPermission('EDITAR_RECIBO') && (
+                    item.estado === 'Anulado' ? (
+                      <button className="mobile-edit-btn" disabled title="Este recibo está anulado y no se puede editar">
+                        <FaEdit /> Anulado
+                      </button>
+                    ) : (
+                      <button className="mobile-edit-btn" onClick={() => setEditTarget(item)}>
+                        <FaEdit /> Editar
+                      </button>
+                    )
+                  )}
                   {singlePendingPago && usuario?.role === 'administrador' && (
                     <button className="mobile-confirm-btn" onClick={() => { setConfirmTarget({ recibo: item, pago: singlePendingPago }); setShowConfirmModal(true); }}>
                       Confirmar
@@ -675,7 +1034,7 @@ const RecibosCaja = () => {
                           <PaymentIcon method={pago.metodo_pago} />
                           <span className="rc-pago-detail-metodo">{pago.metodo_pago}</span>
                           <span className="rc-pago-detail-valor font-mono">{formatCurrency(pago.valor)}</span>
-                          <Badge tone={pago.estado === 'Confirmado' ? 'success' : 'warning'}>{pago.estado}</Badge>
+                          <Badge tone={pago.estado === 'Confirmado' ? 'success' : pago.estado === 'Anulado' ? 'danger' : 'warning'}>{pago.estado}</Badge>
                           {pago.estado === 'Pendiente' && usuario?.role === 'administrador' && (
                             <button className="mobile-confirm-btn" onClick={() => { setConfirmTarget({ recibo: item, pago }); setShowConfirmModal(true); }}>
                               Confirmar
@@ -710,6 +1069,16 @@ const RecibosCaja = () => {
         onSave={handleCreateRC}
         ventas={ventas}
         mediosPago={mediosPago}
+        isLoading={isSubmitting}
+      />
+
+      <EditRCModal
+        isOpen={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={handleEditRC}
+        onAnular={hasPermission('EDITAR_RECIBO') ? handleAnularRC : null}
+        recibo={editTarget}
+        ventas={editVentas}
         isLoading={isSubmitting}
       />
 

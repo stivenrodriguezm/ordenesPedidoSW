@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import {
-  FaPlus, FaEdit, FaTrashAlt, FaStar, FaUpload, FaSave, FaTimes, FaGlobe,
+  FaPlus, FaEdit, FaTrashAlt, FaUpload, FaSave, FaTimes, FaGlobe,
   FaBoxes, FaCheckCircle, FaStar as FaStarSolid, FaImage, FaSearch,
   FaUserTie, FaWhatsapp, FaExclamationTriangle, FaExternalLinkAlt,
+  FaArrowUp, FaArrowDown, FaGripVertical, FaSpinner, FaPlay,
 } from 'react-icons/fa';
 import {
   getAdminProducts,
@@ -21,8 +22,9 @@ import {
 import { getAdminPqrs } from '../../services/pqrsService';
 import PqrsPanel from './PqrsPanel';
 import { getMediaUrl } from '../../apiConfig';
-import { AppContext } from '../../AppContext';
+import { AppContext, usePermissions } from '../../AppContext';
 import { PageHeader, Button, Badge, Modal, StatCard, Skeleton, Tabs } from '../../components/ui';
+import EditorTextoFormato from '../../components/EditorTextoFormato';
 import './Paginaweb.css';
 import './Asesores.css';
 
@@ -38,6 +40,11 @@ function asesorInitials(name) {
     .join('');
 }
 
+const VIDEO_EXTENSIONS = /\.(mp4|mov|webm)$/i;
+function isVideoUrl(url) {
+  return VIDEO_EXTENSIONS.test((url || '').split('?')[0]);
+}
+
 function getErrorMessage(err, fallback) {
   const data = err?.response?.data;
   if (!data) return fallback;
@@ -51,6 +58,12 @@ function getErrorMessage(err, fallback) {
 
 function PaginawebAdminPage() {
   const { notify } = useContext(AppContext);
+  const hasPermission = usePermissions();
+  const canCrearProducto = hasPermission('CREAR_PRODUCTO_WEB');
+  const canEditarProducto = hasPermission('EDITAR_PRODUCTO_WEB');
+  const canEliminarProducto = hasPermission('ELIMINAR_PRODUCTO_WEB');
+  const canAdministrarAsesores = hasPermission('ADMINISTRAR_ASESORES_WEB');
+  const canVerPqrs = hasPermission('RESPONDER_PQRS');
   const [activeTab, setActiveTab] = useState('products');
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
@@ -62,16 +75,16 @@ function PaginawebAdminPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     category: 'sofas',
-    price: 0,
-    oldPrice: '',
     badge: '',
     shortDescription: '',
     description: '',
+    characteristics: '',
     materials: '',
-    dimensions: '',
     featured: false,
     active: true,
     images: [],
@@ -92,14 +105,40 @@ function PaginawebAdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [prodsData, asesoresData, pqrsData] = await Promise.all([
+      // Promise.allSettled en vez de Promise.all: si el backend de PQRS
+      // todavía no está desplegado (endpoint nuevo), esa sección debe
+      // quedar vacía sin tumbar Productos ni Asesores, que sí funcionan.
+      // Asesores y PQRS solo se piden si el rol tiene el permiso — si no,
+      // el backend los rechaza con 403 y ni siquiera deberían llegar a
+      // pedirse (esas pestañas ya están ocultas para este rol).
+      const [prodsResult, asesoresResult, pqrsResult] = await Promise.allSettled([
         getAdminProducts(),
-        getAdminAsesores(),
-        getAdminPqrs(),
+        canAdministrarAsesores ? getAdminAsesores() : Promise.resolve({ results: [] }),
+        canVerPqrs ? getAdminPqrs() : Promise.resolve({ results: [] }),
       ]);
-      setProducts(prodsData.results || prodsData || []);
-      setAsesores(asesoresData.results || asesoresData || []);
-      setPqrs(pqrsData.results || pqrsData || []);
+
+      if (prodsResult.status === 'fulfilled') {
+        setProducts(prodsResult.value.results || prodsResult.value || []);
+      } else {
+        console.error('Error cargando productos web:', prodsResult.reason);
+      }
+
+      if (asesoresResult.status === 'fulfilled') {
+        setAsesores(asesoresResult.value.results || asesoresResult.value || []);
+      } else {
+        console.error('Error cargando asesores:', asesoresResult.reason);
+      }
+
+      if (pqrsResult.status === 'fulfilled') {
+        setPqrs(pqrsResult.value.results || pqrsResult.value || []);
+      } else {
+        console.error('Error cargando PQRS:', pqrsResult.reason);
+      }
+
+      const failedCount = [prodsResult, asesoresResult, pqrsResult].filter((r) => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        notify('Algunas secciones de la página web no se pudieron cargar', 'error');
+      }
     } catch (err) {
       console.error('Error cargando gestión web:', err);
       notify('Error al cargar los datos de la web', 'error');
@@ -132,13 +171,11 @@ function PaginawebAdminPage() {
     setFormData({
       name: '',
       category: 'sofas',
-      price: 0,
-      oldPrice: '',
       badge: '',
       shortDescription: '',
       description: '',
+      characteristics: '',
       materials: '',
-      dimensions: '',
       featured: false,
       active: true,
       images: [],
@@ -151,13 +188,11 @@ function PaginawebAdminPage() {
     setFormData({
       name: p.name || '',
       category: p.category || 'sofas',
-      price: p.price || 0,
-      oldPrice: p.oldPrice || p.old_price || '',
       badge: p.badge || '',
       shortDescription: p.shortDescription || p.short_description || '',
       description: p.description || '',
+      characteristics: p.characteristics || '',
       materials: p.materials || '',
-      dimensions: p.dimensions || '',
       featured: Boolean(p.featured),
       active: p.active !== false,
       images: p.images || [],
@@ -195,6 +230,42 @@ function PaginawebAdminPage() {
     }));
   };
 
+  const handleMoveImage = (index, direction) => {
+    setFormData((prev) => {
+      const imgs = [...prev.images];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= imgs.length) return prev;
+      [imgs[index], imgs[targetIndex]] = [imgs[targetIndex], imgs[index]];
+      return { ...prev, images: imgs };
+    });
+  };
+
+  const handleDragStart = (index) => setDragIndex(index);
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setFormData((prev) => {
+      const imgs = [...prev.images];
+      const [moved] = imgs.splice(dragIndex, 1);
+      imgs.splice(dropIndex, 0, moved);
+      return { ...prev, images: imgs };
+    });
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   const handleSaveProduct = async (e) => {
     if (e) e.preventDefault();
     if (!formData.name.trim()) {
@@ -203,11 +274,8 @@ function PaginawebAdminPage() {
     }
 
     try {
-      const payload = {
-        ...formData,
-        price: parseFloat(formData.price) || 0,
-        oldPrice: formData.oldPrice ? parseFloat(formData.oldPrice) : null,
-      };
+      // Sin precio por ahora (2026-10-08): ni se envía ni se muestra.
+      const payload = { ...formData };
 
       if (editingProduct) {
         await updateAdminProduct(editingProduct.id, payload);
@@ -390,11 +458,6 @@ function PaginawebAdminPage() {
     }
   };
 
-  const formatPrice = (val) => {
-    if (!val && val !== 0) return '$ 0';
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
-  };
-
   return (
     <div className="pw-page-container ds-fade-in">
       {/* Header Estándar de la Plataforma */}
@@ -404,12 +467,12 @@ function PaginawebAdminPage() {
         subtitle="Administra los productos, imágenes, banners y configuraciones para la tienda pública de LOTTUS"
         actions={
           <>
-            {activeTab === 'products' && (
+            {activeTab === 'products' && canCrearProducto && (
               <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateModal}>
                 Nuevo Producto Web
               </Button>
             )}
-            {activeTab === 'asesores' && (
+            {activeTab === 'asesores' && canAdministrarAsesores && (
               <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateAsesorModal}>
                 Nuevo Asesor
               </Button>
@@ -474,8 +537,8 @@ function PaginawebAdminPage() {
         <Tabs
           tabs={[
             { id: 'products', label: `Productos Web (${products.length})` },
-            { id: 'asesores', label: `Paleta de Vendedores (${asesores.length})` },
-            { id: 'pqrs', label: `PQRS (${pqrs.length})` },
+            ...(canAdministrarAsesores ? [{ id: 'asesores', label: `Paleta de Vendedores (${asesores.length})` }] : []),
+            ...(canVerPqrs ? [{ id: 'pqrs', label: `PQRS (${pqrs.length})` }] : []),
           ]}
           active={activeTab}
           onChange={setActiveTab}
@@ -507,11 +570,13 @@ function PaginawebAdminPage() {
           ) : filteredProducts.length === 0 ? (
             <div className="pw-empty-state-panel">
               <p>No se encontraron productos registrados en el catálogo web.</p>
-              <div style={{ marginTop: '1rem' }}>
-                <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateModal}>
-                  Crear Producto
-                </Button>
-              </div>
+              {canCrearProducto && (
+                <div style={{ marginTop: '1rem' }}>
+                  <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateModal}>
+                    Crear Producto
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="pw-table-container">
@@ -521,7 +586,6 @@ function PaginawebAdminPage() {
                     <th>Imagen</th>
                     <th>Producto</th>
                     <th>Categoría</th>
-                    <th>Precio</th>
                     <th>Etiqueta</th>
                     <th>Estado</th>
                     <th style={{ textAlign: 'right' }}>Acciones</th>
@@ -532,7 +596,11 @@ function PaginawebAdminPage() {
                     <tr key={p.id}>
                       <td>
                         {p.images && p.images.length > 0 ? (
-                          <img src={getMediaUrl(p.images[0])} alt={p.name} className="pw-table-thumb" />
+                          isVideoUrl(p.images[0]) ? (
+                            <video src={getMediaUrl(p.images[0])} muted playsInline preload="metadata" className="pw-table-thumb" />
+                          ) : (
+                            <img src={getMediaUrl(p.images[0])} alt={p.name} className="pw-table-thumb" />
+                          )
                         ) : (
                           <div className="pw-table-noimage"><FaImage /></div>
                         )}
@@ -546,12 +614,6 @@ function PaginawebAdminPage() {
                       <td>
                         <Badge tone="info">{p.category?.toUpperCase()}</Badge>
                       </td>
-                      <td>
-                        <div className="pw-price-main">{formatPrice(p.price)}</div>
-                        {(p.oldPrice || p.old_price) && (
-                          <div className="pw-price-old">{formatPrice(p.oldPrice || p.old_price)}</div>
-                        )}
-                      </td>
                       <td>{p.badge ? <Badge tone="neutral">{p.badge}</Badge> : '-'}</td>
                       <td>
                         <Badge tone={p.active !== false ? 'success' : 'neutral'}>
@@ -560,20 +622,24 @@ function PaginawebAdminPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="pw-table-actions">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={FaEdit}
-                            onClick={() => handleOpenEditModal(p)}
-                            title="Editar"
-                          />
-                          <Button
-                            variant="danger-soft"
-                            size="sm"
-                            icon={FaTrashAlt}
-                            onClick={() => handleDeleteProduct(p.id)}
-                            title="Eliminar"
-                          />
+                          {canEditarProducto && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={FaEdit}
+                              onClick={() => handleOpenEditModal(p)}
+                              title="Editar"
+                            />
+                          )}
+                          {canEliminarProducto && (
+                            <Button
+                              variant="danger-soft"
+                              size="sm"
+                              icon={FaTrashAlt}
+                              onClick={() => handleDeleteProduct(p.id)}
+                              title="Eliminar"
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -586,7 +652,7 @@ function PaginawebAdminPage() {
       )}
 
       {/* PESTAÑA PALETA DE VENDEDORES */}
-      {activeTab === 'asesores' && (
+      {activeTab === 'asesores' && canAdministrarAsesores && (
         <div className="pw-main-card">
           <div className="pw-tools-bar">
             <div className="pw-search-input-wrapper">
@@ -610,11 +676,13 @@ function PaginawebAdminPage() {
           ) : filteredAsesores.length === 0 ? (
             <div className="pw-empty-state-panel">
               <p>No hay asesores registrados en la paleta de vendedores.</p>
-              <div style={{ marginTop: '1rem' }}>
-                <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateAsesorModal}>
-                  Crear Asesor
-                </Button>
-              </div>
+              {canAdministrarAsesores && (
+                <div style={{ marginTop: '1rem' }}>
+                  <Button variant="primary" icon={FaPlus} onClick={handleOpenCreateAsesorModal}>
+                    Crear Asesor
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="pw-table-container">
@@ -647,7 +715,7 @@ function PaginawebAdminPage() {
                         <td>
                           {a.whatsapp ? (
                             <span className="pw-whatsapp-cell">
-                              <FaWhatsapp color="var(--success, #16a34a)" /> {a.whatsapp}
+                              <FaWhatsapp color="var(--success, #4c7a4f)" /> {a.whatsapp}
                             </span>
                           ) : (
                             <span className="pw-whatsapp-missing">Sin configurar</span>
@@ -658,7 +726,7 @@ function PaginawebAdminPage() {
                             <input
                               type="checkbox"
                               checked={!!a.activo}
-                              disabled={isPending}
+                              disabled={isPending || !canAdministrarAsesores}
                               onChange={() => handleToggleAsesorActivo(a)}
                             />
                             <span className="pw-slider" />
@@ -677,20 +745,24 @@ function PaginawebAdminPage() {
                                 <FaExternalLinkAlt />
                               </a>
                             )}
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={FaEdit}
-                              onClick={() => handleOpenEditAsesorModal(a)}
-                              title="Editar"
-                            />
-                            <Button
-                              variant="danger-soft"
-                              size="sm"
-                              icon={FaTrashAlt}
-                              onClick={() => handleDeleteAsesor(a)}
-                              title="Eliminar"
-                            />
+                            {canAdministrarAsesores && (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  icon={FaEdit}
+                                  onClick={() => handleOpenEditAsesorModal(a)}
+                                  title="Editar"
+                                />
+                                <Button
+                                  variant="danger-soft"
+                                  size="sm"
+                                  icon={FaTrashAlt}
+                                  onClick={() => handleDeleteAsesor(a)}
+                                  title="Eliminar"
+                                />
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -704,8 +776,8 @@ function PaginawebAdminPage() {
       )}
 
       {/* PESTAÑA PQRS */}
-      {activeTab === 'pqrs' && (
-        <PqrsPanel pqrs={pqrs} loading={loading} notify={notify} onRefresh={loadData} />
+      {activeTab === 'pqrs' && canVerPqrs && (
+        <PqrsPanel pqrs={pqrs} loading={loading} notify={notify} onRefresh={loadData} canResponder={canVerPqrs} />
       )}
 
       {/* MODAL CREAR / EDITAR ASESOR */}
@@ -732,7 +804,7 @@ function PaginawebAdminPage() {
                 <input
                   type="checkbox"
                   checked={!!editingAsesor.activo}
-                  disabled={pendingToggleIds.has(editingAsesor.id)}
+                  disabled={pendingToggleIds.has(editingAsesor.id) || !canAdministrarAsesores}
                   onChange={() => handleToggleAsesorActivo(editingAsesor)}
                 />
                 <span className="pw-slider" />
@@ -845,31 +917,40 @@ function PaginawebAdminPage() {
       {/* MODAL NATIVO CREAR / EDITAR PRODUCTO */}
       <Modal
         open={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => !uploading && setShowModal(false)}
         title={editingProduct ? 'Editar Producto Web' : 'Nuevo Producto Web'}
         size="lg"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
+            <Button variant="secondary" onClick={() => setShowModal(false)} disabled={uploading}>
               Cancelar
             </Button>
-            <Button variant="primary" icon={FaSave} onClick={handleSaveProduct}>
-              {editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
+            <Button
+              variant="primary"
+              icon={uploading ? FaSpinner : FaSave}
+              onClick={handleSaveProduct}
+              disabled={uploading}
+              loading={uploading}
+            >
+              {uploading ? 'Subiendo imágenes…' : editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
             </Button>
           </>
         }
       >
-        <form id="pw-prod-form" onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Sección 1: Información Principal */}
-          <div className="pw-modal-section">
-            <h4 className="pw-form-sub-header">Información Principal</h4>
-            <div className="pw-form-grid-2">
+        <form id="pw-prod-form" onSubmit={handleSaveProduct} className="pw-prod-form-layout">
+
+          {/* COLUMNA IZQUIERDA */}
+          <div className="pw-prod-col">
+
+            {/* Información Principal */}
+            <div className="pw-modal-section pw-modal-section--compact">
+              <h4 className="pw-form-sub-header">Información Principal</h4>
               <div className="ds-field">
                 <label className="ds-label">Nombre del Producto *</label>
                 <input
                   type="text"
                   required
-                  className="ds-input"
+                  className="ds-input ds-input--sm"
                   placeholder="e.g. Sofá Cama Chester"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -878,7 +959,7 @@ function PaginawebAdminPage() {
               <div className="ds-field">
                 <label className="ds-label">Categoría</label>
                 <select
-                  className="ds-select"
+                  className="ds-select ds-input--sm"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
@@ -891,153 +972,190 @@ function PaginawebAdminPage() {
                 </select>
               </div>
             </div>
-          </div>
 
-          {/* Sección 2: Precios y Badges */}
-          <div className="pw-modal-section">
-            <h4 className="pw-form-sub-header">Precios y Clasificación</h4>
-            <div className="pw-form-grid-3">
-              <div className="ds-field">
-                <label className="ds-label">Precio Actual (COP)</label>
-                <input
-                  type="number"
-                  className="ds-input"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                />
-              </div>
-              <div className="ds-field">
-                <label className="ds-label">Precio Anterior (Opcional)</label>
-                <input
-                  type="number"
-                  className="ds-input"
-                  value={formData.oldPrice}
-                  onChange={(e) => setFormData({ ...formData, oldPrice: e.target.value })}
-                />
-              </div>
+            {/* Clasificación */}
+            <div className="pw-modal-section pw-modal-section--compact">
+              <h4 className="pw-form-sub-header">Clasificación</h4>
               <div className="ds-field">
                 <label className="ds-label">Etiqueta / Badge</label>
                 <input
                   type="text"
-                  className="ds-input"
+                  className="ds-input ds-input--sm"
                   placeholder="e.g. Nuevo, Oferta, Sora"
                   value={formData.badge}
                   onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Sección 3: Descripciones y Medidas */}
-          <div className="pw-modal-section">
-            <h4 className="pw-form-sub-header">Descripciones y Medidas</h4>
-            <div className="ds-field">
-              <label className="ds-label">Descripción Corta</label>
-              <input
-                type="text"
-                className="ds-input"
-                placeholder="Resumen ejecutivo para la tarjeta de producto"
-                value={formData.shortDescription}
-                onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-              />
-            </div>
 
-            <div className="ds-field">
-              <label className="ds-label">Descripción Completa</label>
-              <textarea
-                className="ds-textarea"
-                rows={3}
-                placeholder="Detalle completo de fabricación, acabados y confort"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
+          </div>{/* fin columna izquierda */}
 
-            <div className="pw-form-grid-2">
-              <div className="ds-field">
-                <label className="ds-label">Materiales</label>
-                <input
-                  type="text"
-                  className="ds-input"
-                  placeholder="e.g. Estructura en roble, tela Lino beige"
-                  value={formData.materials}
-                  onChange={(e) => setFormData({ ...formData, materials: e.target.value })}
-                />
+          {/* COLUMNA DERECHA */}
+          <div className="pw-prod-col">
+
+            {/* Galería de Imágenes */}
+            <div className="pw-modal-section pw-modal-section--compact pw-gallery-section">
+              <div className="pw-gallery-header">
+                <h4 className="pw-form-sub-header">Galería de Imágenes Web</h4>
+                <span className="pw-gallery-hint">Arrastra para reordenar · 1ª = Portada</span>
               </div>
-              <div className="ds-field">
-                <label className="ds-label">Dimensiones</label>
-                <input
-                  type="text"
-                  className="ds-input"
-                  placeholder="e.g. Ancho: 220cm x Alto: 85cm x Prof: 95cm"
-                  value={formData.dimensions}
-                  onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* Sección 4: Galería de Imágenes */}
-          <div className="pw-modal-section">
-            <h4 className="pw-form-sub-header">Galería de Imágenes Web</h4>
-            <div className="ds-field">
-              <div className="pw-upload-area">
+              {/* Zona de carga */}
+              <div className="pw-upload-dropzone">
                 <input
                   type="file"
                   id="pw-img-native-file"
                   multiple
-                  accept="image/*,.cr2,.cr3,.nef,.nrw,.arw,.srf,.sr2,.raf,.rw2,.orf,.dng,.pef,.srw,.raw,.kdc,.mrw,.x3f,.3fr,.erf,.mef,.mos,.ptx,.rwl,.iiq"
+                  accept="image/*,video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.cr2,.cr3,.nef,.nrw,.arw,.srf,.sr2,.raf,.rw2,.orf,.dng,.pef,.srw,.raw,.kdc,.mrw,.x3f,.3fr,.erf,.mef,.mos,.ptx,.rwl,.iiq"
                   onChange={handleImageUpload}
                   style={{ display: 'none' }}
+                  disabled={uploading}
                 />
-                <label htmlFor="pw-img-native-file" className="ds-btn ds-btn--secondary">
-                  <FaUpload /> {uploading ? 'Subiendo...' : 'Subir Imágenes'}
+                <label
+                  htmlFor="pw-img-native-file"
+                  className={`pw-upload-dropzone-label${uploading ? ' pw-upload-dropzone-label--loading' : ''}`}
+                >
+                  {uploading ? (
+                    <><FaSpinner className="pw-spin" /> Subiendo…</>
+                  ) : (
+                    <><FaUpload /> Subir fotos o videos<span className="pw-dropzone-sub">o arrastra aquí · JPG, PNG, WEBP, MP4, MOV, WEBM (video hasta 100 MB)</span></>
+                  )}
                 </label>
               </div>
 
-              {formData.images.length > 0 && (
-                <div className="pw-image-previews-grid">
+              {/* Grid de thumbnails */}
+              {formData.images.length > 0 ? (
+                <div className="pw-img-gallery-grid">
                   {formData.images.map((img, idx) => (
-                    <div key={idx} className="pw-img-preview-thumb">
-                      <img src={getMediaUrl(img)} alt={`Preview ${idx + 1}`} />
-                      <button
-                        type="button"
-                        className="pw-img-remove-badge"
-                        onClick={() => handleRemoveImage(idx)}
-                        title="Eliminar imagen"
-                      >
-                        <FaTimes />
-                      </button>
+                    <div
+                      key={img + idx}
+                      className={[
+                        'pw-img-thumb-item',
+                        dragIndex === idx ? 'pw-img-thumb-item--dragging' : '',
+                        dragOverIndex === idx && dragIndex !== idx ? 'pw-img-thumb-item--dragover' : '',
+                        idx === 0 ? 'pw-img-thumb-item--cover' : '',
+                      ].join(' ')}
+                      draggable
+                      onDragStart={() => handleDragStart(idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <div className="pw-img-thumb-handle" title="Arrastra para mover">
+                        <FaGripVertical />
+                      </div>
+                      {isVideoUrl(img) ? (
+                        <video src={getMediaUrl(img)} muted playsInline preload="metadata" />
+                      ) : (
+                        <img src={getMediaUrl(img)} alt={`Imagen ${idx + 1}`} />
+                      )}
+                      {isVideoUrl(img) && (
+                        <span className="pw-img-video-badge" title="Video"><FaPlay /></span>
+                      )}
+                      {idx === 0 && (
+                        <span className="pw-img-cover-badge">Portada</span>
+                      )}
+                      <span className="pw-img-order-badge">{idx + 1}</span>
+                      <div className="pw-img-thumb-controls">
+                        <button
+                          type="button"
+                          className="pw-img-ctrl-btn"
+                          onClick={() => handleMoveImage(idx, -1)}
+                          disabled={idx === 0}
+                          title="Mover arriba"
+                        >
+                          <FaArrowUp />
+                        </button>
+                        <button
+                          type="button"
+                          className="pw-img-ctrl-btn pw-img-ctrl-btn--remove"
+                          onClick={() => handleRemoveImage(idx)}
+                          title="Eliminar imagen"
+                        >
+                          <FaTimes />
+                        </button>
+                        <button
+                          type="button"
+                          className="pw-img-ctrl-btn"
+                          onClick={() => handleMoveImage(idx, 1)}
+                          disabled={idx === formData.images.length - 1}
+                          title="Mover abajo"
+                        >
+                          <FaArrowDown />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="pw-img-gallery-empty">
+                  <FaImage />
+                  <span>Sin imágenes aún</span>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Sección 5: Opciones de Publicación */}
-          <div className="pw-modal-section">
-            <h4 className="pw-form-sub-header">Opciones de Publicación</h4>
-            <div className="pw-checkbox-row">
-              <label className="pw-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.featured}
-                  onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                />
-                Destacado en el Inicio
-              </label>
+            {/* Opciones de Publicación */}
+            <div className="pw-modal-section pw-modal-section--compact">
+              <h4 className="pw-form-sub-header">Publicación</h4>
+              <div className="pw-toggle-list">
+                <label className="pw-toggle-item">
+                  <div className="pw-toggle-item-text">
+                    <span className="pw-toggle-item-title">Destacado en el inicio</span>
+                    <span className="pw-toggle-item-sub">Aparece en la sección principal de la web</span>
+                  </div>
+                  <label className="pw-switch">
+                    <input
+                      type="checkbox"
+                      checked={formData.featured}
+                      onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                    />
+                    <span className="pw-slider" />
+                  </label>
+                </label>
+                <label className="pw-toggle-item">
+                  <div className="pw-toggle-item-text">
+                    <span className="pw-toggle-item-title">Producto activo</span>
+                    <span className="pw-toggle-item-sub">Visible públicamente en el catálogo</span>
+                  </div>
+                  <label className="pw-switch">
+                    <input
+                      type="checkbox"
+                      checked={formData.active}
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                    />
+                    <span className="pw-slider" />
+                  </label>
+                </label>
+              </div>
+            </div>
 
-              <label className="pw-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.active}
-                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                />
-                Producto Activo (Visible públicamente)
-              </label>
+          </div>{/* fin columna derecha */}
+
+          {/* FICHA DEL PRODUCTO (todo el ancho): las 4 secciones que se ven en la web */}
+          <div className="pw-modal-section pw-ficha">
+            <div className="pw-ficha__cabeza">
+              <h4 className="pw-form-sub-header">Ficha del producto en la web</h4>
+              <span className="pw-field-hint">Usa la barra para negrillas, viñetas, numeración, subtítulos y separadores. Así se verá en la página del producto.</span>
+            </div>
+            <EditorTextoFormato id="pw-corta" etiqueta="1. Descripción corta" filas={3}
+              ayuda="Aparece debajo del nombre y como resumen en el catálogo."
+              placeholder="Ej.: Sofá de 3 puestos con líneas suaves y espaldar alto, ideal para salas amplias."
+              valor={formData.shortDescription} alCambiar={(v) => setFormData(f => ({ ...f, shortDescription: v }))} />
+            <EditorTextoFormato id="pw-larga" etiqueta="2. Descripción larga" filas={8}
+              placeholder={'Historia, diseño y confort de la pieza.\n\n**Ideal para:** salas familiares…'}
+              valor={formData.description} alCambiar={(v) => setFormData(f => ({ ...f, description: v }))} />
+            <div className="pw-ficha__par">
+              <EditorTextoFormato id="pw-caracteristicas" etiqueta="3. Características" filas={8}
+                placeholder={'- Espaldar reclinable\n- Cojines removibles\n- **Medidas:** 235 × 95 × 90 cm'}
+                valor={formData.characteristics} alCambiar={(v) => setFormData(f => ({ ...f, characteristics: v }))} />
+              <EditorTextoFormato id="pw-materiales" etiqueta="4. Materiales" filas={8}
+                placeholder={'- **Estructura:** madera inmunizada\n- **Tapizado:** lino de alta resistencia\n- **Patas:** roble macizo'}
+                valor={formData.materials} alCambiar={(v) => setFormData(f => ({ ...f, materials: v }))} />
             </div>
           </div>
+
         </form>
       </Modal>
     </div>

@@ -16,7 +16,7 @@ import {
     FaQuoteLeft
 } from 'react-icons/fa';
 import './VendedorHomePage.css';
-import { formatCOP } from '../utils/formatCOP';
+
 import { formatDateLarga, getTodayStr, formatDateCorta } from '../utils/dates';
 
 const MOTIVATIONAL_QUOTES = [

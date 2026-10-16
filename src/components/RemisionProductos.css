@@ -1,0 +1,213 @@
+/* Productos de remisión editables (pedido y a mano). Usa .nr-input / .nr-check /
+   .nr-link / .nr-icon-btn de NuevaRemisionPage.css. */
+
+.rp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  container-type: inline-size;
+}
+
+.rp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+
+.rp-item:focus-within {
+  border-color: var(--accent-line);
+}
+
+.rp-item.is-off {
+  background: var(--gray-50);
+}
+
+.rp-item.is-off .rp-item__fields {
+  opacity: 0.5;
+}
+
+.rp-item.has-error {
+  border-color: var(--danger);
+}
+
+.rp-item__check {
+  margin-top: 11px;
+}
+
+.rp-item__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rp-item__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.3fr) 104px;
+  grid-template-areas:
+    "cat sub ref cant"
+    "desc desc desc desc"
+    "tela tela tela tela";
+  gap: 0.45rem;
+}
+
+.rp-cat { grid-area: cat; }
+.rp-sub { grid-area: sub; }
+.rp-ref { grid-area: ref; }
+.rp-cant { grid-area: cant; }
+.rp-desc { grid-area: desc; }
+.rp-tela { grid-area: tela; }
+
+.rp-item__fields .nr-input {
+  height: 38px;
+  font-size: var(--fs-sm);
+}
+
+.rp-item__fields select.nr-input {
+  padding-right: 0.4rem;
+}
+
+/* Opción vacía ("Categoría", "Subcategoría") en gris, como un placeholder. */
+.rp-item__fields select.nr-input:has(option[value=""]:checked) {
+  color: var(--text-muted);
+}
+
+.rp-item__fields select option {
+  color: var(--text);
+}
+
+.rp-cant {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.rp-cant span {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.rp-cant .nr-input {
+  text-align: center;
+  padding: 0 0.3rem;
+  font-weight: 600;
+}
+
+.rp-item__fields .rp-desc {
+  height: auto;
+  min-height: 38px;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.45;
+  resize: none;
+  overflow: hidden;
+}
+
+.rp-item__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  font-size: var(--fs-xs);
+}
+
+.rp-item__foot .nr-tag {
+  white-space: normal;
+  line-height: 1.35;
+  border-radius: var(--r-sm);
+  padding: 0.2rem 0.5rem;
+}
+
+.rp-restore {
+  font-size: var(--fs-xs);
+}
+
+.rp-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.rp-item__remove {
+  margin-top: 3px;
+}
+
+/* Botón para agregar otro producto escrito a mano */
+.rp-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 42px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--gray-50);
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.rp-add:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+@container (max-width: 560px) {
+  .rp-item__fields {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "cat cat cat sub sub sub"
+      "ref ref ref cant cant cant"
+      "desc desc desc desc desc desc"
+      "tela tela tela tela tela tela";
+  }
+}
+
+/* Descripción de un producto de inventario (solo para la remisión) */
+.rp-inv {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  margin-left: calc(18px + 0.75rem);
+}
+
+.rp-inv .rp-inv__desc {
+  width: 100%;
+  min-height: 38px;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  resize: none;
+  overflow: hidden;
+}
+
+/* Sin casilla (agregados desde bodega) no hay que alinear con ella */
+div.nr-prod__pick + .rp-inv {
+  margin-left: 0;
+}
+
+/* Tapizado (tela o cuero) del producto: opcional, se confirma con un interruptor. */
+.rp-tela { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0; min-height: 32px; }
+.rp-tela__switch { display: inline-flex; align-items: center; gap: 0.45rem; flex-shrink: 0; padding: 0.2rem 0.65rem 0.2rem 0.3rem; border: 1px solid var(--border); border-radius: 999px; background: var(--gray-50); color: var(--text-secondary); font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast); }
+.rp-tela__switch:hover:not(:disabled) { border-color: var(--border-strong); color: var(--text); }
+.rp-tela__switch:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+.rp-tela__switch:disabled { opacity: 0.55; cursor: not-allowed; }
+.rp-tela__pista { position: relative; width: 26px; height: 15px; border-radius: 999px; background: var(--gray-300); transition: background var(--t-fast); }
+.rp-tela__pista::after { content: ''; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(23, 24, 21, 0.25); transition: transform var(--t-fast); }
+.rp-tela.is-on .rp-tela__switch { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+.rp-tela.is-on .rp-tela__pista { background: var(--accent); }
+.rp-tela.is-on .rp-tela__pista::after { transform: translateX(11px); }
+.rp-tela .nr-input { flex: 1; min-width: 200px; }
+.rp-inv .rp-tela { margin-top: 0.35rem; }
+.rp-inv .rp-tela .nr-input { height: 32px; font-size: var(--fs-sm); }

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from "react";
+import { obtenerTodasLasPaginas } from './services/paginacion';
 import API from "./services/api"; // Usaremos la instancia de API centralizada
 
 export const AppContext = createContext();
@@ -19,6 +20,8 @@ export const usePermissions = () => {
     // 'ALL' llega desde el backend para roles sin configuración explícita
     // guardada todavía.
     if (permissions.includes('ALL')) return true;
+
+    if(feature==='ACCESO_OFICINA')return !!usuario.acceso_oficina||permissions.includes('USAR_ASISTENTE_IA');
 
     if (feature === 'ACCESO_CAJA') {
       return permissions.includes('ACCESO_CAJA') || permissions.includes('VER_CAJA');
@@ -47,11 +50,12 @@ export const usePermissions = () => {
 export function AppProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Error recuperable al cargar la sesión (red, 5xx, timeout): se muestra con
+  // opción de reintentar en vez de un loader infinito (H28).
+  const [sessionError, setSessionError] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [proveedores, setProveedores] = useState([]);
   const [isLoadingProveedores, setIsLoadingProveedores] = useState(true);
-  const [clientes, setClientes] = useState([]);
-  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
   // Notificación global (toast) — una sola implementación para toda la app
   const [notification, setNotification] = useState(null);
 
@@ -63,6 +67,8 @@ export function AppProvider({ children }) {
 
   // Read token at render time — when it changes, useEffect re-runs
   const token = localStorage.getItem("accessToken");
+  const [sessionRetry, setSessionRetry] = useState(0);
+  const retrySession = useCallback(() => setSessionRetry(n => n + 1), []);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -72,6 +78,7 @@ export function AppProvider({ children }) {
         return;
       }
       setIsLoading(true);
+      setSessionError(null);
       try {
         const userRes = await API.get("/user/");
         setUsuario(userRes.data);
@@ -82,13 +89,22 @@ export function AppProvider({ children }) {
           setUsuario(null);
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
+        } else {
+          if (error?.response?.status === 429) {
+            const segundos = Math.max(1, Math.ceil(Number(error.response.headers?.['retry-after']) || 60));
+            setSessionError(`Se alcanzó el límite de consultas de sesión. Espera ${segundos} segundos y vuelve a intentar. Tu sesión sigue abierta.`);
+          } else {
+            setSessionError(error?.response
+              ? 'El servidor no pudo cargar tu sesión. Intenta de nuevo en un momento.'
+              : 'No hay conexión con el servidor. Revisa tu red e intenta de nuevo.');
+          }
         }
       } finally {
         setIsLoading(false);
       }
     };
     verifyUser();
-  }, [token]); // re-runs on login/logout
+  }, [token, sessionRetry]); // re-runs on login/logout o al reintentar
 
   // Called after login or when user data needs updating
   const reloadUser = useCallback(async () => {
@@ -114,8 +130,9 @@ export function AppProvider({ children }) {
     }
     setIsLoadingProveedores(true);
     try {
-      const response = await API.get('/proveedores/', { params: { page_size: 1000 } });
-      setProveedores(response.data.results || []);
+      // El API pagina de a 100: antes se pedían 1000 y se descartaba `next`,
+      // así que los proveedores después del 100 no aparecían en los selectores.
+      setProveedores(await obtenerTodasLasPaginas(API, '/proveedores/'));
     } catch {
       // Silently ignore — vendedores without VER_PROVEEDORES get 403 here
       setProveedores([]);
@@ -128,27 +145,12 @@ export function AppProvider({ children }) {
     if (usuario) fetchProveedores();
   }, [usuario, fetchProveedores]);
 
-  const fetchClientes = useCallback(async () => {
-    if (!token) {
-      setClientes([]);
-      return;
-    }
-    setIsLoadingClientes(true);
-    try {
-      const response = await API.get('/clientes/', { params: { page_size: 1000 } });
-      setClientes(response.data.results || response.data || []);
-    } catch {
-      // Silently ignore — usuarios sin permiso de clientes reciben 403
-      setClientes([]);
-    } finally {
-      setIsLoadingClientes(false);
-    }
-  }, [token]);
-
   const value = useMemo(() => ({
     usuario,
     setUsuario,
     isLoading,
+    sessionError,
+    retrySession,
     isLoggingIn,
     setIsLoggingIn,
     reloadUser,
@@ -156,13 +158,9 @@ export function AppProvider({ children }) {
     proveedores,
     isLoadingProveedores,
     fetchProveedores,
-    clientes,
-    isLoadingClientes,
-    fetchClientes,
   }), [
-    usuario, isLoading, isLoggingIn, reloadUser, notify,
+    usuario, isLoading, sessionError, retrySession, isLoggingIn, reloadUser, notify,
     proveedores, isLoadingProveedores, fetchProveedores,
-    clientes, isLoadingClientes, fetchClientes,
   ]);
 
   const notificationValue = useMemo(

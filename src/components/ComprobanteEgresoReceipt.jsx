@@ -20,6 +20,8 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
   if (!comprobante) return null;
 
   const facturas = comprobante.facturas_detalle || [];
+  const otrosConceptosList = Array.isArray(comprobante.otros_conceptos) ? comprobante.otros_conceptos : [];
+  const otrosConceptosTotalReal = otrosConceptosList.reduce((sum, o) => sum + (parseFloat(o.valor) || 0), 0);
   const beneficiario = comprobante.proveedor_nombre || comprobante.proveedor_otro_nombre || 'N/A';
   const totalProductos = facturas.reduce((sum, f) => sum + (f.productos?.length || 0), 0);
 
@@ -39,10 +41,15 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
     descuentoGlobalMonto = diferencia;
   }
   
-  const descuentoRatio = totalFacturas > 0 && descuentoGlobalMonto > 0 
-    ? (descuentoGlobalMonto / totalFacturas) 
+  const descuentoRatio = totalFacturas > 0 && descuentoGlobalMonto > 0
+    ? (descuentoGlobalMonto / totalFacturas)
     : 0;
-  const otrosConceptosMonto = descuentoGlobalMonto - diferencia;
+  // Preferir el desglose estructurado real; solo recurrir a la heurística por
+  // diferencia para comprobantes viejos creados antes de que existiera el
+  // campo `otros_conceptos`.
+  const otrosConceptosMonto = otrosConceptosList.length > 0
+    ? otrosConceptosTotalReal
+    : (descuentoGlobalMonto - diferencia);
 
   return (
     <div ref={ref} className="cer-page">
@@ -55,6 +62,9 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
           <div className="cer-doc-kicker">Comprobante de Egreso</div>
           <div className="cer-doc-number">No. CE-{comprobante.id}</div>
           <div className="cer-doc-date">Fecha: {formatDateLong(comprobante.fecha)}</div>
+          <div className="cer-doc-status-badge">
+            <span className="cer-status-text">Estado: Pagado</span>
+          </div>
         </div>
       </div>
 
@@ -150,9 +160,35 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
         </div>
       )}
 
+      {/* Otros conceptos (envíos, instalaciones, servicios, etc.) — lista real,
+          no texto concatenado */}
+      {otrosConceptosList.length > 0 && (
+        <div className="cer-section">
+          <div className="cer-section-title">
+            Otros conceptos ({otrosConceptosList.length})
+          </div>
+          <table className="cer-table">
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th className="cer-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {otrosConceptosList.map((o, i) => (
+                <tr key={i}>
+                  <td>{o.descripcion}</td>
+                  <td className="cer-right cer-bold">{formatCOP(o.valor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {comprobante.descripcion && (
         <div className="cer-notas">
-          <div className="cer-meta-label">Otros conceptos</div>
+          <div className="cer-meta-label">Notas</div>
           <div className="cer-notas-text">{comprobante.descripcion}</div>
         </div>
       )}
@@ -194,8 +230,12 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
         </div>
       </div>
 
+      <div className="cer-semantica-nota">
+        * Nota operativa: El comprobante impreso se expide como &ldquo;Pagado&rdquo; conforme a la política comercial del negocio. En pagos con medio de transferencia bancaria, el estado administrativo en base de datos permanece como &ldquo;Por confirmar pago&rdquo; hasta la conciliación y verificación por usuarios autorizados.
+      </div>
+
       <div className="cer-footer">
-        LOTTUS · Documento de comprobante de egreso · Impreso el{' '}
+        LOTTUS · Documento de comprobante de egreso · Doc v1.0 · Impreso el{' '}
         {new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}
       </div>
     </div>

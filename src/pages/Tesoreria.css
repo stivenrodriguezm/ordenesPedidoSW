@@ -1,0 +1,28 @@
+.tesoreria-page .tesoreria-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.tesoreria-page .tesoreria-panel { padding: 1rem; margin: 1rem 0; }
+.tesoreria-page .tesoreria-filtros { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+.tesoreria-page .tesoreria-filtros label { display: grid; gap: .4rem; }
+.tesoreria-page .tesoreria-tabla { overflow-x: auto; }
+.tesoreria-page table { width: 100%; border-collapse: collapse; background: var(--color-surface, white); }
+.tesoreria-page th, .tesoreria-page td { padding: .75rem; text-align: left; border-bottom: 1px solid var(--color-border, var(--gray-200)); }
+.tesoreria-page th { font-size: .85rem; }
+.tesoreria-page td small { display: block; margin-top: .3rem; }
+.tesoreria-page .tesoreria-paginacion, .tesoreria-detalle .tesoreria-paginacion { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: center; margin: 1rem 0; }
+.tesoreria-form { display: grid; gap: .75rem; }
+.tesoreria-form label { font-weight: 600; }
+.tesoreria-form p { margin: .3rem 0; }
+.tesoreria-form [role="alert"] { color: var(--danger); }
+.tesoreria-detalle .tesoreria-promesa { border-top: 1px solid var(--color-border, var(--gray-200)); padding: .75rem 0; }
+.tesoreria-detalle .tesoreria-promesa p { overflow-wrap: anywhere; }
+.tesoreria-detalle .tesoreria-acciones { display: flex; gap: .5rem; flex-wrap: wrap; }
+.tesoreria-detalle .tesoreria-cobros { padding-left: 1.25rem; }
+.tesoreria-detalle .tesoreria-cobros li { margin: .65rem 0; }
+.conciliacion-page .conciliacion-importes, .conciliacion-detalle .conciliacion-importes { margin: 0; min-width: 220px; }
+.conciliacion-importes > div { display: flex; justify-content: space-between; gap: 1rem; margin: .25rem 0; }
+.conciliacion-importes dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.conciliacion-page .conciliacion-hallazgos, .conciliacion-detalle .conciliacion-hallazgos { padding-left: 1.25rem; }
+.conciliacion-hallazgos li { margin: .4rem 0; }
+.conciliacion-cobertura { border: 1px solid var(--color-border, var(--gray-200)); border-radius: .5rem; }
+.conciliacion-detalle .tesoreria-tabla { overflow-x: auto; }
+.conciliacion-detalle table { width: 100%; border-collapse: collapse; }
+.conciliacion-detalle th, .conciliacion-detalle td { padding: .6rem; text-align: left; border-bottom: 1px solid var(--color-border, var(--gray-200)); }

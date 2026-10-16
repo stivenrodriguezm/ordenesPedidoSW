@@ -3,7 +3,7 @@
 /* --- Premium Table --- */
 .ordenes-container {
   background-color: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
   overflow: hidden;
   border: 1px solid var(--gray-200);
@@ -56,7 +56,7 @@
 }
 
 .premium-table tbody tr.expanded-row-highlight {
-  background-color: #eff6ff;
+  background-color: var(--accent-soft);
 }
 
 .premium-table tbody tr:last-child td {
@@ -149,7 +149,7 @@
   color: var(--gray-400);
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   transition: all 0.2s;
   display: flex;
   align-items: center;
@@ -195,7 +195,7 @@
 .orden-card {
   background-color: var(--surface);
   border: 1px solid var(--gray-200);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   padding: 1.15rem 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
@@ -264,7 +264,7 @@
   background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
   border: 1px solid var(--gray-200);
   border-left: 3.5px solid var(--info);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 0.65rem 0.85rem;
   font-size: 0.82rem;
   color: var(--gray-700);
@@ -281,7 +281,7 @@
 .orden-table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   background-color: var(--surface);
 }
@@ -322,13 +322,13 @@
 .product-qty-badge {
   display: inline-block;
   padding: 0.15rem 0.55rem;
-  background-color: #eff6ff;
+  background-color: var(--accent-soft);
   color: var(--info);
   font-weight: 700;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-family: 'Roboto Mono', monospace;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--accent-line);
 }
 
 .product-ref-pill {
@@ -349,20 +349,20 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.65rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
   color: var(--info);
   transition: all 0.15s;
   white-space: nowrap;
 }
 
 .btn-editar-pedido:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
   color: var(--info);
 }
 
@@ -377,7 +377,7 @@
 .tela-card {
   background-color: var(--gray-50);
   border: 1px solid var(--gray-200);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 0.875rem;
   transition: background-color 0.15s;
 }
@@ -461,7 +461,7 @@
 
 .mobile-card {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--gray-200);
   overflow: hidden;
@@ -584,7 +584,7 @@
 .mobile-products-list li {
   background: var(--surface);
   padding: 0.75rem;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--gray-200);
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
@@ -732,7 +732,7 @@
    ========================================================================== */
 #pedido-preview {
   width: 700px; background-color: var(--surface) !important; border: 1px solid #e0e0e0;
-  border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 20px;
+  border-radius: var(--r-sm); box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 20px;
   font-family: Arial, sans-serif; font-size: 14px; color: #333;
   position: absolute; left: -9999px; top: -9999px;
 }
@@ -794,3 +794,8 @@
 .ordenes-filters {
   padding: 0.75rem 1rem;
 }
+
+/* Recepción por factura contra la línea (P11-01) */
+.recibidas-linea { margin-top: 4px; font-size: 0.7rem; font-weight: 600; color: var(--warning); white-space: nowrap; }
+.recibidas-linea.is-completa { color: var(--success); }
+.rechazadas-linea { margin-top: 2px; font-size: 0.7rem; font-weight: 600; color: var(--danger); white-space: nowrap; }
