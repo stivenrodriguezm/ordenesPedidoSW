@@ -6,7 +6,7 @@ import AgrupacionVariante from './AgrupacionVariante';
 import * as servicio from '../../services/listaPreciosService';
 
 vi.mock('../../services/listaPreciosService', () => ({ crearAgrupacion: vi.fn(), guardarComponentes: vi.fn(), simularComponentes: vi.fn(), simularNuevaAgrupacion: vi.fn(), getBibliotecaEspeciales: vi.fn(),
-  createCargo: vi.fn(), updateCargo: vi.fn(), deleteCargo: vi.fn() }));
+  createCargo: vi.fn(), updateCargo: vi.fn(), deleteCargo: vi.fn(), getNombresCargos: vi.fn(() => Promise.resolve(['Instalación', 'USB'])), ordenarCargos: vi.fn(), ordenarVariantes: vi.fn() }));
 const mesa = { id: 1, nombre: 'Mesa', costo_base: '500000.00', multiplicador_efectivo: '2', componentes: [] };
 const silla = { id: 2, nombre: 'Silla', costo_base: '100000.00', multiplicador_efectivo: '2', componentes: [], cargos: [{ id: 9, variante: 2, descripcion: 'Instalación', valor: '2000.00', opcional: false, preseleccionado: false, especial: null, tipo: '' }] };
 const juego = { id: 3, nombre: 'Comedor', costo_base: '0.00', multiplicador_efectivo: '2', componentes: [{ variante: 1, variante_nombre: 'Mesa', cantidad: 1, costo_unitario: null, multiplicador: null }, { variante: 2, variante_nombre: 'Silla', cantidad: 6, costo_unitario: null, multiplicador: null }] };
@@ -135,21 +135,23 @@ describe('Agrupaciones por costos de piezas', () => {
   });
 });
 
-it('un conjunto usa una subcategoría existente y reemplaza su ficha sin duplicarla', async () => {
+it('crea una subcategoría nueva con piezas de distintos proveedores sin reemplazar fichas', async () => {
   const destino = { ...juego, subcategoria: 103, categoria_nombre: 'Comedor', componentes: [] };
   const unificada = { ...linea, referencia: 50, variantes: [{ ...mesa, subcategoria: 101 }, { ...silla, subcategoria: 102 }, destino] };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(['lp-linea', 5], unificada);
-  servicio.crearAgrupacion.mockResolvedValue({ ...juego, subcategoria: 103 });
-  render(<QueryClientProvider client={client}><AgrupacionVariante nuevo linea={unificada} variante={{ componentes: [] }} notify={vi.fn()} /></QueryClientProvider>);
-  expect(screen.queryByLabelText('Nombre del conjunto')).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText('Subcategoría del conjunto'), { target: { value: '103' } });
-  agregarPieza(1); agregarPieza(2);
+  const otro = { id: 6, proveedor_nombre: 'Sillas Sur', variantes: [{ ...silla, id: 20 }] };
+  servicio.crearAgrupacion.mockResolvedValue({ ...juego, id: 30, subcategoria: 104 });
+  render(<QueryClientProvider client={client}><AgrupacionVariante nuevo linea={{ ...unificada, proveedor_nombre: 'Mesas Norte' }} lineasGrupo={[otro]} variante={{ componentes: [] }} categorias={[{ id: 10, nombre: 'Comedor' }]} notify={vi.fn()} /></QueryClientProvider>);
+  expect(screen.queryByLabelText('Subcategoría del conjunto')).not.toBeInTheDocument();
+  escribir('Nombre de la nueva subcategoría', 'Comedor de 6p.');
+  agregarPieza(1); agregarPieza(20);
   escribir('Cantidad de Silla', '6');
   fireEvent.click(screen.getByRole('button', { name: 'Crear agrupación' }));
-  await waitFor(() => expect(servicio.crearAgrupacion).toHaveBeenCalledWith(5, { subcategoria: 103, componentes: [
+  await waitFor(() => expect(servicio.crearAgrupacion).toHaveBeenCalledWith(5, { nombre: 'Comedor de 6p.', categoria: 10, componentes: [
     { variante: 1, cantidad: 1, costo_unitario: null, multiplicador: null },
-    { variante: 2, cantidad: 6, costo_unitario: null, multiplicador: null },
+    { variante: 20, cantidad: 6, costo_unitario: null, multiplicador: null },
   ] }));
-  expect(client.getQueryData(['lp-linea', 5]).variantes).toHaveLength(3);
+  expect(client.getQueryData(['lp-linea', 5]).variantes).toHaveLength(4);
+  expect(client.getQueryData(['lp-linea', 5]).variantes.find(v => v.subcategoria === 103).componentes).toEqual([]);
 });

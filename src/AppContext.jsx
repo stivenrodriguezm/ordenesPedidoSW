@@ -8,7 +8,8 @@ export const AppContext = createContext();
 export const NotificationContext = createContext();
 
 export const usePermissions = () => {
-  const { usuario } = useContext(AppContext);
+  // Sin proveedor de contexto (pruebas aisladas) no hay usuario: ningún permiso.
+  const { usuario } = useContext(AppContext) || {};
   const permissions = usuario?.permissions || [];
   
   const hasPermission = (feature) => {
@@ -30,7 +31,7 @@ export const usePermissions = () => {
       return permissions.includes('ACCESO_RECIBOS') || permissions.includes('VER_RECIBOS');
     }
     if (feature === 'ACCESO_EGRESOS') {
-      return permissions.includes('ACCESO_EGRESOS') || permissions.includes('VER_COMPROBANTES_EGRESO');
+      return permissions.includes('ACCESO_EGRESOS') || permissions.includes('VER_COMPROBANTES_EGRESO') || permissions.includes('VER_NOMINA');
     }
 
     if (feature === 'VER_VENTAS') {

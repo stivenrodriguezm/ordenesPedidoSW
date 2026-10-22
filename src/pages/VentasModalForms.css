@@ -29,7 +29,7 @@
     font-size: 0.95rem;
     font-family: inherit;
     color: var(--ventas-text-dark);
-    background: white;
+    background: var(--surface);
     transition: all 0.2s ease;
     resize: vertical;
     min-height: 120px;
@@ -82,7 +82,7 @@
 }
 
 .btn-secondary-modal {
-    background: white;
+    background: var(--surface);
     color: var(--ventas-text-dark);
     border: 1px solid var(--ventas-border);
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);

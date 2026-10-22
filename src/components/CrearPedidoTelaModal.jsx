@@ -249,7 +249,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     await new Promise(resolve => setTimeout(resolve, 150));
                     const { default: html2canvas } = await import('html2canvas');
                     const canvas = await html2canvas(previewRef.current, {
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--surface)',
                         scale: 2,
                         useCORS: true,
                         logging: false,

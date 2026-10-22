@@ -51,7 +51,7 @@
 }
 
 .pqrs-meta-item a {
-  color: var(--accent);
+  color: var(--accent-texto);
   text-decoration: none;
 }
 .pqrs-meta-item a:hover {

@@ -61,7 +61,7 @@
     font-size: 0.78rem;
     font-weight: 600;
     background: linear-gradient(135deg, #ede9fe, #ddd6fe);
-    color: var(--accent);
+    color: var(--accent-texto);
     border: 1px solid #c4b5fd;
     white-space: nowrap;
 }
@@ -262,7 +262,7 @@
 }
 
 .ref-modal-content {
-    background: white;
+    background: var(--surface);
     border-radius: var(--r-lg);
     width: 90%;
     max-width: 600px;
@@ -622,7 +622,7 @@
 .subcat-chip--active {
     background: linear-gradient(135deg, #ede9fe, #ddd6fe);
     border-color: #c4b5fd;
-    color: var(--accent);
+    color: var(--accent-texto);
 }
 
 .subcat-list-wrap {
@@ -710,7 +710,7 @@
 }
 
 .ref-btn-secondary {
-    background: white;
+    background: var(--surface);
     color: var(--gray-600);
     padding: 0.65rem 1.25rem;
     border-radius: var(--r-sm);

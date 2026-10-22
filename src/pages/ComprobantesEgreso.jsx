@@ -1,12 +1,18 @@
 import { useExportacion } from '../hooks/useExportacion';
-import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppContext, usePermissions } from '../AppContext';
 import useDebounce from '../hooks/useDebounce';
 import { useFiltrosUrl } from '../hooks/useFiltrosUrl';
 import './ComprobantesEgreso.css';
 import './VentasImprovements.css';
-import API from '../services/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as pagosApi from '../services/pagosBancariosService';
+import PrepararPagosCE, { CuentaFilaCE, AsociarBeneficiarioCE } from './pagos/PrepararPagosCE';
+import CuentasBancarias from './pagos/CuentasBancarias';
+import { EditorLote, PrepararNomina } from './pagos/PagosBancariosPage';
+import { mostrarPesosAPI } from './pagos/pesos';
+import { mensajeDeError } from '../services/errores';
 import { groupProductos } from '../utils/groupProductos';
 import {
   FaFileExport,
@@ -15,7 +21,6 @@ import {
   FaMoneyBillWave,
   FaUniversity,
   FaCreditCard,
-  FaCalendarDay,
   FaReceipt,
   FaChevronLeft,
   FaChevronRight,
@@ -28,7 +33,7 @@ import {
   FaEdit
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
-import Modal from '../components/Modal';
+import { Modal } from '../components/ui';
 import ComprobanteEgresoPrintModal from '../components/ComprobanteEgresoPrintModal';
 import { PageHeader, Button } from '../components/ui';
 
@@ -53,8 +58,21 @@ const ComprobantesEgreso = () => {
   const { proveedores } = useContext(AppContext);
   const navigate = useNavigate();
   const hasPermission = usePermissions();
-  const [comprobantesData, setComprobantesData] = useState([]);
-  const [totalFiltrado, setTotalFiltrado] = useState(0);
+  const qc = useQueryClient();
+  const [urlParams, setUrlParams] = useSearchParams();
+  const puedeVerCE = hasPermission('VER_COMPROBANTES_EGRESO');
+  const puedeNomina = hasPermission('VER_NOMINA');
+  const puedePreparar = hasPermission('VER_TODOS_EGRESOS') && hasPermission('CREAR_COMPROBANTE_EGRESO');
+  const [seleccion, setSeleccion] = useState({});
+  const [cuentasElegidas, setCuentasElegidas] = useState({});
+  const [revisarPagos, setRevisarPagos] = useState(false);
+  const [cuentasDe, setCuentasDe] = useState(null);
+  const [asociar, setAsociar] = useState(null);
+  const [nomina, setNomina] = useState(urlParams.get('nomina') === '1');
+  const [archivoId, setArchivoId] = useState(urlParams.get('archivo'));
+  const [bancoDestino, setBancoDestino] = useState('');
+  const [soloPagables, setSoloPagables] = useState(false);
+  const [seleccionandoTodos, setSeleccionandoTodos] = useState(false);
   const [expandedCEIds, setExpandedCEIds] = useState([]);
 
   const toggleExpandCE = (id) => {
@@ -78,9 +96,9 @@ const ComprobantesEgreso = () => {
   const filterBarRef = useRef(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+
   const pageSize = 30;
-  const [isLoading, setIsLoading] = useState(true);
+
   const [notification, setNotification] = useState({ message: '', type: '' });
   const { exportar, exportando } = useExportacion('egresos', 'Comprobantes_Egreso.xlsx', setNotification);
   const [printPreviewItem, setPrintPreviewItem] = useState(null);
@@ -139,6 +157,7 @@ const ComprobantesEgreso = () => {
     setSelectedProveedores([]);
     setSelectedEstados([]);
     setSelectedMedios([]);
+    setBancoDestino(''); setSoloPagables(false);
     setCurrentPage(1);
   };
 
@@ -157,42 +176,31 @@ const ComprobantesEgreso = () => {
     return `${dayStr}-${monthStr}-${yearStr}`;
   };
 
-  const fetchData = useCallback(async (page) => {
-    setIsLoading(true);
-    const params = {
-      page,
-      page_size: pageSize,
-      fecha_inicio: filters.fecha_inicio || undefined,
-      fecha_fin: filters.fecha_fin || undefined,
-      query: debouncedQuery || undefined,
-    };
-
-    if (selectedProveedores.length > 0) {
-      params.proveedores = selectedProveedores.join(',');
-    }
-    if (selectedEstados.length > 0) {
-      params.estados = selectedEstados.join(',');
-    }
-    if (selectedMedios.length > 0) {
-      params.medio_pago = selectedMedios.join(',');
-    }
-
-    try {
-      const response = await API.get(`/comprobantes-egreso/`, { params });
-      setComprobantesData(response.data.results || []);
-      setTotalFiltrado(response.data.totales_filtrados?.valor || 0);
-      setTotalPages(Math.ceil(response.data.count / pageSize) || 1);
-    } catch {
-      setNotification({ message: 'Error al cargar datos.', type: 'error' });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [pageSize, filters.fecha_inicio, filters.fecha_fin, debouncedQuery, selectedProveedores, selectedEstados, selectedMedios]);
-
-  useEffect(() => {
-    fetchData(currentPage);
-  }, [currentPage, fetchData]);
-
+  const paramsConsulta = useMemo(() => ({ page: currentPage, page_size: pageSize,
+    fecha_inicio: filters.fecha_inicio || undefined, fecha_fin: filters.fecha_fin || undefined, query: debouncedQuery || undefined,
+    proveedores: selectedProveedores.join(',') || undefined, estados: selectedEstados.join(',') || undefined,
+    medio_pago: selectedMedios.join(',') || undefined, banco_destino: bancoDestino || undefined, solo_pagables: soloPagables ? '1' : undefined,
+  }), [currentPage, filters.fecha_inicio, filters.fecha_fin, debouncedQuery, selectedProveedores, selectedEstados, selectedMedios, bancoDestino, soloPagables]);
+  const consulta = useQuery({ queryKey: ['egresos', paramsConsulta], queryFn: () => pagosApi.comprobantes(paramsConsulta), enabled: puedeVerCE });
+  const comprobantesData = useMemo(() => consulta.data?.results || [], [consulta.data]);
+  const totalFiltrado = consulta.data?.totales_filtrados?.valor || 0;
+  const totalPages = Math.ceil((consulta.data?.count || 0) / pageSize) || 1;
+  const isLoading = consulta.isPending;
+  const cat = useQuery({ queryKey: ['pagos', 'catalogo'], queryFn: pagosApi.catalogo, enabled: puedePreparar });
+  const nominasGuardadas = useQuery({ queryKey: ['pagos', 'lotes', 'nomina'], queryFn: () => pagosApi.lotes('nomina'), enabled: puedeNomina });
+  const archivo = useQuery({ queryKey: ['pagos', 'lote', String(archivoId)], queryFn: () => pagosApi.lote(archivoId), enabled: Boolean(archivoId), refetchOnWindowFocus: false });
+  const actualizarArchivo = d => { setArchivoId(d.id); qc.setQueryData(['pagos', 'lote', String(d.id)], d); qc.invalidateQueries({ queryKey: ['egresos'] }); qc.invalidateQueries({ queryKey: ['pagos', 'lotes'] }); };
+  const cerrarArchivo = () => { setArchivoId(null); if (urlParams.has('archivo')) { const p = new URLSearchParams(urlParams); p.delete('archivo'); setUrlParams(p, { replace: true }); } };
+  const cambiarCuenta = (ce, cuenta) => setCuentasElegidas(d => ({ ...d, [ce.id]: cuenta }));
+  const elegirCE = (ce, elegido) => setSeleccion(d => { const n = { ...d }; if (elegido) n[ce.id] = ce; else delete n[ce.id]; return n; });
+  const elegibles = comprobantesData.filter(ce => ce.pago_bancario?.disponible);
+  const seleccionIds = Object.keys(seleccion).map(Number);
+  const totalSeleccion = Object.values(seleccion).reduce((n, ce) => n + Number(ce.valor), 0);
+  const elegirVisibles = elegido => setSeleccion(d => { const n = { ...d }; elegibles.forEach(ce => { if (elegido) n[ce.id] = ce; else delete n[ce.id]; }); return n; });
+  const seleccionarFiltro = useMutation({ mutationFn: () => pagosApi.comprobantes({ ...paramsConsulta, page: 1, page_size: 500, solo_pagables: '1' }), onSuccess: d => {
+    if (d.count > 500) { setNotification({ message: 'Hay más de 500 CE. Ajusta el banco, proveedor o las fechas para seleccionar hasta 500 por archivo.', type: 'error' }); return; }
+    setSeleccion(prev => Object.fromEntries([...Object.values(prev), ...d.results].map(ce => [ce.id, ce]))); setSeleccionandoTodos(false);
+  } });
   const handleFilterChange = (e) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setCurrentPage(1);
@@ -205,10 +213,10 @@ const ComprobantesEgreso = () => {
     if (!ceToConfirm) return;
     setIsConfirmingCE(true);
     try {
-      await API.patch(`/comprobantes-egreso/${ceToConfirm.id}/confirmar/`, {});
+      await pagosApi.confirmarCE(ceToConfirm.id);
       setNotification({ message: `Transferencia de egreso #${ceToConfirm.id} confirmada exitosamente.`, type: 'success' });
       setCeToConfirm(null);
-      fetchData(filters, currentPage);
+      qc.invalidateQueries({ queryKey: ['egresos'] });
     } catch (error) {
       const data = error.response?.data;
       const errorMsg = data?.detail || data?.error || (typeof data === 'string' ? data : (data ? JSON.stringify(data) : 'Error al confirmar la transferencia de egreso.'));
@@ -220,16 +228,8 @@ const ComprobantesEgreso = () => {
 
   const exportData = () => exportar({
     fecha_inicio: filters.fecha_inicio, fecha_fin: filters.fecha_fin, query: filters.query,
-    proveedores: selectedProveedores.join(','), estados: selectedEstados.join(','), medio_pago: selectedMedios.join(','),
+    proveedores: selectedProveedores.join(','), estados: selectedEstados.join(','), medio_pago: selectedMedios.join(','), banco_destino: bancoDestino, solo_pagables: soloPagables ? '1' : '',
   });
-
-  // Calculate stats for current view (unconfirmed transfer vouchers)
-  const stats = useMemo(() => {
-    const porConfirmarCount = comprobantesData.filter(
-      item => item.estado === 'Por Confirmar Pago'
-    ).length;
-    return { porConfirmarCount };
-  }, [comprobantesData]);
 
   return (
     <div className="ds-page comprobantes-page ds-fade-in">
@@ -239,12 +239,18 @@ const ComprobantesEgreso = () => {
         onClose={() => setNotification({ message: '', type: '' })}
       />
 
+      {revisarPagos && <PrepararPagosCE seleccion={seleccionIds} preferencias={cuentasElegidas} cerrar={() => setRevisarPagos(false)} preparado={d => { setRevisarPagos(false); setSeleccion({}); actualizarArchivo(d); setNotification({ message: 'Archivo Davivienda descargado. Los pagos siguen por confirmar.', type: 'success' }); }} />}
+      {cuentasDe && <Modal open title={`Cuentas · ${cuentasDe.nombre}`} onClose={() => setCuentasDe(null)}><CuentasBancarias titular={cuentasDe.titular} nombre={cuentasDe.nombre} /></Modal>}
+      {asociar && <AsociarBeneficiarioCE ce={asociar} cerrar={() => setAsociar(null)} guardado={() => setNotification({ message: 'Beneficiario asociado al comprobante.', type: 'success' })} />}
+      {nomina && <PrepararNomina cerrar={() => setNomina(false)} abrir={d => { setNomina(false); actualizarArchivo(d); }} />}
+      {archivoId && <Modal open title="Agrupación de comprobantes" size="xl" onClose={cerrarArchivo}>{archivo.data ? <EditorLote key={`${archivo.data.id}-${archivo.data.revision}-${archivo.data.confirmados}`} lote={archivo.data} actualizado={actualizarArchivo} puedeEditar={archivo.data.tipo === 'nomina' ? hasPermission('GESTIONAR_NOMINA') : puedePreparar} puedeExportar={archivo.data.tipo === 'nomina' ? hasPermission('GESTIONAR_NOMINA') : hasPermission('EXPORTAR_EGRESOS')} /> : <p role="status">Cargando pagos…</p>}{archivo.error && <p role="alert">{mensajeDeError(archivo.error)}</p>}</Modal>}
       <PageHeader
         icon={FaReceipt}
         title="Comprobantes de Egreso"
         subtitle="Registro de egresos y pagos a proveedores"
         actions={
           <>
+            {(hasPermission('VER_TODOS_EGRESOS') || puedeNomina) && <Button variant="secondary" icon={FaUniversity} onClick={() => navigate(`/comprobantes-egreso/pagos?tipo=${puedeVerCE ? 'proveedores' : 'nomina'}`)}>Pagos bancarios</Button>}
             {hasPermission('EXPORTAR_EGRESOS') && (
               <Button variant="ghost" icon={FaFileExport} onClick={exportData} loading={exportando} disabled={isLoading} aria-label="Exportar Excel" title="Exportar" />
             )}
@@ -258,18 +264,17 @@ const ComprobantesEgreso = () => {
         }
       />
 
-      {/* --- Live Stats Bar --- */}
-      <div className="stats-bar">
-        <div className="stat-item">
-          <div className="stat-icon warning"><FaCalendarDay /></div>
-          <div className="stat-info">
-            <span className="stat-label">Por Confirmar</span>
-            <span className="stat-value">{stats.porConfirmarCount}</span>
-          </div>
+      {(puedePreparar || puedeNomina) && <section className="ce-pay-toolbar">
+        <div><strong>Prepara varios pagos desde aquí</strong><span>Selecciona los CE, revisa productos y descarga un archivo para Davivienda.</span></div>
+        <div className="ce-pay-controls">{puedePreparar && <><label className="pb-check"><input type="checkbox" checked={soloPagables} onChange={e => { setSoloPagables(e.target.checked); setCurrentPage(1); }} />Solo transferencias disponibles</label>
+        <label>Banco destino<select className="ds-input" value={bancoDestino} onChange={e => { setBancoDestino(e.target.value); setSoloPagables(true); setCurrentPage(1); }}><option value="">Todos los bancos</option><option value="51">Davivienda</option><option value="sin_cuenta">Sin cuenta asignada</option>{Object.entries(cat.data?.bancos || {}).filter(([k]) => k !== '51').sort((a,b) => a[1].localeCompare(b[1])).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></label></>}
+        {hasPermission('GESTIONAR_NOMINA') && <Button variant="secondary" onClick={() => setNomina(true)}>Preparar nómina</Button>}
         </div>
-      </div>
-
-      <div className="ds-card comprobantes-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem' }}>
+        {nominasGuardadas.data?.filter(n => n.estado === 'borrador').map(n => <button className="ce-nomina-ready" key={n.id} onClick={() => setArchivoId(n.id)}><span>{n.nombre} · {n.cantidad} empleados</span><strong>Revisar {mostrarPesosAPI(n.total)} →</strong></button>)}
+      </section>}
+      {consulta.error && <p role="alert" className="pb-error">{mensajeDeError(consulta.error)}</p>}
+      {puedeVerCE && <>
+      <div className="ds-card comprobantes-filters ds-fade-in" style={{ padding: '0.75rem 1rem', marginBottom: '0.75rem' }}>
         <div className="v-filters-bar" ref={filterBarRef} style={{ margin: 0, flex: 1, overflow: 'visible', flexWrap: 'wrap' }}>
           <div className="v-search-pill">
             <FaSearch />
@@ -450,6 +455,9 @@ const ComprobantesEgreso = () => {
         </div>
       </div>
 
+      {puedePreparar && <div className="ce-selection-bar"><label className="pb-check"><input type="checkbox" checked={elegibles.length > 0 && elegibles.every(ce => Boolean(seleccion[ce.id]))} disabled={!elegibles.length || isLoading} onChange={e => elegirVisibles(e.target.checked)} />Seleccionar página</label><Button variant="ghost" size="sm" loading={seleccionarFiltro.isPending} onClick={() => { setSeleccionandoTodos(true); seleccionarFiltro.mutate(); }}>Seleccionar todos con estos filtros</Button><span className="ce-selection-total"><b>{seleccionIds.length} CE · {mostrarPesosAPI(totalSeleccion)}</b>{seleccionIds.length > 0 && <button className="ce-bank-link" onClick={() => setSeleccion({})}>Limpiar selección</button>}</span><Button disabled={!seleccionIds.length || seleccionIds.length > 500 || !hasPermission('EXPORTAR_EGRESOS')} onClick={() => setRevisarPagos(true)}>Revisar y pagar{seleccionIds.length ? ` (${seleccionIds.length})` : ''}</Button></div>}
+      {seleccionandoTodos && seleccionarFiltro.error && <p role="alert" className="pb-error">{mensajeDeError(seleccionarFiltro.error)}</p>}
+
       <div className="content-area">
         {(filters.query || filters.fecha_inicio || filters.fecha_fin || selectedProveedores.length > 0 || selectedEstados.length > 0 || selectedMedios.length > 0) && (
           <div className="ds-totales-filtrados" role="status">
@@ -461,11 +469,12 @@ const ComprobantesEgreso = () => {
           <table className="modern-table">
             <thead>
               <tr>
+                {puedePreparar && <th className="ce-select-col" aria-label="Seleccionar pagos" />}
                 <th className="th-ce-id">CE</th>
                 <th className="th-ce-fecha">Fecha</th>
                 <th className="th-ce-proveedor">Proveedor</th>
                 <th className="th-ce-concepto">Concepto</th>
-                <th className="th-ce-metodo">Medio Pago</th>
+                <th className="ce-bank-col">Banco y cuenta destino</th>
                 <th className="th-ce-estado">Estado</th>
                 <th className="th-ce-valor text-right">Valor</th>
                 <th className="th-ce-actions"></th>
@@ -493,19 +502,15 @@ const ComprobantesEgreso = () => {
                   return (
                     <React.Fragment key={item.id}>
                       <tr className={`table-row-hover ${isExpanded ? 'ce-row-expanded' : ''}`} onClick={() => toggleExpandCE(item.id)} style={{ cursor: 'pointer' }}>
+                        {puedePreparar && <td className="ce-select-col" onClick={e => e.stopPropagation()}><input type="checkbox" aria-label={`Seleccionar CE ${item.id}`} checked={Boolean(seleccion[item.id])} disabled={!item.pago_bancario?.disponible} onChange={e => elegirCE(item, e.target.checked)} /></td>}
                         <td className="font-bold">#{item.id}</td>
-                        <td className="text-muted">{formatDate(item.fecha)}</td>
-                        <td className="ce-ellipsis" title={item.proveedor_nombre || ''}>{item.proveedor_nombre || '—'}</td>
+                        <td className="text-muted ce-date-cell">{formatDate(item.fecha)}</td>
+                        <td className="ce-beneficiary-name" title={item.proveedor_nombre || ''}>{item.proveedor_nombre || '—'}</td>
                         <td className="ce-ellipsis" title={item.concepto || ''}>
                           {item.concepto}
                           {item.descripcion && <FaStickyNote className="ce-note-flag" title={item.descripcion} />}
                         </td>
-                        <td>
-                          <div className="method-cell">
-                            <PaymentIcon method={item.medio_pago} />
-                            <span className="ce-ellipsis">{item.medio_pago}</span>
-                          </div>
-                        </td>
+                        <td className="ce-bank-col" onClick={e => e.stopPropagation()}><CuentaFilaCE ce={item} value={cuentasElegidas[item.id]} cambiar={cambiarCuenta} administrar={setCuentasDe} asociar={setAsociar} abrirArchivo={setArchivoId} editable={puedePreparar} /></td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                             <span className={`status-badge ${claseEstadoEgreso(item.estado)}`}>
@@ -559,7 +564,7 @@ const ComprobantesEgreso = () => {
                       </tr>
                       {isExpanded && (
                         <tr className="ce-expanded-row">
-                          <td colSpan="8" style={{ padding: 0 }}>
+                          <td colSpan={puedePreparar ? 9 : 8} style={{ padding: 0 }}>
                             <div className="ce-expanded-wrapper">
                               <div className="ce-det-panel">
                                 <h4 className="ce-det-titulo">Datos del Comprobante</h4>
@@ -653,7 +658,7 @@ const ComprobantesEgreso = () => {
                   );
                 })
               ) : (
-                <tr><td colSpan="8" className="empty-state">No se encontraron comprobantes.</td></tr>
+                <tr><td colSpan={puedePreparar ? 9 : 8} className="empty-state">No se encontraron comprobantes.</td></tr>
               )}
             </tbody>
           </table>
@@ -670,6 +675,7 @@ const ComprobantesEgreso = () => {
               const hasFacturas = facturas.length > 0;
               return (
                 <div className="transaction-card" key={item.id}>
+                  {puedePreparar && <div className="ce-mobile-bank"><label className="pb-check"><input type="checkbox" aria-label={`Seleccionar CE ${item.id}`} checked={Boolean(seleccion[item.id])} disabled={!item.pago_bancario?.disponible} onChange={e => elegirCE(item, e.target.checked)} />CE #{item.id}</label><CuentaFilaCE ce={item} value={cuentasElegidas[item.id]} cambiar={cambiarCuenta} administrar={setCuentasDe} asociar={setAsociar} abrirArchivo={setArchivoId} editable={puedePreparar} /></div>}
                   <div className="card-left">
                     <PaymentIcon method={item.medio_pago} />
                     <div className="card-info">
@@ -692,7 +698,7 @@ const ComprobantesEgreso = () => {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setCeToConfirm(item); }}
                           style={{
-                            background: '#171815',
+                            background: 'var(--accent)',
                             color: '#ffffff',
                             border: 'none',
                             borderRadius: '6px',
@@ -793,6 +799,7 @@ const ComprobantesEgreso = () => {
         </button>
       </div>
 
+      </>}
       <ComprobanteEgresoPrintModal
         open={!!printPreviewItem}
         onClose={() => setPrintPreviewItem(null)}
@@ -802,24 +809,24 @@ const ComprobantesEgreso = () => {
       {/* Modal Confirmación Transferencia Egreso */}
       {ceToConfirm && (
         <Modal
-          show={Boolean(ceToConfirm)}
+          open={Boolean(ceToConfirm)}
           onClose={() => setCeToConfirm(null)}
           title="Confirmar Transferencia de Egreso"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-            <div style={{ background: '#eaeff1', border: '1px solid #c9d5dc', color: '#4f6a7f', padding: '0.85rem 1.1rem', borderRadius: '10px', fontSize: '0.9rem' }}>
+            <div style={{ background: 'var(--info-soft)', border: '1px solid var(--info-line)', color: 'var(--info)', padding: '0.85rem 1.1rem', borderRadius: '10px', fontSize: '0.9rem' }}>
               <div style={{ fontWeight: '800', fontSize: '1rem', marginBottom: '0.3rem' }}>
                 Comprobante de Egreso #{ceToConfirm.id}
               </div>
-              <div style={{ color: '#4f6a7f', fontSize: '0.88rem' }}>
+              <div style={{ color: 'var(--info)', fontSize: '0.88rem' }}>
                 Proveedor: <strong>{ceToConfirm.proveedor_nombre || 'N/A'}</strong> • Valor: <strong>{formatCOP(ceToConfirm.valor)}</strong>
               </div>
             </div>
-            <p style={{ fontSize: '0.88rem', color: '#3e3e37', margin: 0, lineHeight: '1.4' }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text)', margin: 0, lineHeight: '1.4' }}>
               ¿Confirmas que la transferencia bancaria correspondiente a este egreso ha sido procesada y verificada correctamente? El estado cambiará a <strong>Pagado</strong>.
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e4e3dc' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
               <button
                 type="button"
                 onClick={() => setCeToConfirm(null)}
@@ -827,9 +834,9 @@ const ComprobantesEgreso = () => {
                 style={{
                   padding: '0.55rem 1.1rem',
                   borderRadius: '8px',
-                  border: '1px solid #d0cfc6',
-                  background: '#ffffff',
-                  color: '#57574f',
+                  border: '1px solid var(--border-strong)',
+                  background: 'var(--surface)',
+                  color: 'var(--text-secondary)',
                   fontWeight: '600',
                   fontSize: '0.85rem',
                   cursor: 'pointer'
@@ -845,7 +852,7 @@ const ComprobantesEgreso = () => {
                   padding: '0.55rem 1.25rem',
                   borderRadius: '8px',
                   border: 'none',
-                  background: '#171815',
+                  background: 'var(--accent)',
                   color: '#ffffff',
                   fontWeight: '700',
                   fontSize: '0.85rem',

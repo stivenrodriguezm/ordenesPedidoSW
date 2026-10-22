@@ -57,7 +57,7 @@
     width: 48px;
     height: 48px;
     background-color: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
     border-radius: var(--r-lg);
     font-size: 1.5rem;
     flex-shrink: 0;
@@ -67,7 +67,7 @@
     width: 100px;
     height: 100px;
     background-color: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
     border: 2px solid var(--border);
     border-radius: 50%;
     display: flex;
@@ -153,7 +153,7 @@
 
 .notification-box.success {
     background-color: var(--accent-soft);
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     border: 1px solid var(--accent-ring);
 }
 

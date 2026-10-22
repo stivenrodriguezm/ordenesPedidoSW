@@ -154,7 +154,7 @@
 
 .c-pct-pill.indigo {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
 }
 
 .c-pct-pill.amber {

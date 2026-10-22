@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaChevronUp, FaScroll, FaTruck, FaLayerGroup, FaGlobe, FaTags, FaRobot, FaUser, FaUserShield, FaSignOutAlt } from 'react-icons/fa';
+import { FaBoxes, FaClipboardList, FaFileInvoiceDollar, FaHome, FaCashRegister, FaReceipt, FaFileInvoice, FaTimes, FaChevronLeft, FaChevronRight, FaChevronUp, FaScroll, FaTruck, FaLayerGroup, FaGlobe, FaTags, FaRobot, FaUser, FaUserShield, FaSignOutAlt, FaMoon, FaSun } from 'react-icons/fa';
 import { useQueryClient } from "@tanstack/react-query";
 import { AppContext, usePermissions } from "../AppContext";
 import API from "../services/api";
+import useTema from "../hooks/useTema";
 import "./Sidebar.css";
 
 const iniciales = (nombre = '', apellido = '') => `${nombre ? nombre[0] : ''}${apellido ? apellido[0] : ''}`.toUpperCase();
@@ -13,6 +14,8 @@ const iniciales = (nombre = '', apellido = '') => `${nombre ? nombre[0] : ''}${a
 function UsuarioSidebar({ isCollapsed, onNavegar }) {
   const { usuario, setUsuario } = useContext(AppContext) || {};
   const [abierto, setAbierto] = useState(false);
+  const [tema, cambiarTema] = useTema();
+  const nocturno = tema === 'nocturno';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const ref = useRef(null);
@@ -57,6 +60,11 @@ function UsuarioSidebar({ isCollapsed, onNavegar }) {
             <FaUserShield /><span>Gestión de Usuarios</span>
           </button>
         )}
+        <button type="button" role="switch" aria-checked={nocturno} className="sidebar-user__opcion sidebar-user__tema"
+          onClick={() => cambiarTema(nocturno ? 'diurno' : 'nocturno')} title={titulo(nocturno ? 'Modo nocturno: activado' : 'Modo nocturno: desactivado')}>
+          {nocturno ? <FaMoon /> : <FaSun />}<span>Modo nocturno</span>
+          <span className="sidebar-user__interruptor" aria-hidden="true"><span /></span>
+        </button>
         <button type="button" className="sidebar-user__opcion sidebar-user__opcion--salir" onClick={cerrarSesion} title={titulo('Cerrar Sesión')}>
           <FaSignOutAlt /><span>Cerrar Sesión</span>
         </button>

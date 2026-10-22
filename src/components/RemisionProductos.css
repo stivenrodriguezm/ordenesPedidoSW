@@ -149,7 +149,7 @@
   border: 1px dashed var(--border-strong);
   border-radius: var(--r-md);
   background: var(--gray-50);
-  color: var(--accent);
+  color: var(--accent-texto);
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -204,8 +204,8 @@ div.nr-prod__pick + .rp-inv {
 .rp-tela__switch:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
 .rp-tela__switch:disabled { opacity: 0.55; cursor: not-allowed; }
 .rp-tela__pista { position: relative; width: 26px; height: 15px; border-radius: 999px; background: var(--gray-300); transition: background var(--t-fast); }
-.rp-tela__pista::after { content: ''; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(23, 24, 21, 0.25); transition: transform var(--t-fast); }
-.rp-tela.is-on .rp-tela__switch { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+.rp-tela__pista::after { content: ''; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(23, 24, 21, 0.25); transition: transform var(--t-fast); }
+.rp-tela.is-on .rp-tela__switch { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-texto); }
 .rp-tela.is-on .rp-tela__pista { background: var(--accent); }
 .rp-tela.is-on .rp-tela__pista::after { transform: translateX(11px); }
 .rp-tela .nr-input { flex: 1; min-width: 200px; }

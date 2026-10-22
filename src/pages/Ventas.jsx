@@ -12,6 +12,7 @@ import EditSaleModal from '../components/EditSaleModal';
 import RemisionModal from '../components/RemisionModal';
 import SalesSummaryReport from '../components/SalesSummaryReport';
 import ExpedienteVenta from '../components/ExpedienteVenta';
+import FacturadoVenta from '../components/FacturadoVenta';
 import { ProductosEsqueleto } from '../components/ProductosVenta';
 import { fraccionVenta, participantesVenta } from '../utils/ventasCompartidas';
 
@@ -251,6 +252,9 @@ const Ventas = () => {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [loadingNestedDetails, setLoadingNestedDetails] = useState(false);
     const [notification, setNotification] = useState({ message: '', type: '' });
+    // Facturación (2026-10-21): columna y marca solo para quien tiene MARCAR_VENTA_FACTURADA.
+    const puedeFacturar = hasPermission('MARCAR_VENTA_FACTURADA');
+    const marcarFacturada = (datos) => setVentas((vs) => vs.map((v) => (v.id === datos.id ? { ...v, ...datos } : v)));
   const { exportar, exportando } = useExportacion('ventas', 'Ventas.xlsx', setNotification);
     const [showEditSaleModal, setShowEditSaleModal] = useState(false);
     const [editSaleData, setEditSaleData] = useState(null);
@@ -1000,7 +1004,7 @@ const Ventas = () => {
                                 </button>
                                 {isDateOpen && (
                                     <div className="v-multi-select-popover" style={{ width: '280px' }}>
-                                        <div className="v-popover-tabs" style={{ display: 'flex', borderBottom: '1px solid #e4e3dc', marginBottom: '0.5rem' }}>
+                                        <div className="v-popover-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '0.5rem' }}>
                                             <button 
                                                 type="button" 
                                                 style={{ flex: 1, padding: '0.5rem', background: 'none', border: 'none', borderBottom: selectedDateFilter.mode === 'months' ? '2px solid var(--primary)' : '2px solid transparent', color: selectedDateFilter.mode === 'months' ? 'var(--primary)' : '#72726a', fontWeight: selectedDateFilter.mode === 'months' ? '600' : '400', cursor: 'pointer' }}
@@ -1037,14 +1041,14 @@ const Ventas = () => {
                                         ) : (
                                             <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#57574f' }}>Fecha de Inicio</label>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Fecha de Inicio</label>
                                                     <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} className="v-date-input" value={selectedDateFilter.startDate} onChange={handleStartDateChange} />
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#57574f' }}>Fecha de Fin</label>
+                                                    <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Fecha de Fin</label>
                                                     <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} className="v-date-input" value={selectedDateFilter.endDate} onChange={handleEndDateChange} />
                                                 </div>
-                                                <p style={{ fontSize: '0.7rem', color: '#a3a398', margin: 0, marginTop: '0.25rem', lineHeight: '1.2' }}>
+                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0, marginTop: '0.25rem', lineHeight: '1.2' }}>
                                                     * La búsqueda manual ignora la regla de facturación del día 6 al 5.
                                                 </p>
                                             </div>
@@ -1157,7 +1161,7 @@ const Ventas = () => {
                                                 </button>
                                             </div>
                                             {vendedoresActivos.length === 0 ? (
-                                                <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: '#72726a' }}>No hay vendedores con ventas.</div>
+                                                <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No hay vendedores con ventas.</div>
                                             ) : (
                                                 vendedoresActivos.map(v => (
                                                     <label key={v.id} className="v-popover-item">
@@ -1202,6 +1206,7 @@ const Ventas = () => {
                                 )}
                                 <th className="th-pedidos" title="Pendiente, atrasada o finalizada: finalizada = ya se pidió todo (productos y telas)">Gestión</th>
                                 <th className="th-estado">Estado</th>
+                                {puedeFacturar && <th className="th-facturado" title="Marca de facturación (Contabilidad)">Facturado</th>}
                                 <th className="th-accion"></th>
                             </tr>
                         </thead>
@@ -1226,12 +1231,13 @@ const Ventas = () => {
                                         )}
                                         <td className="td-pedidos"><div className="skeleton skeleton-badge"></div></td>
                                         <td className="td-estado"><div className="skeleton skeleton-badge"></div></td>
+                                        {puedeFacturar && <td className="td-facturado"><div className="skeleton skeleton-badge"></div></td>}
                                         <td className="td-accion"><div className="skeleton skeleton-text" style={{ width: '20px' }}></div></td>
                                     </tr>
                                 ))
                             ) : ventas.length === 0 ? (
                                 <tr>
-                                    <td colSpan={hasPermission('VER_PRECIOS_VENTA') ? "13" : "10"} style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                                    <td colSpan={(hasPermission('VER_PRECIOS_VENTA') ? 13 : 10) + (puedeFacturar ? 1 : 0)} style={{ textAlign: 'center', padding: '4rem 2rem' }}>
                                         <div className="empty-state-content">
                                             <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', margin: 0 }}>No hay ventas para este periodo.</p>
                                         </div>
@@ -1280,6 +1286,9 @@ const Ventas = () => {
                                                     {capitalizeEstado(venta.estado)}
                                                 </Badge>
                                             </td>
+                                            {puedeFacturar && <td className="td-facturado" onClick={(e) => e.stopPropagation()}>
+                                                <FacturadoVenta venta={venta} onCambio={marcarFacturada} onError={(message) => setNotification({ message, type: 'error' })} />
+                                            </td>}
                                             <td className="td-accion">
                                                 <button
                                                     className={`btn-expand ${expandedVentaId === venta.id ? 'active' : ''}`}
@@ -1294,7 +1303,7 @@ const Ventas = () => {
                                         </tr>
                                         {expandedVentaId === venta.id && (
                                             <tr className="expanded-row">
-                                                <td colSpan="13" className="expanded-row-content">
+                                                <td colSpan={puedeFacturar ? 14 : 13} className="expanded-row-content">
                                                     {loadingDetails ? (
                                                         <DetalleEsqueleto />
                                                     ) : detailsError ? (
@@ -1302,7 +1311,7 @@ const Ventas = () => {
                                                     ) : ventaDetails ? (
                                                         <div className="venta-details-view">
                                                             {isPartialData && (
-                                                                <div className="alert-warning" style={{ gridColumn: '1 / -1', marginBottom: '0', padding: '0.75rem', backgroundColor: '#f8f0e0', border: '1px solid #e9d3a9', borderRadius: '8px', color: '#a8732b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <div className="alert-warning" style={{ gridColumn: '1 / -1', marginBottom: '0', padding: '0.75rem', backgroundColor: 'var(--warning-soft)', border: '1px solid var(--warning-line)', borderRadius: '8px', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                     <strong>Atención:</strong> No se pudieron cargar los productos de esta venta debido a un problema de conexión, pero aquí están los pagos y observaciones recuperados.
                                                                 </div>
                                                             )}
@@ -1523,9 +1532,9 @@ const Ventas = () => {
                                                                                         <span className="oc-v2-label">Exhibición</span>
                                                                                         <span className="oc-v2-value">
                                                                                             {pedido.es_exhibicion ? (
-                                                                                                <span className="exh-badge exh-si" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#edf3e9', color: '#4c7a4f' }}>Sí</span>
+                                                                                                <span className="exh-badge exh-si" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: 'var(--success-soft)', color: 'var(--success)' }}>Sí</span>
                                                                                             ) : (
-                                                                                                <span className="exh-badge exh-no" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: '#f2f1eb', color: '#a3a398' }}>No</span>
+                                                                                                <span className="exh-badge exh-no" style={{ display: 'inline-block', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', background: 'var(--gray-100)', color: 'var(--text-muted)' }}>No</span>
                                                                                             )}
                                                                                         </span>
                                                                                     </div>
@@ -1655,6 +1664,7 @@ const Ventas = () => {
                                     </div>
                                     <div className="summary-row-bottom">
                                         <span className="summary-date">{formatShortDate(venta.fecha_venta)}</span>
+                                        {puedeFacturar && <FacturadoVenta venta={venta} onCambio={marcarFacturada} onError={(message) => setNotification({ message, type: 'error' })} />}
                                         {hasPermission('VER_PRECIOS_VENTA') && (
                                             <span className="summary-total">{formatCurrency(venta.valor_total)}</span>
                                         )}

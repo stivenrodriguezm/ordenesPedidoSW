@@ -1,7 +1,7 @@
 .lp-agrupacion { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
 .lp-agrupacion > summary { cursor: pointer; padding: 10px 12px; color: var(--text-secondary); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.lp-agrupacion > summary svg { margin: 0 7px 0 4px; color: var(--accent); }
-.lp-agrupacion > summary > span { margin-left: 10px; color: var(--accent); font-size: 11px; }
+.lp-agrupacion > summary svg { margin: 0 7px 0 4px; color: var(--accent-texto); }
+.lp-agrupacion > summary > span { margin-left: 10px; color: var(--accent-texto); font-size: 11px; }
 .lp-agrupacion[data-estado="pendiente"] { border-color: var(--gold); }
 .lp-agrupacion-editor { min-width: 0; padding: 12px; color: var(--text); }
 .lp-agrupacion-editor > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -10,6 +10,9 @@
 .lp-agrupacion-ayuda { color: var(--text-secondary); font-size: 11px; line-height: 1.6; margin: 6px 0 12px; }
 .lp-agrupacion-identidad { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px; }
 .lp-agrupacion-identidad > label { display: flex; flex-direction: column; gap: 7px; font-size: 12px; }
+.lp-agrupacion-elegir { display: flex; flex-direction: column; gap: 8px; }
+.lp-agrupacion-referencia { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 12px 10px; }
+.lp-agrupacion-referencia > span { color: var(--text-secondary); font-size: 12px; }
 .lp-agrupacion-quitar { display: grid; place-items: center; width: 30px; height: 38px; margin-top: 24px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
 .lp-agrupacion-quitar:hover { background: var(--danger-soft); color: var(--danger); }
 .lp-pieza-especial { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-sm); margin-bottom: 10px; }
@@ -97,3 +100,4 @@
   .lp-agr-fila { padding-left: 8px; padding-right: 8px; }
   .lp-agr-agregar > select { width: 100%; min-width: 0; }
 }
+.lp-agr-nombre .lp-agr-proveedor { display: inline-block; margin-right: 5px; padding: 0 6px; border-radius: 999px; background: var(--gold-soft, var(--gold-soft)); color: var(--gold-dark); font-weight: 600; }

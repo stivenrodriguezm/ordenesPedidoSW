@@ -52,7 +52,7 @@
 
 /* --- Línea de Tiempo del Expediente --- */
 .expediente-timeline-wrapper {
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--slate-200, var(--gray-200));
     border-radius: var(--r-lg);
     padding: 1.25rem 1rem;
@@ -181,7 +181,7 @@
     font-weight: 500;
     background: var(--accent-soft);
     border: 1px solid var(--accent-line);
-    color: var(--accent);
+    color: var(--accent-texto);
 }
 
 .expediente-next-action.warning {
@@ -212,7 +212,7 @@
 
 /* --- Tabla de Líneas de Venta Estructuradas --- */
 .lineas-venta-card {
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--slate-200, var(--gray-200));
     border-radius: var(--r-lg);
     padding: 1.25rem;

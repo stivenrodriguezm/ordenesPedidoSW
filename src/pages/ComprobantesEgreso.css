@@ -550,7 +550,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid transparent;
-  border-top-color: var(--accent);
+  border-top-color: var(--accent-borde);
   /* Dark Blue */
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -611,7 +611,7 @@
   align-items: center;
   gap: 0.3rem;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -795,7 +795,7 @@
 
 .lottus-toggle-btn.active {
   background: var(--surface);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
@@ -1109,7 +1109,7 @@
   padding: 0.25rem 0.55rem;
   border-radius: var(--r-sm);
   border: 1px solid var(--gray-300);
-  background: #ffffff;
+  background: var(--surface);
   color: var(--gray-700);
   cursor: pointer;
   white-space: nowrap;
@@ -1125,7 +1125,7 @@
 .lottus-factura-items-summary {
   padding: 0.65rem 0.85rem;
   border-top: 1px dashed var(--accent-line);
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .lottus-items-summary-header {
@@ -1188,7 +1188,7 @@
 
 .action-btn:hover {
   background: var(--gray-200);
-  color: var(--accent);
+  color: var(--accent-texto);
 }
 
 .ce-row-expanded {
@@ -1238,7 +1238,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--accent);
+  color: var(--accent-texto);
   margin: 0 0 0.75rem;
 }
 
@@ -1379,7 +1379,7 @@
 .ce-producto-cant {
   display: inline-block;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-weight: 800;
   font-size: 0.68rem;
   padding: 0.05rem 0.35rem;
@@ -1415,7 +1415,7 @@
 .ce-mobile-expand-btn {
   background: transparent;
   border: 1px solid var(--gray-200);
-  color: var(--accent);
+  color: var(--accent-texto);
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   font-size: 0.68rem;

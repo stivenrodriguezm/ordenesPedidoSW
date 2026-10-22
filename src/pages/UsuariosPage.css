@@ -85,7 +85,7 @@
 
 .role-btn.active {
   background-color: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   border-left-color: var(--gold);
 }
 
@@ -226,7 +226,7 @@ input:disabled + .slider {
 
 .role-highlight {
   background-color: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   padding: 0.2rem 0.5rem;
   border-radius: var(--r-sm);
   font-weight: 700;

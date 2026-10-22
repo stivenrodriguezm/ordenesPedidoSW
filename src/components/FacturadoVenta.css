@@ -1,0 +1,8 @@
+/* Marca de venta facturada (columna «Facturado» en Ventas). */
+.fv-marca { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 84px; height: 26px; padding: 0 10px; border: 1px dashed var(--border-strong); border-radius: 999px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s, color .15s; }
+.fv-marca:hover:not(:disabled) { border-style: solid; border-color: var(--accent-borde); color: var(--accent-texto); background: var(--accent-soft); }
+.fv-marca.is-facturada { border: 1px solid var(--success-line); background: var(--success-soft); color: var(--success); }
+.fv-marca.is-facturada:hover:not(:disabled) { border-color: var(--success); color: var(--success); background: var(--success-soft); }
+.fv-marca svg { font-size: 10px; }
+.fv-marca:disabled { opacity: .5; cursor: default; }
+.fv-marca:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 1px; }

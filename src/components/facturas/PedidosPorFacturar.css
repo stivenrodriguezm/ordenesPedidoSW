@@ -1,27 +1,27 @@
 /* Pedidos pendientes del proveedor dentro de Nueva factura (2026-10-15). */
-.pf-pedidos { margin-bottom: 16px; border: 1px solid var(--gold-light, #c8b58f); border-radius: var(--r-md, 8px); background: #fbf8f0; overflow: hidden; }
-.pf-pedidos__cabeza { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #ece3cd; }
-.pf-pedidos__icono { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: #171815; color: #d9c69f; }
+.pf-pedidos { margin-bottom: 16px; border: 1px solid var(--gold-light, var(--gold-light)); border-radius: var(--r-md, 8px); background: var(--surface-muted); overflow: hidden; }
+.pf-pedidos__cabeza { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.pf-pedidos__icono { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: var(--accent); color: #d9c69f; }
 .pf-pedidos__cabeza > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.pf-pedidos__cabeza strong { font-size: 0.9rem; color: var(--text, #29281f); }
-.pf-pedidos__cabeza small { font-size: 0.76rem; line-height: 1.45; color: var(--text-secondary, #686051); }
-.pf-pedidos__todos { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary, #686051); cursor: pointer; }
+.pf-pedidos__cabeza strong { font-size: 0.9rem; color: var(--text, var(--text)); }
+.pf-pedidos__cabeza small { font-size: 0.76rem; line-height: 1.45; color: var(--text-secondary, var(--text-secondary)); }
+.pf-pedidos__todos { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary, var(--text-secondary)); cursor: pointer; }
 .pf-pedidos__lista { list-style: none; margin: 0; padding: 6px; max-height: 340px; overflow-y: auto; }
 .pf-pedidos__lista label { display: grid; grid-template-columns: auto 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; cursor: pointer; }
-.pf-pedidos__lista label:hover, .pf-pedidos__lista label.is-elegido { background: #f2ead7; }
+.pf-pedidos__lista label:hover, .pf-pedidos__lista label.is-elegido { background: var(--gold-soft); }
 .pf-pedidos__lista input, .pf-pedidos__todos input { width: 16px; height: 16px; accent-color: #171815; }
-.pf-pedidos__cant { font-weight: 700; font-size: 0.85rem; color: var(--text, #29281f); font-variant-numeric: tabular-nums; }
+.pf-pedidos__cant { font-weight: 700; font-size: 0.85rem; color: var(--text, var(--text)); font-variant-numeric: tabular-nums; }
 .pf-pedidos__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pf-pedidos__texto strong { font-size: 0.84rem; color: var(--text, #29281f); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pf-pedidos__texto small { font-size: 0.72rem; color: var(--text-secondary, #686051); overflow-wrap: anywhere; }
-.pf-pedidos__costo { display: flex; flex-direction: column; align-items: flex-end; font-weight: 700; font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--text, #29281f); white-space: nowrap; }
+.pf-pedidos__texto strong { font-size: 0.84rem; color: var(--text, var(--text)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-pedidos__texto small { font-size: 0.72rem; color: var(--text-secondary, var(--text-secondary)); overflow-wrap: anywhere; }
+.pf-pedidos__costo { display: flex; flex-direction: column; align-items: flex-end; font-weight: 700; font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--text, var(--text)); white-space: nowrap; }
 .pf-pedidos__costo small { font-weight: 500; font-size: 0.66rem; color: var(--text-muted, #9b9383); }
-.pf-pedidos__pie { display: flex; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid #ece3cd; }
-.pf-pedidos__agregar { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: #171815; color: #fff; font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.pf-pedidos__pie { display: flex; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid var(--border); }
+.pf-pedidos__agregar { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
 .pf-pedidos__agregar:disabled { opacity: 0.45; cursor: default; }
-.pf-pedidos__vacio { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary, #686051); }
-.nf-sugerido { display: block; margin-top: 4px; font-size: 0.7rem; line-height: 1.4; color: #7a5a14; }
-.nf-sugerido.is-cambiado { color: var(--text-secondary, #686051); }
+.pf-pedidos__vacio { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary, var(--text-secondary)); }
+.nf-sugerido { display: block; margin-top: 4px; font-size: 0.7rem; line-height: 1.4; color: var(--warning); }
+.nf-sugerido.is-cambiado { color: var(--text-secondary, var(--text-secondary)); }
 
 @media (max-width: 640px) {
   .pf-pedidos__lista label { grid-template-columns: auto 28px minmax(0, 1fr); }

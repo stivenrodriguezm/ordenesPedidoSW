@@ -107,7 +107,7 @@
 
 .badge-blue { background: var(--accent-soft); color: var(--info); }
 .badge-purple { background: #f3e8ff; color: #9333ea; }
-.badge-indigo { background: var(--accent-soft); color: var(--accent); }
+.badge-indigo { background: var(--accent-soft); color: var(--accent-texto); }
 .badge-locked { background: var(--warning-soft); color: var(--warning); }
 
 /* --- Estado de carga (modo edición) --- */
@@ -301,7 +301,7 @@
 }
 
 .nf-chip-icon {
-    color: var(--accent);
+    color: var(--accent-texto);
     font-size: 0.75rem;
 }
 
@@ -309,7 +309,7 @@
     border: none;
     background: transparent;
     font-weight: 700;
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     outline: none;
     font-size: 0.78rem;
     width: 100px;
@@ -389,7 +389,7 @@
 /* --- Referencias / Items Section --- */
 .nf-btn-add-ref {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
     border: 1px solid var(--accent-line);
     padding: 0.35rem 0.75rem;
     border-radius: var(--r-sm);
@@ -570,7 +570,7 @@
 
 .nf-tc-add-btn {
     background: var(--info-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
     border: 1px solid var(--info-line);
     padding: 0.2rem 0.5rem;
     border-radius: 5px;
@@ -626,7 +626,7 @@
     outline: none;
 }
 
-.nf-tc-tela { background: var(--info-soft); color: var(--accent-hover); }
+.nf-tc-tela { background: var(--info-soft); color: var(--accent-texto-hover); }
 .nf-tc-cuero { background: var(--warning-soft); color: var(--warning); }
 
 .nf-tc-input {

@@ -24,6 +24,7 @@ const NuevaVenta = lazy(() => import("./pages/NuevaVenta"));
 const Caja = lazy(() => import("./pages/Caja"));
 const RecibosCaja = lazy(() => import("./pages/RecibosCaja"));
 const ComprobantesEgreso = lazy(() => import("./pages/ComprobantesEgreso"));
+const PagosBancariosPage = lazy(() => import("./pages/pagos/PagosBancariosPage"));
 const NominaPage = lazy(() => import("./pages/NominaPage"));
 const NuevaComprobanteEgresoPage = lazy(() => import("./pages/NuevaComprobanteEgresoPage"));
 const EditarComprobanteEgresoPage = lazy(() => import("./pages/EditarComprobanteEgresoPage"));
@@ -152,6 +153,7 @@ function App() {
                   <Route path="/caja" element={<PrivateRoute feature="ACCESO_CAJA"><Caja /></PrivateRoute>} />
                   <Route path="/recibos-caja" element={<PrivateRoute feature="ACCESO_RECIBOS"><RecibosCaja /></PrivateRoute>} />
                   <Route path="/comprobantes-egreso" element={<PrivateRoute feature="ACCESO_EGRESOS"><ComprobantesEgreso /></PrivateRoute>} />
+                  <Route path="/comprobantes-egreso/pagos" element={<PrivateRoute><PagosBancariosPage /></PrivateRoute>} />
                   <Route path="/comprobantes-egreso/nuevo" element={<PrivateRoute feature="CREAR_COMPROBANTE_EGRESO"><NuevaComprobanteEgresoPage /></PrivateRoute>} />
                   <Route path="/comprobantes-egreso/:id/editar" element={<PrivateRoute feature="EDITAR_COMPROBANTE_EGRESO"><EditarComprobanteEgresoPage /></PrivateRoute>} />
                   <Route path="/nomina" element={<PrivateRoute feature="VER_NOMINA"><NominaPage /></PrivateRoute>} />

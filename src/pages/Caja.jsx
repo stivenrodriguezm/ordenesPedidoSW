@@ -92,7 +92,7 @@ const CreateCajaModal = ({ isOpen, onClose, onSave, saldoActual, isLoading }) =>
     >
       <p className="caja-form-subtitle ds-muted">Registra un egreso o ingreso directo en caja general.</p>
       {formState.tipo === 'egreso' && isExcedingBalance && (
-        <div style={{ background: '#f9ece7', border: '1px solid #e8c3b8', color: '#a8432f', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ background: 'var(--danger-soft)', border: '1px solid #e8c3b8', color: 'var(--danger)', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span>⚠️</span>
           <span>Saldo insuficiente en caja. Saldo disponible en efectivo: {formatCOP(saldoActual || 0)}.</span>
         </div>

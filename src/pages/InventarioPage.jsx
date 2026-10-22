@@ -1395,7 +1395,7 @@ function InventarioPage() {
                         {showFiltersMenu && (
                             <div className="inv-filters-dropdown ds-fade-in" style={{ 
                                 position: 'absolute', top: 'calc(100% + 0.5rem)', left: 0, zIndex: 100, 
-                                background: '#fff', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', 
+                                background: 'var(--surface)', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', 
                                 border: '1px solid var(--gray-200)', padding: '1.25rem', width: 'max-content', maxWidth: '85vw'
                             }}>
                                 <div className="inv-filters-grid" style={{
@@ -1604,8 +1604,8 @@ function InventarioPage() {
                                     </div>
 
                                     {/* CREAR GRUPO RAPIDO */}
-                                    <div className="inv-section" style={{ flex: '2 1 500px', background: '#eaeff1', borderColor: '#c9d5dc', padding: '0.75rem 1rem' }}>
-                                        <div className="inv-section-title" style={{ color: '#4f6a7f', marginBottom: '0.4rem', fontSize: '0.65rem' }}>Crear Nuevo Grupo (Opcional)</div>
+                                    <div className="inv-section" style={{ flex: '2 1 500px', background: 'var(--info-soft)', borderColor: 'var(--info-line)', padding: '0.75rem 1rem' }}>
+                                        <div className="inv-section-title" style={{ color: 'var(--info)', marginBottom: '0.4rem', fontSize: '0.65rem' }}>Crear Nuevo Grupo (Opcional)</div>
                                         <div className="ifg-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end', gap: '0.5rem' }}>
                                             <div className="ifg-group">
                                                 <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Nombre</label>
@@ -1636,7 +1636,7 @@ function InventarioPage() {
                                 <div className="inv-section" style={{ padding: '0', background: 'transparent', border: 'none' }}>
                                     <div className="fct-section-label" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gray-400)' }}>Referencias que Ingresan</span>
-                                        <button type="button" onClick={handleAddRow} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: 'white', border: '1px solid var(--gray-200)', borderRadius: '6px', color: 'var(--gray-900)', cursor: 'pointer', fontWeight: 600 }}>
+                                        <button type="button" onClick={handleAddRow} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: 'var(--surface)', border: '1px solid var(--gray-200)', borderRadius: '6px', color: 'var(--gray-900)', cursor: 'pointer', fontWeight: 600 }}>
                                             <FaPlus /> Añadir Fila
                                         </button>
                                     </div>
@@ -1653,7 +1653,7 @@ function InventarioPage() {
                                         const noRefsMsg = !form.proveedorId ? 'Elige proveedor' : providerRefs.length === 0 ? 'Sin referencias' : filteredRefs.length === 0 ? 'Sin resultados' : 'Seleccione...';
 
                                         return (
-                                            <div key={index} className="fct-ref-row" style={{ position: 'relative', background: 'white', borderRadius: '8px', padding: '1rem', border: '1px solid var(--gray-200)', marginBottom: '1rem', opacity: row.visible ? 1 : 0, transition: 'opacity 0.3s' }}>
+                                            <div key={index} className="fct-ref-row" style={{ position: 'relative', background: 'var(--surface)', borderRadius: '8px', padding: '1rem', border: '1px solid var(--gray-200)', marginBottom: '1rem', opacity: row.visible ? 1 : 0, transition: 'opacity 0.3s' }}>
                                                 {form.productos.length > 1 && (
                                                     <button type="button" className="fct-trash-btn" onClick={() => removeRefRow(index)} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', zIndex: 10 }}>
                                                         <FaTrashAlt />
@@ -1772,7 +1772,7 @@ function InventarioPage() {
                                                                     prods[index] = { ...prods[index], telas_cueros: [...tcs, { tipo: 'tela', referencia: '', color: '', costo_unidad: '', cantidad: '' }] };
                                                                     return { ...prev, productos: prods };
                                                                 })}
-                                                                style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                                                style={{ background: 'var(--info-soft)', color: 'var(--info)', border: '1px solid var(--info-line)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
                                                             >
                                                                 <FaPlus style={{ fontSize: '0.6rem' }} /> Agregar
                                                             </button>
@@ -1786,7 +1786,7 @@ function InventarioPage() {
                                                                     const unitLabel = isCuero ? 'dm' : 'm';
                                                                     const tcSub = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
                                                                     return (
-                                                                        <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#fff', padding: '0.3rem', borderRadius: '5px', border: '1px solid var(--gray-300)' }}>
+                                                                        <div key={tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--surface)', padding: '0.3rem', borderRadius: '5px', border: '1px solid var(--gray-300)' }}>
                                                                             <select value={tc.tipo || 'tela'}
                                                                                 onChange={e => setForm(prev => { const prods = [...prev.productos]; const tcs = [...(prods[index].telas_cueros || [])]; tcs[tcIdx] = { ...tcs[tcIdx], tipo: e.target.value }; prods[index] = { ...prods[index], telas_cueros: tcs }; return { ...prev, productos: prods }; })}
                                                                                 style={{ padding: '0.25rem', fontSize: '0.72rem', borderRadius: '4px', border: '1px solid var(--gray-300)', fontWeight: 700, color: isCuero ? '#a8732b' : '#4f6a7f', background: isCuero ? '#f8f0e0' : '#eaeff1', flexShrink: 0 }}>
@@ -2203,7 +2203,7 @@ function InventarioPage() {
                                 </div>{/* end ifg-grid */}
 
                                 {itemEditModal.form.grupoId && (
-                                    <div style={{ marginTop: '0.8rem', padding: '0.6rem', background: '#f8f0e0', borderRadius: '6px', border: '1px solid #e9d3a9' }}>
+                                    <div style={{ marginTop: '0.8rem', padding: '0.6rem', background: 'var(--warning-soft)', borderRadius: '6px', border: '1px solid var(--warning-line)' }}>
                                         <small style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', lineHeight: '1.2' }}>
                                             <span style={{ fontSize: '1rem' }}>⚠️</span> 
                                             Al pertenecer a un grupo, este ítem hereda su categoría y venta automáticamente. Para cambiarlas, debes removerlo del grupo o editar el grupo entero.
@@ -2214,7 +2214,7 @@ function InventarioPage() {
                                     {/* ── TELAS Y CUEROS ─────────────────────────────────── */}
                                     <div style={{ marginTop: '1rem', borderTop: '1px solid var(--gray-200)', paddingTop: '0.8rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.3rem' }}>
-                                            <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#4f6a7f', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                            <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--info)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                                 🧵 Telas y Cueros (Costos Adicionales)
                                                 <span style={{ fontSize: '0.65rem', fontWeight: '400', textTransform: 'none', color: 'var(--gray-500)', fontStyle: 'italic' }}>
                                                     — Usar punto (.) para decimales, ej: 2.5
@@ -2223,7 +2223,7 @@ function InventarioPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, telas_cueros: [...(prev.form.telas_cueros || []), { tipo: 'tela', referencia: '', color: '', unidad_medida: 'metro', costo_unidad: '', cantidad: '' }] } }))}
-                                                style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                style={{ background: 'var(--info-soft)', color: 'var(--info)', border: '1px solid var(--info-line)', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                                             >
                                                 <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
                                             </button>
@@ -2329,9 +2329,9 @@ function InventarioPage() {
                                     </div>
                                     {/* Resumen costo total */}
                                     {(parseFloat(itemEditModal.form?.costo || 0) > 0 || costosList.length > 0) && (
-                                        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: '#edf3e9', borderRadius: '6px', border: '1px solid #c9dbc2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.72rem', color: '#4c7a4f', fontWeight: '600' }}>Costo Total Real:</span>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#4c7a4f' }}>
+                                        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: 'var(--success-soft)', borderRadius: '6px', border: '1px solid var(--success-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--success)', fontWeight: '600' }}>Costo Total Real:</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--success)' }}>
                                                 {formatCOP((parseFloat(itemEditModal.form?.costo || 0)) + costosList.reduce((s, c) => s + parseFloat(c.valor), 0))}
                                             </span>
                                         </div>
@@ -2366,7 +2366,7 @@ function InventarioPage() {
                     <div className="inv-modal inv-modal-visible" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }} ref={qrRef} role="dialog" aria-modal="true" aria-label="Código QR" tabIndex={-1}>
                         <h3 style={{ marginBottom: '1.5rem', color: 'var(--gray-800)', fontWeight: 800, fontSize: '1.5rem' }}>Código QR</h3>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                            <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                             <QRCodeSVG
                                 id="qr-code-svg"
                                 value={qrModal.item.qr_uuid || `item-${qrModal.item.id}`}

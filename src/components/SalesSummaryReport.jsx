@@ -290,7 +290,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {
                     label: 'Total Vendido',
                     data: top5Vendors.map(v => v.total),
-                    backgroundColor: '#171815',
+                    backgroundColor: 'var(--accent)',
                     borderRadius: 4,
                 }
             ]
@@ -393,7 +393,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {/* Ventas Mes Hero Pill */}
                 <div className="compact-hero-card">
                     <div className="c-hero-header">
-                        <div className="c-badge"><FaFireAlt style={{ color: '#a8732b', fontSize: '0.75rem' }} /> VENTAS DEL MES</div>
+                        <div className="c-badge"><FaFireAlt style={{ color: 'var(--warning)', fontSize: '0.75rem' }} /> VENTAS DEL MES</div>
                         <span className="c-cycle-tag">Ciclo: {kpis.cycleInfo.startDateStr} - {kpis.cycleInfo.endDateStr} ({kpis.cycleInfo.pctCycle}%)</span>
                     </div>
                     <div className="c-hero-body">
@@ -428,7 +428,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 <div className="compact-sede-card indigo">
                     <div className="c-sede-header">
                         <div className="c-sede-title">
-                            <FaStore style={{ color: '#171815' }} />
+                            <FaStore style={{ color: 'var(--text)' }} />
                             <span>Lottus 2</span>
                         </div>
                         <span className="c-pct-pill indigo">{kpis.pctSede2}%</span>
@@ -445,7 +445,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                     <div className="compact-sede-card amber">
                         <div className="c-sede-header">
                             <div className="c-sede-title">
-                                <FaHome style={{ color: '#a8732b' }} />
+                                <FaHome style={{ color: 'var(--warning)' }} />
                                 <span>Feria del Hogar</span>
                             </div>
                             <span className="c-pct-pill amber">{kpis.pctFeria}%</span>
@@ -559,7 +559,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 <div className="compact-vendor-section">
                     <div className="c-vendor-header">
                         <div className="c-vtitle">
-                            <FaTrophy style={{ color: '#a8732b' }} />
+                            <FaTrophy style={{ color: 'var(--warning)' }} />
                             <span>Desempeño de Vendedores</span>
                         </div>
                         <span className="c-vsub">Venta real ($ COP), pedidos y proyección</span>

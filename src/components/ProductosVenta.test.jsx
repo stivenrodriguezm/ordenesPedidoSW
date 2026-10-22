@@ -2,6 +2,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import API from '../services/api';
 import ProductosVenta from './ProductosVenta';
 
@@ -22,7 +23,8 @@ const GRUPOS = [{ id: 7, nombre: 'Grupo 1', tipo: 'tela', precio_por_metro: '200
 const gestion = { estado: 'atrasada', pendientes: ['Producto 1 (Producto especial): falta pedirlo al proveedor (1 u.).'], finalizada_en: null, finalizada_por: null };
 const base = { gestion, venta: 12, revision: 4, vendedor_nombre: 'Ana', fecha_entrega: '2099-01-15', es_feria_hogar: false, confirmados: true, valor_total: '900', valor_lista: '1000', pedidos_sin_vincular: [], lineas: [linea] };
 const todos = () => true;
-const montar = (perms = todos) => render(<MemoryRouter><ProductosVenta ventaId={12} hasPermission={perms} /></MemoryRouter>);
+const conConsultas = ui => <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>;
+const montar = (perms = todos) => render(conConsultas(<MemoryRouter><ProductosVenta ventaId={12} hasPermission={perms} /></MemoryRouter>));
 
 beforeEach(() => {
     vi.resetAllMocks();
@@ -45,6 +47,51 @@ async function editar() {
 const guardados = () => API.post.mock.calls.filter(([url]) => url === '/ventas/12/productos/');
 
 describe('Productos de la venta (en la misma vista)', () => {
+    it('selecciona la subcategoría exacta con su referencia y proveedor, sin elegir una referencia genérica', async () => {
+        const producto = { id: 901, nombre: 'Valencia · Silla de comedor', subcategoria: 71, subcategoria_nombre: 'Silla de comedor',
+            referencia: 81, referencia_nombre: 'Valencia', proveedor_nombre: 'Sillas Sur', categoria: 'Comedor', tela: false,
+            catalogo_actual: true, seleccionable: true, estado_precio: 'publicado', referencias: [{ id: 81, nombre: 'Valencia · Silla de comedor · Sillas Sur' }], opcionales: [] };
+        API.get.mockImplementation(async url => url === '/productos-venta/catalogo/'
+            ? { data: { results: [producto], count: 1, grupos: GRUPOS } }
+            : url === '/proveedores-telas/' ? { data: { results: [] } } : { data: { ...structuredClone(base), lineas: [] } });
+        montar();
+        fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
+        fireEvent.click(await screen.findByRole('button', { name: /Valencia · Silla de comedor/ }));
+        const tarjeta = await screen.findByRole('article', { name: 'Producto 1' });
+        expect(await within(tarjeta).findByText('Valencia · Silla de comedor · Sillas Sur')).toBeInTheDocument();
+        expect(within(tarjeta).queryByRole('button', { name: 'Cambiar', exact: true })).not.toBeInTheDocument();
+        fireEvent.click(within(tarjeta).getByLabelText('No aplica'));
+        await waitFor(() => expect(API.post.mock.calls.some(([url]) => url.endsWith('/calcular/'))).toBe(true));
+        fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
+        await waitFor(() => expect(guardados()).toHaveLength(1));
+        expect(guardados()[0][1].lineas[0]).toMatchObject({ variante: 901, referencia: 81, producto_nombre: 'Valencia' });
+    });
+
+    it('permite encontrar subcategorías después de los primeros 40 resultados', async () => {
+        API.get.mockImplementation(async (url, config) => {
+            if (url === '/productos-venta/catalogo/') {
+                const segunda = config?.params?.page === 2;
+                return { data: { results: [{ id: segunda ? 902 : 901, nombre: segunda ? 'Valencia · Comedor de 6p.' : 'Valencia · Mesa', activo: true }], count: 2, grupos: [] } };
+            }
+            return { data: { ...structuredClone(base), lineas: [] } };
+        });
+        montar();
+        fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Ver más subcategorías' }));
+        expect(await screen.findByRole('button', { name: 'Valencia · Comedor de 6p.' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Valencia · Mesa' })).toBeInTheDocument();
+    });
+
+    it('identifica los borradores y evita seleccionarlos como productos listos para vender', async () => {
+        API.get.mockImplementation(async url => url === '/productos-venta/catalogo/' ? { data: { results: [{ id: 901, nombre: 'Valencia · Silla', activo: false, seleccionable: false, estado_precio: 'borrador' }], grupos: [] } }
+            : { data: { ...structuredClone(base), lineas: [] } });
+        montar();
+        fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
+        const opcion = await screen.findByRole('button', { name: /Valencia · Silla/ });
+        expect(opcion).toBeDisabled();
+        expect(opcion).toHaveTextContent('Borrador · pendiente de publicar');
+        expect(screen.queryByRole('article', { name: 'Producto 1' })).not.toBeInTheDocument();
+    });
     it('muestra los productos, sus textos y el descuento calculado con el precio de lista', async () => {
         montar();
         expect(await screen.findByText('Producto especial')).toBeInTheDocument();
@@ -224,7 +271,7 @@ describe('Productos de la venta (en la misma vista)', () => {
         API.get.mockResolvedValue({ data: { ...base, gestion: { ...gestion, estado: 'pendiente', pendientes: [] } } });
         API.post.mockResolvedValue({ data: { ...base, gestion: { estado: 'finalizada', pendientes: [], finalizada_en: '2026-10-08T15:00:00Z', finalizada_por: 'Ana' } } });
         const onActualizada = vi.fn();
-        render(<MemoryRouter><ProductosVenta ventaId={12} hasPermission={todos} onActualizada={onActualizada} /></MemoryRouter>);
+        render(conConsultas(<MemoryRouter><ProductosVenta ventaId={12} hasPermission={todos} onActualizada={onActualizada} /></MemoryRouter>));
         fireEvent.click(await screen.findByRole('button', { name: 'Finalizar gestión' }));
         await screen.findByText(/Gestión finalizada/);
         expect(API.post).toHaveBeenCalledWith('/ventas/12/gestion/', { revision: 4, accion: 'finalizar' });

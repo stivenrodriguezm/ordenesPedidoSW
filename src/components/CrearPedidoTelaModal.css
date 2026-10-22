@@ -66,7 +66,7 @@
 .pt-modal-icon {
     font-size: 0.9rem;
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
     width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
     border-radius: var(--r-sm);
@@ -126,7 +126,7 @@
     align-items: center;
     gap: 0.3rem;
 }
-.pt-form-group label svg { color: var(--accent); font-size: 0.75rem; }
+.pt-form-group label svg { color: var(--accent-texto); font-size: 0.75rem; }
 
 .pt-select-wrapper select,
 .pt-form-group input,
@@ -147,7 +147,7 @@
 .pt-form-group input:focus,
 .pt-form-group textarea:focus {
     background: var(--surface);
-    border-color: var(--accent);
+    border-color: var(--accent-borde);
     outline: none;
     box-shadow: 0 0 0 2px rgba(164, 141, 102, 0.15);
 }
@@ -155,11 +155,11 @@
 .pt-link-btn {
     align-self: flex-start;
     background: none; border: none; padding: 0;
-    color: var(--accent); font-size: 0.75rem; font-weight: 600;
+    color: var(--accent-texto); font-size: 0.75rem; font-weight: 600;
     cursor: pointer; margin-top: 0.15rem;
     transition: color 0.15s;
 }
-.pt-link-btn:hover { color: var(--accent-hover); text-decoration: underline; }
+.pt-link-btn:hover { color: var(--accent-texto-hover); text-decoration: underline; }
 
 /* Section Box & Material Toggle */
 .pt-section-box {
@@ -210,7 +210,7 @@
 
 .pt-toggle-btn.active {
     background: var(--surface);
-    color: var(--accent);
+    color: var(--accent-texto);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -262,7 +262,7 @@
 }
 
 .pt-detalle-row input:focus { 
-    border-color: var(--accent); 
+    border-color: var(--accent-borde); 
     outline: none; 
     box-shadow: 0 0 0 2px rgba(164, 141, 102, 0.15); 
 }
@@ -300,7 +300,7 @@
 .pt-btn-add {
     background: var(--gray-50); 
     border: none; 
-    color: var(--accent);
+    color: var(--accent-texto);
     font-size: 0.75rem; 
     font-weight: 600; 
     cursor: pointer;
@@ -313,7 +313,7 @@
     border-top: 1px dashed var(--gray-300);
     transition: all 0.15s;
 }
-.pt-btn-add:hover { background: var(--accent-soft); color: var(--accent-hover); }
+.pt-btn-add:hover { background: var(--accent-soft); color: var(--accent-texto-hover); }
 
 /* Sticky Footer */
 .pt-modal-footer {
@@ -359,7 +359,7 @@
     padding: 0.6rem 0.75rem; background: var(--surface); border: 1px solid var(--gray-300); 
     border-radius: var(--r-sm); transition: all 0.15s; cursor: pointer;
 }
-.pt-direccion-item:hover { border-color: var(--accent); background: var(--gray-50); }
+.pt-direccion-item:hover { border-color: var(--accent-borde); background: var(--gray-50); }
 .pt-direccion-item div { display: flex; flex-direction: column; gap: 0.15rem; }
 .pt-direccion-item strong { color: var(--gray-900); font-size: 0.85rem; font-weight: 600; }
 .pt-direccion-item span { color: var(--gray-500); font-size: 0.75rem; }

@@ -3,7 +3,7 @@
 .cq .cq-sub { display: block; color: var(--text-muted, var(--gray-500)); font-size: 0.75rem; }
 .cq .cq-barra { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; margin-bottom: 1rem; }
 .cq .cq-buscar { display: flex; align-items: center; gap: 0.5rem; height: 38px; min-width: 260px; padding: 0 0.75rem; border: 1px solid var(--border-strong, var(--gray-300)); border-radius: var(--r-md, 8px); background: var(--surface); color: var(--text-muted, var(--gray-500)); }
-.cq .cq-buscar:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring, rgba(164, 141, 102, 0.2)); }
+.cq .cq-buscar:focus-within { border-color: var(--accent-borde); box-shadow: 0 0 0 3px var(--accent-ring, rgba(164, 141, 102, 0.2)); }
 .cq .cq-buscar input { border: none; outline: none; background: transparent; width: 100%; font-size: var(--fs-base, 0.9rem); color: var(--text); }
 .cq .cq-ok, .cq-ok { display: flex; align-items: center; gap: 0.5rem; color: var(--success); font-weight: 500; }
 .cq .cq-vacio { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 2.5rem 1rem; border: 1px dashed var(--border-strong, var(--gray-300)); border-radius: var(--r-lg); color: var(--success); background: var(--surface); }
@@ -15,7 +15,7 @@
 .cq .cq-grupo { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm, 0 1px 2px rgba(23, 24, 21, 0.05)); overflow: hidden; }
 .cq .cq-grupo__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--gray-50); border-bottom: 1px solid var(--border); }
 .cq .cq-grupo__motivos { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.cq-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; background: var(--accent-soft); color: var(--accent); margin-left: 0.4rem; }
+.cq-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; background: var(--accent-soft); color: var(--accent-texto); margin-left: 0.4rem; }
 .cq .cq-grupo__motivos .cq-chip { margin-left: 0; }
 .cq-chip--aviso { background: var(--warning-soft); color: var(--warning); }
 .cq .cq-grupo__fichas { list-style: none; margin: 0; padding: 0.25rem 0; }

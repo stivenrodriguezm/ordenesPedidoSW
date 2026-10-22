@@ -560,7 +560,7 @@
   align-items: center;
   gap: 0.3rem;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -749,7 +749,7 @@
 .lottus-payment-btn.active {
   background: var(--accent-soft);
   border-color: var(--info);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(164, 141, 102, 0.1);
 }
@@ -1056,7 +1056,7 @@
 .rc-confirm-val.amount {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-texto);
 }
 
 .rc-confirm-val.method {

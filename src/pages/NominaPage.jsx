@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FaCog, FaFileExcel, FaMoneyCheckAlt, FaPlus } from 'react-icons/fa';
 import { usePermissions } from '../AppContext';
@@ -50,6 +50,7 @@ const estadoGeneral = (c) => (c.estado === 'cerrado' ? ['Cerrado', 'success'] : 
 
 // Nómina de asesores (D12a): reemplaza a Comisiones.
 export default function NominaPage() {
+    const navigate = useNavigate();
     const hasPermission = usePermissions();
     const puede = hasPermission('GESTIONAR_NOMINA');
     const qc = useQueryClient();
@@ -102,6 +103,7 @@ export default function NominaPage() {
         <div className="nom-page">
             <PageHeader icon={FaMoneyCheckAlt} title="Nómina" subtitle="Comisiones, bonificaciones, ajustes y básico de los asesores"
                 actions={<>
+                    <Button variant="secondary" icon={FaMoneyCheckAlt} onClick={() => navigate('/comprobantes-egreso?nomina=1')}>Pagar nómina</Button>
                     <Button variant="secondary" icon={FaCog} onClick={() => setConfig(true)}>Configuración</Button>
                     {puede && <Button icon={FaPlus} onClick={() => setNuevo(true)}>Nuevo cierre</Button>}
                 </>} />

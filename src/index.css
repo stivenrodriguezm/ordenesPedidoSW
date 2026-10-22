@@ -288,9 +288,9 @@ main {
     align-items: center;
     height: calc(52px + env(safe-area-inset-top, 0px));
     padding: env(safe-area-inset-top, 0px) 6px 0;
-    background: #171815;
-    border-bottom: 1px solid rgba(200, 181, 143, 0.18);
-    box-shadow: 0 2px 12px rgba(23, 24, 21, 0.18);
+    background: var(--sidebar-header-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    box-shadow: var(--shadow-sm);
   }
   .barra-movil .mobile-menu-btn {
     display: grid;
@@ -301,7 +301,7 @@ main {
     border: none;
     border-radius: 10px;
     background: transparent;
-    color: #f2efe7;
+    color: var(--sidebar-text-hover);
     font-size: 1.15rem;
     cursor: pointer;
   }
@@ -311,7 +311,7 @@ main {
     font-family: var(--font-brand);
     font-size: 1rem;
     letter-spacing: 4px;
-    color: #fff;
+    color: var(--sidebar-brand);
     text-decoration: none;
   }
   .main-content,

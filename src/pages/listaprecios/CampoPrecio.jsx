@@ -33,7 +33,7 @@ export default function CampoPrecio({ valor, onCommit, label, tipo = 'moneda', s
     let nuevo;
     try {
       nuevo = tipo === 'moneda' ? nullable && texto === '' ? null : leerPesos(texto, permiteNegativo) : tipo === 'texto' ? texto.trim() : leerDecimal(texto, { nullable, min, max });
-      if (tipo === 'texto' && (!nuevo || nuevo.length > (max || 150))) throw new Error('Escribe un nombre de 1 a 150 caracteres.');
+      if (tipo === 'texto' && (!nuevo || nuevo.length > (max || 150))) throw new Error(`Escribe un nombre de 1 a ${max || 150} caracteres.`);
     } catch (e) { setError(e.message); setEstado('error'); return; }
     if (nuevo === (vigente.current == null ? null : tipo === 'texto' ? vigente.current : Number(vigente.current))) {
       tocado.current = false; setTexto(formato(nuevo)); setError(''); setEstado(''); return;

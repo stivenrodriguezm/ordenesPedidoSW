@@ -88,6 +88,7 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
           <span className="cer-concepto-label">Concepto:</span> {comprobante.concepto}
         </div>
       )}
+      {comprobante.cuenta_destino_snapshot?.numero && <div className="cer-concepto"><span className="cer-concepto-label">Cuenta destino:</span> {comprobante.cuenta_destino_snapshot.banco === '51' ? 'Davivienda' : comprobante.cuenta_destino_snapshot.banco === '7' ? 'Bancolombia' : `Banco ${comprobante.cuenta_destino_snapshot.banco}`} · {comprobante.cuenta_destino_snapshot.tipo} · {comprobante.cuenta_destino_snapshot.numero}<br />Titular: {comprobante.cuenta_destino_snapshot.nombres} {comprobante.cuenta_destino_snapshot.apellidos}</div>}
 
       {/* Facturas + productos */}
       {facturas.length > 0 && (

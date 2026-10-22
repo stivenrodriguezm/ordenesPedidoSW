@@ -80,7 +80,7 @@
 
 .nce-card-icon-badge.badge-blue { background: var(--accent-soft); color: var(--info); }
 .nce-card-icon-badge.badge-green { background: var(--success-soft); color: var(--success); }
-.nce-card-icon-badge.badge-indigo { background: var(--accent-soft); color: var(--accent); }
+.nce-card-icon-badge.badge-indigo { background: var(--accent-soft); color: var(--accent-texto); }
 .nce-card-icon-badge.badge-purple { background: #f3e8ff; color: #9333ea; }
 
 .nce-card-title {
@@ -346,7 +346,7 @@
 
 .nce-toggle-btn.active {
   background: var(--surface);
-  color: var(--accent);
+  color: var(--accent-texto);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -406,7 +406,7 @@
 }
 
 .nce-factura-card.selected {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   background: var(--gray-50);
   box-shadow: 0 1px 3px rgba(164, 141, 102, 0.08);
 }
@@ -510,7 +510,7 @@
   gap: 0.3rem;
   background: transparent;
   border: none;
-  color: var(--accent);
+  color: var(--accent-texto);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;

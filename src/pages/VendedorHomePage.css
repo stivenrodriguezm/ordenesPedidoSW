@@ -54,7 +54,7 @@
 }
 
 .vendedor-hero__quote svg {
-  color: var(--accent);
+  color: var(--accent-texto);
   font-size: 0.7rem;
   flex-shrink: 0;
 }
@@ -128,7 +128,7 @@
 
 .vendedor-action:hover .vendedor-action__icon {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
 }
 
 .vendedor-action--primary .vendedor-action__icon {
@@ -161,7 +161,7 @@
 }
 
 .vendedor-action:hover .vendedor-action__arrow {
-  color: var(--accent);
+  color: var(--accent-texto);
   transform: translateX(3px);
 }
 

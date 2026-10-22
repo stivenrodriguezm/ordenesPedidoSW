@@ -202,6 +202,10 @@ export const updateCargo = async (id, data) => {
   return response.data;
 };
 
+export const ordenarGruposTela = (grupos) => API.post('/listaprecios/grupos-tela/ordenar/', { grupos }).then(r => r.data);
+export const ordenarCargos = (varianteId, cargos) => API.post(`/listaprecios/variantes/${varianteId}/orden-cargos/`, { cargos }).then(r => r.data);
+export const getNombresCargos = () => API.get('/listaprecios/cargos/nombres/').then(r => r.data);
+
 export const deleteCargo = async (id) => {
   const response = await API.delete(`/listaprecios/cargos/${id}/`);
   return response.data;
@@ -287,3 +291,6 @@ export const getBibliotecaEspeciales = async () => {
 };
 
 export const sincronizarSubcategorias = (id) => API.post(`/listaprecios/lineas/${id}/sincronizar-subcategorias/`).then(r => r.data);
+
+export const guardarDisposicionSubcategorias = (referencia, datos) => API.post(`/listaprecios/referencias/${referencia}/disposicion/`, datos).then(r => r.data);
+export const renombrarSubcategoria = (subcategoria, nombre) => API.post(`/listaprecios/subcategorias/${subcategoria}/renombrar/`, { nombre }).then(r => r.data);

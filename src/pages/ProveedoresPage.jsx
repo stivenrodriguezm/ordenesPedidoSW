@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AppContext } from "../AppContext";
+import { AppContext, usePermissions } from "../AppContext";
+import CuentasBancarias from './pagos/CuentasBancarias';
 import AppNotification from '../components/AppNotification';
 import API from "../services/api";
 import "./ProveedoresPage.css";
-import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaSearch, FaTruck } from "react-icons/fa";
+import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaSearch, FaTruck, FaUniversity } from "react-icons/fa";
 import { Button, PageHeader, Modal, LoadingBlock, Skeleton } from '../components/ui';
 
 const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
@@ -76,6 +77,8 @@ const ProveedorModal = ({ isOpen, onClose, onSave, proveedor, isLoading }) => {
 };
 
 function ProveedoresPage() {
+  const permisos = usePermissions();
+  const [cuentasProveedor, setCuentasProveedor] = useState(null);
   const { proveedores, isLoadingProveedores, fetchProveedores, usuario } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProveedor, setEditingProveedor] = useState(null);
@@ -235,6 +238,7 @@ function ProveedoresPage() {
                       <td className="td-dias" data-label="Días de Pago">{proveedor.dias_pago}</td>
                       <td className="td-descuento" data-label="% Dcto.">{proveedor.porcentaje_descuento}%</td>
                       <td className="td-editar" data-label="Editar">
+                        <Button variant="ghost" size="sm" icon={FaUniversity} onClick={() => setCuentasProveedor(proveedor)} title="Cuentas bancarias" aria-label={`Cuentas de ${proveedor.nombre_empresa}`} />
                         <Button variant="ghost" size="sm" icon={FaEdit} onClick={() => handleOpenModal(proveedor)} title="Editar proveedor" />
                       </td>
                     </tr>
@@ -264,6 +268,7 @@ function ProveedoresPage() {
                   </div>
                 </div>
                 <div className="card-footer">
+                  <Button variant="ghost" size="sm" icon={FaUniversity} onClick={() => setCuentasProveedor(proveedor)}>Cuentas bancarias</Button>
                   <Button variant="ghost" size="sm" icon={FaEdit} onClick={() => handleOpenModal(proveedor)} title="Editar proveedor" />
                 </div>
               </div>
@@ -280,6 +285,7 @@ function ProveedoresPage() {
         proveedor={editingProveedor}
         isLoading={mutation.isPending}
       />
+      {cuentasProveedor && <Modal open title={`Cuentas de ${cuentasProveedor.nombre_empresa}`} size="lg" onClose={() => setCuentasProveedor(null)}><CuentasBancarias titular={{ proveedor: cuentasProveedor.id }} editable={permisos('ADMINISTRAR_PROVEEDORES') || permisos('CREAR_COMPROBANTE_EGRESO')} /></Modal>}
     </div>
   );
 }

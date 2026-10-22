@@ -47,7 +47,7 @@
 }
 
 .inv-summary-card.accent .inv-sum-value {
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
 }
 
 .inv-sum-label {
@@ -311,7 +311,7 @@
 }
 
 .inv-modal {
-    background: white;
+    background: var(--surface);
     width: 95%;
     max-width: 850px;
     height: auto;
@@ -442,14 +442,14 @@
     border: 1.5px solid var(--gray-300);
     border-radius: var(--r-sm);
     font-size: 0.85rem;
-    background: white;
+    background: var(--surface);
     color: var(--gray-700);
     outline: none;
     transition: all 0.2s;
 }
 
 .ifg-input:focus {
-    border-color: var(--accent);
+    border-color: var(--accent-borde);
     box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.1);
 }
 
@@ -470,8 +470,8 @@
 }
 
 .ifg-toggle-btn--active {
-    background: white;
-    color: var(--accent-hover);
+    background: var(--surface);
+    color: var(--accent-texto-hover);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -481,13 +481,13 @@
     align-items: center;
     border: 1.5px solid var(--gray-300);
     border-radius: var(--r-sm);
-    background: white;
+    background: var(--surface);
     overflow: hidden;
     transition: all 0.2s;
 }
 
 .ifg-input-prefix:focus-within {
-    border-color: var(--accent);
+    border-color: var(--accent-borde);
     box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.1);
 }
 
@@ -516,7 +516,7 @@
 /* --- New: Table Image View --- */
 .btn-view-img {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--accent-texto);
     border: none;
     width: 30px;
     height: 30px;
@@ -652,7 +652,7 @@
 .inv-group-toggle {
     background: transparent;
     border: 1px solid var(--accent-line);
-    color: var(--accent);
+    color: var(--accent-texto);
     width: 26px;
     height: 26px;
     border-radius: var(--r-sm);
@@ -667,7 +667,7 @@
 .inv-group-toggle:hover {
     background: var(--accent);
     color: white;
-    border-color: var(--accent);
+    border-color: var(--accent-borde);
 }
 
 .inv-group-toggle.active {
@@ -684,7 +684,7 @@
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.65rem;
     font-weight: 800;
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     background: var(--accent-soft);
     border: 1px solid var(--accent-line);
     border-radius: 5px;
@@ -695,13 +695,13 @@
 
 .inv-group-nombre {
     font-weight: 700;
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     font-size: 0.85rem;
 }
 
 .inv-group-nombre-small {
     font-weight: 400;
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     font-size: 0.8rem;
     white-space: nowrap;
     overflow: hidden;
@@ -731,7 +731,7 @@
 .inv-group-edit-btn {
     background: var(--accent-soft);
     border: 1px solid var(--accent-ring);
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     width: 26px;
     height: 26px;
     border-radius: var(--r-sm);
@@ -752,7 +752,7 @@
 
 /* Modal editar grupo y sus hijos */
 .inv-grupo-edit-modal {
-    background: white;
+    background: var(--surface);
     width: 95%;
     max-width: 650px;
     max-height: 90vh;
@@ -795,7 +795,7 @@
 .inv-grupo-section-label {
     font-size: 0.75rem;
     font-weight: 800;
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-bottom: 2px solid var(--accent-soft);
@@ -820,7 +820,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--gray-200);
     border-radius: var(--r-sm);
     padding: 0.4rem 0.6rem;
@@ -877,7 +877,7 @@
 
 .inv-grupo-item-add-btn {
     background: var(--accent-soft);
-    color: var(--accent-hover);
+    color: var(--accent-texto-hover);
     border: 1px solid var(--accent-ring);
     border-radius: 4px;
     width: 22px;
@@ -946,15 +946,15 @@
 }
 
 .inv-view-btn.active {
-    background: white;
-    color: var(--accent-hover);
+    background: var(--surface);
+    color: var(--accent-texto-hover);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* ── v-btn-ghost active (cost toggle) ───────────────────────────────────── */
 .v-btn-ghost--active {
     background: var(--accent-soft) !important;
-    color: var(--accent-hover) !important;
+    color: var(--accent-texto-hover) !important;
     border-color: var(--accent-ring) !important;
 }
 
@@ -971,7 +971,7 @@
 }
 
 .sort-icon--idle   { color: var(--gray-300); }
-.sort-icon--active { color: var(--accent-hover); }
+.sort-icon--active { color: var(--accent-texto-hover); }
 
 /* ── Cost column ────────────────────────────────────────────────────────── */
 .inv-costo-col {
@@ -994,7 +994,7 @@
     top: calc(100% + 8px);
     left: 0;
     width: 480px;
-    background: white;
+    background: var(--surface);
     border-radius: var(--r-lg);
     box-shadow: 0 10px 40px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.05);
     border: 1px solid var(--gray-200);
@@ -1039,14 +1039,14 @@
     color: var(--gray-700);
     outline: none;
     transition: all 0.2s;
-    background: white;
+    background: var(--surface);
     width: 100%;
     box-sizing: border-box;
 }
 
 .inv-filter-group select:focus,
 .inv-filter-group input:focus {
-    border-color: var(--accent);
+    border-color: var(--accent-borde);
     box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.1);
 }
 

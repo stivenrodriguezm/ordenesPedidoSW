@@ -750,7 +750,7 @@ export default function NuevaFacturaPage() {
     if (isEditMode && isLoadingFactura) {
         return (
             <div className="ds-page nueva-factura-page ds-fade-in">
-                {pedidoOrigen && <div role={errorPedidoOrigen ? 'alert' : 'status'} style={{ padding: '1rem', background: '#f2f1eb', marginBottom: '1rem' }}>
+                {pedidoOrigen && <div role={errorPedidoOrigen ? 'alert' : 'status'} style={{ padding: '1rem', background: 'var(--gray-100)', marginBottom: '1rem' }}>
                 {errorPedidoOrigen || (cargandoPedidoOrigen ? 'Cargando unidades pendientes…' : `Recepción de OP ${pedidoOrigen}: revisa cantidades y registra los costos reales, el número y el valor de la factura del proveedor.`)}
             </div>}
             <PageHeader
@@ -1274,39 +1274,39 @@ export default function NuevaFacturaPage() {
                                                                 {row.opId && (
                                                                     <span
                                                                         onClick={e => { e.stopPropagation(); handleRefRow(index, 'opId', ''); handleRefRow(index, 'detallePedidoId', ''); }}
-                                                                        style={{ marginRight: '6px', color: '#a3a398', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}
+                                                                        style={{ marginRight: '6px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}
                                                                         title="Quitar OP"
                                                                     >×</span>
                                                                 )}
-                                                                <FaChevronDown size={10} style={{ color: '#a3a398' }} />
+                                                                <FaChevronDown size={10} style={{ color: 'var(--text-muted)' }} />
                                                             </div>
                                                         </div>
                                                         {opOpen && (
                                                             <div style={{
                                                                 position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
-                                                                background: '#fff', border: '1px solid #e4e3dc', borderRadius: '8px',
+                                                                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px',
                                                                 marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
                                                                 display: 'flex', flexDirection: 'column'
                                                             }}>
-                                                                <div style={{ padding: '8px', borderBottom: '1px solid #e4e3dc', background: '#fff', borderRadius: '8px 8px 0 0' }}>
+                                                                <div style={{ padding: '8px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', borderRadius: '8px 8px 0 0' }}>
                                                                     <div style={{ position: 'relative' }}>
-                                                                        <FaSearch size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#a3a398' }} />
+                                                                        <FaSearch size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                                                                         <input
                                                                             type="text"
                                                                             placeholder="Buscar OP por número..."
                                                                             value={opQ}
                                                                             onChange={e => setOpSearch(index, { query: e.target.value })}
                                                                             onClick={e => e.stopPropagation()}
-                                                                            style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 1.75rem', border: '1px solid #e4e3dc', borderRadius: '5px', background: '#faf9f5', color: '#2a2a25', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                                                                            style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 1.75rem', border: '1px solid var(--border)', borderRadius: '5px', background: 'var(--surface-muted)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
                                                                             autoFocus
                                                                         />
                                                                     </div>
                                                                 </div>
                                                                 <div style={{ overflowY: 'auto', maxHeight: '200px' }}>
                                                                     {!form.proveedorId ? (
-                                                                        <div style={{ padding: '10px 12px', color: '#a3a398', fontSize: '0.85rem', textAlign: 'center' }}>Selecciona un proveedor primero</div>
+                                                                        <div style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Selecciona un proveedor primero</div>
                                                                     ) : filteredOPs.length === 0 ? (
-                                                                        <div style={{ padding: '10px 12px', color: '#a3a398', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes pendientes para este proveedor</div>
+                                                                        <div style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Sin órdenes pendientes para este proveedor</div>
                                                                     ) : filteredOPs.map(orden => (
                                                                         <div
                                                                             key={orden.id}
@@ -1320,10 +1320,10 @@ export default function NuevaFacturaPage() {
                                                                             onMouseLeave={e => { if (String(row.opId) !== String(orden.id)) e.currentTarget.style.background = 'transparent'; }}
                                                                         >
                                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                                <span style={{ fontWeight: 600, color: '#171815', fontSize: '0.85rem' }}>OP #{orden.id}</span>
-                                                                                {orden.venta && <span style={{ fontSize: '0.75rem', color: '#4c7a4f', background: '#edf3e9', padding: '1px 6px', borderRadius: '4px' }}>Venta #{orden.venta}</span>}
+                                                                                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.85rem' }}>OP #{orden.id}</span>
+                                                                                {orden.venta && <span style={{ fontSize: '0.75rem', color: 'var(--success)', background: 'var(--success-soft)', padding: '1px 6px', borderRadius: '4px' }}>Venta #{orden.venta}</span>}
                                                                             </div>
-                                                                            <div style={{ fontSize: '0.78rem', color: '#72726a', marginTop: '2px' }}>
+                                                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                                                                 {orden.estado} {orden.fecha_esperada ? `• Esperada: ${orden.fecha_esperada}` : ''}
                                                                             </div>
                                                                             {orden.observacion && (
@@ -1332,7 +1332,7 @@ export default function NuevaFacturaPage() {
                                                                                 </div>
                                                                             )}
                                                                             {orden.detalles && orden.detalles.length > 0 && (
-                                                                                <div style={{ fontSize: '0.75rem', color: '#3e3e37', marginTop: '2px' }}>
+                                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text)', marginTop: '2px' }}>
                                                                                     📦 {orden.detalles.map(d => `${d.cantidad}x ${d.referencia_nombre || ''}`).join(', ')}
                                                                                 </div>
                                                                             )}
@@ -1357,16 +1357,16 @@ export default function NuevaFacturaPage() {
                                                             style={{
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                                                 padding: '0.4rem 0.75rem',
-                                                                background: '#eaeff1', border: '1px solid #c9d5dc',
+                                                                background: 'var(--info-soft)', border: '1px solid var(--info-line)',
                                                                 borderRadius: opDetailOpen ? '7px 7px 0 0' : '7px',
-                                                                fontSize: '0.8rem', fontWeight: 600, color: '#4f6a7f',
+                                                                fontSize: '0.8rem', fontWeight: 600, color: 'var(--info)',
                                                                 cursor: 'pointer', userSelect: 'none', marginTop: '6px'
                                                             }}
                                                         >
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                 📦 Contenido OP #{selectedOp.id}
                                                                 {selectedOp.vendedor && <span style={{ fontWeight: 400, fontSize: '0.75rem' }}>• {selectedOp.vendedor}</span>}
-                                                                {selectedOp.venta && <span style={{ background: '#c9d5dc', color: '#4f6a7f', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
+                                                                {selectedOp.venta && <span style={{ background: '#c9d5dc', color: 'var(--info)', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
                                                             </span>
                                                             <span style={{ fontSize: '0.75rem' }}>{opDetailOpen ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
                                                         </div>
@@ -1374,30 +1374,30 @@ export default function NuevaFacturaPage() {
                                                         {opDetailOpen && (
                                                             <div style={{
                                                                 padding: '0.65rem 0.85rem',
-                                                                background: '#eaeff1', border: '1px solid #c9d5dc',
+                                                                background: 'var(--info-soft)', border: '1px solid var(--info-line)',
                                                                 borderTop: 'none', borderRadius: '0 0 7px 7px',
-                                                                fontSize: '0.82rem', color: '#4f6a7f'
+                                                                fontSize: '0.82rem', color: 'var(--info)'
                                                             }}>
                                                                 {selectedOp.observacion && (
-                                                                    <div style={{ marginBottom: '6px', color: '#0f766e', background: '#edf3e9', padding: '4px 8px', borderRadius: '4px', border: '1px solid #c9dbc2', fontSize: '0.8rem' }}>
+                                                                    <div style={{ marginBottom: '6px', color: '#0f766e', background: 'var(--success-soft)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--success-line)', fontSize: '0.8rem' }}>
                                                                         📝 <strong>Observación del Pedido:</strong> {selectedOp.observacion}
                                                                     </div>
                                                                 )}
                                                                 {selectedOp.detalles && selectedOp.detalles.length > 0 ? (
                                                                     <div>
-                                                                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#4f6a7f', marginBottom: '3px' }}>Productos del Pedido:</div>
+                                                                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--info)', marginBottom: '3px' }}>Productos del Pedido:</div>
                                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                                                             {selectedOp.detalles.map((d, dIdx) => (
-                                                                                <div key={dIdx} style={{ background: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #eaeff1', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
-                                                                                    <span style={{ fontWeight: 700, color: '#4f6a7f', background: '#eaeff1', padding: '1px 6px', borderRadius: '4px' }}>{d.cantidad}x</span>
-                                                                                    <span style={{ fontWeight: 600, color: '#2a2a25' }}>{d.referencia_nombre || 'Referencia'}</span>
-                                                                                    {d.especificaciones && <span style={{ color: '#72726a', fontSize: '0.78rem' }}>({d.especificaciones})</span>}
+                                                                                <div key={dIdx} style={{ background: 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: '1px solid #eaeff1', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                                                                                    <span style={{ fontWeight: 700, color: 'var(--info)', background: 'var(--info-soft)', padding: '1px 6px', borderRadius: '4px' }}>{d.cantidad}x</span>
+                                                                                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{d.referencia_nombre || 'Referencia'}</span>
+                                                                                    {d.especificaciones && <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>({d.especificaciones})</span>}
                                                                                 </div>
                                                                             ))}
                                                                         </div>
                                                                     </div>
                                                                 ) : (
-                                                                    <div style={{ color: '#72726a', fontSize: '0.78rem', fontStyle: 'italic' }}>(Sin detalles de productos en esta OP)</div>
+                                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', fontStyle: 'italic' }}>(Sin detalles de productos en esta OP)</div>
                                                                 )}
                                                             </div>
                                                         )}
@@ -1430,7 +1430,7 @@ export default function NuevaFacturaPage() {
                                                             ))}
                                                         </select>
                                                         {elegida && !row.itemIds?.length && (parseInt(row.cantidad) || 1) > pendiente && (
-                                                            <small role="alert" style={{ color: '#a8432f' }}>
+                                                            <small role="alert" style={{ color: 'var(--danger)' }}>
                                                                 Esta línea tiene {pendiente} pendiente{pendiente === 1 ? '' : 's'}: la cantidad de la fila no puede ser mayor.
                                                             </small>
                                                         )}

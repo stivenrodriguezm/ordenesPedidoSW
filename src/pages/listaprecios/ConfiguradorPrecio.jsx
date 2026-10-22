@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FaCheck, FaMinus, FaPlus, FaShoppingCart, FaTimes } from 'react-icons/fa';
+import { FaCheck, FaMinus, FaPlus, FaShoppingCart, FaStickyNote, FaTimes } from 'react-icons/fa';
 import FotoPrecio from './FotoPrecio';
 import { Modal, Button } from '../../components/ui';
 import { getPrecioVariante } from '../../services/listaPreciosService';
-import { filaDeGrupo, precioValido } from '../../utils/consultaPrecios';
+import { filaDeGrupo, precioValido, transporteDeItem } from '../../utils/consultaPrecios';
 import { mostrarPesos } from '../../utils/capturaPrecios';
 import { formatCOP } from '../../utils/formatCOP';
+import { claveSubcategoria, nombresProveedores, subcategoriasCatalogo } from './catalogoUnificado';
 
 // «Opcional habilitado»: el opcional aparece ya seleccionado (si aplica al material elegido).
 const preseleccion = (variante, grupo) => (variante?.opcionales || [])
@@ -18,12 +19,19 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
   const [varianteId, setVarianteId] = useState(primera?.id);
   const [grupoId, setGrupoId] = useState(inicial ? inicial.grupoId : primera?.precios?.[0]?.grupo ?? null);
   // Un ítem de la cotización conserva lo elegido; una consulta nueva parte de los habilitados.
-  const [opcionalesIds, setOpcionalesIds] = useState(() => (inicial?.id ? (inicial.opcionales || []).map((o) => o.id)
+  // Un id repetido es otra unidad del mismo adicional (p. ej. 2 reclinos eléctricos).
+  const [opcionalesIds, setOpcionalesIds] = useState(() => (inicial?.id ? (inicial.opcionales || []).flatMap((o) => Array(Math.max(1, Number(o.cantidad) || 1)).fill(o.id))
     : preseleccion(primera, filaDeGrupo(primera, inicial ? inicial.grupoId : primera?.precios?.[0]?.grupo ?? null)?.grupo)));
   const [cantidad, setCantidad] = useState(inicial?.cantidad || 1);
+  // Nota del vendedor para este producto (2026-10-21): viaja a la cotización y al impreso.
+  const [nota, setNota] = useState(inicial?.notaVendedor || '');
   const [fotoIdx, setFotoIdx] = useState(0);
   const [mensaje, setMensaje] = useState('');
   const variante = linea.variantes.find((v) => v.id === varianteId);
+  const subcategorias = subcategoriasCatalogo(linea.variantes);
+  const subcategoria = subcategorias.find(s => s.variantes.some(v => v.id === varianteId));
+  const proveedores = variante?.proveedores || [];
+  const proveedorNombre = nombresProveedores(proveedores) || variante?.origen?.proveedorNombre || linea.proveedor_nombre || '';
   const fila = filaDeGrupo(variante, grupoId);
   const opciones = (variante?.opcionales || []).map(op => {
     const precioGrupo = op.precios?.find(p => p.grupo === fila?.grupo);
@@ -32,6 +40,18 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
   // El precio de la tarjeta ya trae los opcionales habilitados: se recalcula si hay alguno
   // elegido o si hay habilitados (quitarlos también cambia el precio).
   const calcula = opcionalesIds.length > 0 || preseleccion(variante, fila?.grupo).length > 0;
+  // «Cojines incluidos» obligatorio viene en decorativos_incluidos; si es opcional, cuenta al elegirlo.
+  const cupoDecorativos = variante?.decorativos_incluidos || (opciones.some((o) => o.decorativos && opcionalesIds.includes(o.id)) ? 2 : 0);
+  // Mientras el vendedor no toque los adicionales, siguen a los habilitados del producto (también
+  // si el catálogo guardado en el equipo se actualiza después de abrir la consulta).
+  const [tocado, setTocado] = useState(!!inicial?.id);
+  const firmaPreseleccion = preseleccion(variante, fila?.grupo).join(',');
+  useEffect(() => {
+    if (!tocado) setOpcionalesIds(firmaPreseleccion ? firmaPreseleccion.split(',').map(Number) : []);
+  }, [firmaPreseleccion, tocado]);
+  const tieneAdicionales = !!variante?.opcionales?.length || variante?.decorativos_incluidos > 0 || !!variante?.incluidos?.length;
+  const unidadesDe = (id) => opcionalesIds.filter((x) => x === id).length;
+  const cambiarOpcionales = (fn) => { setTocado(true); setOpcionalesIds((ids) => fn(ids).sort((a, b) => a - b)); setMensaje(''); };
   const incompatibles = opcionalesIds.some(id => !opciones.some(op => op.id === id && op.disponible));
   const precio = useQuery({
     queryKey: ['lp-precio-variante', varianteId, fila?.grupo, opcionalesIds],
@@ -44,16 +64,21 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
   const error = calcula && precio.isError;
   const valor = calcula ? precio.data?.precio : fila?.precio;
   const listo = !incompatibles && !!fila && precioValido(valor) && !calculando && !error && !confirmando;
-  const fotos = linea.fotos || [];
+  const fotos = variante?.origen?.fotos || linea.fotos || [];
+  const esDecorativo = variante?.origen?.esDecorativo ?? (linea.es_decorativo || linea.slug === 'decorativos');
+  const notasLinea = variante?.origen?.notas ?? linea.notas;
   const item = {
-    lineaId: linea.id, lineaNombre: linea.nombre, referenciaId: linea.referencia, varianteId, varianteNombre: variante?.nombre,
+    lineaId: variante?.origen?.lineaId ?? linea.id, lineaNombre: linea.nombre, referenciaId: variante?.origen?.referenciaId ?? linea.referencia, varianteId, varianteNombre: variante?.nombre,
+    proveedorNombre, proveedores,
     categoriaNombre: variante?.categoria_nombre, grupoId: fila?.grupo ?? null, grupoNombre: fila?.grupo_nombre || '',
     opcionales: calcula ? precio.data?.opcionales_incluidos || [] : [],
-    notas: (variante?.notas || []).join(' · '), componentes: variante?.componentes || '',
+    notas: (variante?.notas || []).join(' · '), notaVendedor: nota.trim(), componentes: variante?.componentes || '',
     precioUnitario: listo ? Number(valor) : null, cantidad, foto: fotos[0] || null,
     // «Cojines incluidos»: cuántos decorativos cubre por unidad, o, si es un decorativo, hasta cuánto se cubre.
-    decorativosIncluidos: variante?.decorativos_incluidos || 0,
-    esDecorativo: linea.es_decorativo || linea.slug === 'decorativos', topeIncluido: fila?.tope_incluido ?? null,
+    decorativosIncluidos: cupoDecorativos,
+    esDecorativo, topeIncluido: fila?.tope_incluido ?? null,
+    // Transporte por envío: en la cotización se cobra uno por cupo de unidades o por conjunto.
+    transporte: transporteDeItem(variante, opcionalesIds),
   };
   const elegirVariante = (v) => {
     setVarianteId(v.id);
@@ -61,6 +86,8 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
     const grupo = filaDeGrupo(v, grupoId)?.grupo ?? null;
     setGrupoId(grupo);
     setOpcionalesIds(preseleccion(v, grupo));
+    setTocado(false); // otro producto: sus adicionales parten de los habilitados
+    setFotoIdx(0);
     setMensaje('');
   };
   const cambiarGrupo = (id) => { setGrupoId(id); setMensaje(''); };
@@ -72,9 +99,14 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
           <strong>{calculando ? 'Calculando…' : confirmando ? 'Confirmando precio…' : error ? 'Precio sin confirmar' : listo ? formatCOP(Number(valor) * cantidad) : 'Elige un grupo de tela'}</strong>
           {listo && cantidad > 1 && <small>{formatCOP(valor)} por unidad</small>}
         </div>
+        <label className="lp-config-nota"><FaStickyNote aria-hidden="true" />
+          <input value={nota} maxLength={200} placeholder="Nota para este producto (opcional)" aria-label="Nota del producto"
+            onChange={(e) => { setNota(e.target.value); setMensaje(''); }} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
+        </label>
         <div className="lp-config-acciones">
           <Button icon={FaShoppingCart} disabled={!listo} onClick={() => {
             onAgregar(item); setMensaje(inicial?.id ? 'Producto actualizado en la cotización.' : 'Agregado a la cotización.');
+            if (!inicial?.id) setNota(''); // la próxima combinación empieza sin nota
           }}>{inicial?.id ? 'Guardar cambio' : 'Agregar'}</Button>
         </div>
         {mensaje && <div className="lp-config-confirmacion" role="status"><FaCheck /> {mensaje}
@@ -84,7 +116,7 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
   const contenido = <>
       <div className="lp-config-resumen">
         <div className="lp-config-foto"><FotoPrecio src={fotos[fotoIdx]} alt={linea.nombre} /></div>
-        <div><span className="lp-eyebrow">{variante?.componentes ? 'Conjunto de muebles' : variante?.categoria_nombre || 'Consulta rápida'}</span>
+        <div><span className="lp-eyebrow">{variante?.categoria_nombre || 'Consulta rápida'}</span>
           <h3>{variante?.nombre || 'Sin productos'}</h3>
           <p>{fila?.grupo_nombre || (fila ? 'Precio único · no requiere tela' : 'Selecciona el grupo de tela')}</p>
           {variante?.componentes && <p className="lp-componentes"><FaCheck /> {variante.componentes}</p>}
@@ -92,50 +124,74 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
       </div>
       {fotos.length > 1 && <div className="lp-detalle-thumbs">{fotos.map((foto, i) => <button key={foto} aria-label={`Ver foto ${i + 1}`} aria-pressed={fotoIdx === i}
         className={`lp-thumb ${fotoIdx === i ? 'lp-thumb--active' : ''}`} onClick={() => setFotoIdx(i)}><img src={foto} alt="" loading="lazy" /></button>)}</div>}
-      <section className="lp-config-section" aria-label={linea.referencia ? "Subcategoría" : "Producto y medida"}>
-        <h4><span>1</span> {linea.referencia ? "Subcategoría" : "Producto y medida"}</h4>
-        <div className="lp-variantes">{linea.variantes.map((v) => <button key={v.id} className={`lp-variante-opcion ${v.id === varianteId ? 'is-selected' : ''}`}
-          aria-pressed={v.id === varianteId} onClick={() => elegirVariante(v)}>
-          <span>{v.nombre}{v.componentes && <small>Conjunto · {v.componentes}</small>}</span>
-          {v.id === varianteId && <FaCheck aria-hidden="true" />}
-        </button>)}</div>
+      <section className="lp-config-section" aria-label="Subcategoría">
+        <h4><span>1</span> Subcategoría</h4>
+        <div className="lp-variantes">{subcategorias.map((s) => {
+          const elegida = s.clave === (variante && claveSubcategoria(variante));
+          const v = elegida ? variante : s.variantes[0];
+          return <button key={s.clave} className={`lp-variante-opcion ${elegida ? 'is-selected' : ''}`}
+          aria-pressed={elegida} onClick={() => elegirVariante(v)}>
+          <span>{v.nombre}{v.componentes && <small>{v.componentes}</small>}</span>
+          {elegida && <FaCheck aria-hidden="true" />}
+        </button>; })}</div>
+        {/* El proveedor no se muestra en la consulta (2026-10-21): si la subcategoría tiene
+            varias fichas, se eligen por precio; el proveedor viaja en el ítem para ventas. */}
+        {subcategoria?.variantes.length > 1 && <label className="lp-config-proveedor"><span>Opciones de {subcategoria.nombre}</span>
+          <select value={varianteId} onChange={e => elegirVariante(subcategoria.variantes.find(v => v.id === Number(e.target.value)))}>
+            {subcategoria.variantes.map((v, i) => {
+              const valores = (v.precios || []).map((p) => p.precio).filter(precioValido).map(Number);
+              return <option key={v.id} value={v.id}>Opción {i + 1}{valores.length ? ` · desde ${formatCOP(Math.min(...valores))}` : ''}</option>;
+            })}
+          </select></label>}
       </section>
+      {tieneAdicionales && <section className="lp-config-section" aria-label="Adicionales">
+        <h4><span>2</span> Adicionales <small>Incluidos ya van en el precio</small></h4>
+        <div className="lp-opcionales-chips">
+          {(variante?.incluidos || []).map((nombre) => <span key={nombre} className="lp-opcional-chip lp-opcional-chip--active lp-opcional-chip--fijo"
+            title="Ya va en el precio: no se puede quitar"><FaCheck /> {nombre}<small>incluido</small></span>)}
+          {variante?.decorativos_incluidos > 0 && <span className="lp-opcional-chip lp-opcional-chip--active lp-opcional-chip--fijo"
+          title="Ya va en el precio: no se puede quitar"><FaCheck /> Decorativos x{variante.decorativos_incluidos} · incluido</span>}
+          {opciones.map((op) => {
+            const unidades = unidadesDe(op.id), activo = unidades > 0;
+            return <span key={op.id} className={`lp-opcional ${activo ? 'is-activo' : ''}`}>
+              <button className={`lp-opcional-chip ${activo ? 'lp-opcional-chip--active' : ''}`} aria-pressed={activo} disabled={!op.disponible && !activo}
+                onClick={() => cambiarOpcionales((ids) => activo ? ids.filter((id) => id !== op.id) : [...ids, op.id])}>
+                {activo ? <FaCheck /> : <FaPlus />} {op.descripcion}{!op.disponible && <small>No aplica a este material</small>}{op.valor != null && <small>{Number(op.valor) < 0 ? '−' : '+'}{mostrarPesos(Math.abs(Number(op.valor) * Math.max(1, unidades)))}</small>}
+              </button>
+              {activo && op.multiple && <span className="lp-opcional-cantidad" role="group" aria-label={`Unidades de ${op.descripcion}`}>
+                <button type="button" aria-label={`Quitar una unidad de ${op.descripcion}`} onClick={() => cambiarOpcionales((ids) => { const k = ids.indexOf(op.id); return ids.filter((_, j) => j !== k); })}><FaMinus /></button>
+                <output aria-label={`Unidades de ${op.descripcion}`}>{unidades}</output>
+                <button type="button" aria-label={`Agregar una unidad de ${op.descripcion}`} disabled={unidades >= 9} onClick={() => cambiarOpcionales((ids) => [...ids, op.id])}><FaPlus /></button>
+              </span>}
+            </span>;
+          })}</div>
+        {cupoDecorativos > 0 && <p className="lp-ayuda">Por unidad incluye {cupoDecorativos} productos de la línea Decorativos: sin cobro en grupo 1 o 2; desde grupo 3 se cobra la diferencia. Agrégalos a la cotización y se descuentan solos.</p>}
+        {incompatibles && <p className="lp-aviso" role="alert">Un especial seleccionado no tiene consumo para este material. Desactívalo o elige otro grupo antes de agregar.</p>}
+        {error && <div className="lp-aviso" role="alert">No se pudo confirmar el precio de los adicionales. <button onClick={() => precio.refetch()}>Reintentar</button></div>}
+      </section>}
       <section className="lp-config-section" aria-label="Grupo de tela">
-        <h4><span>2</span> {variante?.precios?.every((p) => p.grupo == null) ? 'Precio único' : 'Grupo de tela o cuero'}</h4>
+        <h4><span>{tieneAdicionales ? 3 : 2}</span> {variante?.precios?.every((p) => p.grupo == null) ? 'Precio único' : 'Grupo de tela o cuero'}</h4>
         <div className="lp-telas">{(variante?.precios || []).map((p) => <button key={p.grupo ?? 'unico'}
           className={`lp-tela-opcion ${fila === p ? 'is-selected' : ''}`} aria-pressed={fila === p} onClick={() => cambiarGrupo(p.grupo)}>
           <span>{p.grupo_nombre || 'Sin tela'}</span><strong>{precioValido(p.precio) ? formatCOP(p.precio) : 'Sin precio'}</strong>
         </button>)}</div>
-        <p className="lp-ayuda">{variante?.componentes ? 'El grupo de tela aplica a las piezas tapizadas del conjunto.' : 'Precios base por unidad. Los adicionales se calculan aparte.'}</p>
-        {(linea.es_decorativo || linea.slug === 'decorativos') && <p className="lp-ayuda">Decorativo: si la cotización lleva un producto con «Cojines incluidos», va sin cobro hasta su precio en grupo 2{fila?.tope_incluido != null && fila.tope_incluido < fila.precio ? ` (aquí cubre ${formatCOP(fila.tope_incluido)})` : ''}.</p>}
+        <p className="lp-ayuda">{variante?.componentes ? 'El grupo de tela aplica a las piezas tapizadas.' : 'Precios base por unidad. Los adicionales se calculan aparte.'}</p>
+        {esDecorativo && <p className="lp-ayuda">Decorativo: si la cotización lleva un producto con «Cojines incluidos», va sin cobro hasta su precio en grupo 2{fila?.tope_incluido != null && fila.tope_incluido < fila.precio ? ` (aquí cubre ${formatCOP(fila.tope_incluido)})` : ''}.</p>}
         {!fila && <p className="lp-aviso" role="status">Esta medida no ofrece el grupo anterior. Elige uno disponible para confirmar el precio.</p>}
       </section>
-      {(!!variante?.opcionales?.length || variante?.decorativos_incluidos > 0) && <section className="lp-config-section" aria-label="Adicionales">
-        <h4>Adicionales <small>{variante?.opcionales?.length ? 'Opcional' : 'Incluido'}</small></h4>
-        <div className="lp-opcionales-chips">{variante?.decorativos_incluidos > 0 && <span className="lp-opcional-chip lp-opcional-chip--active lp-opcional-chip--fijo"
-          title="Ya va en el precio: no se puede quitar"><FaCheck /> Decorativos x{variante.decorativos_incluidos} · incluido</span>}
-          {opciones.map((op) => <button key={op.id}
-          className={`lp-opcional-chip ${opcionalesIds.includes(op.id) ? 'lp-opcional-chip--active' : ''}`} aria-pressed={opcionalesIds.includes(op.id)} disabled={!op.disponible && !opcionalesIds.includes(op.id)}
-          onClick={() => { setOpcionalesIds((ids) => ids.includes(op.id) ? ids.filter((id) => id !== op.id) : [...ids, op.id].sort((a, b) => a - b)); setMensaje(''); }}>
-          {opcionalesIds.includes(op.id) ? <FaCheck /> : <FaPlus />} {op.descripcion}{!op.disponible && <small>No aplica a este material</small>}{op.valor != null && <small>{Number(op.valor) < 0 ? '−' : '+'}{mostrarPesos(Math.abs(Number(op.valor)))}</small>}
-        </button>)}</div>
-        {variante?.decorativos_incluidos > 0 && <p className="lp-ayuda">Por unidad incluye {variante.decorativos_incluidos} productos de la línea Decorativos: sin cobro en grupo 1 o 2; desde grupo 3 se cobra la diferencia. Agrégalos a la cotización y se descuentan solos.</p>}
-        {incompatibles && <p className="lp-aviso" role="alert">Un especial seleccionado no tiene consumo para este material. Desactívalo o elige otro grupo antes de agregar.</p>}
-        {error && <div className="lp-aviso" role="alert">No se pudo confirmar el precio de los adicionales. <button onClick={() => precio.refetch()}>Reintentar</button></div>}
-      </section>}
       <div className="lp-config-cantidad"><span>Cantidad</span><div className="lp-cantidad-control">
         <button aria-label="Reducir cantidad" disabled={cantidad <= 1} onClick={() => { setCantidad((n) => n - 1); setMensaje(''); }}><FaMinus /></button>
         <output aria-label="Cantidad">{cantidad}</output>
         <button aria-label="Aumentar cantidad" disabled={cantidad >= 99} onClick={() => { setCantidad((n) => n + 1); setMensaje(''); }}><FaPlus /></button>
       </div></div>
       {variante?.notas?.length > 0 && <p className="lp-notas">{variante.notas.join(' · ')}</p>}
-      {linea.notas && <p className="lp-notas lp-notas--linea">{linea.notas}</p>}
+      {notasLinea && <p className="lp-notas lp-notas--linea">{notasLinea}</p>}
       <details className="lp-config-galeria"><summary>Ver foto del producto</summary><FotoPrecio src={fotos[fotoIdx]} alt={linea.nombre} /></details>
 </>;
   if (inline) return <section className="lp-configurador lp-configurador--inline" aria-label={`Configurar ${linea.nombre}`}>
-    <header className="lp-config-inline-cabecera"><div><span className="lp-eyebrow">{linea.proveedor_nombre || 'Configura y cotiza'}{linea.referencia ? ` · Ref. #${linea.referencia}` : ''}</span><h2>{linea.nombre}</h2></div>
+    <header className="lp-config-inline-cabecera"><div><span className="lp-eyebrow">Configura y cotiza</span><h2>{linea.nombre}</h2></div>
       <button className="lp-icon-btn" aria-label="Cerrar configuración" onClick={onClose}><FaTimes /></button></header>
     <div className="lp-config-inline-cuerpo">{contenido}</div><footer className="lp-config-inline-pie">{footer}</footer>
   </section>;
-  return <Modal open onClose={onClose} title={linea.proveedor_nombre ? `${linea.nombre} · ${linea.proveedor_nombre}` : linea.nombre} size="lg" className="lp-configurador" footer={footer}>{contenido}</Modal>;
+  return <Modal open onClose={onClose} title={linea.nombre} size="lg" className="lp-configurador" footer={footer}>{contenido}</Modal>;
 }

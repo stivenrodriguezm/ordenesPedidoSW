@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { decorativosIncluidos } from '../utils/consultaPrecios';
+import { decorativosIncluidos, transportesCompartidos } from '../utils/consultaPrecios';
 
 const LEGACY_STORAGE_KEY = 'lp_cotizacion_cart';
 export const obtenerStorageKey = (usuarioId) => `lp_cotizacion_cart_${usuarioId ?? 'anon'}`;
@@ -102,9 +102,14 @@ function useCotizacionCart(usuarioId) {
   // Decorativos que cubren los «Cojines incluidos» de otros productos de la cotización.
   const incluidos = useMemo(() => decorativosIncluidos(items), [items]);
   const incluido = Object.values(incluidos).reduce((s, r) => s + r.valor, 0);
-  const total = bruto - incluido;
+  // Transporte por envío: lo que no se cobra porque viaja junto (conjunto o cupo de unidades).
+  const transportes = useMemo(() => transportesCompartidos(items), [items]);
+  const transporteCompartido = Object.values(transportes).reduce((s, r) => s + r.valor, 0);
+  const total = bruto - incluido - transporteCompartido;
+  // Lo que no se cobra de un ítem (decorativos incluidos y transporte compartido).
+  const descontado = useCallback((id) => (incluidos[id]?.valor || 0) + (transportes[id]?.valor || 0), [incluidos, transportes]);
 
-  return { items, agregarItem, agregarItems, quitarItem, actualizarCantidad, actualizarItem, agrupar, desagrupar, vaciar, total, bruto, incluido, incluidos };
+  return { items, agregarItem, agregarItems, quitarItem, actualizarCantidad, actualizarItem, agrupar, desagrupar, vaciar, total, bruto, incluido, incluidos, transportes, transporteCompartido, descontado };
 }
 
 export default useCotizacionCart;

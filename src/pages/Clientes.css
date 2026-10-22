@@ -19,7 +19,7 @@
 }
 
 .clientes-page .cli-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 

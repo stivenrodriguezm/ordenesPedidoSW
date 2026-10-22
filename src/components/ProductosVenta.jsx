@@ -1,7 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { FaBoxOpen, FaCheckCircle, FaChevronDown, FaEdit, FaLayerGroup, FaPlus, FaSearch, FaTimes, FaTruck } from 'react-icons/fa';
 import API from '../services/api';
+import { buscarProductosVenta } from '../services/productosVentaService';
+import useDebounce from '../hooks/useDebounce';
 import { Button } from './ui';
 import { formatCOP } from '../utils/formatCOP';
 import { AppContext } from '../AppContext';
@@ -120,48 +123,47 @@ export function ProductosEsqueleto() {
 
 function BuscadorCatalogo({ alElegir, cerrar, titulo }) {
     const [q, setQ] = useState('');
-    const [datos, setDatos] = useState(null);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState('');
-    useEffect(() => {
-        const c = new AbortController();
-        setCargando(true);
-        const t = setTimeout(() => {
-            API.get('/productos-venta/catalogo/', { params: { q }, signal: c.signal })
-                .then(r => { setDatos(r.data); setError(''); setCargando(false); })
-                .catch(e => { if (!c.signal.aborted) { setError(errorTexto(e)); setCargando(false); } });
-        }, 200);
-        return () => { clearTimeout(t); c.abort(); };
-    }, [q]);
+    const consulta = useDebounce(q, 200);
+    const catalogo = useInfiniteQuery({
+        queryKey: ['productos-venta-catalogo', 'subcategorias-v2', consulta],
+        queryFn: ({ pageParam, signal }) => buscarProductosVenta({ q: consulta, page: pageParam }, { signal }),
+        initialPageParam: 1,
+        getNextPageParam: (ultima, paginas, numero) => (ultima.count || 0) > paginas.reduce((n, p) => n + p.results.length, 0) ? numero + 1 : undefined,
+        staleTime: 0, retry: false,
+    });
+    const resultados = catalogo.data?.pages.flatMap(p => p.results) || [];
+    const cargando = catalogo.isFetching || consulta !== q;
+    const estado = p => ({ borrador: 'Borrador · pendiente de publicar', sin_costo: 'Costo pendiente de confirmar', historico: 'Producto anterior' })[p.estado_precio] || (p.activo === false ? 'Inactivo' : '');
     return (
         <div className="pv-buscador">
             {titulo && <p className="pv-buscador__titulo">{titulo}</p>}
             <div className="pv-buscador__campo">
                 <FaSearch aria-hidden="true" />
-                <input autoFocus aria-label="Buscar producto en la lista de precios" placeholder="Buscar en la lista de precios…" value={q} onChange={e => setQ(e.target.value)} />
+                <input autoFocus aria-label="Buscar producto en la lista de precios" placeholder="Referencia, subcategoría o proveedor…" value={q} onChange={e => setQ(e.target.value)} />
                 {cargando && <span className="pv-giro" aria-hidden="true" />}
                 <button type="button" className="pv-icono" aria-label="Cerrar búsqueda" onClick={cerrar}><FaTimes /></button>
             </div>
-            {error && <p role="alert" className="pv-error">{error}</p>}
-            {!datos && !error && <div className="pv-resultados">{[0, 1, 2].map(i => <span key={i} className="pv-hueso pv-hueso--resultado" />)}</div>}
-            {datos && (
+            {catalogo.isError && <p role="alert" className="pv-error">{errorTexto(catalogo.error)} <button type="button" className="pv-link" onClick={() => catalogo.refetch()}>Reintentar</button></p>}
+            {catalogo.isPending && <div className="pv-resultados">{[0, 1, 2].map(i => <span key={i} className="pv-hueso pv-hueso--resultado" />)}</div>}
+            {catalogo.data && (
                 <ul className={`pv-resultados${cargando ? ' is-actualizando' : ''}`}>
-                    {datos.results.map(p => (
+                    {resultados.map(p => (
                         <li key={p.id}>
-                            <button type="button" disabled={p.activo === false} onClick={() => alElegir(p)}>
+                            <button type="button" disabled={p.activo === false || p.seleccionable === false || cargando || catalogo.isError} onClick={() => alElegir(p)}>
                                 <span>{p.nombre}{p.juego && <b className="pv-juego-tag">{p.piezas?.length ? 'Conjunto' : 'Juego'}</b>}</span>
-                                <small>{p.juego ? `${p.categoria} · ${p.piezas?.length ? 'se agrega como conjunto: ' : ''}${p.juego}` : p.categoria}{p.activo === false ? ' · inactivo' : ''}</small>
+                                <small>{[p.proveedor_nombre, p.categoria, p.juego, estado(p)].filter(Boolean).join(' · ')}</small>
                             </button>
                         </li>
                     ))}
-                    {!datos.results.length && <li className="pv-muted pv-resultados__vacio">Sin resultados para “{q}”.</li>}
+                    {!resultados.length && <li className="pv-muted pv-resultados__vacio">{q ? `Sin subcategorías para “${q}”.` : 'No hay subcategorías configuradas. Revisa Administrar lista.'}</li>}
+                    {catalogo.hasNextPage && <li><button type="button" className="pv-link" disabled={cargando} onClick={() => catalogo.fetchNextPage()}>Ver más subcategorías</button></li>}
                 </ul>
             )}
         </div>
     );
 }
 
-function Referencia({ linea, opciones, cambiar }) {
+function Referencia({ linea, opciones, cambiar, canonica = false }) {
     const [buscar, setBuscar] = useState(false);
     const [q, setQ] = useState('');
     const [res, setRes] = useState([]);
@@ -171,7 +173,8 @@ function Referencia({ linea, opciones, cambiar }) {
         const t = setTimeout(() => API.get('/productos-venta/referencias/', { params: { q }, signal: c.signal }).then(r => setRes(r.data.results)).catch(() => {}), 200);
         return () => { clearTimeout(t); c.abort(); };
     }, [q, buscar]);
-    const nombre = linea.referencia_nombre || opciones.find(o => o.id === linea.referencia)?.nombre;
+    const elegida = opciones.find(o => o.id === linea.referencia)?.nombre;
+    const nombre = canonica ? elegida || linea.referencia_nombre : linea.referencia_nombre || elegida;
     if (buscar) {
         return (
             <div className="pv-ref__buscar">
@@ -192,7 +195,7 @@ function Referencia({ linea, opciones, cambiar }) {
                     {opciones.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
                 </select>
             ) : <span className="pv-ref__nombre" title={nombre}>{nombre || 'Se asigna al guardar'}</span>}
-            <button type="button" className="pv-link" onClick={() => setBuscar(true)}>Cambiar</button>
+            {!canonica && <button type="button" className="pv-link" onClick={() => setBuscar(true)}>Cambiar</button>}
         </div>
     );
 }
@@ -319,6 +322,12 @@ function NotaDecorativos({ da, incluido, esDecorativo }) {
     return null;
 }
 
+// Transporte por envío (2026-10-21): al guardar, lo que viaja junto no se cobra dos veces.
+function NotaTransporte({ compartido }) {
+    if (!compartido) return null;
+    return <small className="pv-decorativos">{compartido.transportes === 0 ? 'Transporte incluido en el del conjunto' : `${compartido.transportes} transporte${compartido.transportes > 1 ? 's' : ''} para estas unidades`}: −{formatCOP(compartido.valor)} en la lista.</small>;
+}
+
 // Qué falta por sección: guía al asesor (Compra, Tela, Textos) con ✓ o pendiente.
 const SECCIONES = {
     compra: (f) => !f.referencia,
@@ -352,33 +361,35 @@ function Cantidad({ valor, cambiar, n, falta }) {
 }
 
 function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPermission, proveedoresTela, grupos = [], enConjunto = false, faltas = {}, copiarTela }) {
-    const [meta, setMeta] = useState(null);
-    const [gruposPrecio, setGruposPrecio] = useState([]);
+    const catalogo = useQuery({
+        queryKey: ['productos-venta-catalogo', 'detalle', linea.variante],
+        queryFn: ({ signal }) => buscarProductosVenta({ id: linea.variante }, { signal }),
+        enabled: !!linea.variante, staleTime: 0, retry: false,
+    });
+    const meta = catalogo.data?.results[0];
+    const gruposPrecio = catalogo.data?.grupos || [];
     const [precio, setPrecio] = useState({ estado: 'listo', valor: linea.precio_lista_unitario, error: '' });
     const [verEspecial, setVerEspecial] = useState(Boolean(linea.precio_lista_override));
     const [verMas, setVerMas] = useState(Boolean(linea.adicionales?.length || linea.precio_lista_override));
     // Un producto nuevo se ve abierto; uno guardado, como un resumen que se abre al editarlo.
     const [abierto, setAbierto] = useState(!linea.id);
     const especial = !linea.variante;
+    // «Cojines incluidos»: obligatorio desde el catálogo; si es opcional, cuenta al elegirlo.
+    const cupoDecorativos = meta?.decorativos_incluidos || (meta?.opcionales?.some(o => o.decorativos && linea.opcionales.includes(o.id)) ? 2 : 0);
     const puedeAjustar = hasPermission('AJUSTAR_PRECIO_LISTA_VENTA');
     useEffect(() => {
-        if (!linea.variante) return undefined;
-        const c = new AbortController();
-        API.get('/productos-venta/catalogo/', { params: { id: linea.variante }, signal: c.signal }).then(r => {
-            const m = r.data.results[0];
-            setMeta(m); setGruposPrecio(r.data.grupos || []);
-            if (!linea.referencia && m?.referencias?.length) cambiar({ referencia: m.referencias[0].id, referencia_nombre: m.referencias[0].nombre }, false);
-            if (m && !m.tela && !linea.tela_modo) cambiar({ tela_modo: 'no_aplica' }, false);
-            // Producto nuevo: los opcionales «habilitados» en la lista llegan ya seleccionados.
-            const pre = (m?.opcionales || []).filter(o => o.preseleccionado).map(o => o.id);
-            if (!linea.id && !linea.opcionales?.length && pre.length) cambiar({ opcionales: pre }, false);
-            // Juego que no se divide (tiene costos propios): sus partes van en los textos.
-            if (m?.juego && !linea.texto_proveedor && !linea.sin_texto_proveedor) cambiar({ texto_proveedor: `Juego: ${m.juego}` }, false);
-            if (m?.juego && !linea.texto_cliente) cambiar({ texto_cliente: `Incluye: ${m.juego}` }, false);
-            cambiar({ _requiere_grupo: Boolean(m?.tela) }, false);
-        }).catch(() => {});
-        return () => c.abort();
-    }, [linea.variante]); // eslint-disable-line react-hooks/exhaustive-deps
+        const m = meta;
+        if (!m) return;
+        if (!linea.referencia && m.referencias?.length) cambiar({ referencia: m.referencias[0].id, referencia_nombre: m.referencias[0].nombre }, false);
+        if (!m.tela && !linea.tela_modo) cambiar({ tela_modo: 'no_aplica' }, false);
+        // Producto nuevo: los opcionales «habilitados» en la lista llegan ya seleccionados.
+        const pre = (m.opcionales || []).filter(o => o.preseleccionado).map(o => o.id);
+        if (!linea.id && !linea.opcionales?.length && pre.length) cambiar({ opcionales: pre }, false);
+        // Juego que no se divide (tiene costos propios): sus partes van en los textos.
+        if (m.juego && !linea.texto_proveedor && !linea.sin_texto_proveedor) cambiar({ texto_proveedor: `Juego: ${m.juego}` }, false);
+        if (m.juego && !linea.texto_cliente) cambiar({ texto_cliente: `Incluye: ${m.juego}` }, false);
+        cambiar({ _requiere_grupo: Boolean(m.tela) }, false);
+    }, [meta, linea.variante]); // eslint-disable-line react-hooks/exhaustive-deps
     // El precio de lista se calcula solo con lo elegido (sin botón). Solo cuentan los
     // recargos completos, para no fallar mientras se escribe.
     const calc = entrada(linea);
@@ -413,6 +424,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
 
     return (
         <article className={conFalta(`pv-card${enConjunto ? ' pv-card--pieza' : ''}${verDetalle ? ' is-abierto' : ''}`, nFaltas)} aria-label={`Producto ${n}`}>
+            {catalogo.isError && <p className="pv-error" role="alert">No se pudo verificar la subcategoría. <button type="button" className="pv-link" onClick={() => catalogo.refetch()}>Reintentar</button></p>}
             <header className="pv-card__cabeza">
                 <span className="pv-num">{n}</span>
                 <div className="pv-card__titulo">
@@ -445,9 +457,10 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                         title={conPedidos ? 'Ya tiene pedido o unidad de bodega: no se puede quitar' : 'Quitar producto'} aria-label={`Quitar producto ${n}`}><FaTimes /></button>
                 </div>
             </header>
-            {(meta?.decorativos_incluidos > 0 || linea.decorativos_incluidos || meta?.es_decorativo) && (
-                <NotaDecorativos da={meta?.decorativos_incluidos || 0} incluido={linea.decorativos_incluidos} esDecorativo={meta?.es_decorativo} />
+            {(cupoDecorativos > 0 || linea.decorativos_incluidos || meta?.es_decorativo) && (
+                <NotaDecorativos da={cupoDecorativos} incluido={linea.decorativos_incluidos} esDecorativo={meta?.es_decorativo} />
             )}
+            <NotaTransporte compartido={linea.transporte_compartido} />
 
             {!verDetalle ? (
                 <p className="pv-card__resumen">
@@ -461,7 +474,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                     <section className="pv-sec" aria-label={`Compra del producto ${n}`}>
                         <h6 className="pv-sec__titulo" title="A quién se le pide este mueble">Compra</h6>
                         <div className={conFalta('pv-campo pv-sec__compra', faltas.referencia)}>
-                            <Referencia linea={linea} opciones={meta?.referencias || []} cambiar={cambiar} />
+                            <Referencia linea={linea} opciones={meta?.referencias || []} cambiar={cambiar} canonica={meta?.catalogo_actual} />
                             <Falta m={faltas.referencia} />
                         </div>
                     </section>
@@ -721,6 +734,7 @@ function TarjetaProducto({ l, verPrecios, pieza = false }) {
                 {!!l.adicionales?.length && <small className="pv-fila__recargos">{l.adicionales.map(a => `+ ${a.descripcion}`).join(' · ')}</small>}
                 {l.grupo_tela && <small className="pv-muted">{l.grupo_tela}</small>}
                 <NotaDecorativos da={l.da_decorativos ? 2 : 0} incluido={l.decorativos_incluidos} />
+                <NotaTransporte compartido={l.transporte_compartido} />
             </footer>
         </li>
     );
@@ -877,12 +891,16 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
     const agregarDelCatalogo = (p, destino) => {
         const existente = destino && destino !== 'nuevo' ? lineas.find(l => l.conjunto === destino) : null;
         const clave = existente ? destino : (destino === 'nuevo' || p.piezas?.length ? crypto.randomUUID() : '');
-        const coleccion = String(p.nombre).split(' · ')[0];
+        const coleccion = p.referencia_nombre || String(p.nombre).split(' · ')[0];
         const veces = existente ? Number(existente.conjunto_cantidad) || 1 : 1;
         const conj = clave ? { conjunto: clave, conjunto_nombre: existente?.conjunto_nombre || (p.piezas?.length ? p.nombre : coleccion), conjunto_cantidad: veces } : {};
         const nuevas = p.piezas?.length
-            ? p.piezas.map(pz => nueva({ variante: pz.variante, producto_nombre: `${coleccion} · ${pz.nombre}`, cantidad: pz.cantidad * veces, clave: crypto.randomUUID(), ...conj }))
-            : [nueva({ variante: p.id, producto_nombre: p.nombre, clave: crypto.randomUUID(), ...conj })];
+            ? p.piezas.map(pz => nueva({ variante: pz.variante, referencia: pz.referencia || null,
+                producto_nombre: pz.referencia_nombre || coleccion, variante_nombre: pz.nombre,
+                cantidad: pz.cantidad * veces, clave: crypto.randomUUID(), ...conj }))
+            : [nueva({ variante: p.id, referencia: p.referencia || null,
+                producto_nombre: p.referencia_nombre || p.nombre, variante_nombre: p.subcategoria_nombre || '',
+                clave: crypto.randomUUID(), ...conj })];
         setLineas(ls => {
             const ultima = existente ? ls.map(l => l.conjunto).lastIndexOf(destino) : -1;
             return ultima >= 0 ? [...ls.slice(0, ultima + 1), ...nuevas, ...ls.slice(ultima + 1)] : [...ls, ...nuevas];

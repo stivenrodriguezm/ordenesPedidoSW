@@ -7,7 +7,8 @@ export function indexarCatalogo(lineas = []) {
     linea,
     nombre: normalizarBusqueda(linea.nombre),
     variantes: (linea.variantes || []).map((v) => ({
-      v, texto: normalizarBusqueda([linea.nombre, linea.proveedor_nombre, linea.referencia, linea.notas, v.nombre, v.categoria_nombre, v.componentes, ...(v.notas || [])].join(' ')),
+      v, texto: normalizarBusqueda([linea.nombre, v.proveedores?.length ? '' : v.origen?.proveedorNombre ?? linea.proveedor_nombre, v.origen?.referenciaId ?? linea.referencia,
+        v.origen?.notas ?? linea.notas, ...(v.proveedores || []).map(p => p.nombre), v.nombre, v.categoria_nombre, v.componentes, ...(v.notas || [])].join(' ')),
     })),
   }));
 }
@@ -35,7 +36,8 @@ export function filaDeGrupo(variante, grupoId) {
 export const precioValido = (valor) => valor != null && valor !== '' && Number.isFinite(Number(valor)) && Number(valor) >= 0;
 
 
-export const notasCotizacion = (item) => [item.conjuntoNombre ? `Conjunto: ${item.conjuntoNombre}` : '', item.componentes ? `Incluye: ${item.componentes}` : '', item.notas].filter(Boolean).join(' · ');
+export const notasCotizacion = (item) => [item.conjuntoNombre ? `Conjunto: ${item.conjuntoNombre}` : '', item.componentes ? `Incluye: ${item.componentes}` : '', item.notas,
+  item.notaVendedor ? `Nota: ${item.notaVendedor}` : ''].filter(Boolean).join(' · ');
 
 // «Cojines incluidos» (2026-10-15), misma regla que el servidor (listaprecios/decorativos.py):
 // cada unidad de un producto con «Decorativos x2» cubre 2 decorativos; cada decorativo se cubre
@@ -54,6 +56,39 @@ export function decorativosIncluidos(items = []) {
     resultado[u.id] = resultado[u.id] || { unidades: 0, valor: 0 };
     resultado[u.id].unidades += 1;
     resultado[u.id].valor += u.tope;
+  });
+  return resultado;
+}
+
+// «Transporte» por envío (2026-10-21), misma regla que el servidor (listaprecios/transportes.py).
+// El transporte de un producto suelto que viaja en la cotización: lo que suma por unidad y
+// cuántas unidades lleva cada transporte; null si no lleva o si es opcional y no se eligió.
+export function transporteDeItem(variante, opcionalesIds = []) {
+  const t = variante?.transporte;
+  if (!t || (t.opcional && !opcionalesIds.includes(t.id))) return null;
+  return { valor: Number(t.valor) || 0, cupo: t.cupo || null };
+}
+
+// Cada transporte lleva su cupo de unidades (vacío = todas las de la línea) y las piezas
+// reunidas en un conjunto cobran uno solo, el mayor. Devuelve {id del ítem: {transportes, valor}}
+// con lo que se descuenta por los transportes que viajan juntos.
+export function transportesCompartidos(items = []) {
+  const resultado = {};
+  const grupos = {};
+  items.forEach((i) => {
+    const t = Number(i.transporte?.valor) || 0;
+    const n = Number(i.cantidad) || 0;
+    if (t <= 0 || n <= 0) return;
+    if (i.conjuntoId) { (grupos[i.conjuntoId] = grupos[i.conjuntoId] || []).push({ i, t, n }); return; }
+    const cobrados = i.transporte.cupo ? Math.ceil(n / i.transporte.cupo) : 1;
+    if (cobrados < n) resultado[i.id] = { transportes: cobrados, valor: t * (n - cobrados) };
+  });
+  Object.values(grupos).forEach((piezas) => {
+    const mayor = piezas.reduce((a, b) => (b.t > a.t ? b : a));
+    piezas.forEach((p) => {
+      const cobrados = p === mayor ? 1 : 0;
+      if (cobrados < p.n) resultado[p.i.id] = { transportes: cobrados, valor: p.t * (p.n - cobrados) };
+    });
   });
   return resultado;
 }

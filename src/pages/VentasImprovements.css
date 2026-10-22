@@ -171,7 +171,7 @@
 .remision-icon {
     min-width: 48px;
     height: 48px;
-    background: white;
+    background: var(--surface);
     border-radius: var(--r-lg);
     display: flex;
     align-items: center;
@@ -263,7 +263,7 @@
 .v-multi-select-btn.active-filter {
   background: var(--gold-soft);
     border-color: var(--gold);
-    color: var(--accent);
+    color: var(--accent-texto);
   font-weight: 600;
 }
 

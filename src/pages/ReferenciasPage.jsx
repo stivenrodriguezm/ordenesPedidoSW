@@ -83,7 +83,7 @@ const CategoriasModal = ({ isOpen, onClose }) => {
       <div className="ref-modal-content" style={{ maxWidth: 480 }} ref={dialogoRef} role="dialog" aria-modal="true" aria-label="Gestionar categorías" tabIndex={-1}>
         <InlineNotif {...notif} />
         <div className="ref-modal-header">
-          <h3><FaTags style={{ marginRight: 8, color: '#57574f' }} />Gestionar Categorías</h3>
+          <h3><FaTags style={{ marginRight: 8, color: 'var(--text-secondary)' }} />Gestionar Categorías</h3>
           <button className="ref-modal-close" onClick={onClose} aria-label="Cerrar" data-dialogo-cerrar="">×</button>
         </div>
 
@@ -106,12 +106,12 @@ const CategoriasModal = ({ isOpen, onClose }) => {
           {isLoading ? (
             <div className="loading-container"><div className="loader" /></div>
           ) : categorias.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#a3a398', fontSize: '0.875rem' }}>No hay categorías registradas.</p>
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>No hay categorías registradas.</p>
           ) : (
             <ul className="mgmt-list">
               {categorias.map((cat) => (
                 <li key={cat.id} className="mgmt-list-item">
-                  <span style={{ fontWeight: 500, color: '#2a2a25', fontSize: '0.9rem' }}>{cat.nombre}</span>
+                  <span style={{ fontWeight: 500, color: 'var(--text)', fontSize: '0.9rem' }}>{cat.nombre}</span>
                   <button
                     onClick={() => { if (window.confirm(`¿Eliminar la categoría "${cat.nombre}"?`)) deleteMutation.mutate(cat.id); }}
                     className="delete-btn"
@@ -373,7 +373,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                           onClick={() => setEditingSubcat(sub)}
                           className="action-btn"
                           title="Editar subcategoría"
-                          style={{ padding: '0.35rem', color: 'var(--accent)' }}
+                          style={{ padding: '0.35rem', color: 'var(--accent-texto)' }}
                         >
                           <FaEdit size={13} />
                         </button>
@@ -837,7 +837,7 @@ function ReferenciasPage() {
                         className="action-btn"
                         title="Editar referencia"
                         disabled={mutation.isPending}
-                        style={{ margin: '0 auto', color: 'var(--accent)', padding: '0.45rem' }}
+                        style={{ margin: '0 auto', color: 'var(--accent-texto)', padding: '0.45rem' }}
                       >
                         <FaEdit size={16} />
                       </button>

@@ -21,7 +21,7 @@
 .rpm-hoja {
   position: relative;
   margin: 0 auto;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 1px 3px rgba(23, 24, 21, 0.18), 0 8px 24px rgba(23, 24, 21, 0.12);
   overflow: hidden;
   cursor: zoom-out;
@@ -41,7 +41,7 @@
   top: 0;
   left: 0;
   border: 0;
-  background: #ffffff;
+  background: var(--surface);
   transform-origin: 0 0;
   pointer-events: none;
 }

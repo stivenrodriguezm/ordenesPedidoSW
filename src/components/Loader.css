@@ -22,7 +22,7 @@
 .loader-text {
   margin-top: 1rem;
   font-size: 1rem;
-  color: #333;
+  color: var(--text);
   font-weight: 500;
 }
 

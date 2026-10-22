@@ -29,6 +29,7 @@ const roleTone = (role) => {
   if (r === 'vendedor') return 'info';
   if (r === 'auxiliar') return 'warning';
   if (r === 'marketing') return 'success';
+  if (r === 'contabilidad') return 'info';
   return 'neutral';
 };
 
@@ -123,6 +124,7 @@ const UserModal = ({ isOpen, onClose, user, isEditing }) => {
               <option value="auxiliar">Auxiliar</option>
               <option value="transportador">Transportador</option>
               <option value="marketing">Marketing</option>
+              <option value="contabilidad">Contabilidad</option>
               <option value="administrador">Administrador</option>
             </select>
           </div>
@@ -175,6 +177,7 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_ESTADO_VENTA", label: "Editar estado de venta (Pendiente, Entregado, Anulada)" },
       { code: "EDITAR_ESTADO_PEDIDOS_VENTA", label: "Editar estado de pedidos" },
       { code: "VER_PRECIOS_VENTA", label: "Ver montos y precios de la venta" },
+      { code: "MARCAR_VENTA_FACTURADA", label: "Facturación: ver la columna «Facturado» y marcar ventas como facturadas" },
       { code: "VER_MARGENES", label: "Ver márgenes y costos de venta" }
     ] 
   },

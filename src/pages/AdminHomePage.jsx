@@ -12,15 +12,16 @@ import {
     FaFileInvoiceDollar, FaClipboardList, FaScroll, FaMoneyBillWave, FaUserTie, FaRegFileAlt,
 } from 'react-icons/fa';
 import { corto, resumenPeriodo } from '../utils/panelAdmin';
+import useTema, { colorTema } from '../hooks/useTema';
 import './AdminHomePage.css';
 
 // chart.js + react-chartjs-2 se cargan bajo demanda (ver components/charts.js)
 const Line = lazy(() => import('../components/charts').then(m => ({ default: m.Line })));
 const Bar = lazy(() => import('../components/charts').then(m => ({ default: m.Bar })));
 
-const TINTA = '#171815';
-const ORO = '#a48d66';
-const GRIS = '#c9c7bd';
+// Colores de los gráficos según el modo diurno/nocturno (tokens de styles/tokens.css).
+const paleta = () => ({ linea: colorTema('--accent-texto'), relleno: colorTema('--accent-soft'), oro: colorTema('--gold'),
+  gris: colorTema('--gray-300'), rejilla: colorTema('--border'), texto: colorTema('--text-muted') });
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const ICONO_GRUPO = { ventas: FaFileInvoiceDollar, pedidos: FaClipboardList, telas: FaScroll, entregas: FaTruck, dinero: FaMoneyBillWave, nomina: FaUserTie };
 const ORDEN_TONO = { danger: 0, warning: 1, info: 2 };
@@ -65,6 +66,8 @@ function RitmoVentas({ datos }) {
         try { setAnual((await api.get('/sales-chart-data/')).data); } catch { setErrorAnual(true); }
     };
 
+    const [tema] = useTema();
+    const c = useMemo(() => paleta(), [tema]); // eslint-disable-line react-hooks/exhaustive-deps
     const serie = useMemo(() => {
         const n = Math.max(ventas.serie_anterior.length, periodo.dias);
         const inicio = parseLocalDate(periodo.inicio);
@@ -75,13 +78,13 @@ function RitmoVentas({ datos }) {
         return {
             labels,
             datasets: [
-                { label: 'Este período', data: ventas.serie_actual, borderColor: TINTA, backgroundColor: 'rgba(164, 141, 102, 0.14)',
+                { label: 'Este período', data: ventas.serie_actual, borderColor: c.linea, backgroundColor: c.relleno,
                   fill: true, tension: 0.3, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2.2 },
-                { label: 'Período anterior', data: ventas.serie_anterior, borderColor: GRIS, borderDash: [5, 4],
+                { label: 'Período anterior', data: ventas.serie_anterior, borderColor: c.gris, borderDash: [5, 4],
                   fill: false, tension: 0.3, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1.6 },
             ],
         };
-    }, [ventas, periodo]);
+    }, [ventas, periodo, c]);
 
     const opciones = {
         responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
@@ -90,15 +93,15 @@ function RitmoVentas({ datos }) {
             tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${formatCOP(c.parsed.y)}` } },
         },
         scales: {
-            y: { beginAtZero: true, border: { display: false }, grid: { color: '#efede6' },
-                 ticks: { callback: (v) => corto(v), color: '#9b9a90', font: { size: 10 } } },
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#9b9a90', font: { size: 10 } } },
+            y: { beginAtZero: true, border: { display: false }, grid: { color: c.rejilla },
+                 ticks: { callback: (v) => corto(v), color: c.texto, font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: c.texto, font: { size: 10 } } },
         },
     };
 
     const anualEstilo = anual && {
         ...anual,
-        datasets: anual.datasets.map((ds, i) => ({ ...ds, backgroundColor: i === 1 ? TINTA : GRIS, hoverBackgroundColor: ORO, borderRadius: 3, maxBarThickness: 22 })),
+        datasets: anual.datasets.map((ds, i) => ({ ...ds, backgroundColor: i === 1 ? c.linea : c.gris, hoverBackgroundColor: c.oro, borderRadius: 3, maxBarThickness: 22 })),
     };
 
     return (
@@ -123,7 +126,7 @@ function RitmoVentas({ datos }) {
                 <Suspense fallback={<LoadingBlock message="Cargando gráfico..." />}>
                     {vista === 'periodo' && <Line data={serie} options={opciones} />}
                     {vista === 'anual' && (anualEstilo
-                        ? <Bar data={anualEstilo} options={{ ...opciones, plugins: { ...opciones.plugins, legend: { display: true, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', color: '#57574f', font: { size: 11 } } } } }} />
+                        ? <Bar data={anualEstilo} options={{ ...opciones, plugins: { ...opciones.plugins, legend: { display: true, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', color: 'var(--text-secondary)', font: { size: 11 } } } } }} />
                         : errorAnual ? <p className="adm-vacio">No se pudo cargar la comparación anual.</p> : <LoadingBlock message="Cargando..." />)}
                 </Suspense>
             </div>

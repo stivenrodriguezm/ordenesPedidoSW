@@ -40,7 +40,7 @@
 }
 
 .caja-filter-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
@@ -271,7 +271,7 @@
 .caja-val-preview {
   font-size: var(--fs-xs);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-texto);
   background: var(--accent-soft);
   padding: 0.15rem 0.5rem;
   border-radius: var(--r-sm);
@@ -295,7 +295,7 @@
 .caja-money__input {
   padding-left: 1.7rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-texto);
 }
 
 .caja-toggle-row {
@@ -326,7 +326,7 @@
 
 .caja-toggle-btn.active {
   background: var(--surface);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-weight: 700;
   box-shadow: var(--shadow-sm);
 }

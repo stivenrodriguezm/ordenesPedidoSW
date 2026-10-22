@@ -8,7 +8,7 @@
 
 .greeting-title {
     font-size: 1.5rem;
-    color: #333;
+    color: var(--text);
     margin-bottom: 2rem;
     font-weight: 600;
 }
@@ -34,7 +34,7 @@
 
 /* Contenedor de stats y accesos */
 .stats-and-access {
-    background-color: #ffffff;
+    background-color: var(--surface);
     padding: 1.5rem;
     border-radius: var(--r-lg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -57,7 +57,7 @@
 
 .stat-card h3 {
     font-size: 0.9rem;
-    color: #555;
+    color: var(--text-secondary);
     margin: 0 0 0.5rem 0;
     text-transform: uppercase;
 }
@@ -94,7 +94,7 @@
 
 /* Contenedor del gráfico */
 .chart-container {
-    background-color: #ffffff;
+    background-color: var(--surface);
     padding: 1.5rem;
     border-radius: var(--r-lg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -105,14 +105,14 @@
 /* Tabla de Actividad Reciente (sin cambios) */
 .recent-activity h3 {
     font-size: 1.5rem;
-    color: #333;
+    color: var(--text);
     margin-bottom: 1rem;
 }
 
 .activity-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #ffffff;
+    background-color: var(--surface);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     border-radius: var(--r-lg);
     overflow: hidden;
@@ -140,7 +140,7 @@
 }
 
 .activity-table a {
-    color: #000000;
+    color: var(--text);
     text-decoration: none;
     font-weight: 500;
 }
@@ -157,19 +157,19 @@
     text-transform: capitalize;
 }
 
-.status-pendiente { background-color: #fff0c2; color: #8a6d00; }
-.status-entregado { background-color: #d4edda; color: #155724; }
-.status-anulado { background-color: #f8d7da; color: #721c24; }
+.status-pendiente { background-color: var(--warning-soft); color: var(--warning); }
+.status-entregado { background-color: var(--success-soft); color: var(--success); }
+.status-anulado { background-color: var(--danger-soft); color: var(--danger); }
 
 .error-message p {
-    color: #721c24;
-    background-color: #f8d7da;
+    color: var(--danger);
+    background-color: var(--danger-soft);
     padding: 1rem;
     border-radius: var(--r-sm);
 }
 .welcome-message {
     font-size: 1rem;
-    color: #555;
+    color: var(--text-secondary);
     line-height: 1.5;
     margin-bottom: 1.4rem;
 }

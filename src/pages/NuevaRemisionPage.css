@@ -80,7 +80,7 @@
   height: 28px;
   border-radius: var(--r-full);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-weight: 700;
   font-size: var(--fs-sm);
   display: grid;
@@ -104,7 +104,7 @@
   padding: 0.25rem 0.7rem;
   border-radius: var(--r-full);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-texto);
   font-size: var(--fs-xs);
   font-weight: 700;
   white-space: nowrap;
@@ -161,7 +161,7 @@ select.nr-input {
 
 .nr-input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
   background: var(--surface);
 }
@@ -231,7 +231,7 @@ select.nr-input {
 }
 
 .nr-money:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
   background: var(--surface);
 }
@@ -280,21 +280,21 @@ select.nr-input {
 }
 
 .nr-chip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-borde);
+  color: var(--accent-texto);
 }
 
 .nr-chip:focus-visible,
 .nr-segment__opt:focus-visible,
 .nr-link:focus-visible,
 .nr-icon-btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-borde);
   outline-offset: 2px;
 }
 
 .nr-chip.is-active {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   color: var(--accent-contrast);
 }
 
@@ -366,7 +366,7 @@ select.nr-input {
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-texto);
   cursor: pointer;
 }
 
@@ -507,7 +507,7 @@ select.nr-input {
 
 .nr-picker__box:focus-within,
 .nr-picker__box.is-open {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
@@ -591,7 +591,7 @@ select.nr-input {
 
 .nr-picker__num {
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-texto);
   font-variant-numeric: tabular-nums;
 }
 
@@ -654,7 +654,7 @@ select.nr-input {
 .nr-venta-card__num {
   font-size: var(--fs-xs);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-texto);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -912,7 +912,7 @@ label.nr-prod__pick {
 
 .nr-qty__input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
@@ -1030,7 +1030,7 @@ label.nr-prod__pick {
 }
 
 .nr-inline-input:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 

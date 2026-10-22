@@ -67,9 +67,9 @@
 }
 
 .pw-search-input-field:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-  background-color: #ffffff;
+  background-color: var(--surface);
 }
 
 .pw-table-container {
@@ -220,7 +220,7 @@
 .ds-textarea {
   width: 100%;
   padding: 0.6rem 0.85rem;
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md, 8px);
   font-size: 0.875rem;
@@ -233,7 +233,7 @@
 .ds-input:focus,
 .ds-select:focus,
 .ds-textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
 }
 
@@ -409,15 +409,15 @@
 }
 
 .pw-upload-dropzone-label:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   background-color: rgba(212, 175, 55, 0.05);
-  color: var(--accent);
+  color: var(--accent-texto);
 }
 
 .pw-upload-dropzone-label--loading {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   background-color: rgba(212, 175, 55, 0.07);
-  color: var(--accent);
+  color: var(--accent-texto);
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -482,7 +482,7 @@
 
 .pw-img-thumb-item:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
 }
 
 .pw-img-thumb-item--dragging {
@@ -493,13 +493,13 @@
 }
 
 .pw-img-thumb-item--dragover {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
   transform: scale(1.03);
 }
 
 .pw-img-thumb-item--cover {
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
 }
 
 /* Handle de arrastre */

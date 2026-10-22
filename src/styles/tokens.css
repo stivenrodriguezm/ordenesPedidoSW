@@ -4,39 +4,58 @@
    Breakpoints estándar: 640 / 768 / 1024 / 1280 px
    ========================================================================== */
 
-:root {
-  /* Acento principal: tinta (botones principales, enlaces, estados activos)
-     con dorado para indicadores, foco y detalles — estilo «Oficina IA». */
-  --accent: #171815;
-  --accent-hover: #35372e;
-  --accent-active: #000000;
-  --accent-soft: #f2efe7;
-  --accent-line: #ddd3bd;
-  --accent-ring: rgba(164, 141, 102, 0.32);
+/* --------------------------------------------------------------------------
+   Modos de color (2026-10-21): diurno (azul marino sobre grises claros) y
+   nocturno (verde esmeralda sobre negro verdoso). El modo se guarda por equipo
+   (localStorage «lottus-tema») y se aplica con data-tema en <html> antes de
+   pintar. Los imprimibles (comprobantes, cotización, remisión, imágenes de
+   pedido) siempre usan el diurno: son papel.
+   -------------------------------------------------------------------------- */
+
+:root,
+.tema-diurno,
+.cer-page,
+.rr-page,
+.cot-page,
+.preview-container {
+  color-scheme: light;
+
+  /* Acento principal: azul marino (botones, enlaces, estados activos). */
+  --accent: #1f3a52;
+  --accent-hover: #2a4b68;
+  --accent-active: #152a3c;
+  --accent-soft: #e9eef4;
+  --accent-line: #c5d2df;
+  --accent-ring: rgba(31, 58, 82, 0.28);
   --accent-contrast: #ffffff;
+  /* El acento como texto, icono o borde sobre una superficie (en nocturno es más claro). */
+  --accent-texto: var(--accent);
+  --accent-texto-hover: var(--accent-hover);
+  --accent-borde: var(--accent);
+  --accent-boton-borde: transparent;
 
   /* Alias heredados (algunas páginas los usan con valor de respaldo) */
   --primary: var(--accent);
   --primary-50: var(--accent-soft);
   --primary-100: var(--accent-ring);
 
-  /* Dorado de marca */
-  --gold: #a48d66;
-  --gold-light: #c8b58f;
-  --gold-dark: #8b7756;
-  --gold-soft: #f4efe4;
+  /* Realce secundario (antes dorado): indicadores, foco y detalles. */
+  --gold: #3d6185;
+  --gold-light: #8fa8c1;
+  --gold-dark: #1f3a52;
+  --gold-soft: #eaf0f6;
 
-  /* Neutros cálidos (antes escala slate) */
-  --gray-50: #faf9f5;
-  --gray-100: #f2f1eb;
-  --gray-200: #e4e3dc;
-  --gray-300: #d0cfc6;
-  --gray-400: #a3a398;
-  --gray-500: #72726a;
-  --gray-600: #57574f;
-  --gray-700: #3e3e37;
-  --gray-800: #2a2a25;
-  --gray-900: #171815;
+  /* Neutros fríos */
+  --gray-50: #f6f7f9;
+  --gray-100: #eef0f3;
+  --gray-200: #e2e5ea;
+  --gray-300: #cdd2d9;
+  --gray-400: #9aa3ae;
+  --gray-500: #6b7480;
+  --gray-600: #525b67;
+  --gray-700: #3b434e;
+  --gray-800: #273039;
+  --gray-900: #1a2129;
 
   --slate-50: var(--gray-50);
   --slate-100: var(--gray-100);
@@ -50,38 +69,157 @@
   --slate-900: var(--gray-900);
 
   /* Superficies */
-  --bg-app: #f5f4ef;
+  --bg-app: #eceef1;
   --surface: #ffffff;
   --surface-muted: var(--gray-50);
+  --surface-raised: #ffffff;
   --border: var(--gray-200);
   --border-strong: var(--gray-300);
+  --overlay: rgba(26, 33, 41, 0.45);
 
   /* Texto */
-  --text: #24241f;
+  --text: #1f2933;
   --text-secondary: var(--gray-500);
   --text-muted: var(--gray-400);
 
-  /* Estados (tonos sobrios, coherentes con la paleta cálida) */
-  --success: #4c7a4f;
-  --success-soft: #edf3e9;
-  --warning: #a8732b;
-  --warning-soft: #f8f0e0;
-  --danger: #a8432f;
-  --danger-soft: #f9ece7;
-  --info: #4f6a7f;
-  --info-soft: #eaeff1;
-  --success-line: #c9dbc2;
-  --warning-line: #e9d3a9;
-  --danger-line: #e8c3b8;
-  --info-line: #c9d5dc;
+  /* Estados */
+  --success: #2f7a4f;
+  --success-soft: #e8f4ec;
+  --warning: #a86b14;
+  --warning-soft: #fbf1df;
+  --danger: #b23b2e;
+  --danger-soft: #fbeceb;
+  --info: #2f5f86;
+  --info-soft: #e8f0f7;
+  --success-line: #bcdcc8;
+  --warning-line: #ecd2a2;
+  --danger-line: #efc3be;
+  --info-line: #c4d6e6;
 
-  /* Sidebar */
-  --sidebar-bg: linear-gradient(180deg, #0b0b0a 0%, #151513 100%);
-  --sidebar-text: #a8a79e;
+  /* Menú lateral claro con el activo en azul marino */
+  --sidebar-bg: #f4f5f7;
+  --sidebar-header-bg: #f4f5f7;
+  --sidebar-brand: #1a2a3a;
+  --sidebar-border: #e2e5ea;
+  --sidebar-text: #3b4652;
+  --sidebar-text-hover: #1a2a3a;
+  --sidebar-subtitle: #7b8692;
+  --sidebar-hover-bg: rgba(31, 58, 82, 0.07);
   --sidebar-text-active: #ffffff;
-  --sidebar-active-bg: linear-gradient(90deg, rgba(200, 181, 143, 0.16) 0%, rgba(200, 181, 143, 0.02) 100%);
-  --sidebar-active-bar: #c8b58f;
+  --sidebar-active-bg: #1f3a52;
+  --sidebar-active-icon: #ffffff;
+  --sidebar-active-bar: transparent;
+  --sidebar-footer-bg: #eef0f3;
+  --sidebar-menu-bg: #ffffff;
+  --sidebar-avatar-bg: #1f3a52;
+  --sidebar-avatar-text: #ffffff;
+  --sidebar-shadow: 2px 0 14px rgba(26, 33, 41, 0.06);
 
+  /* Cabeceras destacadas (panel de inicio, IA) */
+  --hero-bg: linear-gradient(135deg, #1f3a52 0%, #132536 100%);
+  --hero-glow: rgba(143, 168, 193, 0.22);
+  --hero-detalle: #9fb6cc;
+  --hero-acento: #e9eef4;
+  --hero-acento-hover: #ffffff;
+  --hero-acento-texto: #1f3a52;
+
+  /* Sombras discretas */
+  --shadow-sm: 0 1px 2px rgba(26, 33, 41, 0.06);
+  --shadow-md: 0 4px 13px rgba(26, 33, 41, 0.08);
+  --shadow-lg: 0 12px 34px rgba(26, 33, 41, 0.16);
+}
+
+:root[data-tema="nocturno"] {
+  color-scheme: dark;
+
+  /* Acento principal: verde profundo #023328 (2026-10-21, a pedido del usuario). Como fondo
+     de botones y activos; como texto o borde sobre fondos oscuros se usa su tono claro. */
+  --accent: #023328;
+  --accent-hover: #04463a;
+  --accent-active: #01261e;
+  --accent-soft: #0a2721;
+  --accent-line: #0f4f41;
+  --accent-ring: rgba(26, 150, 120, 0.45);
+  --accent-contrast: #ffffff;
+  --accent-texto: #5cc9ab;
+  --accent-texto-hover: #85dcc4;
+  --accent-borde: #1a7a63;
+  --accent-boton-borde: #0f5a49;
+
+  --gold: #3fb894;
+  --gold-light: #7fd8c0;
+  --gold-dark: #0f7a61;
+  --gold-soft: #0a2721;
+
+  /* Neutros: escala invertida (50 = superficie oscura, 900 = texto claro) */
+  --gray-50: #17231e;
+  --gray-100: #1b2923;
+  --gray-200: #23342d;
+  --gray-300: #2f443b;
+  --gray-400: #5f726a;
+  --gray-500: #8d9e97;
+  --gray-600: #a9b8b1;
+  --gray-700: #c5d1cb;
+  --gray-800: #dce5e1;
+  --gray-900: #eef3f1;
+
+  --bg-app: #0f1814;
+  --surface: #14201b;
+  --surface-muted: #17231e;
+  --surface-raised: #1a2822;
+  --border: #23342d;
+  --border-strong: #2f443b;
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --text: #e6ece9;
+  --text-secondary: #9fb0a8;
+  --text-muted: #6f817a;
+
+  --success: #4ade80;
+  --success-soft: #13301f;
+  --warning: #f2b84b;
+  --warning-soft: #33290f;
+  --danger: #f87171;
+  --danger-soft: #3a1b1b;
+  --info: #7fb6dc;
+  --info-soft: #132a37;
+  --success-line: #1f5a35;
+  --warning-line: #5c4818;
+  --danger-line: #6b2b2b;
+  --info-line: #224a63;
+
+  /* Menú lateral negro con el activo en verde */
+  --sidebar-bg: #0b100e;
+  --sidebar-header-bg: #000000;
+  --sidebar-brand: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-text: #b4c1bb;
+  --sidebar-text-hover: #ffffff;
+  --sidebar-subtitle: #6c7c75;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --sidebar-text-active: #ffffff;
+  --sidebar-active-bg: #023328;
+  --sidebar-active-icon: #7fd8c0;
+  --sidebar-active-bar: transparent;
+  --sidebar-footer-bg: rgba(0, 0, 0, 0.3);
+  --sidebar-menu-bg: #121b17;
+  --sidebar-avatar-bg: #1d2a24;
+  --sidebar-avatar-text: #7fd8c0;
+  --sidebar-shadow: 4px 0 22px rgba(0, 0, 0, 0.45);
+
+  --hero-bg: linear-gradient(135deg, #010c0a 0%, #023328 100%);
+  --hero-glow: rgba(63, 184, 148, 0.18);
+  --hero-detalle: #7fd8c0;
+  --hero-acento: #0f7a61;
+  --hero-acento-hover: #139274;
+  --hero-acento-texto: #ffffff;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+:root {
   /* Tipografía */
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-brand: 'Audiowide', 'Inter', sans-serif;

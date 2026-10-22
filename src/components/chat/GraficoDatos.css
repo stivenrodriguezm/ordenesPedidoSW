@@ -1,12 +1,12 @@
-.chat-grafico { margin: 1rem 0; padding: 1rem; border: 1px solid var(--color-border, #e2e8f0); border-radius: 12px; background: var(--color-surface, #fff); min-width: 0; }
+.chat-grafico { margin: 1rem 0; padding: 1rem; border: 1px solid var(--color-border, var(--border)); border-radius: 12px; background: var(--color-surface, var(--surface)); min-width: 0; }
 .chat-grafico figcaption { display: flex; flex-direction: column; gap: .3rem; margin-bottom: 1rem; }
-.chat-grafico figcaption span, .chat-grafico__filtros, .chat-grafico__nota { font-size: .78rem; color: var(--gray-500, #64748b); line-height: 1.5; overflow-wrap: anywhere; }
+.chat-grafico figcaption span, .chat-grafico__filtros, .chat-grafico__nota { font-size: .78rem; color: var(--gray-500, var(--text-secondary)); line-height: 1.5; overflow-wrap: anywhere; }
 .chat-grafico__canvas { position: relative; width: 100%; min-width: 0; }
 .chat-grafico__acciones { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .75rem; justify-content: space-between; }
 .chat-grafico__acciones summary, .chat-grafico__acciones button { cursor: pointer; font: inherit; font-size: .8rem; }
-.chat-grafico__acciones button { background: var(--gray-50, #f8fafc); color: inherit; border: 1px solid var(--color-border, #e2e8f0); border-radius: 6px; padding: .4rem .65rem; }
+.chat-grafico__acciones button { background: var(--gray-50, var(--surface-muted)); color: inherit; border: 1px solid var(--color-border, var(--border)); border-radius: 6px; padding: .4rem .65rem; }
 .chat-grafico__acciones details { flex: 1 1 220px; min-width: 0; }
 .chat-grafico__tabla { overflow-x: auto; margin-top: .5rem; }
 .chat-grafico table { width: 100%; border-collapse: collapse; font-size: .8rem; }
-.chat-grafico th, .chat-grafico td { padding: .5rem; text-align: left; border-bottom: 1px solid var(--color-border, #e2e8f0); }
+.chat-grafico th, .chat-grafico td { padding: .5rem; text-align: left; border-bottom: 1px solid var(--color-border, var(--border)); }
 .chat-grafico td { text-align: right; font-variant-numeric: tabular-nums; }

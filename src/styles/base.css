@@ -42,7 +42,7 @@ textarea {
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-texto);
   text-decoration: none;
 }
 

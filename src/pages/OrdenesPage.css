@@ -460,7 +460,7 @@
 }
 
 .mobile-card {
-  background: white;
+  background: var(--surface);
   border-radius: var(--r-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--gray-200);
@@ -731,9 +731,9 @@
    Vista Previa para Imagen (Sin Cambios Visuales)
    ========================================================================== */
 #pedido-preview {
-  width: 700px; background-color: var(--surface) !important; border: 1px solid #e0e0e0;
+  width: 700px; background-color: var(--surface) !important; border: 1px solid var(--border);
   border-radius: var(--r-sm); box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 20px;
-  font-family: Arial, sans-serif; font-size: 14px; color: #333;
+  font-family: Arial, sans-serif; font-size: 14px; color: var(--text);
   position: absolute; left: -9999px; top: -9999px;
 }
 

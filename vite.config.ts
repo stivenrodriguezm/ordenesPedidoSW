@@ -10,6 +10,8 @@ export default defineConfig({
     // archivos pasan por este proxy (VITE_API_BASE_URL=/api en .env.development), así que
     // el backend sigue escuchando solo en este equipo.
     host: true,
+    // Bonjour mantiene este acceso aunque el router cambie la IP del Mac.
+    allowedHosts: ["stivens-macbook-air.local"],
     proxy: {
       "/api": "http://127.0.0.1:8000",
       "/media": "http://127.0.0.1:8000",

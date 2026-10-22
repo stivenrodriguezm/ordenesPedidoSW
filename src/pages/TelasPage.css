@@ -300,8 +300,8 @@
 
 .btn-edit-estado-badge:hover {
   background: var(--surface-muted, var(--gray-50));
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-borde);
+  color: var(--accent-texto);
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
 }
@@ -312,7 +312,7 @@
 
 .btn-edit-estado-badge .edit-icon-badge {
   font-size: 0.8rem;
-  color: var(--accent);
+  color: var(--accent-texto);
   transition: transform 0.2s ease;
 }
 
@@ -346,6 +346,6 @@
 
 .status-badge.en-lottus {
   background-color: var(--accent-soft) !important;
-  color: var(--accent) !important;
+  color: var(--accent-texto) !important;
   border: 1px solid var(--accent-line) !important;
 }

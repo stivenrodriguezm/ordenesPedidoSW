@@ -4,15 +4,15 @@
 .etf-cabeza .ds-label { margin: 0; }
 .etf-barra { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--gray-50); }
 .etf-barra button { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; min-width: 28px; height: 26px; padding: 0 6px; border: none; border-radius: var(--r-sm); background: transparent; color: var(--gray-600); font: inherit; font-size: 0.72rem; cursor: pointer; }
-.etf-barra button:hover:not(:disabled) { background: var(--surface); color: var(--accent); }
+.etf-barra button:hover:not(:disabled) { background: var(--surface); color: var(--accent-texto); }
 .etf-barra button:disabled { opacity: 0.35; cursor: default; }
 .etf-barra .etf-vista { font-weight: 600; }
 .etf-barra .etf-vista.is-activa { background: var(--accent); color: #fff; }
 .etf-sep { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
 .etf-area { width: 100%; box-sizing: border-box; min-height: 90px; padding: 0.6rem 0.7rem; border: 1px solid var(--border-strong, var(--gray-300)); border-radius: var(--r-sm); background: var(--surface); color: var(--gray-800); font: inherit; font-size: 0.88rem; line-height: 1.55; resize: vertical; }
-.etf-area:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring, rgba(164, 141, 102, 0.15)); }
+.etf-area:focus { outline: none; border-color: var(--accent-borde); box-shadow: 0 0 0 3px var(--accent-ring, rgba(164, 141, 102, 0.15)); }
 .etf-ayuda { color: var(--gray-500); font-size: 0.72rem; }
-.etf-preview { min-height: 90px; padding: 0.7rem 0.9rem; border: 1px dashed var(--border-strong, var(--gray-300)); border-radius: var(--r-sm); background: #fffdf8; color: #5c584f; font-size: 0.9rem; line-height: 1.65; }
+.etf-preview { min-height: 90px; padding: 0.7rem 0.9rem; border: 1px dashed var(--border-strong, var(--gray-300)); border-radius: var(--r-sm); background: var(--surface); color: #5c584f; font-size: 0.9rem; line-height: 1.65; }
 .etf-vacio { color: var(--gray-400); font-style: italic; }
 
 /* Misma presentación que .formato en la web (webLottus/public/css/style.css). */

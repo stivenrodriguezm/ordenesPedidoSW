@@ -5,7 +5,7 @@
 .lottus-loader-overlay {
   position: fixed;
   inset: 0;
-  background-color: #ffffff;
+  background-color: var(--surface);
   display: flex;
   flex-direction: column;
   justify-content: center;

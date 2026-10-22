@@ -55,7 +55,7 @@
 }
 
 .report-header .btn-icon {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--ventas-border);
   color: var(--ventas-text-medium);
   width: 40px;
@@ -226,7 +226,7 @@
 }
 
 .btn-secondary {
-  background-color: white;
+  background-color: var(--surface);
   color: var(--ventas-text-dark);
   border: 1px solid var(--gray-200);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -239,7 +239,7 @@
 }
 
 .btn-secondary {
-  background-color: white;
+  background-color: var(--surface);
   color: var(--ventas-text-dark);
   border: 1px solid var(--ventas-border);
 }
@@ -311,6 +311,8 @@
 .th-pedidos, .td-pedidos { width: 8.5%; min-width: 85px; text-align: center; }
 .th-estado, .td-estado { width: 8.5%; min-width: 85px; text-align: center; }
 .th-accion { width: 4.5%; min-width: 40px; text-align: center; }
+/* Facturado (solo con MARCAR_VENTA_FACTURADA): con la tabla de ancho fijo necesita su ancho. */
+.th-facturado, .td-facturado { width: 8.5%; min-width: 96px; text-align: center; }
 
 .ventas-container .ventas-table th,
 .desktop-view .ventas-table th,
@@ -425,7 +427,7 @@
 }
 
 .details-card {
-  background: white;
+  background: var(--surface);
   border-radius: var(--r-lg);
   padding: 0.75rem 1rem;
   box-shadow: var(--shadow-soft);
@@ -619,7 +621,7 @@
 
   /* Sale Item Container */
   .mobile-sale-item {
-    background: white;
+    background: var(--surface);
     border-radius: var(--r-lg);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--ventas-border);
@@ -766,7 +768,7 @@
   .financial-summary {
     display: flex;
     gap: 1rem;
-    background: white;
+    background: var(--surface);
     padding: 1rem;
     border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
@@ -795,7 +797,7 @@
   /* Compact Lists (Payments & Orders) */
   .mobile-payment-compact,
   .mobile-order-compact {
-    background: white;
+    background: var(--surface);
     padding: 0.75rem;
     border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
@@ -867,7 +869,7 @@
     padding: 0.75rem;
     border-radius: var(--r-sm);
     border: 1px solid var(--ventas-border);
-    background: white;
+    background: var(--surface);
     color: var(--ventas-text-dark);
     font-weight: 600;
     font-size: 0.85rem;
@@ -895,7 +897,7 @@
    Skeleton Loading
    ========================================================================== */
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--gray-100) 25%, #e0e0e0 50%, var(--gray-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -1070,7 +1072,7 @@
 }
 
 .payment-item:hover {
-  background-color: white;
+  background-color: var(--surface);
   border-color: var(--ventas-primary-soft);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   transform: translateX(2px);
@@ -1244,7 +1246,7 @@
 }
 
 .order-card-v2 {
-  background: white;
+  background: var(--surface);
   border-radius: var(--r-sm);
   border: 1px solid var(--gray-200);
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
@@ -1314,7 +1316,7 @@
 }
 
 .status-pill.pendiente { background-color: var(--warning-soft); color: var(--warning); border-color: var(--warning-soft); }
-.status-pill.en-proceso { background-color: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
+.status-pill.en-proceso { background-color: var(--accent-soft); color: var(--accent-texto); border-color: var(--accent-soft); }
 .status-pill.finalizado { background-color: var(--success-soft); color: var(--success); border-color: var(--success-soft); }
 .status-pill.recibido { background-color: var(--success-soft); color: var(--success); border-color: var(--success-soft); }
 .status-pill.anulado { background-color: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
@@ -1375,7 +1377,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--gray-200);
   border-radius: var(--r-sm);
 }

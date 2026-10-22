@@ -39,20 +39,27 @@ function validar(form) {
   return { componentes, errores, valido: !Object.keys(errores).length };
 }
 
-export default function AgrupacionVariante({ variante, linea, categorias = [], notify, nuevo = false, onCreado, onCancelar, general }) {
+// Un conjunto no tiene proveedor (2026-10-16): sus piezas pueden venir de cualquier proveedor
+// de la misma referencia (`lineasGrupo`) y cada una conserva el suyo.
+function piezasDeLaReferencia(linea, lineasGrupo) {
+  const lineas = [linea, ...(lineasGrupo || []).filter(l => l.id !== linea.id)];
+  return lineas.flatMap(l => l.variantes.map(v => ({ ...v, proveedorPieza: l.proveedor_nombre, lineaPieza: l.id })));
+}
+
+export default function AgrupacionVariante({ variante, linea, lineasGrupo, categorias = [], notify, nuevo = false, onCreado, onCancelar, general }) {
   const client = useQueryClient();
   const [form, setForm] = useState(() => ({ activa: nuevo || !!variante.componentes?.length, filas: borrador(variante.componentes || []) }));
   const [guardado, setGuardado] = useState(form), [montado, setMontado] = useState(nuevo);
   const [abierto, setAbierto] = useState(nuevo), [errores, setErrores] = useState({}), [error, setError] = useState('');
   const [extras, setExtras] = useState(() => new Set());
-  const [subcategoria, setSubcategoria] = useState('');
-  const objetivo = linea.variantes.find(v => v.subcategoria === Number(subcategoria));
   const [nombre, setNombre] = useState(''), [categoria, setCategoria] = useState(categorias[0]?.id || '');
   const cambiado = nuevo || JSON.stringify(form) !== JSON.stringify(guardado);
   const revision = useMemo(() => validar(form), [form]), consulta = JSON.stringify(revision.componentes);
   const consultaDemorada = useDebounce(consulta, 350);
-  const usados = linea.variantes.some(v => v.id !== variante.id && v.componentes?.some(c => c.variante === variante.id));
-  const disponibles = linea.variantes.filter(v => v.id !== variante.id && v.id !== objetivo?.id && !v.componentes?.length);
+  const coleccion = useMemo(() => piezasDeLaReferencia(linea, lineasGrupo), [linea, lineasGrupo]);
+  const variosProveedores = new Set(coleccion.map(v => v.lineaPieza)).size > 1;
+  const usados = coleccion.some(v => v.id !== variante.id && v.componentes?.some(c => c.variante === variante.id));
+  const disponibles = coleccion.filter(v => v.id !== variante.id && !v.componentes?.length);
   const cambiar = patch => { setForm(f => ({ ...f, ...patch })); setErrores({}); setError(''); };
   const cambiarFila = (i, patch) => cambiar({ filas: form.filas.map((f, j) => j === i ? { ...f, ...patch } : f) });
   const simulacion = useQuery({
@@ -62,12 +69,19 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
     retry: false, staleTime: 0,
   });
   const guardar = useMutation({
-    mutationFn: componentes => nuevo ? crearAgrupacion(linea.id, { ...(linea.referencia ? { subcategoria: Number(subcategoria) } : { nombre: nombre.trim(), categoria: categoria ? Number(categoria) : null }), componentes }) : guardarComponentes(variante.id, componentes),
+    mutationFn: componentes => nuevo ? crearAgrupacion(linea.id, { nombre: nombre.trim(), categoria: categoria ? Number(categoria) : null, componentes }) : guardarComponentes(variante.id, componentes),
     onSuccess: async data => {
       actualizarLineaEnCache(client, linea.id, l => ({
         ...l, variantes: nuevo && !l.variantes.some(v => v.id === data.id) ? [...l.variantes, data] : l.variantes.map(v => v.id === data.id ? data : v),
       }));
       setGuardado(form); await invalidarListaPrecios(client, linea.id);
+      if (nuevo && linea.referencia) {
+        await Promise.all([
+          client.invalidateQueries({ queryKey: ['lp-referencias'] }),
+          client.invalidateQueries({ queryKey: ['referencias'] }),
+          client.invalidateQueries({ queryKey: ['suministros-subcategorias'] }),
+        ]);
+      }
       notify(form.activa ? 'Agrupación guardada. Los productos originales conservan sus costos.' : 'Guardado como producto individual.', 'success');
       onCreado?.(data);
     },
@@ -75,8 +89,8 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
   });
   const enviar = e => {
     e.preventDefault(); setError(''); setErrores(revision.errores);
-    if (nuevo && linea.referencia && !subcategoria) { setError('Selecciona la subcategoría del conjunto.'); return; }
-    if (nuevo && !linea.referencia && !nombre.trim()) { setError('Escribe el nombre de la agrupación.'); return; }
+    if (nuevo && !nombre.trim()) { setError('Escribe el nombre de la agrupación.'); return; }
+    if (nuevo && !categoria) { setError('Selecciona la categoría de la nueva subcategoría.'); return; }
     if (!revision.valido) return;
     guardar.mutate(revision.componentes);
   };
@@ -86,18 +100,18 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
   const multiplo = v => Number(v).toLocaleString('es-CO', { maximumFractionDigits: 3 });
   const contenido = () => <form className="lp-agrupacion-editor" aria-label={nuevo ? 'Nueva agrupación' : `Agrupación de ${variante.nombre}`} onSubmit={enviar} noValidate data-estado={guardar.isPending ? 'guardando' : cambiado ? 'pendiente' : ''}>
     <fieldset disabled={guardar.isPending}>
-      {nuevo && linea.referencia ? <div className="lp-agrupacion-identidad"><label>Subcategoría del conjunto<select className="ds-input" value={subcategoria} onChange={e => { setSubcategoria(e.target.value); cambiar({ filas: [] }); }}><option value="">Seleccionar…</option>{linea.variantes.filter(v => !v.componentes?.length && !linea.variantes.some(j => j.componentes?.some(c => c.variante === v.id))).map(v => <option key={v.subcategoria} value={v.subcategoria}>{v.categoria_nombre} · {v.nombre}</option>)}</select></label><p className="lp-agrupacion-ayuda">El conjunto usa la ficha de esta subcategoría. Agrega abajo las piezas que lo forman.</p></div> : nuevo ? <div className="lp-agrupacion-identidad"><label>Nombre del conjunto<input className="ds-input" value={nombre} maxLength={150} placeholder="Ej.: Comedor de 6 puestos" onChange={e => setNombre(e.target.value)} /></label><label>Categoría<select className="ds-input" value={categoria} onChange={e => setCategoria(e.target.value)}>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label></div>
-        : <label className="lp-agrupacion-toggle"><input type="checkbox" checked={form.activa} disabled={usados} onChange={e => cambiar({ activa: e.target.checked })} /> Combinar otras variantes de esta colección</label>}
+      {nuevo ? <><div className="lp-agrupacion-identidad"><label>{linea.referencia ? 'Nombre de la nueva subcategoría' : 'Nombre del conjunto'}<input className="ds-input" value={nombre} maxLength={linea.referencia ? 100 : 150} placeholder="Ej.: Comedor de 6p." onChange={e => { setNombre(e.target.value); setError(''); }} /></label><label>Categoría<select className="ds-input" value={categoria} onChange={e => setCategoria(e.target.value)}><option value="">Seleccionar…</option>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label></div>{linea.referencia && <p className="lp-agrupacion-ayuda">Se creará una subcategoría nueva con la suma de sus piezas. Cada pieza conserva su proveedor.</p>}</>
+        : <label className="lp-agrupacion-toggle"><input type="checkbox" checked={form.activa} disabled={usados} onChange={e => cambiar({ activa: e.target.checked })} /> {linea.referencia ? 'Combinar otras subcategorías de esta referencia (cada pieza con su proveedor)' : 'Combinar otras variantes de esta colección'}</label>}
       {usados && <p className="lp-agrupacion-ayuda">Esta pieza ya pertenece a otro conjunto. Los conjuntos se forman con productos individuales.</p>}
       {form.activa && <>
         <div className="lp-agr-piezas" role="list" aria-label="Piezas del conjunto">
           {form.filas.length > 0 && <div className="lp-agr-cabecera" aria-hidden="true"><span>Pieza</span><span>Cant.</span><span>Costo c/u</span><span>Múltiplo</span><span>Extras</span><span /></div>}
           {form.filas.map((fila, i) => {
-            const origen = linea.variantes.find(v => v.id === fila.variante), fallos = errores[i] || {}, nombreP = origen?.nombre || `pieza ${i + 1}`;
+            const origen = coleccion.find(v => v.id === fila.variante), fallos = errores[i] || {}, nombreP = origen?.nombre || `pieza ${i + 1}`;
             const nCargos = origen?.cargos?.length || 0, nEspeciales = fila.adicionales?.length || 0, abierto = extras.has(i);
             return <div className="lp-agr-pieza" role="listitem" key={fila.variante || `p${i}`} data-abierta={abierto || undefined}>
               <div className="lp-agr-fila">
-                <div className="lp-agr-nombre"><strong>{origen?.nombre || 'Producto no disponible'}</strong>{origen && <small>{mostrarPesos(origen.costo_base)} · ×{multiplo(origen.multiplicador_efectivo)}</small>}</div>
+                <div className="lp-agr-nombre"><strong>{origen?.nombre || 'Producto no disponible'}</strong>{origen && <small>{variosProveedores && <span className="lp-agr-proveedor">{origen.proveedorPieza || 'Sin proveedor'}</span>}{mostrarPesos(origen.costo_base)} · ×{multiplo(origen.multiplicador_efectivo)}</small>}</div>
                 <CampoEspecial label="Cant." ariaLabel={`Cantidad de ${nombreP}`} valor={fila.cantidad} onChange={cantidad => cambiarFila(i, { cantidad })} error={fallos.cantidad} />
                 <CampoEspecial label="Costo c/u" ariaLabel={`Costo unitario de ${nombreP}`} moneda valor={fila.costo} placeholder={origen ? mostrarPesos(origen.costo_base) : 'Del producto'} onChange={costo => cambiarFila(i, { costo })} error={fallos.costo} />
                 <CampoEspecial label="Múltiplo" ariaLabel={`Multiplicador de ${nombreP}`} valor={fila.multiplo} sufijo="×" placeholder={origen ? multiplo(origen.multiplicador_efectivo) : 'Del producto'} onChange={multiplo => cambiarFila(i, { multiplo })} error={fallos.multiplo} />
@@ -109,7 +123,7 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
               {fallos.variante && <small className="lp-agrupacion-error" role="alert">{fallos.variante}</small>}
               {abierto && <div className="lp-agr-extras">
                 {origen && <section aria-label={`Cargos de ${origen.nombre}`}><h5>Cargos de {origen.nombre} <small>Son los del producto: se guardan al instante y aplican también en su referencia</small></h5>
-                  <CargosVariante variante={origen} lineaId={linea.id} notify={notify} /></section>}
+                  <CargosVariante variante={origen} lineaId={origen.lineaPieza} notify={notify} /></section>}
                 <section aria-label={`Especiales de ${nombreP} en este conjunto`}><h5>Especiales solo en este conjunto <small>Por cada unidad de la pieza</small></h5>
                   <AdicionalesComponente valor={fila.adicionales || []} general={general} errores={fallos.adicionales} onChange={adicionales => cambiarFila(i, { adicionales, adicionalesEditados: true })} /></section>
               </div>}
@@ -119,9 +133,12 @@ export default function AgrupacionVariante({ variante, linea, categorias = [], n
         <div className="lp-agr-agregar">
           <select aria-label="Agregar pieza" value="" disabled={!libres.length} onChange={e => e.target.value && cambiar({ filas: [...form.filas, { variante: Number(e.target.value), cantidad: '1', costo: '', multiplo: '', adicionales: [] }] })}>
             <option value="">{libres.length ? '+ Agregar pieza…' : 'No quedan productos para agregar'}</option>
-            {libres.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+            {variosProveedores
+              ? [...new Set(libres.map(v => v.lineaPieza))].map(id => { const deProv = libres.filter(v => v.lineaPieza === id);
+                return <optgroup key={id} label={deProv[0].proveedorPieza || 'Sin proveedor'}>{deProv.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}</optgroup>; })
+              : libres.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
           </select>
-          <p className="lp-agrupacion-ayuda">{form.filas.length ? 'Costo y múltiplo vacíos = los del producto; lo que escribas aplica solo a este conjunto.' : 'Elige los productos de la colección que forman el conjunto.'}</p>
+          <p className="lp-agrupacion-ayuda">{form.filas.length ? 'Costo y múltiplo vacíos = los del producto; lo que escribas aplica solo a este conjunto.' : 'Elige las piezas de la referencia y ajusta sus cantidades.'}</p>
         </div>
         {errores.general && <p role="alert" className="lp-agrupacion-error">{errores.general}</p>}
         {!nuevo && variante.precios?.some(p => p.precio_manual != null) && <p className="lp-agrupacion-aviso">Este conjunto tiene precios manuales que siguen vigentes. Usa «Volver al calculado» en los grupos que deban tomar la suma de piezas.</p>}

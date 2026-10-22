@@ -11,6 +11,9 @@ import { formatCOP } from '../utils/formatCOP';
 import { groupProductos } from '../utils/groupProductos';
 import { PageHeader, Button } from '../components/ui';
 import './NuevaComprobanteEgresoPage.css';
+import { useQuery } from '@tanstack/react-query';
+import { beneficiarios } from '../services/pagosBancariosService';
+import { SelectorCuenta } from './pagos/CuentasBancarias';
 
 const PROVEEDOR_OTRO = '__otro__';
 
@@ -49,6 +52,7 @@ export default function EditarComprobanteEgresoPage() {
   const [proveedorOtroNombre, setProveedorOtroNombre] = useState('');
   const [recibidoPor, setRecibidoPor] = useState('');
   const [medioPago, setMedioPago] = useState('');
+  const [cuentaDestino, setCuentaDestino] = useState('');
   const [estado, setEstado] = useState('Por Confirmar Pago');
   const [valor, setValor] = useState('');
   const [concepto, setConcepto] = useState('');
@@ -73,6 +77,10 @@ export default function EditarComprobanteEgresoPage() {
   const [submitError, setSubmitError] = useState(null);
 
   const isProveedorOtro = proveedor === PROVEEDOR_OTRO;
+  const isProveedorTela = String(proveedor).startsWith('tela:');
+  const proveedorTelaId = isProveedorTela ? proveedor.slice(5) : null;
+  const titularCuenta = isProveedorTela ? { proveedor_tela: proveedorTelaId } : { proveedor };
+  const directorio = useQuery({ queryKey: ['pagos', 'beneficiarios'], queryFn: beneficiarios });
 
   // --- Cargar el comprobante (si no llegó por navigation state, ej. F5) ---
   useEffect(() => {
@@ -93,10 +101,11 @@ export default function EditarComprobanteEgresoPage() {
   useEffect(() => {
     if (!comprobante) return;
     setFecha((comprobante.fecha || '').split('T')[0]);
-    setProveedor(comprobante.proveedor ? String(comprobante.proveedor) : PROVEEDOR_OTRO);
+    setProveedor(comprobante.proveedor_tela ? `tela:${comprobante.proveedor_tela}` : comprobante.proveedor ? String(comprobante.proveedor) : PROVEEDOR_OTRO);
     setProveedorOtroNombre(comprobante.proveedor_otro_nombre || '');
     setRecibidoPor(comprobante.recibido_por || '');
     setMedioPago(comprobante.medio_pago || '');
+    setCuentaDestino(String(comprobante.cuenta_destino || ''));
     setEstado(comprobante.estado || 'Por Confirmar Pago');
     setValor(comprobante.valor != null ? String(parseInt(comprobante.valor)) : '');
     setConcepto(comprobante.concepto || '');
@@ -115,16 +124,16 @@ export default function EditarComprobanteEgresoPage() {
   // que la página de creación) — solo se dispara cuando el usuario cambia el
   // proveedor manualmente, no pisa el 0% inicial del prefill del comprobante.
   useEffect(() => {
-    if (!comprobante || !proveedor || isProveedorOtro || !Array.isArray(proveedores)) return;
+    if (!comprobante || !proveedor || isProveedorOtro || isProveedorTela || !Array.isArray(proveedores)) return;
     if (String(proveedor) === String(comprobante.proveedor)) return;
     const prov = proveedores.find(p => String(p.id) === String(proveedor));
     if (!prov) return;
     setPorcentajeDescuento(prov.porcentaje_descuento != null ? parseFloat(prov.porcentaje_descuento) || 0 : 0);
-  }, [proveedor, proveedores, comprobante, isProveedorOtro]);
+  }, [proveedor, proveedores, comprobante, isProveedorOtro, isProveedorTela]);
 
   // --- Cargar facturas pendientes disponibles del proveedor para poder agregar más ---
   useEffect(() => {
-    if (!proveedor || isProveedorOtro) {
+    if (!proveedor || isProveedorOtro || isProveedorTela) {
       setFacturasDisponibles([]);
       setFacturasNuevasSeleccionadas([]);
       return;
@@ -137,7 +146,7 @@ export default function EditarComprobanteEgresoPage() {
       })
       .catch(() => setFacturasDisponibles([]))
       .finally(() => setLoadingFacturas(false));
-  }, [proveedor, isProveedorOtro]);
+  }, [proveedor, isProveedorOtro, isProveedorTela]);
 
   const toggleKeepVinculada = (fId) => {
     setFacturasVinculadasKeep(prev => prev.includes(fId) ? prev.filter(x => x !== fId) : [...prev, fId]);
@@ -209,6 +218,7 @@ export default function EditarComprobanteEgresoPage() {
 
   const proveedorInvalido = isProveedorOtro ? !proveedorOtroNombre.trim() : !proveedor;
   const isFormInvalid = proveedorInvalido
+    || (medioPago === 'Transferencia' && !isProveedorOtro && !cuentaDestino)
     || !medioPago
     || !estado
     || !recibidoPor.trim()
@@ -228,10 +238,12 @@ export default function EditarComprobanteEgresoPage() {
 
     const payload = {
       fecha,
-      proveedor: isProveedorOtro ? '' : proveedor,
+      proveedor: isProveedorOtro || isProveedorTela ? '' : proveedor,
+      proveedor_tela: proveedorTelaId,
       proveedor_otro_nombre: isProveedorOtro ? proveedorOtroNombre : '',
       recibido_por: recibidoPor,
       medio_pago: medioPago,
+      cuenta_destino: medioPago === 'Transferencia' && !isProveedorOtro ? (cuentaDestino || null) : null,
       estado,
       valor: String(parseInt(valor) || 0),
       concepto: concepto.trim(),
@@ -310,11 +322,12 @@ export default function EditarComprobanteEgresoPage() {
 
               <div className="nce-form-group">
                 <label><FaBuilding /> Proveedor <span className="nce-req">*</span></label>
-                <select required value={proveedor} onChange={e => setProveedor(e.target.value)}>
+                <select required value={proveedor} onChange={e => { setProveedor(e.target.value); setCuentaDestino(''); }}>
                   <option value="">Seleccionar proveedor...</option>
                   {Array.isArray(proveedores) && proveedores.map(p => (
                     <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
                   ))}
+                  {directorio.data?.filter(b => b.tipo === 'Proveedor de telas').map(b => <option key={b.clave} value={`tela:${b.titular.proveedor_tela}`}>{b.nombre} · Telas</option>)}
                   <option value={PROVEEDOR_OTRO}>Otro</option>
                 </select>
               </div>
@@ -326,6 +339,8 @@ export default function EditarComprobanteEgresoPage() {
                   <span className="nce-hint">Proveedor no registrado: no se pueden asociar facturas.</span>
                 </div>
               )}
+
+              {medioPago === 'Transferencia' && proveedor && !isProveedorOtro && <div className="nce-form-group"><SelectorCuenta titular={titularCuenta} value={cuentaDestino} onChange={setCuentaDestino} administrar required /></div>}
 
               <div className="nce-form-group">
                 <label><FaUserCheck /> Recibido por (persona que recibe) <span className="nce-req">*</span></label>
@@ -494,7 +509,7 @@ export default function EditarComprobanteEgresoPage() {
                 </>
               )}
 
-              {!isProveedorOtro && proveedor && (
+              {!isProveedorOtro && !isProveedorTela && proveedor && (
                 <>
                   <div className="nce-concepto-section-title nce-concepto-section-title-spaced">➕ Agregar más facturas pendientes</div>
                   <div className="nce-facturas-section">

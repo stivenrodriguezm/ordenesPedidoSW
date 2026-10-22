@@ -720,8 +720,8 @@ function FacturasProveedorPage() {
             return <FaSort style={{ opacity: 0.35, fontSize: '0.75rem', flexShrink: 0 }} />;
         }
         return sortConfig.direction === 'asc' 
-            ? <FaSortUp style={{ color: '#171815', fontSize: '0.8rem', flexShrink: 0, marginBottom: '-2px' }} />
-            : <FaSortDown style={{ color: '#171815', fontSize: '0.8rem', flexShrink: 0, marginTop: '-2px' }} />;
+            ? <FaSortUp style={{ color: 'var(--text)', fontSize: '0.8rem', flexShrink: 0, marginBottom: '-2px' }} />
+            : <FaSortDown style={{ color: 'var(--text)', fontSize: '0.8rem', flexShrink: 0, marginTop: '-2px' }} />;
     };
 
     const filteredFacturas = React.useMemo(() => {
@@ -937,14 +937,14 @@ function FacturasProveedorPage() {
                     </div>
 
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#72726a', textTransform: 'uppercase' }}>Desde</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Desde</label>
                         <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
-                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#3e3e37', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: 'var(--text)', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     <div className="v-select-pill" style={{ height: 34, display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, padding: '0 0.5rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#72726a', textTransform: 'uppercase' }}>Hasta</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Hasta</label>
                         <input type="date" onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
-                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: '#3e3e37', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
+                            style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', color: 'var(--text)', fontWeight: 600, cursor: 'pointer', outline: 'none', width: 'auto' }} />
                     </div>
                     {hasFilters && (
                         <button className="fct-clear-pill" onClick={handleClearFilters} title="Limpiar filtros">
@@ -1018,9 +1018,9 @@ function FacturasProveedorPage() {
                                     </tr>
                                 ))
                             ) : errorFacturas ? (
-                                <tr><td colSpan="8" style={{ textAlign: 'center', color: '#a8432f', padding: '3rem', fontStyle: 'italic' }}>No se pudieron cargar las facturas.</td></tr>
+                                <tr><td colSpan="8" style={{ textAlign: 'center', color: 'var(--danger)', padding: '3rem', fontStyle: 'italic' }}>No se pudieron cargar las facturas.</td></tr>
                             ) : filteredFacturas.length === 0 ? (
-                                <tr><td colSpan="8" style={{ textAlign: 'center', color: '#a3a398', padding: '3rem', fontStyle: 'italic' }}>No se encontraron facturas.</td></tr>
+                                <tr><td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem', fontStyle: 'italic' }}>No se encontraron facturas.</td></tr>
                             ) : filteredFacturas.map(f => (
                                 <React.Fragment key={f.id}>
                                     <tr className={expandedId === f.id ? 'expanded-row-highlight' : ''} onClick={() => toggleExpand(f.id)} style={{ cursor: 'pointer' }}>
@@ -1047,9 +1047,9 @@ function FacturasProveedorPage() {
                                             <td colSpan="8">
                                                 <div className="factura-expanded-premium">
                                                     {loadingDetailsId === f.id ? (
-                                                         <div style={{ textAlign: 'center', padding: '2.5rem', color: '#72726a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                                             <FaSpinner style={{ fontSize: '2.2rem', color: '#171815', animation: 'spin 0.8s linear infinite', marginBottom: '0.8rem' }} />
-                                                             <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#3e3e37' }}>Cargando detalles de la factura...</span>
+                                                         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                             <FaSpinner style={{ fontSize: '2.2rem', color: 'var(--text)', animation: 'spin 0.8s linear infinite', marginBottom: '0.8rem' }} />
+                                                             <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>Cargando detalles de la factura...</span>
                                                          </div>
                                                     ) : (
                                                         <>
@@ -1118,7 +1118,7 @@ function FacturasProveedorPage() {
                                                                                     <div 
                                                                                         key={keyIndex} 
                                                                                         className={`invoice-item-card compact-card ${isNested ? 'nested-item-card' : ''}`}
-                                                                                        style={isNested ? { borderLeft: '3px solid #4f6a7f', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' } : {}}
+                                                                                        style={isNested ? { borderLeft: '3px solid #4f6a7f', background: 'var(--surface)', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' } : {}}
                                                                                     >
                                                                                         <div className="compact-col compact-col-main">
                                                                                             <div className="compact-title-group">
@@ -1126,7 +1126,7 @@ function FacturasProveedorPage() {
                                                                                                 <h4 className="item-title" title={refNombre}>{refNombre}</h4>
                                                                                             </div>
                                                                                             <div className="item-tags">
-                                                                                                {!isNested && grupoNombre && <span className="item-tag" style={{ background: '#eaeff1', color: '#4f6a7f', borderColor: '#c9d5dc' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
+                                                                                                {!isNested && grupoNombre && <span className="item-tag" style={{ background: 'var(--info-soft)', color: 'var(--info)', borderColor: 'var(--info-line)' }}><FaLayerGroup style={{marginRight: 4}}/>{grupoNombre}</span>}
                                                                                                 <span className={`item-tag ${!catNombre ? 'item-tag-empty' : ''}`}>{catNombre || 'Sin categoría'}</span>
                                                                                                 <span className={`item-tag ${!subNombre ? 'item-tag-empty' : ''}`}>{subNombre || 'Sin subcategoría'}</span>
                                                                                             </div>
@@ -1173,12 +1173,12 @@ function FacturasProveedorPage() {
                                                                                         <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
                                                                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                                                 <span className="item-costo" style={{ fontSize: '0.95rem', fontWeight: 800 }}>{formatCOP(baseCosto)}</span>
-                                                                                                <span style={{ fontSize: '0.65rem', color: '#72726a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Costo Proveedor</span>
+                                                                                                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Costo Proveedor</span>
                                                                                             </div>
                                                                                             {hasTC && totalTCCosto > 0 && (
-                                                                                                <div style={{ fontSize: '0.72rem', background: '#faf9f5', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid #e4e3dc', textAlign: 'right' }}>
-                                                                                                    <span style={{ color: '#57574f' }}>Total c/Telas/Cueros: </span>
-                                                                                                    <strong style={{ color: '#171815' }}>{formatCOP(baseCosto + totalTCCosto)}</strong>
+                                                                                                <div style={{ fontSize: '0.72rem', background: 'var(--surface-muted)', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid var(--border)', textAlign: 'right' }}>
+                                                                                                    <span style={{ color: 'var(--text-secondary)' }}>Total c/Telas/Cueros: </span>
+                                                                                                    <strong style={{ color: 'var(--text)' }}>{formatCOP(baseCosto + totalTCCosto)}</strong>
                                                                                                 </div>
                                                                                             )}
                                                                                             {p.imagen && (
@@ -1248,16 +1248,16 @@ function FacturasProveedorPage() {
                                                                                     >
                                                                                         <div className="compact-col compact-col-main">
                                                                                             <div className="compact-title-group">
-                                                                                                <span className="item-id-badge" style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
+                                                                                                <span className="item-id-badge" style={{ background: 'var(--info-soft)', color: 'var(--info)', border: '1px solid var(--info-line)', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
                                                                                                     <FaLayerGroup style={{ fontSize: '0.65rem' }} /> {grupoBadgeStr}
                                                                                                 </span>
                                                                                                 <h4 className="item-title" title={gName}>{gName}</h4>
                                                                                             </div>
-                                                                                            <div className="group-ref-subtitle" style={{ fontSize: '0.78rem', color: '#4f6a7f', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                                                <span style={{ color: '#72726a', fontWeight: 500 }}>Ref:</span> <span title={refsLabel}>{refsLabel}</span>
+                                                                                            <div className="group-ref-subtitle" style={{ fontSize: '0.78rem', color: 'var(--info)', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                                <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Ref:</span> <span title={refsLabel}>{refsLabel}</span>
                                                                                             </div>
                                                                                             <div className="item-tags" style={{ marginTop: '0.2rem' }}>
-                                                                                                <span className="item-tag" style={{ background: '#4f6a7f', color: '#ffffff', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
+                                                                                                <span className="item-tag" style={{ background: 'var(--info)', color: '#ffffff', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
                                                                                                 {catLabel && <span className="item-tag">{catLabel}</span>}
                                                                                                 {subcatLabel && <span className="item-tag">{subcatLabel}</span>}
                                                                                             </div>
@@ -1275,7 +1275,7 @@ function FacturasProveedorPage() {
                                                                                                 </div>
                                                                                             )}
                                                                                             {badStateCount > 0 && (
-                                                                                                <div className="item-desc" style={{ marginTop: '0.2rem', color: '#a8432f', fontWeight: 600, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                                                                <div className="item-desc" style={{ marginTop: '0.2rem', color: 'var(--danger)', fontWeight: 600, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                                                                                                     <FaExclamationTriangle style={{ fontSize: '0.65rem' }} /> {badStateCount} en mal estado
                                                                                                 </div>
                                                                                             )}
@@ -1308,8 +1308,8 @@ function FacturasProveedorPage() {
 
                                                                                         <div className="compact-col compact-col-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
                                                                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                                                                <span className="item-costo" style={{ color: '#4f6a7f', fontSize: '1.05rem', fontWeight: 800 }}>{formatCOP(totalCosto)}</span>
-                                                                                                <span style={{ fontSize: '0.62rem', color: '#72726a', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Costo Total Grupo</span>
+                                                                                                <span className="item-costo" style={{ color: 'var(--info)', fontSize: '1.05rem', fontWeight: 800 }}>{formatCOP(totalCosto)}</span>
+                                                                                                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Costo Total Grupo</span>
                                                                                             </div>
                                                                                         </div>
 
@@ -1322,7 +1322,7 @@ function FacturasProveedorPage() {
                                                                                                     width: '100%',
                                                                                                     marginTop: '0.75rem',
                                                                                                     paddingTop: '0.85rem',
-                                                                                                    borderTop: '1.5px solid #c9d5dc'
+                                                                                                    borderTop: '1.5px solid var(--info-line)'
                                                                                                 }}
                                                                                             >
                                                                                                 <div 
@@ -1333,18 +1333,18 @@ function FacturasProveedorPage() {
                                                                                                         justifyContent: 'space-between',
                                                                                                         marginBottom: '0.75rem',
                                                                                                         padding: '0.5rem 0.75rem',
-                                                                                                        background: '#ffffff',
+                                                                                                        background: 'var(--surface)',
                                                                                                         borderRadius: '8px',
-                                                                                                        border: '1px solid #c9d5dc'
+                                                                                                        border: '1px solid var(--info-line)'
                                                                                                     }}
                                                                                                 >
                                                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                                                        <FaLayerGroup style={{ color: '#4f6a7f', fontSize: '0.9rem' }} />
-                                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#171815' }}>
-                                                                                                            Componentes de {gName} <span style={{ color: '#4f6a7f', fontWeight: 600 }}>(Ref: {refsLabel})</span>
+                                                                                                        <FaLayerGroup style={{ color: 'var(--info)', fontSize: '0.9rem' }} />
+                                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>
+                                                                                                            Componentes de {gName} <span style={{ color: 'var(--info)', fontWeight: 600 }}>(Ref: {refsLabel})</span>
                                                                                                         </span>
                                                                                                     </div>
-                                                                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4f6a7f' }}>
+                                                                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--info)' }}>
                                                                                                         Subtotal: {formatCOP(totalCosto)}
                                                                                                     </div>
                                                                                                 </div>
@@ -1456,7 +1456,7 @@ function FacturasProveedorPage() {
                                             <span className="fct-grupos-empty">Sin grupos nuevos — puedes asignar ítems a grupos existentes desde el select de cada referencia</span>
                                         ) : form.grupoInstances.map(gi => (
                                             <div key={gi.localId} className="fct-grupo-chip">
-                                                <FaLayerGroup style={{ fontSize: '0.75rem', color: '#171815', flexShrink: 0 }} />
+                                                <FaLayerGroup style={{ fontSize: '0.75rem', color: 'var(--text)', flexShrink: 0 }} />
                                                 <input
                                                     type="text"
                                                     className="fct-grupo-chip-name"
@@ -1692,7 +1692,7 @@ function FacturasProveedorPage() {
                                                             {ordenesPendientes.map(id => <option key={id} value={id}>{id}</option>)}
                                                         </select>
                                                         {row.grupoLocalId && (
-                                                            <small style={{ color: '#a8732b', display: 'block', marginTop: '0.2rem', fontSize: '0.7rem', lineHeight: '1.2' }}>
+                                                            <small style={{ color: 'var(--warning)', display: 'block', marginTop: '0.2rem', fontSize: '0.7rem', lineHeight: '1.2' }}>
                                                                 Hereda la venta del grupo asignado.
                                                             </small>
                                                         )}
@@ -1743,7 +1743,7 @@ function FacturasProveedorPage() {
                                                     <div className="fct-img-zone">
                                                         {row.imagen ? (
                                                             <div className="fct-img-preview">
-                                                                <FaImage style={{ fontSize: '0.9rem', color: '#171815', flexShrink: 0 }} />
+                                                                <FaImage style={{ fontSize: '0.9rem', color: 'var(--text)', flexShrink: 0 }} />
                                                                 <span className="fct-img-name">{row.imagen.name}</span>
                                                                 <button type="button" className="fct-img-remove" onClick={() => handleRefRow(index, 'imagen', null)}>&times;</button>
                                                             </div>
@@ -1769,25 +1769,25 @@ function FacturasProveedorPage() {
                                             </div>
 
                                             {/* Sub-sección Dinámica: Telas y Cueros */}
-                                            <div style={{ background: '#faf9f5', border: '1px solid #e4e3dc', borderRadius: '8px', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
+                                            <div style={{ background: 'var(--surface-muted)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3e3e37', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                                         🧵 Telas y Cueros (Costos Adicionales)
-                                                        <span style={{ fontSize: '0.68rem', fontWeight: 400, color: '#72726a', fontStyle: 'italic', marginLeft: '0.2rem' }}>
+                                                        <span style={{ fontSize: '0.68rem', fontWeight: 400, color: 'var(--text-secondary)', fontStyle: 'italic', marginLeft: '0.2rem' }}>
                                                             — Usar punto (.) para decimales, ej: 2.5
                                                         </span>
                                                     </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => addTelaCueroToRow(index)}
-                                                        style={{ background: '#eaeff1', color: '#4f6a7f', border: '1px solid #c9d5dc', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                        style={{ background: 'var(--info-soft)', color: 'var(--info)', border: '1px solid var(--info-line)', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                                                     >
                                                         <FaPlus style={{ fontSize: '0.65rem' }} /> Agregar Tela/Cuero
                                                     </button>
                                                 </div>
 
                                                 {(!row.telas_cueros || row.telas_cueros.length === 0) ? (
-                                                    <div style={{ fontSize: '0.7rem', color: '#a3a398', fontStyle: 'italic' }}>Sin telas o cueros asignados a este producto.</div>
+                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin telas o cueros asignados a este producto.</div>
                                                 ) : (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                                         {row.telas_cueros.map((tc, tcIdx) => {
@@ -1795,11 +1795,11 @@ function FacturasProveedorPage() {
                                                             const unitLabel = isCuero ? 'dm' : 'm';
                                                             const tcSubtotal = (parseFloat(tc.costo_unidad) || 0) * (parseFloat(tc.cantidad) || 0);
                                                             return (
-                                                                <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', padding: '0.35rem', borderRadius: '6px', border: '1px solid #d0cfc6' }}>
+                                                                <div key={tc.id || tcIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--surface)', padding: '0.35rem', borderRadius: '6px', border: '1px solid var(--border-strong)' }}>
                                                                     <select
                                                                         value={tc.tipo || 'tela'}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'tipo', e.target.value)}
-                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6', fontWeight: 700, color: isCuero ? '#a8732b' : '#4f6a7f', background: isCuero ? '#f8f0e0' : '#eaeff1', flexShrink: 0 }}
+                                                                        style={{ padding: '0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-strong)', fontWeight: 700, color: isCuero ? '#a8732b' : '#4f6a7f', background: isCuero ? '#f8f0e0' : '#eaeff1', flexShrink: 0 }}
                                                                     >
                                                                         <option value="tela">Tela (m)</option>
                                                                         <option value="cuero">Cuero (dm)</option>
@@ -1810,7 +1810,7 @@ function FacturasProveedorPage() {
                                                                         placeholder={isCuero ? "Ref. Cuero" : "Ref. Tela"}
                                                                         value={tc.referencia || ''}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'referencia', e.target.value)}
-                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
+                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-strong)' }}
                                                                     />
 
                                                                     <input
@@ -1818,11 +1818,11 @@ function FacturasProveedorPage() {
                                                                         placeholder="Color"
                                                                         value={tc.color || ''}
                                                                         onChange={e => updateTelaCueroInRow(index, tcIdx, 'color', e.target.value)}
-                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
+                                                                        style={{ flex: '1 1 0%', minWidth: 0, padding: '0.3rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-strong)' }}
                                                                     />
 
                                                                     <div style={{ position: 'relative', flex: '1 1 0%', minWidth: 0 }}>
-                                                                        <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: '#a3a398', fontSize: '0.7rem' }}>$</span>
+                                                                        <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.7rem' }}>$</span>
                                                                         <input
                                                                             type="text"
                                                                             placeholder={isCuero ? "$/dm" : "$/m"}
@@ -1831,7 +1831,7 @@ function FacturasProveedorPage() {
                                                                                 const raw = e.target.value.replace(/[^0-9]/g, '');
                                                                                 updateTelaCueroInRow(index, tcIdx, 'costo_unidad', raw);
                                                                             }}
-                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
+                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem 0.3rem 1.1rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-strong)' }}
                                                                         />
                                                                     </div>
 
@@ -1846,13 +1846,13 @@ function FacturasProveedorPage() {
                                                                                 const val = e.target.value.replace(',', '.');
                                                                                 updateTelaCueroInRow(index, tcIdx, 'cantidad', val);
                                                                             }}
-                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #d0cfc6' }}
+                                                                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.3rem 0.3rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-strong)' }}
                                                                         />
-                                                                        <span style={{ fontSize: '0.7rem', color: '#72726a', fontWeight: 600 }}>{unitLabel}</span>
+                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{unitLabel}</span>
                                                                     </div>
 
                                                                     {tcSubtotal > 0 && (
-                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#171815', whiteSpace: 'nowrap', padding: '0 0.3rem', flexShrink: 0 }}>
+                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', padding: '0 0.3rem', flexShrink: 0 }}>
                                                                             = {formatCOP(tcSubtotal)}
                                                                         </span>
                                                                     )}
@@ -1860,7 +1860,7 @@ function FacturasProveedorPage() {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => removeTelaCueroFromRow(index, tcIdx)}
-                                                                        style={{ background: 'transparent', border: 'none', color: '#a8432f', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem', flexShrink: 0 }}
+                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.2rem 0.3rem', fontSize: '0.8rem', flexShrink: 0 }}
                                                                         title="Quitar esta tela/cuero"
                                                                     >
                                                                         <FaTrashAlt />
@@ -1886,7 +1886,7 @@ function FacturasProveedorPage() {
                             <div className="fct-footer">
                                 <button type="button" className="fact-btn-secondary" onClick={resetModal} disabled={isCreating}>Cancelar</button>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto', marginRight: '1rem' }}>
-                                    <span style={{ fontSize: '0.85rem', color: '#72726a', fontWeight: 600 }}>Total Productos:</span>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Productos:</span>
                                     <span className={`total-costos-label ${totalCostos === valorFactura && valorFactura > 0 ? 'total-match' : totalCostos > 0 ? 'total-mismatch' : ''}`}>
                                         {formatCOPInt(totalCostos)}
                                     </span>

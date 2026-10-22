@@ -12,7 +12,8 @@ const formatDateLong = (date) => date.toLocaleDateString('es-CO', { day: '2-digi
  */
 const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, folio, descuento = 0 }, ref) => {
   // «Cojines incluidos»: un decorativo cubierto resta lo incluido de su subtotal.
-  const subtotal = items.reduce((sum, i) => sum + (Number(i.precioUnitario) || 0) * i.cantidad - (Number(i.incluido) || 0), 0);
+  // Transporte por envío: lo que viaja junto (conjunto o cupo de unidades) no se cobra dos veces.
+  const subtotal = items.reduce((sum, i) => sum + (Number(i.precioUnitario) || 0) * i.cantidad - (Number(i.incluido) || 0) - (Number(i.transporteCompartido) || 0), 0);
   const descVal = Number(descuento) || 0;
   const total = Math.max(0, subtotal - descVal);
   const hoy = new Date();
@@ -61,15 +62,16 @@ const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, fo
                 </div>
                 {item.opcionales?.length > 0 && (
                   <div className="cot-item-opcionales">
-                    Incluye: {item.opcionales.map((o) => `${o.descripcion} (+${formatCOP(o.valor)})`).join(', ')}
+                    Incluye: {item.opcionales.map((o) => `${o.cantidad > 1 ? `${o.cantidad} × ` : ''}${o.descripcion} (+${formatCOP(Number(o.valor) * (Number(o.cantidad) || 1))})`).join(', ')}
                   </div>
                 )}
                 {item.notas && <div className="cot-item-notas">{item.notas}</div>}
                 {Number(item.incluido) > 0 && <div className="cot-item-opcionales">Incluido con «Cojines incluidos»: −{formatCOP(item.incluido)}</div>}
+                {Number(item.transporteCompartido) > 0 && <div className="cot-item-opcionales">Transporte compartido: −{formatCOP(item.transporteCompartido)}</div>}
               </td>
               <td className="cot-center">{item.cantidad}</td>
               <td className="cot-right">{formatCOP(item.precioUnitario)}</td>
-              <td className="cot-right cot-bold">{formatCOP(item.precioUnitario * item.cantidad - (Number(item.incluido) || 0))}</td>
+              <td className="cot-right cot-bold">{formatCOP(item.precioUnitario * item.cantidad - (Number(item.incluido) || 0) - (Number(item.transporteCompartido) || 0))}</td>
             </tr>
           ))}
         </tbody>

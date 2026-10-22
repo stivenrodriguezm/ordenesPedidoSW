@@ -113,7 +113,7 @@ const RemisionPrintModal = ({ open, onClose, remision, closeLabel = 'Cerrar' }) 
             // tiene que estar cargada aquí, no solo en el iframe.
             await document.fonts?.load('22px "Audiowide"').catch(() => {});
             const canvas = await html2canvas(doc.body, {
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--surface)',
                 scale: 2,
                 useCORS: true,
                 logging: false,

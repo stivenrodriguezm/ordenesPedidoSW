@@ -169,12 +169,12 @@
 .minimal-input-wrapper input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.07);
-  border-color: var(--accent);
+  border-color: var(--accent-borde);
   box-shadow: 0 0 0 3px rgba(164, 141, 102, 0.2);
 }
 
 .minimal-input-wrapper:focus-within .input-field-icon {
-  color: var(--accent);
+  color: var(--accent-texto);
 }
 
 .password-eye-btn {
@@ -268,7 +268,7 @@
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
+  border-top-color: var(--surface);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

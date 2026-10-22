@@ -155,15 +155,15 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
             </div>
 
             {showVentaDropdown && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #e4e3dc', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '8px', borderBottom: '1px solid #e4e3dc', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
                   <input 
                     type="text" 
                     placeholder="Buscar # de venta..." 
                     value={ventaSearch}
                     onChange={(e) => setVentaSearch(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #d0cfc6', borderRadius: '6px', background: '#faf9f5', color: '#2a2a25', fontSize: '0.9rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface-muted)', color: 'var(--text)', fontSize: '0.9rem', outline: 'none' }}
                     autoFocus
                   />
                 </div>
@@ -183,7 +183,7 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
                       Venta #{venta.id_venta}
                     </div>
                   )) : (
-                    <div style={{ padding: '12px', color: '#72726a', textAlign: 'center', fontSize: '0.9rem' }}>
+                    <div style={{ padding: '12px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.9rem' }}>
                       No se encontraron ventas
                     </div>
                   )}
@@ -401,15 +401,15 @@ const EditRCModal = ({ isOpen, onClose, onSave, onAnular, recibo, ventas, isLoad
             </div>
 
             {!hasConfirmados && showVentaDropdown && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #e4e3dc', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '8px', borderBottom: '1px solid #e4e3dc', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2, borderRadius: '8px 8px 0 0' }}>
                   <input
                     type="text"
                     placeholder="Buscar # de venta..."
                     value={ventaSearch}
                     onChange={(e) => setVentaSearch(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #d0cfc6', borderRadius: '6px', background: '#faf9f5', color: '#2a2a25', fontSize: '0.9rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface-muted)', color: 'var(--text)', fontSize: '0.9rem', outline: 'none' }}
                     autoFocus
                   />
                 </div>
@@ -429,7 +429,7 @@ const EditRCModal = ({ isOpen, onClose, onSave, onAnular, recibo, ventas, isLoad
                       Venta #{venta.id_venta}
                     </div>
                   )) : (
-                    <div style={{ padding: '12px', color: '#72726a', textAlign: 'center', fontSize: '0.9rem' }}>
+                    <div style={{ padding: '12px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.9rem' }}>
                       No se encontraron ventas
                     </div>
                   )}

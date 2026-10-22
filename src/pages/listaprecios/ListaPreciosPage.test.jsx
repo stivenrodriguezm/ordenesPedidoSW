@@ -29,22 +29,78 @@ beforeEach(() => {
 });
 
 describe('Consulta de showroom', () => {
-  it('distingue referencias homónimas por proveedor y permite buscar la correcta', async () => {
+  it('descarta el catálogo del navegador anterior a la unificación de subcategorías', async () => {
+    localStorage.setItem('lp_catalogo_40', JSON.stringify({ t: Date.now(), data: [{ ...sofa, id: 555, nombre: 'Colección anterior' }] }));
+    servicio.getCatalogo.mockResolvedValue([{ ...sofa, referencia: 101, variantes: [{ ...sofa.variantes[0], subcategoria: 71, nombre: 'Subcategoría actual' }] }]);
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Consultar Detroit' }));
+    const region = within(screen.getByRole('dialog')).getByRole('region', { name: 'Subcategoría' });
+    expect(within(region).getByRole('button', { name: 'Subcategoría actual' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Consultar Colección anterior' })).not.toBeInTheDocument();
+  });
+  it('presenta una sola referencia con sus proveedores y busca la ficha del proveedor correcto', async () => {
     servicio.getCatalogo.mockResolvedValue([
-      { ...sofa, referencia: 101, proveedor_nombre: 'Fabricante Andino' },
-      { ...sofa, id: 3, referencia: 102, proveedor_nombre: 'Fabricante Costero' },
+      { ...sofa, referencia: 101, proveedor: 7, proveedor_nombre: 'Fabricante Andino', variantes: [{ ...sofa.variantes[0], subcategoria: 71 }] },
+      { ...sofa, id: 3, referencia: 102, proveedor: 8, proveedor_nombre: 'Fabricante Costero', variantes: [{ ...sofa.variantes[1], id: 31, subcategoria: 72 }] },
     ]);
     montar();
-    expect(await screen.findByRole('button', { name: 'Consultar Detroit de Fabricante Andino · Ref. 101' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Consultar Detroit de Fabricante Costero · Ref. 102' })).toBeInTheDocument();
+    // La consulta no menciona proveedores (2026-10-21); se sigue pudiendo buscar por ellos.
+    expect(await screen.findByRole('button', { name: 'Consultar Detroit' })).not.toHaveTextContent('proveedores');
+    expect(screen.getAllByRole('button', { name: /^Consultar Detroit/ })).toHaveLength(1);
+    expect(screen.getByText('1 referencia')).toBeInTheDocument();
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'fabricante costero' } });
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Consultar Detroit de Fabricante Andino · Ref. 101' })).not.toBeInTheDocument());
+    const modal = await consultar('Detroit');
+    expect(within(modal).getByRole('button', { name: 'Sofá 200 cm', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(modal).queryByText('Fabricante Costero', { exact: true })).not.toBeInTheDocument();
+  });
+
+  it('agrupa tres proveedores de Valencia y conserva sus precios e identidades al agregar y editar', async () => {
+    const valores = [3168000, 1165120, 12270720];
+    const nombres = ['Tapa de 6p.', 'Silla de comedor', 'Comedor 6p.'];
+    servicio.getCatalogo.mockResolvedValue([100, 174, 65].map((ref, i) => ({ id: 204 + i, referencia: ref, nombre: 'Valencia', proveedor: 10 + i, proveedor_nombre: ['Gerardo Urrea', 'John Galindo', 'Metalisteros'][i], fotos: [],
+      variantes: [{ id: 801 + i, subcategoria: 71 + i, nombre: nombres[i], categoria: 2, categoria_nombre: 'Comedor', precios: [grupo(1, valores[i])], opcionales: [], notas: [] }] })));
+    montar();
+    const tarjeta = await screen.findByRole('button', { name: 'Consultar Valencia', exact: true });
+    expect(tarjeta).not.toHaveTextContent('proveedores');
+    expect(tarjeta).toHaveTextContent('3 subcategorías');
+    fireEvent.click(tarjeta);
+    let modal = screen.getByRole('dialog');
+    fireEvent.click(within(modal).getByRole('button', { name: 'Silla de comedor', exact: true }));
+    expect(within(modal).queryByText('John Galindo', { exact: true })).not.toBeInTheDocument();
+    fireEvent.click(within(modal).getByRole('button', { name: 'Agregar', exact: true }));
+    const [item] = JSON.parse(localStorage.getItem('lp_cotizacion_cart_40'));
+    expect(item).toMatchObject({ lineaId: 205, referenciaId: 174, varianteId: 802, precioUnitario: 1165120, proveedorNombre: 'John Galindo' });
+    fireEvent.click(within(modal).getByRole('button', { name: 'Ver cotización' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Valencia Silla de comedor' }));
+    modal = screen.getByRole('dialog');
+    expect(within(modal).getByRole('button', { name: 'Silla de comedor', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(modal).queryByText('John Galindo', { exact: true })).not.toBeInTheDocument();
+    fireEvent.click(within(modal).getByRole('button', { name: 'Aumentar cantidad' }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'Guardar cambio' }));
+    const actualizados = JSON.parse(localStorage.getItem('lp_cotizacion_cart_40'));
+    expect(actualizados).toHaveLength(1);
+    expect(actualizados[0]).toMatchObject({ referenciaId: 174, varianteId: 802, cantidad: 2, precioUnitario: 1165120 });
+  });
+
+  it('la misma subcategoría tiene un selector de proveedor y no mezcla sus precios, notas ni fotos', async () => {
+    servicio.getCatalogo.mockResolvedValue([7, 8].map((proveedor, i) => ({ id: 201 + i, referencia: 101 + i, nombre: 'Valencia', proveedor, proveedor_nombre: `Fabricante ${proveedor}`, fotos: [`/foto-${proveedor}.jpg`], notas: `Acabado de ${proveedor}`,
+      variantes: [{ id: 801 + i, subcategoria: 71, nombre: 'Mesa de 6', categoria: 2, categoria_nombre: 'Comedor', precios: [grupo(1, 1000000 + i * 500000)], opcionales: [], notas: [] }] })));
+    montar();
+    const modal = await consultar('Valencia');
+    expect(within(modal).getByRole('region', { name: 'Subcategoría' }).querySelectorAll('.lp-variante-opcion')).toHaveLength(1);
+    const opcion = within(modal).getByLabelText('Opciones de Mesa de 6');
+    expect([...opcion.options].map(o => o.textContent)).toEqual([`Opción 1 · desde ${formatCOP(1000000)}`, `Opción 2 · desde ${formatCOP(1500000)}`]);
+    fireEvent.change(opcion, { target: { value: '802' } });
+    expect(within(modal).getByText('Acabado de 8')).toBeInTheDocument();
+    expect(within(modal).queryByText('Acabado de 7')).not.toBeInTheDocument();
+    fireEvent.click(within(modal).getByRole('button', { name: 'Agregar', exact: true }));
+    expect(JSON.parse(localStorage.getItem('lp_cotizacion_cart_40'))[0]).toMatchObject({ lineaId: 202, referenciaId: 102, varianteId: 802, foto: '/foto-8.jpg', precioUnitario: 1500000 });
   });
   it('respeta el orden de administración y selecciona la primera variante sin adelantar los conjuntos', async () => {
     montar();
     const modal = await consultar('Qatar');
-    const opciones = within(modal).getByRole('region', { name: 'Producto y medida' });
-    expect(within(opciones).getAllByRole('button').map(b => b.textContent)).toEqual(['Mesa', 'Comedor 6 puestosConjunto · 1 Mesa + 6 Sillas']);
+    const opciones = within(modal).getByRole('region', { name: 'Subcategoría' });
+    expect(within(opciones).getAllByRole('button').map(b => b.textContent)).toEqual(['Mesa', 'Comedor 6 puestos1 Mesa + 6 Sillas']);
     expect(within(opciones).getByRole('button', { name: 'Mesa', exact: true })).toHaveAttribute('aria-pressed', 'true');
   });
   it('busca sin tildes por medida, filtra localmente y conserva el precio de la variante filtrada', async () => {
@@ -86,7 +142,8 @@ describe('Consulta de showroom', () => {
     expect(screen.queryByRole('button', { name: 'Consultar Detroit' })).not.toBeInTheDocument();
     const modal = await consultar('Qatar');
     expect(within(modal).getByRole('button', { name: /Comedor 6 puestos/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(modal).getByText('1 Mesa + 6 Sillas')).toBeInTheDocument();
+    expect(within(modal).getAllByText('1 Mesa + 6 Sillas').length).toBeGreaterThan(0);
+    expect(within(modal).queryByText(/Conjunto/)).not.toBeInTheDocument();
     fireEvent.click(within(modal).getByRole('button', { name: 'Agregar', exact: true }));
     fireEvent.click(within(modal).getByRole('button', { name: 'Ver cotización' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Incluye: 1 Mesa + 6 Sillas');
@@ -244,4 +301,72 @@ it('un opcional habilitado llega seleccionado y se puede quitar; el deshabilitad
   await waitFor(() => expect(servicio.getPrecioVariante).toHaveBeenCalledWith(10, { grupo: 1, opcionales: [100] }));
   fireEvent.click(screen.getByRole('button', { name: /USB/ }));
   expect(screen.getByRole('button', { name: /USB/ })).toHaveAttribute('aria-pressed', 'false');
+});
+
+it('«Cojines incluidos» opcional da el cupo de decorativos solo al elegirlo', async () => {
+  servicio.getPrecioVariante.mockResolvedValue({ precio: 3200000, opcionales_incluidos: [{ id: 300, descripcion: 'Decorativos x2' }] });
+  const onAgregar = vi.fn();
+  const variante = { ...sofa.variantes[0], decorativos_incluidos: 0, opcionales: [{ id: 300, descripcion: 'Decorativos x2', valor: 200640, preseleccionado: false, decorativos: true }] };
+  montar(<ConfiguradorPrecio linea={{ ...sofa, variantes: [variante] }} inicial={{ varianteId: 10, grupoId: 1 }} onClose={vi.fn()} onAgregar={onAgregar} onVerCotizacion={vi.fn()} />);
+  expect(screen.queryByText(/Por unidad incluye/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Decorativos x2/ }));
+  expect(screen.getByText(/Por unidad incluye 2 productos/)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Agregar', exact: true })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Agregar', exact: true }));
+  expect(onAgregar).toHaveBeenCalledWith(expect.objectContaining({ decorativosIncluidos: 2 }));
+});
+
+describe('Adicionales al elegir la subcategoría (2026-10-21)', () => {
+  const variante = (extra = {}) => ({ ...sofa.variantes[0], incluidos: ['Armado'],
+    opcionales: [{ id: 100, descripcion: 'Reclino eléctrico', valor: 1000000, preseleccionado: false, multiple: true },
+      { id: 101, descripcion: 'Transporte', valor: 211200, preseleccionado: true, multiple: false }], ...extra });
+
+  it('van justo después de la subcategoría, con los obligatorios fijos y los habilitados seleccionados', () => {
+    servicio.getPrecioVariante.mockResolvedValue({ precio: 3100000, opcionales_incluidos: [] });
+    montar(<ConfiguradorPrecio linea={{ ...sofa, variantes: [variante()] }} inicial={{ varianteId: 10, grupoId: 1 }} onClose={vi.fn()} onAgregar={vi.fn()} onVerCotizacion={vi.fn()} />);
+    const secciones = [...document.querySelectorAll('.lp-config-section')].map((s) => s.getAttribute('aria-label'));
+    expect(secciones.slice(0, 3)).toEqual(['Subcategoría', 'Adicionales', 'Grupo de tela']);
+    expect(screen.getByText('Armado').closest('.lp-opcional-chip')).toHaveClass('lp-opcional-chip--fijo');
+    expect(screen.getByRole('button', { name: /Transporte/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('group', { name: 'Unidades de Transporte' })).not.toBeInTheDocument();
+  });
+
+  it('un adicional múltiple se puede llevar varias veces', async () => {
+    servicio.getPrecioVariante.mockResolvedValue({ precio: 5100000, opcionales_incluidos: [{ id: 100, descripcion: 'Reclino eléctrico', valor: 1000000, cantidad: 2 }] });
+    const onAgregar = vi.fn();
+    montar(<ConfiguradorPrecio linea={{ ...sofa, variantes: [variante()] }} inicial={{ varianteId: 10, grupoId: 1 }} onClose={vi.fn()} onAgregar={onAgregar} onVerCotizacion={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Reclino eléctrico/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar una unidad de Reclino eléctrico' }));
+    expect(within(screen.getByRole('group', { name: 'Unidades de Reclino eléctrico' })).getByText('2')).toBeInTheDocument();
+    await waitFor(() => expect(servicio.getPrecioVariante).toHaveBeenLastCalledWith(10, { grupo: 1, opcionales: [100, 100, 101] }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Agregar', exact: true })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar', exact: true }));
+    expect(onAgregar).toHaveBeenCalledWith(expect.objectContaining({ opcionales: [expect.objectContaining({ id: 100, cantidad: 2 })] }));
+  });
+
+  it('si el catálogo guardado se actualiza, toma los habilitados nuevos mientras no se toquen', () => {
+    servicio.getPrecioVariante.mockResolvedValue({ precio: 3100000, opcionales_incluidos: [] });
+    const sinHabilitar = variante({ opcionales: [{ id: 101, descripcion: 'Transporte', valor: 211200, preseleccionado: false, multiple: false }] });
+    const props = { inicial: { varianteId: 10, grupoId: 1 }, onClose: vi.fn(), onAgregar: vi.fn(), onVerCotizacion: vi.fn() };
+    const { rerender } = montar(<ConfiguradorPrecio linea={{ ...sofa, variantes: [sinHabilitar] }} {...props} />);
+    expect(screen.getByRole('button', { name: /Transporte/ })).toHaveAttribute('aria-pressed', 'false');
+    // Misma consulta abierta (mismo componente), con el catálogo fresco que llega después.
+    rerender(<QueryClientProvider client={new QueryClient()}><AppContext.Provider value={{ usuario: { id: 40, username: 'Vendedor' } }}>
+      <ConfiguradorPrecio linea={{ ...sofa, variantes: [variante()] }} {...props} /></AppContext.Provider></QueryClientProvider>);
+    expect(screen.getByRole('button', { name: /Transporte/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+it('la nota del producto va con el ítem y en las notas de la cotización', async () => {
+  const { notasCotizacion } = await import('../../utils/consultaPrecios');
+  servicio.getPrecioVariante.mockResolvedValue({ precio: 3000000, opcionales_incluidos: [] });
+  const onAgregar = vi.fn();
+  montar(<ConfiguradorPrecio linea={sofa} inicial={{ varianteId: 10, grupoId: 1 }} onClose={vi.fn()} onAgregar={onAgregar} onVerCotizacion={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Nota del producto'), { target: { value: '  Patas en roble ' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Agregar', exact: true })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Agregar', exact: true }));
+  const item = onAgregar.mock.calls[0][0];
+  expect(item.notaVendedor).toBe('Patas en roble');
+  expect(notasCotizacion(item)).toContain('Nota: Patas en roble');
+  expect(screen.getByLabelText('Nota del producto')).toHaveValue('');
 });

@@ -56,6 +56,22 @@ describe('Perfil al pie del menú', () => {
         expect(screen.getByText('Pantalla de perfil')).toBeInTheDocument();
     });
 
+    it('cambia entre modo diurno y nocturno y lo recuerda en este equipo', () => {
+        localStorage.removeItem('lottus-tema');
+        document.documentElement.dataset.tema = 'diurno';
+        montar('/', admin);
+        fireEvent.click(screen.getByRole('button', { name: 'Cuenta de Ana Ruiz' }));
+        const modo = screen.getByRole('switch', { name: /Modo nocturno/ });
+        expect(modo).toHaveAttribute('aria-checked', 'false');
+        fireEvent.click(modo);
+        expect(modo).toHaveAttribute('aria-checked', 'true');
+        expect(document.documentElement.dataset.tema).toBe('nocturno');
+        expect(localStorage.getItem('lottus-tema')).toBe('nocturno');
+        fireEvent.click(modo);
+        expect(document.documentElement.dataset.tema).toBe('diurno');
+        expect(localStorage.getItem('lottus-tema')).toBe('diurno');
+    });
+
     it('oculta Gestión de usuarios a quien no es administrador', () => {
         montar('/', { ...admin, role: 'vendedor' });
         fireEvent.click(screen.getByRole('button', { name: 'Cuenta de Ana Ruiz' }));

@@ -9,7 +9,7 @@
   
   .editar-venta-container h2 {
     font-size: 24px;
-    color: #000000;
+    color: var(--text);
     margin-bottom: 20px;
     font-weight: 600;
     text-align: center;
@@ -42,7 +42,7 @@
   }
   
   .cliente-form h3, .venta-form h3, .observacion-form h3 {
-    color: #000000;
+    color: var(--text);
     margin-bottom: 12px;
     font-size: 16px;
     font-weight: 600;
@@ -65,7 +65,7 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #000000;
+    color: var(--text);
     font-size: 14px;
     width: 120px;
   }

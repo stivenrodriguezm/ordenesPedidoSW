@@ -5,8 +5,9 @@ import { ordenarVariantes } from '../../services/listaPreciosService';
 import { mensajeDeError } from '../../services/errores';
 import invalidarListaPrecios, { actualizarLineaEnCache } from './invalidarListaPrecios';
 import './VariantesOrdenables.css';
+import { aplicarDisposicionSubcategorias } from './disposicionSubcategorias';
 
-export default function VariantesOrdenables({ linea, children, notify }) {
+export default function VariantesOrdenables({ linea, children, notify, onGuardar, puedeOrdenar, etiquetaLista, acciones }) {
   const client = useQueryClient(), ayudaId = useId();
   const elementos = useRef(new Map()), gesto = useRef(null), animacion = useRef(null);
   const [arrastre, setArrastre] = useState(null), [propuesta, setPropuesta] = useState(null);
@@ -14,8 +15,10 @@ export default function VariantesOrdenables({ linea, children, notify }) {
   const originales = linea.variantes.map(v => v.id);
   const visibles = propuesta ? [...linea.variantes].sort((a, b) => propuesta.indexOf(a.id) - propuesta.indexOf(b.id)) : linea.variantes;
   const guardar = useMutation({
-    mutationFn: ids => ordenarVariantes(linea.id, ids, originales),
+    mutationFn: ids => onGuardar ? onGuardar(ids) : ordenarVariantes(linea.id, ids, originales),
     onSuccess: async data => {
+      if (onGuardar) { setPropuesta(null); setEstado('Orden guardado'); return; }
+      if (data.disposicion) aplicarDisposicionSubcategorias(client, data.disposicion);
       const posiciones = new Map(data.variantes.map((id, i) => [id, i]));
       actualizarLineaEnCache(client, linea.id, l => ({
         ...l, variantes: l.variantes.map(v => ({ ...v, orden: posiciones.get(v.id) ?? v.orden })).sort((a, b) => a.orden - b.orden),
@@ -26,7 +29,7 @@ export default function VariantesOrdenables({ linea, children, notify }) {
     onError: async e => {
       setPropuesta(null); setEstado(''); setError(mensajeDeError(e, 'No se pudo guardar el orden. Se restauró el anterior; vuelve a arrastrar para reintentar.'));
       notify('No se pudo guardar el orden de las variantes.', 'error');
-      await invalidarListaPrecios(client, linea.id);
+      if (!onGuardar) await invalidarListaPrecios(client, linea.id);
     },
   });
   const cancelar = () => {
@@ -39,6 +42,7 @@ export default function VariantesOrdenables({ linea, children, notify }) {
   }, []);
   const guardarOrden = ids => {
     if (ids.every((id, i) => id === originales[i])) return;
+    if (puedeOrdenar && !puedeOrdenar()) return;
     setError(''); setEstado(''); setPropuesta(ids); guardar.mutate(ids);
   };
   const medir = () => {
@@ -67,6 +71,7 @@ export default function VariantesOrdenables({ linea, children, notify }) {
     const control = e.target.closest('input, select, textarea, button, a, label, summary');
     if (control && !control.classList.contains('lp-variante-asa')) return;
     if (e.pointerType === 'touch' && !control?.classList.contains('lp-variante-asa')) return;
+    if (puedeOrdenar && !puedeOrdenar()) return;
     e.preventDefault(); control?.focus({ preventScroll: true });
     gesto.current = { id, inicioY: e.clientY, y: e.clientY, inicioScroll: window.scrollY, activo: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -90,7 +95,7 @@ export default function VariantesOrdenables({ linea, children, notify }) {
     <span id={ayudaId} className="sr-only">Mover con arrastre o con las flechas arriba y abajo.</span>
     {originales.length > 1 && (guardar.isPending || estado) && <div className="lp-variantes-orden-ayuda"><span role="status">{guardar.isPending ? 'Guardando orden…' : estado}</span></div>}
     {error && <p className="lp-variantes-orden-error" role="alert">{error}</p>}
-    <div role="list" aria-label={`Variantes de ${linea.nombre}`} className={`lp-variantes-orden-lista ${arrastre ? 'is-arrastrando' : ''}`}>
+    <div role="list" aria-label={etiquetaLista || `Variantes de ${linea.nombre}`} className={`lp-variantes-orden-lista ${arrastre ? 'is-arrastrando' : ''}`}>
       {visibles.map((v, i) => <div key={v.id} role="listitem" aria-label={v.nombre} ref={el => el ? elementos.current.set(v.id, el) : elementos.current.delete(v.id)}
         className={`lp-variante-ordenable ${arrastre?.antes === v.id ? 'is-destino-antes' : ''} ${arrastre?.despues === v.id ? 'is-destino-despues' : ''}`}
         onPointerDown={e => comenzar(e, v.id)} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={cancelar}>
@@ -104,6 +109,7 @@ export default function VariantesOrdenables({ linea, children, notify }) {
               if (siguiente < 0 || siguiente >= originales.length || guardar.isPending) return;
               const ids = [...originales]; [ids[i], ids[siguiente]] = [ids[siguiente], ids[i]]; guardarOrden(ids);
             }}><FaGripVertical aria-hidden="true" /></button>
+          {acciones?.(v)}
           {children(v)}
         </div>
       </div>)}

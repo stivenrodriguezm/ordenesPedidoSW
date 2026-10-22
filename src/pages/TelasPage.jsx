@@ -210,7 +210,7 @@ const TelasPage = () => {
                     previewRef.current.style.display = 'block';
                     const { default: html2canvas } = await import('html2canvas');
                     const canvas = await html2canvas(previewRef.current, {
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--surface)',
                         scale: 2,
                         useCORS: true,
                     });
@@ -404,7 +404,7 @@ const TelasPage = () => {
                                     </button>
                                 </div>
                                 {proveedoresTelas.length === 0 ? (
-                                    <div style={{ padding: '0.5rem', fontSize: '0.8rem', color: '#72726a' }}>No hay proveedores</div>
+                                    <div style={{ padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>No hay proveedores</div>
                                 ) : (
                                     proveedoresTelas.map(p => (
                                         <label key={p.id} className="v-popover-item">
@@ -478,7 +478,7 @@ const TelasPage = () => {
                                         </tr>
                                     ))
                                 ) : displayedPedidos.length === 0 ? (
-                                    <tr><td colSpan="11" style={{ textAlign: 'center', color: '#72726a', padding: '2rem' }}>No hay pedidos registrados</td></tr>
+                                    <tr><td colSpan="11" style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>No hay pedidos registrados</td></tr>
                                 ) : (
                                     displayedPedidos.map(pedido => (
                                     <React.Fragment key={pedido.id}>
@@ -486,24 +486,24 @@ const TelasPage = () => {
                                             <td className="font-mono" style={{ fontWeight: '600' }}>#{pedido.id}</td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e4e3dc', color: '#57574f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>
+                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--gray-200)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>
                                                         {pedido.usuario_nombre ? pedido.usuario_nombre.substring(0, 2).toUpperCase() : 'U'}
                                                     </div>
                                                     <span style={{ fontWeight: '500' }}>{pedido.usuario_nombre}</span>
                                                 </div>
                                             </td>
-                                            <td><span style={{ fontWeight: '600', color: '#171815' }}>{pedido.proveedor_nombre}</span></td>
-                                            <td><span style={{ fontWeight: '500', color: '#57574f' }}>{getFabricante(pedido)}</span></td>
-                                            <td style={{ color: '#72726a', fontSize: '0.8rem' }}>{pedido.fecha_creacion}</td>
+                                            <td><span style={{ fontWeight: '600', color: 'var(--text)' }}>{pedido.proveedor_nombre}</span></td>
+                                            <td><span style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>{getFabricante(pedido)}</span></td>
+                                            <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{pedido.fecha_creacion}</td>
                                             <td>
                                                 <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
                                                     {pedido.estado}
                                                 </span>
                                             </td>
-                                            <td>{pedido.orden_id ? <span style={{ backgroundColor: '#f2f1eb', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#171815' }}>#{pedido.orden_id}</span> : '-'}</td>
-                                            <td>{pedido.venta_id ? <span style={{ backgroundColor: '#f2f1eb', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#0d9488' }}>#{pedido.venta_id}</span> : '-'}</td>
-                                            <td><span style={{ fontWeight: '500', color: '#57574f' }}>{pedido.venta_vendedor_nombre || '-'}</span></td>
-                                            <td className="truncate-text" style={{ maxWidth: '350px', fontSize: '0.85rem', color: '#3e3e37' }} title={pedido.direccion_entrega}>{pedido.direccion_entrega}</td>
+                                            <td>{pedido.orden_id ? <span style={{ backgroundColor: 'var(--gray-100)', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: 'var(--text)' }}>#{pedido.orden_id}</span> : '-'}</td>
+                                            <td>{pedido.venta_id ? <span style={{ backgroundColor: 'var(--gray-100)', padding: '4px 8px', borderRadius: '6px', fontWeight: '600', fontSize: '0.75rem', color: '#0d9488' }}>#{pedido.venta_id}</span> : '-'}</td>
+                                            <td><span style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>{pedido.venta_vendedor_nombre || '-'}</span></td>
+                                            <td className="truncate-text" style={{ maxWidth: '350px', fontSize: '0.85rem', color: 'var(--text)' }} title={pedido.direccion_entrega}>{pedido.direccion_entrega}</td>
                                             <td style={{ width: '50px', textAlign: 'right' }}>
                                                 <button className="action-btn" onClick={(e) => { e.stopPropagation(); toggleExpand(pedido.id); }} style={{ marginLeft: 'auto' }}>
                                                     {expandedPedidoId === pedido.id ? <FaChevronUp /> : <FaChevronDown />}
@@ -590,7 +590,7 @@ const TelasPage = () => {
                                                                                      <td style={{ textAlign: 'right', fontWeight: '600' }}>{detalle.cantidad}</td>
                                                                                  </tr>
                                                                              ))
-                                                                             : <tr><td colSpan="2" style={{ color: 'var(--text-muted, #a3a398)', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles registrados.</td></tr>
+                                                                             : <tr><td colSpan="2" style={{ color: 'var(--text-muted, var(--text-muted))', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles registrados.</td></tr>
                                                                          }
                                                                      </tbody>
                                                                  </table>
@@ -611,7 +611,7 @@ const TelasPage = () => {
                 <div className="mobile-view">
                     {loading ? (
                         Array.from({ length: 5 }).map((_, index) => (
-                            <div key={`skeleton-card-${index}`} className="mobile-card skeleton-item" style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e4e3dc', backgroundColor: '#fff' }}>
+                            <div key={`skeleton-card-${index}`} className="mobile-card skeleton-item" style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <div className="skeleton skeleton-text" style={{ width: '50px' }}></div>
                                     <div className="skeleton skeleton-badge" style={{ width: '80px' }}></div>
@@ -622,36 +622,36 @@ const TelasPage = () => {
                         ))
                     ) : displayedPedidos.length > 0 ? (
                         displayedPedidos.map(pedido => (
-                            <div className="mobile-card" key={pedido.id} style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid #e4e3dc', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                            <div className="mobile-card" key={pedido.id} style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                                 <div className="mobile-card-header" onClick={() => toggleExpand(pedido.id)} style={{ cursor: 'pointer' }}>
                                     <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                        <span className="card-id" style={{ fontWeight: 'bold', color: '#171815' }}>PT #{pedido.id}</span>
+                                        <span className="card-id" style={{ fontWeight: 'bold', color: 'var(--text)' }}>PT #{pedido.id}</span>
                                         <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
                                             {pedido.estado}
                                         </span>
                                     </div>
                                     <div className="header-main" style={{ marginBottom: '0.5rem' }}>
-                                        <div style={{ fontWeight: '600', fontSize: '1rem', color: '#2a2a25' }}>
+                                        <div style={{ fontWeight: '600', fontSize: '1rem', color: 'var(--text)' }}>
                                             {pedido.proveedor_nombre}
                                         </div>
-                                        <div style={{ fontSize: '0.85rem', color: '#72726a' }}>
-                                            Fabricante: <span style={{ fontWeight: '500', color: '#57574f' }}>{getFabricante(pedido)}</span>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                            Fabricante: <span style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>{getFabricante(pedido)}</span>
                                         </div>
                                     </div>
-                                    <div className="header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#72726a' }}>
+                                    <div className="header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                         <span>{pedido.fecha_creacion}</span>
-                                        <span style={{ backgroundColor: '#f2f1eb', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                                        <span style={{ backgroundColor: 'var(--gray-100)', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
                                             {pedido.orden_id ? `Ord #${pedido.orden_id}` : 'Sin Orden'}
                                         </span>
                                     </div>
                                 </div>
                                 
                                 {expandedPedidoId === pedido.id && (
-                                    <div className="mobile-card-expanded" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e4e3dc' }}>
+                                    <div className="mobile-card-expanded" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
                                         <div style={{ marginBottom: '1rem' }}>
-                                            <div style={{ fontSize: '0.85rem', color: '#72726a', marginBottom: '0.25rem' }}>Usuario Creador</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Usuario Creador</div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#e4e3dc', color: '#57574f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--gray-200)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>
                                                     {pedido.usuario_nombre ? pedido.usuario_nombre.substring(0, 2).toUpperCase() : 'U'}
                                                 </div>
                                                 <span style={{ fontWeight: '500', fontSize: '0.9rem' }}>{pedido.usuario_nombre}</span>
@@ -659,14 +659,14 @@ const TelasPage = () => {
                                         </div>
                                         
                                         <div style={{ marginBottom: '1rem' }}>
-                                            <div style={{ fontSize: '0.85rem', color: '#72726a', marginBottom: '0.25rem' }}>Dirección de Entrega</div>
-                                            <div style={{ fontSize: '0.9rem', color: '#3e3e37' }}>{pedido.direccion_entrega}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Dirección de Entrega</div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--text)' }}>{pedido.direccion_entrega}</div>
                                         </div>
 
                                         {pedido.observacion && (
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <div style={{ fontSize: '0.85rem', color: '#72726a', marginBottom: '0.25rem' }}>Observación</div>
-                                                <div style={{ fontSize: '0.9rem', color: '#3e3e37', whiteSpace: 'pre-line' }}>{pedido.observacion}</div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Observación</div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'pre-line' }}>{pedido.observacion}</div>
                                             </div>
                                         )}
 
@@ -688,7 +688,7 @@ const TelasPage = () => {
                                         )}
 
                                         <div className="tela-expanded-body" style={{ padding: '0' }}>
-                                            <h4 style={{ fontSize: '0.9rem', color: '#171815', marginBottom: '0.5rem' }}>Detalles de Telas</h4>
+                                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text)', marginBottom: '0.5rem' }}>Detalles de Telas</h4>
                                             <table className="details-table" style={{ width: '100%' }}>
                                                 <thead>
                                                     <tr>
@@ -704,7 +704,7 @@ const TelasPage = () => {
                                                                 <td style={{ fontSize: '0.85rem' }}>{detalle.cantidad}</td>
                                                             </tr>
                                                         ))
-                                                        : <tr><td colSpan="2" style={{ color: '#a3a398', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles.</td></tr>
+                                                        : <tr><td colSpan="2" style={{ color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>Sin detalles.</td></tr>
                                                     }
                                                 </tbody>
                                             </table>
@@ -714,7 +714,7 @@ const TelasPage = () => {
                             </div>
                         ))
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '2rem', color: '#72726a', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e4e3dc' }}>
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                             No hay pedidos registrados
                         </div>
                     )}
@@ -747,7 +747,7 @@ const TelasPage = () => {
             >
                 <div className="ds-field">
                     <label className="ds-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                        PT #{editEstadoModal.pedidoId} &mdash; Estado actual: <strong style={{ color: 'var(--accent, #171815)' }}>{editEstadoModal.currentEstado}</strong>
+                        PT #{editEstadoModal.pedidoId} &mdash; Estado actual: <strong style={{ color: 'var(--accent, var(--text))' }}>{editEstadoModal.currentEstado}</strong>
                     </label>
                     <select
                         className="ds-select"
@@ -760,7 +760,7 @@ const TelasPage = () => {
                         <option value="En Lottus">En Lottus</option>
                     </select>
                     {!canEditEstado(editEstadoModal.currentEstado) && (
-                        <p className="ds-field__hint" style={{ color: 'var(--danger, #a8432f)', marginTop: '0.5rem' }}>
+                        <p className="ds-field__hint" style={{ color: 'var(--danger, var(--danger))', marginTop: '0.5rem' }}>
                             🔒 No se puede editar un pedido en estado "En fabrica".
                         </p>
                     )}
@@ -806,13 +806,13 @@ const TelasPage = () => {
 
                         <div className="direcciones-list" style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                             {direcciones.length === 0 ? (
-                                <p style={{ color: '#72726a', fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>No hay direcciones registradas.</p>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>No hay direcciones registradas.</p>
                             ) : (
                                 direcciones.map(d => (
-                                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem', borderBottom: '1px solid #e4e3dc', background: '#faf9f5', borderRadius: '6px', marginBottom: '0.5rem' }}>
+                                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem', borderBottom: '1px solid var(--border)', background: 'var(--surface-muted)', borderRadius: '6px', marginBottom: '0.5rem' }}>
                                         <div>
-                                            <strong style={{ fontSize: '0.9rem', color: '#2a2a25', display: 'block' }}>{d.nombre}</strong>
-                                            <span style={{ fontSize: '0.8rem', color: '#72726a' }}>{d.detalles}</span>
+                                            <strong style={{ fontSize: '0.9rem', color: 'var(--text)', display: 'block' }}>{d.nombre}</strong>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{d.detalles}</span>
                                         </div>
                                         <button type="button" className="btn-icon btn-remove" onClick={() => handleDeleteDireccion(d.id)} title="Eliminar dirección" style={{ padding: '0.25rem' }}>
                                             <FaTrashAlt />
@@ -822,9 +822,9 @@ const TelasPage = () => {
                             )}
                         </div>
 
-                        <hr style={{ border: 'none', borderTop: '1px solid #e4e3dc', margin: '1.5rem 0' }} />
+                        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '1.5rem 0' }} />
 
-                        <h4 style={{ fontSize: '1rem', color: '#2a2a25', marginBottom: '1rem' }}>Agregar Nueva Dirección</h4>
+                        <h4 style={{ fontSize: '1rem', color: 'var(--text)', marginBottom: '1rem' }}>Agregar Nueva Dirección</h4>
                         <form onSubmit={handleCreateDireccion}>
                             <div className="form-group">
                                 <label>Nombre Corto (Ej. "Bodega Principal")</label>

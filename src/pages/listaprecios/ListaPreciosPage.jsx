@@ -6,18 +6,19 @@ import { AppContext } from '../../AppContext';
 import { PageHeader, Button } from '../../components/ui';
 import { EmptyState, ErrorState } from '../../components/ui/States';
 import { formatCOP } from '../../utils/formatCOP';
-import { buscarCatalogo, indexarCatalogo, notasCotizacion, precioValido } from '../../utils/consultaPrecios';
+import { buscarCatalogo, indexarCatalogo, notasCotizacion, precioValido, transporteDeItem } from '../../utils/consultaPrecios';
 import { mensajeDeError } from '../../services/errores';
 import useCotizacionCart from '../../hooks/useCotizacionCart';
 import CotizacionPrintModal from '../../components/CotizacionPrintModal';
 import FotoPrecio from './FotoPrecio';
 import ConfiguradorPrecio from './ConfiguradorPrecio';
 import CotizacionConsulta from './CotizacionConsulta';
+import { subcategoriasCatalogo, unificarCatalogo } from './catalogoUnificado';
 import './ListaPreciosPage.css';
 
 // Última consulta del catálogo en este navegador: la página se ve al instante y el servidor
 // confirma los precios por detrás (sin confirmar, no se agrega nada a la cotización).
-const claveCatalogo = (usuarioId) => `lp_catalogo_${usuarioId ?? 'anon'}`;
+const claveCatalogo = (usuarioId) => `lp_catalogo_subcategorias_v3_${usuarioId ?? 'anon'}`;
 const leerCatalogo = (usuarioId) => {
   try { const g = JSON.parse(localStorage.getItem(claveCatalogo(usuarioId)) || 'null'); return Array.isArray(g?.data) ? g : null; } catch { return null; }
 };
@@ -68,7 +69,7 @@ function ListaPreciosPage() {
   // Un catálogo compartido en caché: buscar y cambiar categoría es inmediato.
   const [guardado] = useState(() => leerCatalogo(usuario?.id));
   const catalogo = useQuery({
-    queryKey: ['listaprecios-catalogo', usuario?.id],
+    queryKey: ['listaprecios-catalogo', usuario?.id, 'subcategorias-v3'],
     queryFn: async () => { const data = await getCatalogo(); guardarCatalogo(usuario?.id, data); return data; },
     staleTime: 30000,
     initialData: guardado?.data,
@@ -76,7 +77,7 @@ function ListaPreciosPage() {
   });
   // Precios confirmados por el servidor en esta visita (no solo los guardados en el navegador).
   const confirmando = catalogo.isFetching && !catalogo.isFetchedAfterMount;
-  const lineas = useMemo(() => catalogo.data || [], [catalogo.data]);
+  const lineas = useMemo(() => unificarCatalogo(catalogo.data || []), [catalogo.data]);
   const indice = useMemo(() => indexarCatalogo(lineas), [lineas]);
   // La lista se filtra sin bloquear lo que se escribe.
   const busqueda = useDeferredValue(search);
@@ -95,7 +96,7 @@ function ListaPreciosPage() {
     setRecientes((ids) => [linea.id, ...ids.filter((id) => id !== linea.id)].slice(0, 5));
   };
   const editarItem = (item) => {
-    const linea = lineas.find((l) => l.id === item.lineaId);
+    const linea = lineas.find((l) => l.variantes.some(v => v.id === item.varianteId));
     if (!linea || !linea.variantes.some((v) => v.id === item.varianteId)) { setAviso('Este producto ya no está en el catálogo. Quita la opción y consulta una referencia vigente.'); return; }
     setCartOpen(false);
     abrirLinea(linea, item);
@@ -104,7 +105,7 @@ function ListaPreciosPage() {
     mutationFn: async ({ cliente, descuento }) => {
       // Verificar también los precios recuperados del carrito de una visita anterior.
       const vigentes = await Promise.all(cart.items.map((item) => getPrecioVariante(item.varianteId, {
-        grupo: item.grupoId, opcionales: (item.opcionales || []).map((o) => o.id),
+        grupo: item.grupoId, opcionales: (item.opcionales || []).flatMap((o) => Array(Math.max(1, Number(o.cantidad) || 1)).fill(o.id)),
       })));
       let cambiaron = false;
       vigentes.forEach((vigente, i) => {
@@ -114,25 +115,33 @@ function ListaPreciosPage() {
           cambiaron = true;
         }
       });
+      // El transporte por envío se calcula con el catálogo vigente (ítems de visitas anteriores incluidos).
+      const variantes = new Map(lineas.flatMap((l) => l.variantes).map((v) => [v.id, v]));
+      cart.items.forEach((item) => {
+        const transporte = transporteDeItem(variantes.get(item.varianteId), (item.opcionales || []).map((o) => o.id));
+        if (JSON.stringify(transporte) !== JSON.stringify(item.transporte ?? null)) { cart.actualizarItem(item.id, { transporte }); cambiaron = true; }
+      });
       if (cambiaron) throw new Error('Los precios cambiaron desde la consulta y ya se actualizaron. Revisa el nuevo total antes de generar la cotización.');
-      const items = cart.items.map((item) => ({ ...item, notas: notasCotizacion(item), incluido: cart.incluidos[item.id]?.valor || 0 }));
+      const items = cart.items.map((item) => ({ ...item, notas: notasCotizacion(item), incluido: cart.incluidos[item.id]?.valor || 0,
+        transporteCompartido: cart.transportes[item.id]?.valor || 0 }));
       const res = await createCotizacion({ cliente_nombre: cliente, descuento, lineas: items.map((item) => ({
         variante: item.varianteId, linea_nombre: item.lineaNombre, variante_nombre: item.varianteNombre,
         categoria_nombre: item.categoriaNombre, grupo_nombre: item.grupoNombre, grupo_tela: item.grupoId,
         cantidad: item.cantidad, precio_unitario: item.precioUnitario, opcionales: item.opcionales || [],
-        notas: item.notas, foto: item.foto || null,
+        notas: item.notas, foto: item.foto || null, conjunto: item.conjuntoId || '',
       })) });
       return { items, cliente, descuento, folio: res.numero };
     },
     onSuccess: (data) => { setPrintData(data); setCartOpen(false); },
   });
 
-  const configurador = seleccion ? <ConfiguradorPrecio key={`${seleccion.linea.id}-${seleccion.inicial?.id || 'consulta'}-${seleccion.inicial?.varianteId}-${seleccion.inicial?.grupoId}`} inline={escritorio} linea={lineas.find((l) => l.id === seleccion.linea.id) || seleccion.linea} inicial={seleccion.inicial} confirmando={confirmando} onClose={() => setSeleccion(null)}
+  const lineaSeleccionada = seleccion && lineas.find(l => l.id === seleccion.linea.id || l.variantes.some(v => v.id === seleccion.inicial?.varianteId));
+  const configurador = lineaSeleccionada ? <ConfiguradorPrecio key={`${lineaSeleccionada.id}-${seleccion.inicial?.id || 'consulta'}-${seleccion.inicial?.varianteId}-${seleccion.inicial?.grupoId}`} inline={escritorio} linea={lineaSeleccionada} inicial={seleccion.inicial} confirmando={confirmando} onClose={() => setSeleccion(null)}
       onAgregar={(item) => seleccion.inicial?.id ? cart.actualizarItem(seleccion.inicial.id, item) : cart.agregarItem(item)} onVerCotizacion={() => { setSeleccion(null); setCartOpen(true); }} /> : null;
 
   return <div className={`ds-page lp-page ${escritorio ? 'lp-page--escritorio' : ''}`}>
     <PageHeader icon={FaTags} title="Lista de precios" subtitle="Encuentra el mueble. Cambia la tela. Acompaña la venta." />
-    {escritorio && <div className="lp-escritorio-intro"><span>SHOWROOM / CATÁLOGO</span><p>Una referencia. Todas sus posibilidades.</p></div>}
+    {escritorio && <div className="lp-escritorio-intro"><span>SHOWROOM / CATÁLOGO</span></div>}
     <div className="lp-workspace"><div className="lp-catalogo-panel">
     <div className="lp-consulta-toolbar">
       <div className="lp-search"><FaSearch aria-hidden="true" /><input type="search" aria-label="Buscar referencia o medida" placeholder="Referencia, sofá, medida, comedor…" value={search} onChange={(e) => setSearch(e.target.value)}
@@ -146,7 +155,7 @@ function ListaPreciosPage() {
     </div>
     {categorias.isError && <p className="lp-ayuda">No se pudieron cargar las categorías. Puedes buscar en todo el catálogo. <button onClick={() => categorias.refetch()}>Reintentar</button></p>}
     {!!recientes.length && !search && !categoria && !soloConjuntos && <div className="lp-recientes"><span><FaClock /> Recientes</span>{recientes.map((id) => lineas.find((l) => l.id === id)).filter(Boolean).map((l) => <button key={l.id} onClick={() => abrirLinea(l)}>{l.nombre}</button>)}</div>}
-    <div className="lp-resultados-cabeza"><span aria-live="polite">{catalogo.isLoading ? 'Cargando catálogo…' : `${resultados.length} referencias`}</span>
+    <div className="lp-resultados-cabeza"><span aria-live="polite">{catalogo.isLoading ? 'Cargando catálogo…' : `${resultados.length} ${resultados.length === 1 ? 'referencia' : 'referencias'}`}</span>
       {escritorio && <div className="lp-catalogo-controles"><label>Ordenar <select aria-label="Ordenar referencias" value={orden} onChange={e => setOrden(e.target.value)}><option value="nombre">Nombre A–Z</option><option value="precio">Menor precio</option></select></label>
         <div role="group" aria-label="Vista del catálogo"><button aria-label="Ver tarjetas" aria-pressed={vista === 'tarjetas'} onClick={() => setVista('tarjetas')}><FaThLarge /></button><button aria-label="Ver lista" aria-pressed={vista === 'lista'} onClick={() => setVista('lista')}><FaList /></button></div></div>}
       <button className={`lp-conjuntos-filtro ${soloConjuntos ? 'is-selected' : ''}`} aria-pressed={soloConjuntos} onClick={() => setSoloConjuntos((v) => !v)}><FaLayerGroup /> Conjuntos</button></div>
@@ -155,21 +164,20 @@ function ListaPreciosPage() {
     {catalogo.isError && lineas.length > 0 && <p className="lp-aviso" role="alert">No se pudo actualizar. Los precios visibles corresponden a la última consulta. <button onClick={() => catalogo.refetch()}>Reintentar</button></p>}
     {catalogo.isLoading ? <div className="lp-grid">{Array.from({ length: 6 }, (_, i) => <div key={i} className="lp-card lp-card--skeleton" />)}</div>
       : catalogo.isError && !lineas.length ? <ErrorState message="No se pudo cargar el catálogo de precios." onRetry={catalogo.refetch} />
-      : !resultados.length ? <EmptyState icon={FaSearch} title="Sin coincidencias" message="Prueba con la referencia, el tipo de mueble o su medida." action={<Button onClick={() => { setSearch(''); setCategoria(''); setSoloConjuntos(false); }}>Ver todo</Button>} />
+      : !resultados.length ? <EmptyState icon={FaSearch} title={lineas.length ? 'Sin coincidencias' : 'Sin subcategorías publicadas'} message={lineas.length ? 'Prueba con la referencia o su subcategoría.' : 'En Administrar lista, elige el proveedor, guarda el costo y pulsa «Publicar» en cada subcategoría.'} action={lineas.length ? <Button onClick={() => { setSearch(''); setCategoria(''); setSoloConjuntos(false); }}>Ver todo</Button> : undefined} />
       : <div className={`lp-grid ${escritorio && vista === 'lista' ? 'lp-grid--lista' : ''}`}>{resultados.map((linea) => {
         const precios = linea.variantes.flatMap((v) => v.precios || []).map((p) => p.precio).filter(precioValido).map(Number);
-        const conjunto = linea.variantes.some((v) => v.componentes);
-        return <button key={linea.id} className={`lp-card ${seleccion?.linea.id === linea.id ? 'lp-card--seleccionada' : ''}`} aria-pressed={seleccion?.linea.id === linea.id} onClick={() => abrirLinea(linea)} aria-label={`Consultar ${linea.nombre}${linea.proveedor_nombre ? ` de ${linea.proveedor_nombre} · Ref. ${linea.referencia}` : ''}`}>
+        const subcategorias = subcategoriasCatalogo(linea.variantes);
+        return <button key={linea.id} className={`lp-card ${lineaSeleccionada?.id === linea.id ? 'lp-card--seleccionada' : ''}`} aria-pressed={lineaSeleccionada?.id === linea.id} onClick={() => abrirLinea(linea)} aria-label={`Consultar ${linea.nombre}`}>
           <div className="lp-card-foto"><FotoPrecio src={linea.fotos?.[0]} loading="lazy" decoding="async" /></div>
           <div className="lp-card-info"><span className="lp-eyebrow">{[...new Set(linea.variantes.map((v) => v.categoria_nombre))].filter(Boolean).join(' · ')}</span><strong className="lp-card-nombre">{linea.nombre}</strong>
-            {linea.proveedor_nombre && <small className="lp-card-proveedor">{linea.proveedor_nombre} · Ref. #{linea.referencia}</small>}
-            <span className="lp-card-descripcion">{linea.variantes.length === 1 ? linea.variantes[0].nombre : `${linea.variantes.length} subcategorías`}</span>
+            <span className="lp-card-descripcion">{subcategorias.length === 1 ? subcategorias[0].nombre : `${subcategorias.length} subcategorías`}</span>
             <span className="lp-card-precio">{precios.length ? `Desde ${formatCOP(Math.min(...precios))}` : 'Consultar disponibilidad de precio'}</span>
             {escritorio && <span className="lp-card-abrir">Ver opciones <FaArrowRight /></span>}
-            {conjunto && <span className="lp-card-conjunto"><FaLayerGroup /> Conjunto disponible</span>}</div>
+</div>
         </button>;
       })}</div>}
-    <p className="lp-catalogo-nota">Elige una referencia para ver el precio exacto según producto, medida y grupo de tela.</p>
+    <p className="lp-catalogo-nota">Elige una referencia y su subcategoría para ver el precio exacto según el grupo de tela.</p>
     </div>
     {escritorio && <aside ref={panelRef} className="lp-venta-panel" aria-label="Asistente de venta">
       {configurador || <section className="lp-venta-bienvenida"><div className="lp-venta-simbolo"><FaTags /></div><span className="lp-eyebrow">Tu consulta, en un solo lugar</span><h2>Encuentra la combinación ideal.</h2><p>Selecciona una referencia. Aquí podrás cambiar la medida, explorar telas y confirmar el precio sin perder de vista el catálogo.</p><ol><li>Elige producto y medida</li><li>Elige tela y opciones</li><li>Agrégalo a la cotización</li></ol></section>}

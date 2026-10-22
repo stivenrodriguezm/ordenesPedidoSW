@@ -26,18 +26,20 @@ export default function CotizacionConsulta({ open, cart, onClose, onEditar, onGe
     {!cart.items.length ? <div className="lp-vacio"><FaLayerGroup /><h3>Arma la propuesta del cliente</h3><p>Agrega productos desde la consulta. Puedes cambiar telas, medidas y reunir piezas en un conjunto.</p></div> : <>
       <div className="lp-cart-list">{[...grupos].map(([key, piezas]) => <section className="lp-cart-grupo" key={key}>
         {piezas[0].conjuntoId && <div className="lp-conjunto-cabeza"><strong><FaLayerGroup /> {piezas[0].conjuntoNombre}</strong>
-          <span>{formatCOP(piezas.reduce((s, p) => s + p.precioUnitario * p.cantidad - (cart.incluidos?.[p.id]?.valor || 0), 0))}</span>
+          <span>{formatCOP(piezas.reduce((s, p) => s + p.precioUnitario * p.cantidad - cart.descontado(p.id), 0))}</span>
           <button onClick={() => cart.desagrupar(key)} disabled={guardando}>Separar piezas</button></div>}
         {piezas.map((item) => <article key={item.id} className="lp-cart-item">
           <label className="lp-cart-seleccionar"><input type="checkbox" aria-label={`Seleccionar ${item.lineaNombre} ${item.varianteNombre}`} checked={seleccionActual.includes(item.id)}
             disabled={guardando} onChange={(e) => setSeleccion((ids) => e.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id))} /></label>
           <div className="lp-cart-item-info"><strong>{item.lineaNombre} · {item.varianteNombre}</strong><span>{item.grupoNombre || 'Sin tela'}</span>
             {item.componentes && <span className="lp-componentes">Incluye: {item.componentes}</span>}
-            {!!item.opcionales?.length && <span>{item.opcionales.map((o) => o.descripcion).join(' · ')}</span>}
+            {!!item.opcionales?.length && <span>{item.opcionales.map((o) => `${o.cantidad > 1 ? `${o.cantidad} × ` : ''}${o.descripcion}`).join(' · ')}</span>}
             <small>{formatCOP(item.precioUnitario)} por unidad</small>
+            {item.notaVendedor && <small className="lp-cart-nota">Nota: {item.notaVendedor}</small>}
             {item.decorativosIncluidos > 0 && <small>Incluye {item.decorativosIncluidos} decorativos por unidad</small>}
-            {cart.incluidos?.[item.id] && <small className="lp-incluido">{cart.incluidos[item.id].unidades} incluido{cart.incluidos[item.id].unidades > 1 ? 's' : ''} por «Cojines incluidos»: −{formatCOP(cart.incluidos[item.id].valor)}</small>}</div>
-          <strong className="lp-cart-item-precio">{formatCOP(item.precioUnitario * item.cantidad - (cart.incluidos?.[item.id]?.valor || 0))}</strong>
+            {cart.incluidos?.[item.id] && <small className="lp-incluido">{cart.incluidos[item.id].unidades} incluido{cart.incluidos[item.id].unidades > 1 ? 's' : ''} por «Cojines incluidos»: −{formatCOP(cart.incluidos[item.id].valor)}</small>}
+            {cart.transportes?.[item.id] && <small className="lp-incluido">{cart.transportes[item.id].transportes === 0 ? 'Transporte incluido en el del conjunto' : `${cart.transportes[item.id].transportes} transporte${cart.transportes[item.id].transportes > 1 ? 's' : ''} para ${item.cantidad} unidades`}: −{formatCOP(cart.transportes[item.id].valor)}</small>}</div>
+          <strong className="lp-cart-item-precio">{formatCOP(item.precioUnitario * item.cantidad - cart.descontado(item.id))}</strong>
           <div className="lp-cart-item-controles"><div className="lp-cantidad-control">
             <button aria-label={`Reducir cantidad de ${item.varianteNombre}`} disabled={guardando || item.cantidad <= 1} onClick={() => cart.actualizarCantidad(item.id, item.cantidad - 1)}><FaMinus /></button>
             <output>{item.cantidad}</output><button aria-label={`Aumentar cantidad de ${item.varianteNombre}`} disabled={guardando || item.cantidad >= 99} onClick={() => cart.actualizarCantidad(item.id, item.cantidad + 1)}><FaPlus /></button>
@@ -54,8 +56,9 @@ export default function CotizacionConsulta({ open, cart, onClose, onEditar, onGe
         <label className="ds-field">Descuento en pesos<input className="ds-input" type="number" inputMode="numeric" min="0" max={cart.total * 0.25} value={descuento} onChange={(e) => setDescuento(e.target.value)} disabled={guardando} placeholder="0" />
           <small>Tope estándar: {formatCOP(cart.total * 0.25)} (25%).</small></label></div>
       {!descuentoValido && <p className="lp-aviso" role="alert">El descuento debe estar entre cero y el tope permitido.</p>}
-      <div className="lp-cotizacion-total">{cart.incluido > 0 && <><div><span>Productos</span><span>{formatCOP(cart.bruto)}</span></div>
-        <div><span>Decorativos incluidos</span><span>−{formatCOP(cart.incluido)}</span></div></>}
+      <div className="lp-cotizacion-total">{(cart.incluido > 0 || cart.transporteCompartido > 0) && <div><span>Productos</span><span>{formatCOP(cart.bruto)}</span></div>}
+        {cart.incluido > 0 && <div><span>Decorativos incluidos</span><span>−{formatCOP(cart.incluido)}</span></div>}
+        {cart.transporteCompartido > 0 && <div><span>Transporte compartido</span><span>−{formatCOP(cart.transporteCompartido)}</span></div>}
         <div><span>Subtotal</span><span>{formatCOP(cart.total)}</span></div>
         {descuentoNumero > 0 && <div><span>Descuento</span><span>−{formatCOP(descuentoNumero)}</span></div>}
         <div><strong>Total de la propuesta</strong><strong>{formatCOP(Math.max(0, cart.total - (descuentoValido ? descuentoNumero : 0)))}</strong></div></div>

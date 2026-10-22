@@ -1,13 +1,13 @@
 .lp-variantes-orden { min-width: 0; }
 .lp-variantes-orden-ayuda { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 4px 2px 8px; color: var(--text-secondary); font-size: 11px; }
 .lp-variantes-orden-ayuda > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
-.lp-variantes-orden-ayuda [role="status"] { color: var(--accent); }
+.lp-variantes-orden-ayuda [role="status"] { color: var(--accent-texto); }
 .lp-variantes-orden-lista { display: flex; flex-direction: column; gap: 6px; }
 .lp-variante-ordenable { position: relative; min-width: 0; padding-left: 22px; }
 .lp-variante-ordenable > div { position: relative; }
 .lp-variante-ordenable .lp-variante-header { cursor: grab; }
 .lp-variante-asa { position: absolute; left: -22px; top: 15px; display: grid; place-items: center; width: 22px; min-height: 38px; border: 0; padding: 0; background: transparent; color: var(--text-muted); cursor: grab; touch-action: none; }
-.lp-variante-asa:hover, .lp-variante-asa:focus-visible { color: var(--accent); background: var(--gray-100); border-radius: var(--r-sm); }
+.lp-variante-asa:hover, .lp-variante-asa:focus-visible { color: var(--accent-texto); background: var(--gray-100); border-radius: var(--r-sm); }
 .lp-variante-asa:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .lp-variante-asa:disabled { cursor: default; opacity: .35; }
 .lp-variante-moviendo { z-index: 30; box-shadow: var(--shadow-lg); opacity: .94; pointer-events: none; }

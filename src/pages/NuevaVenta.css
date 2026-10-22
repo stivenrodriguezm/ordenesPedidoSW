@@ -71,7 +71,7 @@
 }
 
 .badge-blue { background: var(--info-soft); color: var(--info); }
-.badge-indigo { background: var(--accent-soft); color: var(--accent); }
+.badge-indigo { background: var(--accent-soft); color: var(--accent-texto); }
 
 /* Verificación automática de cédula */
 .nv-cedula-input-wrap {
@@ -263,7 +263,7 @@
 
 /* Success Overlay */
 .success-overlay {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: var(--surface);
   backdrop-filter: blur(4px);
   animation: nv-fade-in 0.3s ease-out;
 }
@@ -307,7 +307,7 @@
   flex-wrap: wrap;
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);
-  color: var(--accent);
+  color: var(--accent-texto);
   border-radius: var(--r-lg);
   padding: 0.6rem 1rem;
   margin-bottom: 1rem;

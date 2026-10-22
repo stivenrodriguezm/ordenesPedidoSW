@@ -10,7 +10,7 @@ body:has(.lp-page) .ia-acceso, body:has(.lp-page) .ia-chat-wrapper.is-minimizado
 .lp-icon-btn:disabled { opacity: .45; cursor: default; }
 .lp-categoria-chips { display: flex; gap: 8px; overflow-x: auto; padding: 3px 2px 10px; margin-bottom: 6px; scrollbar-width: thin; }
 .lp-chip { flex-shrink: 0; min-height: 44px; padding: 10px 18px; border: 1px solid var(--border); border-radius: 99px; color: var(--text-secondary); background: var(--surface); font: inherit; font-weight: 600; cursor: pointer; }
-.lp-chip--active { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.lp-chip--active { background: var(--accent); border-color: var(--accent-borde); color: var(--accent-contrast); }
 .lp-resultados-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 8px 0 14px; color: var(--text-secondary); font-size: 13px; }
 .lp-conjuntos-filtro { display: flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); color: var(--text-secondary); padding: 8px 12px; font: inherit; cursor: pointer; }
 .lp-conjuntos-filtro.is-selected { background: var(--gold-soft); border-color: var(--gold); color: var(--text); }
@@ -51,6 +51,10 @@ body:has(.lp-page) .ia-acceso, body:has(.lp-page) .ia-chat-wrapper.is-minimizado
 .lp-config-section h4 > span { display: grid; place-items: center; width: 22px; height: 22px; background: var(--gray-100); color: var(--text-secondary); border-radius: 50%; font-size: 11px; }
 .lp-config-section h4 small { color: var(--text-secondary); font-weight: 400; }
 .lp-variantes { display: flex; flex-wrap: wrap; gap: 8px; }
+.lp-configurador .lp-config-proveedor { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; color: var(--text-secondary); font-size: 12px; }
+.lp-configurador .lp-config-proveedor select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.lp-configurador .lp-config-proveedor-fijo { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.lp-configurador .lp-config-proveedor-fijo strong { font-weight: 500; color: var(--text); overflow-wrap: anywhere; }
 .lp-variante-opcion { display: flex; gap: 10px; align-items: center; justify-content: space-between; text-align: left; min-height: 48px; padding: 12px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; flex: 1 1 160px; }
 .lp-variante-opcion small { display: block; margin-top: 5px; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
 .lp-variante-opcion svg { flex-shrink: 0; color: var(--gold-dark); }
@@ -202,7 +206,7 @@ body:has(.lp-page) .ia-acceso, body:has(.lp-page) .ia-chat-wrapper.is-minimizado
 .lp-venta-total { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 0; gap: 12px; }
 .lp-venta-total > span { font-size: 12px; color: var(--text-secondary); }
 .lp-venta-total > strong { font-size: 23px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.lp-venta-abrir { background: var(--accent); color: var(--accent-contrast); border: 1px solid var(--accent); }
+.lp-venta-abrir { background: var(--accent); color: var(--accent-contrast); border: 1px solid var(--accent-borde); }
 .lp-venta-abrir svg { font-size: 10px; margin-left: auto; }
 .lp-venta-abrir { padding: 0 14px; }
 .lp-configurador--inline { display: flex; flex-direction: column; min-height: 0; max-height: none; flex: 1 1 auto; width: 100%; border: 1px solid var(--border-strong); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
@@ -261,3 +265,18 @@ body:has(.lp-page) .ia-acceso, body:has(.lp-page) .ia-chat-wrapper.is-minimizado
   .lp-configurador .ds-modal__body, .lp-cotizacion .ds-modal__body { padding: 16px; overscroll-behavior: contain; }
 }
 .lp-card-proveedor { display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+/* Adicional con varias unidades (2026-10-21): el chip seleccionado lleva un contador pegado. */
+.lp-opcional { display: inline-flex; align-items: stretch; }
+.lp-opcional.is-activo:has(.lp-opcional-cantidad) > .lp-opcional-chip { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.lp-opcional-cantidad { display: inline-flex; align-items: center; border: 1px solid var(--success); border-left: 1px dashed var(--success-line); border-radius: 0 var(--r-md) var(--r-md) 0; background: var(--success-soft); overflow: hidden; }
+.lp-opcional-cantidad button { display: grid; place-items: center; width: 28px; align-self: stretch; padding: 0; border: 0; background: transparent; color: var(--success); font-size: 10px; cursor: pointer; }
+.lp-opcional-cantidad button:hover:not(:disabled) { background: var(--success-line); }
+.lp-opcional-cantidad button:disabled { opacity: .35; cursor: default; }
+.lp-opcional-cantidad output { min-width: 16px; text-align: center; font-size: 13px; font-weight: 700; color: var(--success); font-variant-numeric: tabular-nums; }
+.lp-opcional-chip--fijo small { margin-left: 2px; font-size: 10px; opacity: .8; }
+/* Nota del producto (2026-10-21): una línea entre el precio y «Agregar». */
+.lp-config-nota { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 0 10px; height: 36px; border: 1px dashed var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text-muted); cursor: text; }
+.lp-config-nota:focus-within { border-style: solid; border-color: var(--accent-borde); box-shadow: 0 0 0 2px var(--accent-ring); color: var(--accent-texto); }
+.lp-config-nota svg { flex-shrink: 0; font-size: 12px; }
+.lp-config-nota input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: var(--text); font: inherit; font-size: 13px; }
+.lp-cart-nota { font-style: italic; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buscarCatalogo, decorativosIncluidos, indexarCatalogo } from './consultaPrecios';
+import { buscarCatalogo, decorativosIncluidos, indexarCatalogo, transportesCompartidos, transporteDeItem } from './consultaPrecios';
 
 describe('«Cojines incluidos» en la cotización', () => {
   const sofa = { id: 's', decorativosIncluidos: 2, cantidad: 1, precioUnitario: 3000000 };
@@ -29,5 +29,25 @@ describe('buscador del catálogo', () => {
     expect(buscarCatalogo(indice, '', 'sofa').map((l) => l.id)).toEqual([1, 2]);
     expect(buscarCatalogo(indice, '', 'ALASKA 2P').map((l) => l.id)).toEqual([2]);
     expect(buscarCatalogo(indice, 2, '').map((l) => l.id)).toEqual([3]);
+  });
+});
+
+describe('transporte por envío', () => {
+  const silla = { valor: 40000, cupo: 6 };
+  it('cada transporte lleva su cupo de unidades; sin cupo, uno por línea', () => {
+    expect(transportesCompartidos([{ id: 's', cantidad: 6, transporte: silla }])).toEqual({ s: { transportes: 1, valor: 200000 } });
+    expect(transportesCompartidos([{ id: 's', cantidad: 7, transporte: silla }])).toEqual({ s: { transportes: 2, valor: 200000 } });
+    expect(transportesCompartidos([{ id: 'm', cantidad: 2, transporte: { valor: 60000, cupo: null } }])).toEqual({ m: { transportes: 1, valor: 60000 } });
+    expect(transportesCompartidos([{ id: 'm', cantidad: 1, transporte: { valor: 60000, cupo: null } }])).toEqual({});
+  });
+  it('las piezas de un conjunto cobran un solo transporte, el mayor; productos distintos el suyo', () => {
+    const items = [{ id: 'm', cantidad: 1, conjuntoId: 'c', transporte: { valor: 60000, cupo: null } },
+      { id: 's', cantidad: 6, conjuntoId: 'c', transporte: silla }, { id: 'sofa', cantidad: 1, transporte: { valor: 100000, cupo: null } }];
+    expect(transportesCompartidos(items)).toEqual({ s: { transportes: 0, valor: 240000 } });
+  });
+  it('un opcional no elegido no cuenta', () => {
+    const variante = { transporte: { id: 9, valor: 40000, cupo: 6, opcional: true } };
+    expect(transporteDeItem(variante, [])).toBeNull();
+    expect(transporteDeItem(variante, [9])).toEqual({ valor: 40000, cupo: 6 });
   });
 });

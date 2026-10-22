@@ -24,7 +24,7 @@
 .lp-especial-ficha-sentido { display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
 .lp-especial-ficha-sentido svg { font-size: 9px; }
 .lp-especial-ficha-detalles { padding-top: 8px; border-top: 1px solid var(--border); width: 100%; }
-.lp-especial-ficha-pendiente { color: var(--accent); font-weight: 600; margin-left: auto; }
+.lp-especial-ficha-pendiente { color: var(--accent-texto); font-weight: 600; margin-left: auto; }
 .lp-ajuste.is-expandido > .lp-especial-ficha { border-bottom: 1px solid var(--border); }
 .lp-ajuste-cabecera { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--gray-50); }
 .lp-ajuste-insignia { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
@@ -58,14 +58,14 @@
 .lp-especial-anterior { margin: 0 20px 20px; padding: 12px; background: var(--gold-soft); border-radius: var(--r-md); }
 .lp-ajuste-productos-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--gray-50); font-size: 12px; }
 .lp-ajuste-productos-cabecera strong span { color: var(--text-muted); font-weight: 400; margin-left: 8px; }
-.lp-ajuste-productos-cabecera button, .lp-ajuste-enlace { background: transparent; border: 0; color: var(--accent); font: inherit; font-size: 12px; padding: 6px 8px; min-height: 36px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.lp-ajuste-productos-cabecera button, .lp-ajuste-enlace { background: transparent; border: 0; color: var(--accent-texto); font: inherit; font-size: 12px; padding: 6px 8px; min-height: 36px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .lp-ajuste-producto { border-top: 1px solid var(--border); padding: 12px 20px; }
 .lp-ajuste-producto-fila { display: flex; align-items: center; gap: 20px; }
 .lp-ajuste-producto-fila > label { display: flex; align-items: center; gap: 12px; font-size: 13px; flex: 1; min-width: 0; cursor: pointer; }
 .lp-ajuste input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); }
 .lp-ajuste-valor { display: flex; flex-direction: column; text-align: right; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .lp-ajuste-valor small { font-size: 10px; color: var(--text-muted); font-weight: 400; margin-top: 3px; }
-.lp-ajuste-valor.is-excepcion small { color: var(--accent); }
+.lp-ajuste-valor.is-excepcion small { color: var(--accent-texto); }
 .lp-ajuste-vista { margin: 7px 0 0 30px; font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
 .lp-ajuste-vista strong { color: var(--text); }
 .lp-especial-precios { margin: 4px 0 0 30px; font-size: 11px; color: var(--text-secondary); }
