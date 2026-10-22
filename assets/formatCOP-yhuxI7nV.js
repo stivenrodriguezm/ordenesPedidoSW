@@ -1,0 +1,1 @@
+function s(n){if(n==null||n==="")return"";let e;if(typeof n=="string"){const r=n.split(".")[0].replace(/[^0-9]/g,"");e=parseInt(r,10)}else e=Math.floor(n);return isNaN(e)?"":"$"+e.toLocaleString("es-CO")}function i(n){if(!n)return 0;const t=String(n).split(".")[0].replace(/[^0-9]/g,"");return parseInt(t,10)||0}export{s as f,i as p};

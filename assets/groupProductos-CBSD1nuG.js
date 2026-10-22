@@ -1,0 +1,1 @@
+function c(r=[]){const e=new Map,n=[];return r.forEach(o=>{const a=[o.referencia_nombre||"",o.variacion||"",o.categoria_nombre||"",o.subcategoria_nombre||"",o.costo].join("|");if(e.has(a))e.get(a).cantidad+=1;else{const t={...o,cantidad:1};e.set(a,t),n.push(a)}}),n.map(o=>e.get(o))}export{c as g};
