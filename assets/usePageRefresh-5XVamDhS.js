@@ -1,0 +1,1 @@
+import{r as i}from"./index-DdrxNfoj.js";const c=(e,r=[])=>{const t=i.useRef(e);i.useEffect(()=>{t.current=e},[e]),i.useEffect(()=>{t.current();const n=()=>{document.visibilityState==="visible"&&t.current()};return document.addEventListener("visibilitychange",n),()=>document.removeEventListener("visibilitychange",n)},r)};export{c as u};

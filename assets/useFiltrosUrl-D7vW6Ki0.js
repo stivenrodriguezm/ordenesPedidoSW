@@ -1,1 +1,0 @@
-import{N as l,r as c}from"./index-C5EeG9ac.js";function m(n){const[u,o]=l(),a=c.useRef(Object.keys(n)).current,[r,f]=c.useState(()=>{const t={...n};for(const s of a){const e=u.get(s);e!==null&&(t[s]=e)}return t});return c.useEffect(()=>{o(t=>{const s=new URLSearchParams(t);for(const e of a)r[e]?s.set(e,r[e]):s.delete(e);return s},{replace:!0})},[r,a,o]),[r,f]}export{m as u};

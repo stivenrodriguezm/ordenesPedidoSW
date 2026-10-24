@@ -1,0 +1,1 @@
+import{j as s}from"./index-DdrxNfoj.js";const n=({size:a="md"})=>s.jsx("span",{className:`ds-spinner ds-spinner--${a}`,role:"status","aria-label":"Cargando"}),r=({message:a="Cargando..."})=>s.jsxs("div",{className:"ds-loading-block",children:[s.jsx(n,{size:"lg"}),s.jsx("span",{children:a})]});export{r as L};
