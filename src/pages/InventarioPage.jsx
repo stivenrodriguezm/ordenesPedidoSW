@@ -1,7 +1,8 @@
 import { useExportacion } from '../hooks/useExportacion';
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { imprimirEtiquetaQR } from '../utils/printQR';
+import { documentoEtiquetaQR, imprimirEtiquetaQR } from '../utils/printQR';
+import BotonImprimir from '../components/impresion/BotonImprimir';
 import API from '../services/api';
 import { mensajeDeError } from '../services/errores';
 import { usePendientesIds } from '../hooks/useSharedData';
@@ -141,6 +142,9 @@ const isExistingGrupoId = (localId) => localId && !String(localId).startsWith('g
 function InventarioPage() {
     const { proveedores } = useContext(AppContext);
     const hasPermission = usePermissions();
+    // Estado físico y disponibilidad de lo ya registrado: permiso propio (EDITAR_ESTADO_ITEM).
+    const puedeCambiarEstado = hasPermission('EDITAR_ESTADO_ITEM');
+    const sinPermisoEstado = puedeCambiarEstado ? undefined : 'No tienes permiso para cambiar el estado físico o la disponibilidad';
 
     const { exportar, exportando } = useExportacion('inventario', 'Inventario_Lottus.xlsx', aviso => showToast(aviso.message, aviso.type));
 
@@ -1305,10 +1309,11 @@ function InventarioPage() {
     };
 
     // ── QR & Traslado Handlers ────────────────────────────────────────────────
+    const datosQR = () => ({ svg: document.getElementById('qr-code-svg'), id: qrModal.item?.id, nombre: qrModal.item?.prod?.nombre });
     const handlePrintQR = () => {
-        const svg = document.getElementById('qr-code-svg');
-        if (!svg) return;
-        if (!imprimirEtiquetaQR({ svg, id: qrModal.item?.id, nombre: qrModal.item?.prod?.nombre })) {
+        const datos = datosQR();
+        if (!datos.svg) return;
+        if (!imprimirEtiquetaQR(datos)) {
             showToast('El navegador bloqueó la ventana de impresión.', 'error');
         }
     };
@@ -1378,7 +1383,7 @@ function InventarioPage() {
                             className="v-select-pill"
                             style={{ 
                                 height: '34px', cursor: 'pointer', padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                                background: showFiltersMenu ? 'var(--accent)' : '#fff', 
+                                background: showFiltersMenu ? 'var(--accent)' : 'var(--surface)', 
                                 color: showFiltersMenu ? '#fff' : 'var(--gray-700)', 
                                 fontWeight: 600, border: '1px solid var(--gray-200)', flexShrink: 0
                             }}
@@ -1983,6 +1988,7 @@ function InventarioPage() {
                                 <label className="ifg-label">Disponibilidad</label>
                                 <select className="ifg-input"
                                     value={grupoEditModal.disponibilidad}
+                                    disabled={!puedeCambiarEstado} title={sinPermisoEstado}
                                     onChange={e => setGrupoEditModal(prev => ({ ...prev, disponibilidad: e.target.value }))}>
                                     <option value="">Sin cambio</option>
                                     {DISPONIBILIDAD_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
@@ -1993,6 +1999,7 @@ function InventarioPage() {
                                 <label className="ifg-label">Estado Físico</label>
                                 <select className="ifg-input"
                                     value={grupoEditModal.estadoFisico}
+                                    disabled={!puedeCambiarEstado} title={sinPermisoEstado}
                                     onChange={e => setGrupoEditModal(prev => ({ ...prev, estadoFisico: e.target.value }))}>
                                     <option value="">Sin cambio</option>
                                     <option value="buen_estado">Buen estado</option>
@@ -2132,13 +2139,13 @@ function InventarioPage() {
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>
                                             Disponibilidad {!!itemEditModal.form.grupoId && <span style={{ color: 'var(--gray-400)', fontStyle: 'italic', fontWeight: 400 }}>(Del grupo)</span>}
                                         </label>
-                                        <select className="ifg-input" value={itemEditModal.form.disponibilidad} disabled={!!itemEditModal.form.grupoId} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, disponibilidad: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
+                                        <select className="ifg-input" value={itemEditModal.form.disponibilidad} disabled={!!itemEditModal.form.grupoId || !puedeCambiarEstado} title={sinPermisoEstado} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, disponibilidad: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                             {DISPONIBILIDAD_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
                                         </select>
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 3' }}>
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Estado Físico</label>
-                                        <select className="ifg-input" value={itemEditModal.form.estadoFisico} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, estadoFisico: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
+                                        <select className="ifg-input" value={itemEditModal.form.estadoFisico} disabled={!puedeCambiarEstado} title={sinPermisoEstado} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, estadoFisico: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                             <option value="buen_estado">Buen estado</option>
                                             <option value="por_reparar">Por reparar</option>
                                             <option value="por_modificar">Por modificar</option>
@@ -2381,7 +2388,7 @@ function InventarioPage() {
                         </p>
                         <div className="inv-modal-footer" style={{ justifyContent: 'center', marginTop: '2rem' }}>
                             <Button variant="secondary" onClick={() => setQrModal({ open: false, item: null })}>Cerrar</Button>
-                            <Button onClick={handlePrintQR}>Imprimir QR</Button>
+                            <BotonImprimir documento={() => documentoEtiquetaQR(datosQR())} titulo={`QR ítem ${qrModal.item.id}`} imprimirLocal={handlePrintQR}>Imprimir QR</BotonImprimir>
                         </div>
                     </div>
                 </div>,

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 // compartido: al cambiarlo, todo lo que dependa del modo (p. ej. gráficos) se vuelve a pintar.
 export const CLAVE_TEMA = 'lottus-tema';
 export const TEMAS = ['diurno', 'nocturno'];
-const COLOR_BARRA = { diurno: '#f4f5f7', nocturno: '#000000' };
+const COLOR_BARRA = { diurno: '#f4f5f7', nocturno: '#070b10' };
 const oyentes = new Set();
 
 export function temaGuardado() {

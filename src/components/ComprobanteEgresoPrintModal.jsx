@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import { FaPrint } from 'react-icons/fa';
 import { Modal, Button } from './ui';
+import BotonImprimir from './impresion/BotonImprimir';
 import ComprobanteEgresoReceipt from './ComprobanteEgresoReceipt';
 import receiptCss from './ComprobanteEgresoReceipt.css?raw';
 import './ComprobanteEgresoPrintModal.css';
@@ -19,22 +19,8 @@ import './ComprobanteEgresoPrintModal.css';
 const ComprobanteEgresoPrintModal = ({ open, onClose, comprobante }) => {
   const receiptRef = useRef(null);
 
-  const handlePrint = () => {
-    const node = receiptRef.current;
-    if (!node) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<!DOCTYPE html>
+  // El mismo documento sirve para imprimir aquí o enviarlo a la impresora de la oficina.
+  const documento = () => `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
@@ -47,8 +33,24 @@ const ComprobanteEgresoPrintModal = ({ open, onClose, comprobante }) => {
   ${receiptCss}
 </style>
 </head>
-<body>${node.outerHTML}</body>
-</html>`);
+<body>${receiptRef.current?.outerHTML || ''}</body>
+</html>`;
+
+  const handlePrint = () => {
+    if (!receiptRef.current) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(documento());
     doc.close();
 
     const cleanup = () => {
@@ -72,7 +74,7 @@ const ComprobanteEgresoPrintModal = ({ open, onClose, comprobante }) => {
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-          <Button variant="primary" icon={FaPrint} onClick={handlePrint}>Imprimir</Button>
+          <BotonImprimir documento={documento} titulo={`Comprobante de Egreso ${comprobante ? `CE-${comprobante.id}` : ''}`} imprimirLocal={handlePrint} />
         </>
       }
     >

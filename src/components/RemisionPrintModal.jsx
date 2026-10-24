@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { FaPrint, FaImage } from 'react-icons/fa';
+import { FaImage } from 'react-icons/fa';
 import { Modal, Button } from './ui';
+import BotonImprimir from './impresion/BotonImprimir';
 import RemisionReceipt from './RemisionReceipt';
 import receiptCss from './RemisionReceipt.css?raw';
 import { numeroRemision } from '../utils/remisiones';
@@ -172,7 +173,7 @@ const RemisionPrintModal = ({ open, onClose, remision, closeLabel = 'Cerrar' }) 
                     <Button variant="secondary" icon={FaImage} onClick={handleDescargarPng} disabled={!lista} loading={descargando}>
                         Descargar PNG
                     </Button>
-                    <Button variant="primary" icon={FaPrint} onClick={handlePrint} disabled={!lista}>Imprimir</Button>
+                    <BotonImprimir documento={() => html} titulo={`Remisión ${numeroRemision(remision?.id)}`} imprimirLocal={handlePrint} disabled={!lista} />
                 </>
             )}
         >

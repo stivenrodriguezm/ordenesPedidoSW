@@ -98,7 +98,7 @@
 }
 
 .pqrs-thread-bubble--admin {
-  background: #fdf8ec;
+  background: color-mix(in srgb, #fdf8ec calc(100% - var(--mezcla-fondo)), var(--surface));
   border: 1px solid #f0e0ad;
   margin-left: 1.5rem;
 }

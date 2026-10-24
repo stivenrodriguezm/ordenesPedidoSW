@@ -168,6 +168,16 @@
   font-weight: 600;
 }
 
+.module-nota {
+  margin: -0.5rem 0 0.75rem;
+  font-size: var(--fs-sm);
+}
+
+.feature-toggle.is-fijo {
+  cursor: default;
+  opacity: 0.75;
+}
+
 /* ---- Switch ---- */
 
 .switch {

@@ -17,7 +17,7 @@ import { describirError } from "../services/errores";
 function CrearPedidoPage() {
   const { proveedores, usuario: user, isLoading: contextLoading } = useContext(AppContext);
   const hasPermission = usePermissions();
-  const canCreateOthers = hasPermission('CREAR_ORDENES_OTROS') || user?.role?.toLowerCase() === 'administrador';
+  const canCreateOthers = hasPermission('CREAR_ORDENES_OTROS');
 
   const navigate = useNavigate();
   const location = useLocation();

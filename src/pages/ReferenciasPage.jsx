@@ -815,7 +815,7 @@ function ReferenciasPage() {
                             <span key={idx} className="categoria-badge">{cName}</span>
                           ))
                         ) : (
-                          <span style={{ color: '#d0cfc6', fontSize: '0.8rem' }}>—</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
                         )}
                       </div>
                     </td>
@@ -826,7 +826,7 @@ function ReferenciasPage() {
                             <span key={idx} className="subcategoria-badge">{sName}</span>
                           ))
                         ) : (
-                          <span style={{ color: '#d0cfc6', fontSize: '0.8rem' }}>—</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
                         )}
                       </div>
                     </td>

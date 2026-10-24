@@ -23,7 +23,6 @@ const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
     const ubicacion = [rem.barrio, rem.ciudad].filter(Boolean).join(' · ');
     const cobrar = !rem.sin_saldo && Number(rem.saldo) > 0;
     const anulada = rem.estado === 'anulada' || rem.estado === 'devuelta';
-    let n = 0;
 
     return (
         <div ref={ref} className="rr-page">
@@ -82,29 +81,26 @@ const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
                 <table className="rr-table">
                     <thead>
                         <tr>
-                            <th className="rr-col-num">#</th>
                             <th className="rr-col-cant">Cant.</th>
                             <th className="rr-col-cat">Categoría</th>
                             <th className="rr-col-sub">Subcategoría</th>
                             <th className="rr-col-ref">Referencia</th>
                             <th>Descripción</th>
-                            <th className="rr-col-check">✓</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filas.length === 0 && (
-                            <tr><td colSpan="7" className="rr-empty">Sin productos registrados.</td></tr>
+                            <tr><td colSpan="5" className="rr-empty">Sin productos registrados.</td></tr>
                         )}
                         {filas.map(f => (f.tipo === 'grupo' ? (
                             <tr key={f.key} className="rr-group-row">
-                                <td colSpan="7">
+                                <td colSpan="5">
                                     Juego: {f.nombre} · {f.piezas} pieza{f.piezas === 1 ? '' : 's'}
                                     {f.observacion && <span className="rr-group-obs"> — {f.observacion}</span>}
                                 </td>
                             </tr>
                         ) : (
                             <tr key={f.key}>
-                                <td className="rr-col-num">{++n}</td>
                                 <td className="rr-col-cant">{f.cantidad}</td>
                                 <td className="rr-col-cat">{f.categoria || '—'}</td>
                                 <td className="rr-col-sub">{f.subcategoria || '—'}</td>
@@ -116,7 +112,6 @@ const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
                                     {f.descripcion || (f.tela ? '' : '—')}
                                     {f.tela && <div className="rr-tela"><strong>Tapizado:</strong> {f.tela}</div>}
                                 </td>
-                                <td className="rr-col-check"><span className="rr-checkbox" /></td>
                             </tr>
                         )))}
                     </tbody>
@@ -148,15 +143,10 @@ const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
             </div>
 
             <div className="rr-firmas">
-                <div className="rr-firma">
-                    <div className="rr-firma-title">Despachado por</div>
-                    <div className="rr-firma-line">Nombre</div>
-                    <div className="rr-firma-line">Firma</div>
-                </div>
-                <div className="rr-firma">
+                <div className="rr-firma rr-firma--recibido">
                     <div className="rr-firma-title">Recibí a satisfacción</div>
-                    <div className="rr-firma-line">Nombre y C.C.</div>
-                    <div className="rr-firma-line">Firma</div>
+                    <div className="rr-firma-line">Nombre y documento</div>
+                    <div className="rr-firma-line rr-firma-line--firma">Firma</div>
                     <div className="rr-firma-line">Fecha y hora</div>
                 </div>
             </div>

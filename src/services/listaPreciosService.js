@@ -66,8 +66,9 @@ export const updateMultiplicador = async (id, data) => {
   return response.data;
 };
 
-export const deleteMultiplicador = async (id) => {
-  const response = await API.delete(`/listaprecios/multiplicadores/${id}/`);
+// Sus productos pasan a `reasignarA` (id) o, sin él, al multiplicador general.
+export const deleteMultiplicador = async (id, reasignarA = null) => {
+  const response = await API.delete(`/listaprecios/multiplicadores/${id}/`, { params: reasignarA ? { reasignar_a: reasignarA } : {} });
   return response.data;
 };
 

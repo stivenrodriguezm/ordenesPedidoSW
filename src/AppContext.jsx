@@ -14,12 +14,9 @@ export const usePermissions = () => {
   
   const hasPermission = (feature) => {
     if (!usuario) return false;
-    // El rol administrador siempre tiene acceso total (misma regla que el
-    // backend aplica en cada endpoint), sin importar qué haya quedado
-    // guardado en la configuración de permisos del rol.
-    if (usuario.role?.toLowerCase() === 'administrador') return true;
-    // 'ALL' llega desde el backend para roles sin configuración explícita
-    // guardada todavía.
+    // Todos los roles, administrador incluido, siguen lo configurado en Gestión de
+    // usuarios (/user/ ya entrega esa lista). 'ALL' solo llega para un administrador
+    // cuyo rol aún no tiene configuración guardada.
     if (permissions.includes('ALL')) return true;
 
     if(feature==='ACCESO_OFICINA')return !!usuario.acceso_oficina||permissions.includes('USAR_ASISTENTE_IA');
@@ -41,7 +38,7 @@ export const usePermissions = () => {
       return permissions.includes('VER_PEDIDOS_TELAS');
     }
     if (feature === 'GESTION_WEB') {
-      return usuario.role?.toLowerCase() === 'administrador' || permissions.includes('GESTION_WEB') || permissions.includes('ADMINISTRAR_PAGINA_WEB');
+      return permissions.includes('GESTION_WEB') || permissions.includes('ADMINISTRAR_PAGINA_WEB');
     }
     return permissions.includes(feature);
   };

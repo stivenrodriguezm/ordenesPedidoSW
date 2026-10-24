@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { FaBoxOpen, FaCheckCircle, FaChevronDown, FaEdit, FaLayerGroup, FaPlus, FaSearch, FaTimes, FaTruck } from 'react-icons/fa';
 import API from '../services/api';
@@ -10,6 +10,7 @@ import { formatCOP } from '../utils/formatCOP';
 import { AppContext } from '../AppContext';
 import { GeneradorImagenes, PedirProveedor, PedirTelas } from './productosVenta/PedidosDesdeVenta';
 import { TIPOS_ADICIONAL, faltantesDe, nombreCampo, recargoListo } from './productosVenta/faltantes';
+import useAlturaUniforme from './productosVenta/useAlturaUniforme';
 import './ProductosVenta.css';
 
 /*
@@ -61,6 +62,7 @@ const fechaCorta = (iso) => (iso ? new Date(iso).toLocaleDateString('es-CO', { d
 // Lo que viaja al servidor: sin precios por producto ni fecha ni especificaciones.
 const entrada = (l) => ({
     id: l.id, tipo: l.tipo || 'producto', variante: l.variante || null, grupo_catalogo: l.grupo_catalogo || null, referencia: l.referencia || null,
+    juego: l.juego || null, pieza: l.pieza || null,
     producto_nombre: l.producto_nombre || '', cantidad: Number(l.cantidad) || 1, opcionales: l.opcionales || [],
     adicionales: (l.adicionales || []).filter(recargoListo).map(a => ({ descripcion: a.descripcion.trim(), importe_lista: a.importe_lista })),
     precio_lista_override: l.precio_lista_override || null, motivo_precio: l.motivo_precio || '',
@@ -73,6 +75,8 @@ const entrada = (l) => ({
     tela_grupo: l.tela_modo && l.tela_modo !== 'no_aplica' ? (l.tela_grupo || null) : null,
     tela_costo: l.tela_modo === 'aparte' && l.tela_costo !== '' && l.tela_costo != null ? l.tela_costo : null,
     conjunto: l.conjunto || '', conjunto_nombre: l.conjunto ? (l.conjunto_nombre || '') : '', conjunto_cantidad: l.conjunto ? (Number(l.conjunto_cantidad) || 1) : 1,
+    // Una venta guardada conserva sus precios; solo con «Actualizar» toma los de la lista actual.
+    recalcular: Boolean(l.recalcular),
 });
 // Grupo de la tela: el elegido o, si coincide el material, el del precio del catálogo.
 const grupoDeTela = (l, grupos) => {
@@ -121,18 +125,23 @@ export function ProductosEsqueleto() {
     );
 }
 
+// Búsqueda del catálogo (2026-10-24): lo ya buscado sale al instante (caché de 2 minutos; el
+// servidor también la guarda hasta que cambie la lista) y, mientras llega lo nuevo, se siguen
+// viendo los resultados anteriores en vez de volver al esqueleto de carga.
+const consultaCatalogo = (consulta) => ({
+    queryKey: ['productos-venta-catalogo', 'subcategorias-v2', consulta],
+    queryFn: ({ pageParam, signal }) => buscarProductosVenta({ q: consulta, page: pageParam }, { signal }),
+    initialPageParam: 1,
+    getNextPageParam: (ultima, paginas, numero) => (ultima.count || 0) > paginas.reduce((n, p) => n + p.results.length, 0) ? numero + 1 : undefined,
+    staleTime: 120000, retry: false,
+});
+
 function BuscadorCatalogo({ alElegir, cerrar, titulo }) {
     const [q, setQ] = useState('');
-    const consulta = useDebounce(q, 200);
-    const catalogo = useInfiniteQuery({
-        queryKey: ['productos-venta-catalogo', 'subcategorias-v2', consulta],
-        queryFn: ({ pageParam, signal }) => buscarProductosVenta({ q: consulta, page: pageParam }, { signal }),
-        initialPageParam: 1,
-        getNextPageParam: (ultima, paginas, numero) => (ultima.count || 0) > paginas.reduce((n, p) => n + p.results.length, 0) ? numero + 1 : undefined,
-        staleTime: 0, retry: false,
-    });
+    const consulta = useDebounce(q.trim(), 200);
+    const catalogo = useInfiniteQuery({ ...consultaCatalogo(consulta), placeholderData: keepPreviousData });
     const resultados = catalogo.data?.pages.flatMap(p => p.results) || [];
-    const cargando = catalogo.isFetching || consulta !== q;
+    const cargando = catalogo.isFetching || consulta !== q.trim();
     const estado = p => ({ borrador: 'Borrador · pendiente de publicar', sin_costo: 'Costo pendiente de confirmar', historico: 'Producto anterior' })[p.estado_precio] || (p.activo === false ? 'Inactivo' : '');
     return (
         <div className="pv-buscador">
@@ -240,7 +249,7 @@ function TelaProducto({ linea, n, cambiar, proveedores, grupos = [], requiere = 
     return (
         <div className={conFalta('pv-tela', faltas.tela_modo)}>
             <div className="pv-pregunta">
-                <div className="pv-segmento" role="radiogroup" aria-label={`Tela del producto ${n}`} title="¿Lleva tela?">
+                <div className="pv-segmento" role="radiogroup" aria-label={`Tela o cuero del producto ${n}`} title="¿Lleva tela o cuero?">
                     {modos.map(([v, t]) => (
                         <button type="button" key={v} role="radio" aria-checked={modo === v} className={modo === v ? 'is-activo' : ''}
                             disabled={pedida} onClick={() => elegirModo(v)}>{t}</button>
@@ -248,6 +257,7 @@ function TelaProducto({ linea, n, cambiar, proveedores, grupos = [], requiere = 
                 </div>
                 <Falta m={faltas.tela_modo} />
             </div>
+            {modo === 'no_aplica' && !verGrupo && <p className="pv-tela__no-aplica"><FaCheckCircle aria-hidden="true" /><span>Este producto no lleva tela ni cuero.<small>Continúa con el texto para el proveedor y la remisión.</small></span></p>}
             {verGrupo && (
                 <div className="pv-tela__grid">
                     {lleva && (
@@ -308,7 +318,7 @@ function TelaProducto({ linea, n, cambiar, proveedores, grupos = [], requiere = 
                 </div>
             )}
             {pedida && <small className="pv-muted">Ya pedida (PT {linea.tela_pedidos.map(t => t.id).join(', ')}). Para cambiarla, elimina ese pedido en Telas; el grupo y el costo sí se pueden completar.</small>}
-            {copiarTela && lleva && <button type="button" className="pv-link pv-tela__copiar" onClick={copiarTela}>Usar esta tela en las demás piezas del conjunto</button>}
+            <div className="pv-tela__acciones">{copiarTela && lleva && <button type="button" className="pv-link pv-tela__copiar" onClick={copiarTela}>Usar esta tela en las demás piezas del conjunto</button>}</div>
         </div>
     );
 }
@@ -339,7 +349,7 @@ function Paso({ ok, texto }) {
 }
 
 function resumenTela(l, grupos) {
-    if (!l.tela_modo) return <em className="pv-aviso">Falta decir si lleva tela</em>;
+    if (!l.tela_modo) return <em className="pv-aviso">Falta decir si lleva tela o cuero</em>;
     if (l.tela_modo === 'no_aplica') return 'No lleva tela';
     const g = grupoDeTela(l, grupos);
     const cuero = esCuero(l);
@@ -360,19 +370,19 @@ function Cantidad({ valor, cambiar, n, falta }) {
     );
 }
 
-function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPermission, proveedoresTela, grupos = [], enConjunto = false, faltas = {}, copiarTela }) {
+function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPermission, proveedoresTela, grupos = [], enConjunto = false, faltas = {}, copiarTela, actualizarPrecio }) {
     const catalogo = useQuery({
         queryKey: ['productos-venta-catalogo', 'detalle', linea.variante],
         queryFn: ({ signal }) => buscarProductosVenta({ id: linea.variante }, { signal }),
-        enabled: !!linea.variante, staleTime: 0, retry: false,
+        enabled: !!linea.variante, staleTime: 60000, retry: false,
     });
     const meta = catalogo.data?.results[0];
     const gruposPrecio = catalogo.data?.grupos || [];
     const [precio, setPrecio] = useState({ estado: 'listo', valor: linea.precio_lista_unitario, error: '' });
     const [verEspecial, setVerEspecial] = useState(Boolean(linea.precio_lista_override));
     const [verMas, setVerMas] = useState(Boolean(linea.adicionales?.length || linea.precio_lista_override));
-    // Un producto nuevo se ve abierto; uno guardado, como un resumen que se abre al editarlo.
-    const [abierto, setAbierto] = useState(!linea.id);
+    // Abrir un conjunto muestra sus piezas con el mismo editor completo de un producto.
+    const [abierto, setAbierto] = useState(!linea.id || enConjunto);
     const especial = !linea.variante;
     // «Cojines incluidos»: obligatorio desde el catálogo; si es opcional, cuenta al elegirlo.
     const cupoDecorativos = meta?.decorativos_incluidos || (meta?.opcionales?.some(o => o.decorativos && linea.opcionales.includes(o.id)) ? 2 : 0);
@@ -385,15 +395,12 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
         // Producto nuevo: los opcionales «habilitados» en la lista llegan ya seleccionados.
         const pre = (m.opcionales || []).filter(o => o.preseleccionado).map(o => o.id);
         if (!linea.id && !linea.opcionales?.length && pre.length) cambiar({ opcionales: pre }, false);
-        // Juego que no se divide (tiene costos propios): sus partes van en los textos.
-        if (m.juego && !linea.texto_proveedor && !linea.sin_texto_proveedor) cambiar({ texto_proveedor: `Juego: ${m.juego}` }, false);
-        if (m.juego && !linea.texto_cliente) cambiar({ texto_cliente: `Incluye: ${m.juego}` }, false);
         cambiar({ _requiere_grupo: Boolean(m.tela) }, false);
     }, [meta, linea.variante]); // eslint-disable-line react-hooks/exhaustive-deps
     // El precio de lista se calcula solo con lo elegido (sin botón). Solo cuentan los
     // recargos completos, para no fallar mientras se escribe.
     const calc = entrada(linea);
-    const clave = JSON.stringify([calc.variante, calc.grupo_catalogo, calc.opcionales, calc.adicionales, calc.precio_lista_override, calc.motivo_precio, calc.producto_nombre]);
+    const clave = JSON.stringify([calc.variante, calc.grupo_catalogo, calc.opcionales, calc.adicionales, calc.precio_lista_override, calc.motivo_precio, calc.producto_nombre, calc.recalcular]);
     useEffect(() => {
         if (meta?.tela && !linea.grupo_catalogo) { setPrecio({ estado: 'falta', valor: null, error: 'Elige el grupo de la tela' }); return undefined; }
         if (especial && !linea.precio_lista_override) { setPrecio({ estado: 'falta', valor: null, error: 'Indica el precio' }); return undefined; }
@@ -402,7 +409,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
         setPrecio(p => ({ ...p, estado: 'calculando' }));
         const t = setTimeout(() => {
             API.post(`/ventas/${ventaId}/productos/calcular/`, { ...calc, cantidad: 1, sin_texto_proveedor: true }, { signal: c.signal })
-                .then(r => { setPrecio({ estado: 'listo', valor: r.data.precio_lista_unitario, error: '' }); cambiar({ precio_lista_unitario: r.data.precio_lista_unitario, _precio_error: '' }, false); })
+                .then(r => { setPrecio({ estado: 'listo', valor: r.data.precio_lista_unitario, vigente: r.data.precio_lista_vigente || null, error: '' }); cambiar({ precio_lista_unitario: r.data.precio_lista_unitario, _precio_error: '' }, false); })
                 .catch(e => { if (!c.signal.aborted) { setPrecio({ estado: 'error', valor: null, error: errorTexto(e) }); cambiar({ _precio_error: `No se pudo calcular el precio: ${errorTexto(e)}` }, false); } });
         }, 350);
         return () => { clearTimeout(t); c.abort(); };
@@ -437,7 +444,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                         </button>
                     )}
                     <div className="pv-card__pasos">
-                        <Paso ok={listo.compra} texto="Compra" /><Paso ok={listo.tela} texto="Tela" /><Paso ok={listo.textos} texto="Textos" />
+                        <Paso ok={listo.compra} texto="Compra" /><Paso ok={listo.tela} texto="Tela / Cuero" /><Paso ok={listo.textos} texto="Textos" />
                         {meta?.juego && <small className="pv-juego" title="Juego: se vende y se pide como un solo producto">Incluye {meta.juego}</small>}
                         {especial && <small className="pv-juego">Producto especial</small>}
                         {nFaltas > 0 && <span className="pv-faltan-chip">Falta{nFaltas === 1 ? '' : 'n'} {nFaltas} dato{nFaltas === 1 ? '' : 's'}</span>}
@@ -461,30 +468,36 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                 <NotaDecorativos da={cupoDecorativos} incluido={linea.decorativos_incluidos} esDecorativo={meta?.es_decorativo} />
             )}
             <NotaTransporte compartido={linea.transporte_compartido} />
+            {precio.vigente && !linea.recalcular && actualizarPrecio && (
+                <p className="pv-lista-cambio" role="status">
+                    <span>La lista de precios cambió: hoy vale <b>{formatCOP(Number(precio.vigente) * cant)}</b> y se vendió en <b>{formatCOP(Number(precio.valor) * cant)}</b>. La venta conserva su precio.</span>
+                    <button type="button" className="pv-link" onClick={actualizarPrecio}>{enConjunto ? 'Actualizar el conjunto a la lista actual' : 'Actualizar a la lista actual'}</button>
+                </p>
+            )}
 
             {!verDetalle ? (
                 <p className="pv-card__resumen">
                     <span><b>Compra</b> {linea.referencia_nombre || <em className="pv-aviso">sin referencia</em>}</span>
-                    <span><b>Tela</b> {resumenTela(linea, todosLosGrupos)}</span>
+                    <span><b>Tela / Cuero</b> {resumenTela(linea, todosLosGrupos)}</span>
                     <span><b>Proveedor</b> {linea.sin_texto_proveedor ? 'no aplica' : linea.texto_proveedor || <em className="pv-aviso">sin texto</em>}</span>
                     <span><b>Remisión</b> {linea.texto_cliente || nombreRemision}</span>
                 </p>
             ) : (
                 <div className="pv-card__cuerpo">
-                    <section className="pv-sec" aria-label={`Compra del producto ${n}`}>
+                    <section className="pv-sec pv-sec--compra" aria-label={`Compra del producto ${n}`}>
                         <h6 className="pv-sec__titulo" title="A quién se le pide este mueble">Compra</h6>
                         <div className={conFalta('pv-campo pv-sec__compra', faltas.referencia)}>
                             <Referencia linea={linea} opciones={meta?.referencias || []} cambiar={cambiar} canonica={meta?.catalogo_actual} />
                             <Falta m={faltas.referencia} />
                         </div>
                     </section>
-                    <section className="pv-sec" aria-label={`Tela del producto ${n}`}>
-                        <h6 className="pv-sec__titulo" title={meta?.tela ? 'El grupo define el precio de lista' : 'Si el mueble va tapizado'}>Tela</h6>
+                    <section className="pv-sec pv-sec--tela" aria-label={`Tela o cuero del producto ${n}`}>
+                        <h6 className="pv-sec__titulo" title={meta?.tela ? 'El grupo define el precio de lista' : 'Si el mueble va tapizado en tela o cuero'}>Tela / Cuero</h6>
                         <TelaProducto linea={linea} n={n} cambiar={cambiar} proveedores={proveedoresTela} grupos={todosLosGrupos} faltas={faltas}
                             requiere={Boolean(meta?.tela)} permitidos={meta?.grupos || []} copiarTela={copiarTela}
                             sugerida={meta?.metraje ? Number(meta.metraje) * cant : null} sugeridaCuero={meta?.decimetraje_cuero ? Number(meta.decimetraje_cuero) * cant : null} />
                     </section>
-                    <section className="pv-sec" aria-label={`Textos del producto ${n}`}>
+                    <section className="pv-sec pv-sec--textos" aria-label={`Textos del producto ${n}`}>
                         <h6 className="pv-sec__titulo">Textos</h6>
                         <div className="pv-ed__textos">
                             <div className={conFalta('pv-campo', faltas.texto_proveedor)}>
@@ -558,10 +571,70 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
     );
 }
 
+// Costos propios de un conjunto de la lista (su Transporte…): los calcula la lista de precios.
+const esCostoConjunto = (l) => (l.tipo || 'producto') !== 'producto' && Boolean(l.juego);
+function CostosConjunto({ costos, verPrecios = true }) {
+    if (!costos.length) return null;
+    return (
+        <ul className="pv-conj__costos">
+            {costos.map(l => (
+                <li key={l.id || l.clave}>
+                    <span className={`pv-adic__tipo pv-adic__tipo--${l.tipo}`}>{TIPOS_ADICIONAL[l.tipo]}</span>
+                    <span>{l.producto_nombre} del conjunto <small className="pv-muted">· {l.recalcular ? 'se actualiza a la lista actual al guardar' : 'de la lista de precios, no se pide a ningún proveedor'}</small></span>
+                    {verPrecios && <strong>{conSigno(Number(l.precio_lista_unitario) * (Number(l.cantidad) || 1))}</strong>}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
 // Conjunto en edición: nombre y cuántos conjuntos; las piezas van dentro.
-function EditorConjunto({ nombre, cantidad, piezas, faltaNombre, renombrar, cambiarCantidad, agregarPieza, separar, quitar, children }) {
-    const total = piezas.reduce((s, l) => s + (Number(l.precio_lista_unitario) || 0) * (Number(l.cantidad) || 0), 0);
+// Conjunto cerrado (2026-10-24): una tarjeta como la de un producto, en una sola casilla de la
+// grilla; abierto, ocupa toda la fila con sus piezas. Uno nuevo o con datos faltantes abre solo.
+function EditorConjunto({ nombre, cantidad, piezas, costos = [], faltaNombre, faltan = 0, renombrar, cambiarCantidad, quitar, children }) {
+    const total = [...piezas, ...costos].reduce((s, l) => s + (Number(l.precio_lista_unitario) || 0) * (Number(l.cantidad) || 0), 0);
+    const proveedores = [...new Set(piezas.map(l => l.proveedor_nombre).filter(Boolean))];
     const bloqueado = piezas.some(l => l.pedidos?.length || l.inventario_origen);
+    const [abierto, setAbierto] = useState(() => piezas.some(l => !l.id));
+    const debeAbrir = !!faltaNombre || faltan > 0;
+    useEffect(() => { if (debeAbrir) setAbierto(true); }, [debeAbrir]);
+    const quitarBoton = (
+        <button type="button" className="pv-icono" onClick={quitar} disabled={bloqueado} aria-label={`Quitar el conjunto ${nombre}`}
+            title={bloqueado ? 'Alguna pieza ya tiene pedido: quítalas una a una' : 'Quitar el conjunto completo'}><FaTimes /></button>
+    );
+    if (!abierto) {
+        const n = Number(cantidad) || 1;
+        return (
+            <article className="pv-card pv-card--conjunto" aria-label={`Conjunto ${nombre || 'sin nombre'}`}>
+                <header className="pv-card__cabeza">
+                    <span className="pv-num pv-num--conjunto" aria-hidden="true"><FaLayerGroup /></span>
+                    <div className="pv-card__titulo">
+                        <button type="button" className="pv-card__nombre" onClick={() => setAbierto(true)} title="Ver y editar sus piezas">
+                            <strong>{nombre || 'Conjunto sin nombre'}</strong><span>Conjunto · {piezas.length} pieza{piezas.length === 1 ? '' : 's'}</span>
+                        </button>
+                        <div className="pv-card__pasos">
+                            <small className="pv-juego">{proveedores.length > 1 ? `${proveedores.length} proveedores: un pedido a cada uno` : 'Un proveedor'}</small>
+                        </div>
+                    </div>
+                    <div className="pv-cantidad" title="Cuántos conjuntos iguales: multiplica sus piezas">
+                        <button type="button" aria-label="Un conjunto menos" disabled={n <= 1} onClick={() => cambiarCantidad(n - 1)}>−</button>
+                        <input aria-label="Cantidad de conjuntos" type="number" min="1" max="100" value={cantidad} onChange={e => cambiarCantidad(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+                        <button type="button" aria-label="Un conjunto más" onClick={() => cambiarCantidad(n + 1)}>+</button>
+                    </div>
+                    <div className="pv-card__precio pv-ed__precio"><span>{total ? formatCOP(total) : '—'}<small> lista</small></span></div>
+                    <div className="pv-card__acciones">
+                        <button type="button" className="pv-icono pv-icono--abrir" aria-expanded="false" aria-label={`Ver las piezas del conjunto ${nombre}`} title="Ver y editar sus piezas" onClick={() => setAbierto(true)}><FaChevronDown /></button>
+                        {quitarBoton}
+                    </div>
+                </header>
+                <p className="pv-card__resumen">
+                    <span><b>Piezas</b> {piezas.map(l => `${l.cantidad} ${l.variante_nombre || l.producto_nombre}`).join(' + ')}</span>
+                    <span><b>Compra</b> {proveedores.join(' · ') || <em className="pv-aviso">sin referencia</em>}</span>
+                    {costos.map(l => <span key={l.id || l.clave}><b>{l.producto_nombre}</b> {conSigno(Number(l.precio_lista_unitario) * (Number(l.cantidad) || 1))}</span>)}
+                </p>
+            </article>
+        );
+    }
     return (
         <section className="pv-conj" aria-label={`Conjunto ${nombre || 'sin nombre'}`}>
             <header className="pv-conj__cabeza">
@@ -570,22 +643,22 @@ function EditorConjunto({ nombre, cantidad, piezas, faltaNombre, renombrar, camb
                     <label className={conFalta('pv-conj__nombre', faltaNombre)}><span className="pv-sr">Nombre del conjunto</span>
                         <input aria-invalid={!!faltaNombre} aria-label="Nombre del conjunto" placeholder="Nombre del conjunto, p. ej. Comedor 6 puestos" value={nombre} onChange={e => renombrar(e.target.value)} />
                     </label>
-                    <small>{piezas.length} pieza{piezas.length === 1 ? '' : 's'} · se ven juntas, cada una se pide con su referencia</small>
+                    <small>{piezas.length} pieza{piezas.length === 1 ? '' : 's'} · {proveedores.length > 1
+                        ? `${proveedores.length} proveedores (${proveedores.join(', ')}): un pedido a cada uno`
+                        : 'cada una se pide con su referencia'}</small>
                 </div>
                 <label className="pv-conj__cant" title="Cuántos conjuntos iguales: multiplica sus piezas">
                     <span>Conjuntos</span>
                     <input aria-label="Cantidad de conjuntos" type="number" min="1" max="100" value={cantidad} onChange={e => cambiarCantidad(Math.max(1, parseInt(e.target.value, 10) || 1))} />
                 </label>
                 <span className="pv-conj__total">{total ? formatCOP(total) : '—'}<small>precio de lista</small></span>
-                <button type="button" className="pv-icono" onClick={quitar} disabled={bloqueado} aria-label={`Quitar el conjunto ${nombre}`}
-                    title={bloqueado ? 'Alguna pieza ya tiene pedido: quítalas una a una' : 'Quitar el conjunto completo'}><FaTimes /></button>
+                <button type="button" className="pv-icono pv-icono--abrir" aria-expanded="true" aria-label={`Ocultar las piezas del conjunto ${nombre}`}
+                    title={debeAbrir ? 'Completa los datos que faltan para cerrarlo' : 'Ocultar las piezas'} disabled={debeAbrir} onClick={() => setAbierto(false)}><FaChevronDown /></button>
+                {quitarBoton}
             </header>
             {faltaNombre && <Falta m={faltaNombre} />}
             <div className="pv-conj__piezas">{children}</div>
-            <footer className="pv-conj__pie">
-                <button type="button" className="pv-link" onClick={agregarPieza}><FaPlus /> Agregar pieza</button>
-                <button type="button" className="pv-link pv-link--suave" onClick={separar} title="Las piezas quedan como productos sueltos">Separar en productos sueltos</button>
-            </footer>
+            <CostosConjunto costos={costos} />
         </section>
     );
 }
@@ -630,7 +703,7 @@ function EditorAdicional({ linea, cambiar, quitar, faltas = {} }) {
             )}
             <label className={conFalta('pv-campo pv-adic__valor', faltas.precio_lista_override)}><span>{tipo === 'articulo' ? 'Valor c/u' : 'Valor'}</span>
                 <input type="number" min="0" step="1000" aria-invalid={!!faltas.precio_lista_override} aria-label={`Valor ${etiqueta}`}
-                    value={monto} onChange={e => fijar(e.target.value)} />
+                    value={monto} onChange={e => fijar(e.target.value)} readOnly={Boolean(linea.juego)} title={linea.juego ? 'Lo calcula la lista de precios del conjunto' : undefined} />
                 <Falta m={faltas.precio_lista_override} />
             </label>
             <button type="button" className="pv-icono" aria-label={`Quitar ${etiqueta}`} onClick={quitar}><FaTimes /></button>
@@ -666,18 +739,19 @@ function estadoDe(l) {
     return { tono: 'pendiente', texto: `Por pedir ${l.por_pedir}` };
 }
 
-function TelaResumen({ l }) {
-    if (l.tela_modo === 'no_aplica') return null;
+function TelaResumen({ l, corto = false }) {
+    if (l.tela_modo === 'no_aplica') return <span className="pv-muted">No lleva</span>;
     if (!l.tela_modo) return <span className="pv-tela-chip is-falta">Falta definir la tela</span>;
     const cuero = l.tela_material === 'cuero';
     const pedido = l.tela_pedidos?.[0];
     const nombre = [l.tela_referencia, l.tela_color && `color ${l.tela_color}`].filter(Boolean).join(' · ');
     return (
         <span className="pv-tela-linea">
-            <span className="pv-tela-linea__nombre">{cuero ? 'Cuero' : 'Tela'}: {nombre || <em className="pv-aviso">sin indicar</em>}</span>
-            {l.tela_modo === 'incluida' && <span className="pv-muted"> · la incluye el proveedor</span>}
+            <span className="pv-tela-linea__nombre">{corto ? '' : `${cuero ? 'Cuero' : 'Tela'}: `}{nombre || <em className="pv-aviso">sin indicar</em>}</span>
+            {l.tela_modo === 'incluida' && <span className="pv-muted"> · la pone el proveedor</span>}
             {l.tela_modo === 'aparte' && <>
                 <span className="pv-muted"> · {l.tela_proveedor_nombre || 'sin proveedor'}{l.tela_cantidad ? ` · ${Number(l.tela_cantidad).toLocaleString('es-CO')} ${cuero ? 'dm' : 'm'}` : ''}</span>
+                {' '}{/* deja partir la línea antes del chip para que no se salga de la tarjeta */}
                 {pedido ? <span className="pv-tela-chip is-ok">PT {pedido.id} · {pedido.estado}</span> : <span className="pv-tela-chip is-falta">{cuero ? 'Cuero' : 'Tela'} por pedir</span>}
             </>}
         </span>
@@ -710,59 +784,92 @@ function Gestion({ gestion, puede, ocupado, finalizar, reabrir }) {
 }
 
 // Vista (2026-10-15): cada producto es una tarjeta compacta, como un ítem de factura.
+// Producto en la vista (2026-10-24): estado arriba, a quién se compra, la tela y los dos
+// textos; tarjetas de ancho fijo para que quepan varias por fila.
 function TarjetaProducto({ l, verPrecios, pieza = false }) {
     const estado = estadoDe(l);
     const remision = l.texto_cliente || nombreConDetalle(l);
+    const cuero = l.tela_material === 'cuero' || (!l.tela_material && l.grupo_es_cuero);
+    const notas = !!l.adicionales?.length || l.da_decorativos || l.decorativos_incluidos || l.transporte_compartido;
     return (
         <li className={`pv-tj${pieza ? ' pv-tj--pieza' : ''}`}>
             <header className="pv-tj__cab">
-                <span className="pv-tj__cant">{l.cantidad}<small>×</small></span>
+                <span className="pv-tj__cant" title={`${l.cantidad} unidad${l.cantidad === 1 ? '' : 'es'}`}>{l.cantidad}<small>×</small></span>
                 <div className="pv-tj__nombre">
                     <strong title={nombreConDetalle(l)}>{l.producto_nombre}</strong>
-                    {l.variante_nombre && <span>{l.variante_nombre}</span>}
+                    {(l.variante_nombre || l.grupo_tela) && <span>{[l.variante_nombre, l.grupo_tela].filter(Boolean).join(' · ')}</span>}
+                    <span className={`pv-estado pv-estado--${estado.tono} pv-tj__estado`}>{estado.texto}</span>
                 </div>
                 {verPrecios && <span className="pv-tj__precio" title="Precio de lista">{l.precio_lista_unitario ? formatCOP(Number(l.precio_lista_unitario) * l.cantidad) : '—'}</span>}
             </header>
             <dl className="pv-tj__datos">
-                <div><dt>Compra</dt><dd>{l.referencia_nombre ? `${l.referencia_nombre}${l.proveedor_nombre ? ` · ${l.proveedor_nombre}` : ''}` : <em className="pv-aviso">Sin referencia</em>}</dd></div>
-                {l.tela_modo !== 'no_aplica' && <div><dt>Tela</dt><dd><TelaResumen l={l} /></dd></div>}
-                <div><dt>Proveedor</dt><dd>{l.sin_texto_proveedor ? <em className="pv-muted">No aplica</em> : l.texto_proveedor ? <span title={l.texto_proveedor}>{l.texto_proveedor}</span> : <em className="pv-aviso">Sin texto</em>}</dd></div>
-                <div><dt>Remisión</dt><dd title={l.texto_cliente ? remision : 'Sin texto: la remisión usa el nombre del producto'}>{remision}</dd></div>
+                <div><dt>Se compra a</dt><dd>{l.referencia_nombre
+                    ? <><b>{l.proveedor_nombre || l.referencia_nombre}</b>{l.proveedor_nombre && <span className="pv-muted"> · ref. {l.referencia_nombre}</span>}</>
+                    : <em className="pv-aviso">Sin referencia</em>}</dd></div>
+                <div><dt>{l.tela_modo && l.tela_modo !== 'no_aplica' ? (cuero ? 'Cuero' : 'Tela') : 'Tela / Cuero'}</dt><dd><TelaResumen l={l} corto /></dd></div>
+                <div><dt>Al proveedor</dt><dd>{l.sin_texto_proveedor ? <em className="pv-muted">No aplica</em>
+                    : l.texto_proveedor ? <q title={l.texto_proveedor}>{l.texto_proveedor}</q> : <em className="pv-aviso">Sin texto</em>}</dd></div>
+                <div><dt>En remisión</dt><dd title={l.texto_cliente ? remision : 'Sin texto: la remisión usa el nombre del producto'}>
+                    {l.texto_cliente ? <q>{remision}</q> : <span className="pv-muted">{remision}</span>}</dd></div>
             </dl>
-            <footer className="pv-tj__pie">
-                <span className={`pv-estado pv-estado--${estado.tono}`}>{estado.texto}</span>
-                {!!l.adicionales?.length && <small className="pv-fila__recargos">{l.adicionales.map(a => `+ ${a.descripcion}`).join(' · ')}</small>}
-                {l.grupo_tela && <small className="pv-muted">{l.grupo_tela}</small>}
-                <NotaDecorativos da={l.da_decorativos ? 2 : 0} incluido={l.decorativos_incluidos} />
-                <NotaTransporte compartido={l.transporte_compartido} />
-            </footer>
+            {notas && (
+                <footer className="pv-tj__pie">
+                    {!!l.adicionales?.length && <small className="pv-fila__recargos">{l.adicionales.map(a => `+ ${a.descripcion}`).join(' · ')}</small>}
+                    <NotaDecorativos da={l.da_decorativos ? 2 : 0} incluido={l.decorativos_incluidos} />
+                    <NotaTransporte compartido={l.transporte_compartido} />
+                </footer>
+            )}
         </li>
     );
 }
 
-// Conjunto en la vista: una tarjeta ancha con el resumen; se despliega para ver sus piezas.
-function TarjetaConjunto({ nombre, cantidad, piezas, verPrecios }) {
+// Conjunto en la vista (2026-10-24): cerrado es una tarjeta como la de un producto (una casilla
+// de la grilla); al abrirlo ocupa toda la fila y muestra cada pieza con su proveedor y estado.
+function TarjetaConjunto({ nombre, cantidad, piezas, verPrecios, costos = [] }) {
     const [abierto, setAbierto] = useState(false);
-    const total = piezas.reduce((s, l) => s + (Number(l.precio_lista_unitario) || 0) * l.cantidad, 0);
+    const total = [...piezas, ...costos].reduce((s, l) => s + (Number(l.precio_lista_unitario) || 0) * l.cantidad, 0);
+    const proveedores = [...new Set(piezas.map(l => l.proveedor_nombre).filter(Boolean))];
     const porPedir = piezas.reduce((s, l) => s + (l.por_pedir || 0), 0);
     const estados = piezas.map(estadoDe);
     const estado = porPedir ? { tono: 'pendiente', texto: `Por pedir ${porPedir}` } : estados.every(e => e.tono === 'ok') ? { tono: 'ok', texto: 'Recibido' } : { tono: 'curso', texto: 'Pedido' };
     const resumen = piezas.map(l => `${l.cantidad} ${l.variante_nombre || l.producto_nombre}`).join(' + ');
+    const telas = piezas.filter(l => l.tela_modo && l.tela_modo !== 'no_aplica');
+    const telaPorPedir = telas.some(l => l.tela_modo === 'aparte' && !l.tela_pedidos?.length);
+    const cabeza = (
+        <header className="pv-tj__cab">
+            <span className="pv-tj__cant">{cantidad}<small>×</small></span>
+            <button type="button" className="pv-tj__nombre pv-conj__abrir" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}
+                title={abierto ? 'Ocultar las piezas' : 'Ver las piezas'}>
+                <strong><FaLayerGroup aria-hidden="true" /> {nombre} <FaChevronDown aria-hidden="true" className="pv-conj__flecha" /></strong>
+                <span>Conjunto · {piezas.length} pieza{piezas.length === 1 ? '' : 's'}</span>
+                <span className={`pv-estado pv-estado--${estado.tono} pv-tj__estado`}>{estado.texto}</span>
+            </button>
+            {verPrecios && <span className="pv-tj__precio">{total ? formatCOP(total) : '—'}</span>}
+        </header>
+    );
+    if (!abierto) {
+        return (
+            <li className="pv-tj pv-tj--conjunto">
+                {cabeza}
+                <dl className="pv-tj__datos">
+                    <div><dt>Piezas</dt><dd title={resumen}>{resumen}</dd></div>
+                    <div><dt>Se compra a</dt><dd>{proveedores.length ? <b>{proveedores.join(' · ')}</b> : <em className="pv-aviso">Sin referencia</em>}</dd></div>
+                    <div><dt>Tela / Cuero</dt><dd>{telas.length ? <>{telas.length} pieza{telas.length === 1 ? '' : 's'} {telaPorPedir
+                        ? <span className="pv-tela-chip is-falta">por pedir</span> : <span className="pv-muted">con tela definida</span>}</> : <span className="pv-muted">No lleva</span>}</dd></div>
+                    {verPrecios && costos.map(l => <div key={l.id}><dt>{l.producto_nombre}</dt><dd>{conSigno(Number(l.precio_lista_unitario) * (Number(l.cantidad) || 1))}</dd></div>)}
+                </dl>
+                <footer className="pv-tj__pie">
+                    <button type="button" className="pv-link" onClick={() => setAbierto(true)}><FaChevronDown aria-hidden="true" /> Ver las {piezas.length} piezas</button>
+                </footer>
+            </li>
+        );
+    }
     return (
-        <li className="pv-tj pv-tj--conjunto">
-            <header className="pv-tj__cab">
-                <span className="pv-tj__cant">{cantidad}<small>×</small></span>
-                <button type="button" className="pv-tj__nombre pv-conj__abrir" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}>
-                    <strong><FaLayerGroup aria-hidden="true" /> {nombre} <FaChevronDown aria-hidden="true" className="pv-conj__flecha" /></strong>
-                    <span>{resumen}</span>
-                </button>
-                {verPrecios && <span className="pv-tj__precio">{total ? formatCOP(total) : '—'}</span>}
-            </header>
-            <footer className="pv-tj__pie">
-                <span className={`pv-estado pv-estado--${estado.tono}`}>{estado.texto}</span>
-                <small className="pv-muted">{piezas.length} piezas: cada una se pide con su referencia{abierto ? '' : ' · despliega para verlas'}</small>
-            </footer>
-            {abierto && <ul className="pv-tarjetas pv-tarjetas--piezas">{piezas.map(l => <TarjetaProducto key={l.id} l={l} verPrecios={verPrecios} pieza />)}</ul>}
+        <li className="pv-tj pv-tj--conjunto is-abierto">
+            {cabeza}
+            <small className="pv-muted">{proveedores.length > 1 ? `${proveedores.length} proveedores (${proveedores.join(', ')}): un pedido a cada uno` : 'Cada pieza se pide con su referencia'}</small>
+            <ul className="pv-tarjetas pv-tarjetas--piezas">{piezas.map(l => <TarjetaProducto key={l.id} l={l} verPrecios={verPrecios} pieza />)}</ul>
+            <CostosConjunto costos={costos} verPrecios={verPrecios} />
         </li>
     );
 }
@@ -779,6 +886,7 @@ function bloques(lineas) {
 }
 
 export default function ProductosVenta({ ventaId, hasPermission, onActualizada }) {
+    const queryClient = useQueryClient();
     const [datos, setDatos] = useState(null);
     const [lineas, setLineas] = useState([]);
     const [editando, setEditando] = useState(false);
@@ -794,6 +902,8 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
     const { usuario } = useContext(AppContext) || {};
     const [catalogoTela, setCatalogoTela] = useState({ proveedores: [] });
     const [gruposTela, setGruposTela] = useState([]);
+    const productosRef = useRef(null);
+    useAlturaUniforme(productosRef, editando);
     const mutex = useRef(false);
     const intento = useRef(null);
     const navigate = useNavigate();
@@ -886,25 +996,26 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
         await onActualizada?.();
     });
     const cancelar = () => { if (window.confirm('¿Descartar los cambios de productos?')) { setLineas(datos.lineas); setEditando(false); setBuscando(false); setError(''); setIntentoGuardar(false); setFaltasServidor({}); } };
-    // Del catálogo: un juego divisible entra como conjunto (una línea por pieza); con
-    // `destino` el producto se agrega a ese conjunto o abre uno nuevo ('nuevo').
-    const agregarDelCatalogo = (p, destino) => {
-        const existente = destino && destino !== 'nuevo' ? lineas.find(l => l.conjunto === destino) : null;
-        const clave = existente ? destino : (destino === 'nuevo' || p.piezas?.length ? crypto.randomUUID() : '');
+    // Solo la lista de precios define los conjuntos y sus piezas; Ventas los agrega completos.
+    const agregarDelCatalogo = (p) => {
+        const clave = p.piezas?.length ? crypto.randomUUID() : '';
         const coleccion = p.referencia_nombre || String(p.nombre).split(' · ')[0];
-        const veces = existente ? Number(existente.conjunto_cantidad) || 1 : 1;
-        const conj = clave ? { conjunto: clave, conjunto_nombre: existente?.conjunto_nombre || (p.piezas?.length ? p.nombre : coleccion), conjunto_cantidad: veces } : {};
+        const veces = 1;
+        const conj = clave ? { conjunto: clave, conjunto_nombre: p.nombre, conjunto_cantidad: veces } : {};
+        // Conjunto de la lista: cada pieza con su proveedor (un pedido por proveedor) y su precio
+        // dentro del conjunto; lo propio del conjunto (su Transporte…) va en una línea aparte.
+        const costos = p.piezas?.length && Number(p.costos_conjunto) ? [nueva({ tipo: p.costos_conjunto_tipo || 'transporte', juego: p.id,
+            producto_nombre: p.costos_conjunto_nombre || 'Transporte', precio_lista_override: String(Number(p.costos_conjunto) * veces),
+            precio_lista_unitario: String(Number(p.costos_conjunto) * veces), _costo_por_conjunto: Number(p.costos_conjunto),
+            tela_modo: 'no_aplica', sin_texto_proveedor: true, clave: crypto.randomUUID(), ...conj })] : [];
         const nuevas = p.piezas?.length
-            ? p.piezas.map(pz => nueva({ variante: pz.variante, referencia: pz.referencia || null,
-                producto_nombre: pz.referencia_nombre || coleccion, variante_nombre: pz.nombre,
-                cantidad: pz.cantidad * veces, clave: crypto.randomUUID(), ...conj }))
+            ? [...p.piezas.map(pz => nueva({ variante: pz.variante, referencia: pz.referencia || null, juego: p.id, pieza: pz.pieza,
+                producto_nombre: pz.referencia_nombre || coleccion, variante_nombre: pz.nombre, proveedor_nombre: pz.proveedor_nombre || '',
+                cantidad: pz.cantidad * veces, clave: crypto.randomUUID(), ...conj })), ...costos]
             : [nueva({ variante: p.id, referencia: p.referencia || null,
                 producto_nombre: p.referencia_nombre || p.nombre, variante_nombre: p.subcategoria_nombre || '',
                 clave: crypto.randomUUID(), ...conj })];
-        setLineas(ls => {
-            const ultima = existente ? ls.map(l => l.conjunto).lastIndexOf(destino) : -1;
-            return ultima >= 0 ? [...ls.slice(0, ultima + 1), ...nuevas, ...ls.slice(ultima + 1)] : [...ls, ...nuevas];
-        });
+        setLineas(ls => [...ls, ...nuevas]);
         setBuscando(false);
     };
     const enConjunto = (clave, fn) => { setLineas(ls => ls.map(l => (l.conjunto === clave ? { ...l, ...fn(l) } : l))); setMensaje(''); };
@@ -913,10 +1024,12 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
         // Cuántos conjuntos iguales: cada pieza conserva su cantidad por conjunto.
         cambiarCantidad: (n) => enConjunto(clave, l => {
             const antes = Number(l.conjunto_cantidad) || 1;
+            if (esCostoConjunto(l)) {
+                const unidad = l._costo_por_conjunto ?? Number(l.precio_lista_unitario) / antes;
+                return { conjunto_cantidad: n, cantidad: 1, _costo_por_conjunto: unidad, precio_lista_override: String(unidad * n), precio_lista_unitario: String(unidad * n) };
+            }
             return { conjunto_cantidad: n, cantidad: Math.max(1, Math.round((Number(l.cantidad) || 1) / antes) * n) };
         }),
-        agregarPieza: () => setBuscando({ conjunto: clave }),
-        separar: () => enConjunto(clave, () => ({ conjunto: '', conjunto_nombre: '', conjunto_cantidad: 1 })),
         quitar: () => { if (window.confirm('¿Quitar el conjunto completo con todas sus piezas?')) setLineas(ls => ls.filter(l => l.conjunto !== clave)); },
     });
     // «Usar esta tela en las demás piezas»: copia la tela a las piezas del conjunto que
@@ -952,7 +1065,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                 <h4>Productos <span className="pv-contador">{(editando ? productosEditados : productosVista).length}</span></h4>
                 {verPrecios && <Resumen lista={totalLista} venta={Number(datos.valor_total)} margen={editando ? null : margen} />}
                 {puedeEditar && !editando && (
-                    <Button size="sm" variant="secondary" icon={datos.lineas.length ? FaEdit : FaPlus} onClick={() => { setEditando(true); setMensaje(''); if (!datos.lineas.length) setBuscando(true); }}>
+                    <Button size="sm" variant="secondary" icon={datos.lineas.length ? FaEdit : FaPlus} onClick={() => { queryClient.prefetchInfiniteQuery(consultaCatalogo('')); setEditando(true); setMensaje(''); if (!datos.lineas.length) setBuscando(true); }}>
                         {datos.lineas.length ? 'Editar productos' : 'Agregar productos'}
                     </Button>
                 )}
@@ -968,13 +1081,16 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
 
             {editando ? (
                 <div className="pv-editor">
-                    <p className="pv-guia">Cada producto necesita tres cosas: <b>a quién se compra</b>, <b>si lleva tela</b> y <b>el texto para el proveedor</b>. Las marcas ✓ te dicen qué está listo.</p>
+                    <p className="pv-guia">Cada producto necesita tres cosas: <b>a quién se compra</b>, <b>si lleva tela o cuero</b> y <b>el texto para el proveedor</b>. Las marcas ✓ te dicen qué está listo.</p>
+                    {/* Tarjetas en grilla (2026-10-24): varias por fila en pantallas anchas. */}
+                    <div className="pv-editor__productos" ref={productosRef}>
                     {bloques(lineas.map((l, i) => ({ ...l, _i: i })).filter(esProducto)).map(b => {
                         const editor = ({ l }) => {
                             const i = l._i;
                             return <EditorProducto key={l.id || l.clave || `nueva-${i}`} ventaId={ventaId} linea={lineas[i]} indice={i} numero={lineas.slice(0, i + 1).filter(esProducto).length}
                                 hasPermission={hasPermission} proveedoresTela={catalogoTela.proveedores} grupos={gruposTela} enConjunto={!!l.conjunto} faltas={faltasDe(lineas[i], i)}
                                 copiarTela={l.conjunto && lineas.filter(x => x.conjunto === l.conjunto).length > 1 ? () => copiarTela(i) : undefined}
+                                actualizarPrecio={l.conjunto ? () => enConjunto(l.conjunto, () => ({ recalcular: true })) : () => cambiar(i, { recalcular: true })}
                                 cambiar={(p, m) => cambiar(i, p, m)} quitar={() => setLineas(ls => ls.filter((_, idx) => idx !== i))} />;
                         };
                         if (b.tipo === 'producto') return editor(b);
@@ -982,22 +1098,20 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                         const ops = conjuntoOps(b.clave);
                         return (
                             <EditorConjunto key={b.clave} nombre={piezas[0].conjunto_nombre || ''} cantidad={Number(piezas[0].conjunto_cantidad) || 1} piezas={piezas}
-                                faltaNombre={intentoGuardar && !String(piezas[0].conjunto_nombre || '').trim() ? 'Ponle nombre al conjunto.' : ''} {...ops}>
+                                costos={lineas.filter(x => esCostoConjunto(x) && x.conjunto === b.clave)}
+                                faltaNombre={intentoGuardar && !String(piezas[0].conjunto_nombre || '').trim() ? 'Ponle nombre al conjunto.' : ''}
+                                faltan={b.piezas.filter(x => Object.keys(faltasDe(lineas[x.l._i], x.l._i)).length).length} {...ops}>
                                 {b.piezas.map(editor)}
-                                {buscando?.conjunto === b.clave && <BuscadorCatalogo titulo={`Agregar una pieza a ${piezas[0].conjunto_nombre || 'este conjunto'}`} cerrar={() => setBuscando(false)} alElegir={p => agregarDelCatalogo(p, b.clave)} />}
                             </EditorConjunto>
                         );
                     })}
-                    {buscando && !buscando.conjunto ? (
-                        <BuscadorCatalogo titulo={buscando === 'nuevo' ? 'Primera pieza del conjunto (p. ej. la mesa o la base de la cama)' : ''} cerrar={() => setBuscando(false)}
-                            alElegir={p => agregarDelCatalogo(p, buscando === 'nuevo' ? 'nuevo' : null)} />
+                    </div>
+                    {buscando ? (
+                        <BuscadorCatalogo cerrar={() => setBuscando(false)} alElegir={agregarDelCatalogo} />
                     ) : (
                         <div className="pv-agregar" role="group" aria-label="Agregar a la venta">
                             <button type="button" className="pv-agregar__op" onClick={() => setBuscando(true)}>
-                                <FaPlus aria-hidden="true" /><span><strong>Agregar de la lista de precios</strong><small>Un mueble del catálogo con su precio</small></span>
-                            </button>
-                            <button type="button" className="pv-agregar__op" onClick={() => setBuscando('nuevo')}>
-                                <FaLayerGroup aria-hidden="true" /><span><strong>Conjunto</strong><small>Comedor, cama… piezas que se ven juntas</small></span>
+                                <FaPlus aria-hidden="true" /><span><strong>Agregar de la lista de precios</strong><small>Productos y conjuntos con sus precios</small></span>
                             </button>
                             {hasPermission('AJUSTAR_PRECIO_LISTA_VENTA') && (
                                 <button type="button" className="pv-agregar__op" onClick={() => setLineas(ls => [...ls, nueva({ clave: crypto.randomUUID() })])}>
@@ -1011,7 +1125,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                             <h5>Servicios y ajustes</h5>
                             <small className="pv-muted">Transporte, artículos que no son productos del catálogo (jarrones, decoración) y ajustes de la negociación. Suman o restan al precio de lista.</small>
                         </div>
-                        {lineas.map((l, i) => (!esProducto(l) && (
+                        {lineas.map((l, i) => (!esProducto(l) && !(esCostoConjunto(l) && l.conjunto) && (
                             <EditorAdicional key={l.id || l.clave || `adic-${i}`} linea={l} faltas={faltasDe(l, i)}
                                 cambiar={(p, m) => cambiar(i, p, m)} quitar={() => setLineas(ls => ls.filter((_, idx) => idx !== i))} />
                         )))}
@@ -1037,9 +1151,10 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                     {productosVista.length > 0 && <>
                         <ul className="pv-tarjetas">{bloques(productosVista).map(b => (b.tipo === 'producto'
                             ? <TarjetaProducto key={b.l.id} l={b.l} verPrecios={verPrecios} />
-                            : <TarjetaConjunto key={b.clave} nombre={b.piezas[0].l.conjunto_nombre} cantidad={b.piezas[0].l.conjunto_cantidad || 1} piezas={b.piezas.map(x => x.l)} verPrecios={verPrecios} />))}</ul>
+                            : <TarjetaConjunto key={b.clave} nombre={b.piezas[0].l.conjunto_nombre} cantidad={b.piezas[0].l.conjunto_cantidad || 1} piezas={b.piezas.map(x => x.l)} verPrecios={verPrecios}
+                                costos={datos.lineas.filter(x => esCostoConjunto(x) && x.conjunto === b.clave)} />))}</ul>
                     </>}
-                    <Servicios lineas={datos.lineas.filter(l => !esProducto(l))} verPrecios={verPrecios} />
+                    <Servicios lineas={datos.lineas.filter(l => !esProducto(l) && !(esCostoConjunto(l) && l.conjunto && productosVista.some(x => x.conjunto === l.conjunto)))} verPrecios={verPrecios} />
                 </>
             ) : (
                 <div className="pv-vacio"><FaBoxOpen aria-hidden="true" /><span>Aún no se registran los productos de esta venta.</span></div>

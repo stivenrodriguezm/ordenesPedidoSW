@@ -265,18 +265,18 @@ const FEATURES_CATALOG = [
   { module: "Bases de Datos", features: [
       { code: "BASES_DATOS", label: "Acceso al módulo (Dashboard)" },
       { code: "VER_CLIENTES", label: "Ver Clientes" },
-      { code: "CREAR_CLIENTE", label: "Crear Clientes" },
       { code: "EDITAR_CLIENTE", label: "Editar Clientes" },
       { code: "VER_CALIDAD_CLIENTES", label: "Revisar posibles duplicados y formato (requiere Ver Clientes)" },
       { code: "NORMALIZAR_CLIENTES", label: "Aplicar correcciones de formato con historial (requiere editar y revisar calidad)" },
       { code: "EXPORTAR_CLIENTES", label: "Exportar Clientes a Excel" },
-      { code: "VER_FINANZAS_CLIENTE", label: "Ver finanzas del cliente" },
       { code: "ADMINISTRAR_PROVEEDORES", label: "Administrar Proveedores" },
       { code: "ADMINISTRAR_REFERENCIAS", label: "Administrar Referencias" },
       { code: "ADMINISTRAR_SEDES", label: "Administrar Sedes y Zonas" }
     ]
   },
-  { module: "Usuarios y Sistema", features: [
+  // La API de usuarios y permisos es exclusiva del rol administrador (y para él siempre
+  // está activa, para no perder la vía de corrección): aquí solo se informa.
+  { module: "Usuarios y Sistema", soloAdministrador: true, features: [
       { code: "VER_USUARIOS", label: "Acceso a Usuarios" },
       { code: "ADMINISTRAR_USUARIOS", label: "Crear y Editar Usuarios" },
       { code: "EDITAR_PERMISOS_SISTEMA", label: "Editar Roles y Permisos" }
@@ -290,10 +290,6 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_CONFIGURACION_WEB", label: "Editar configuración del sitio (banner, textos)" },
       { code: "ADMINISTRAR_ASESORES_WEB", label: "Ver y administrar la Paleta de Vendedores (asesores)" },
       { code: "RESPONDER_PQRS", label: "Ver y responder tickets PQRS" }
-    ]
-  },
-  { module: "Catálogos Adicionales", features: [
-      { code: "ADMINISTRAR_TELAS", label: "Administrar Telas" }
     ]
   },
   { module: "Lista de Precios", features: [
@@ -336,16 +332,17 @@ const RolePermissionsTab = ({ notify }) => {
     onError: () => notify('Error actualizando permisos', 'error')
   });
 
+  // Copia nueva en cada cambio: antes se mutaba la lista en caché y un cambio sin
+  // guardar seguía viéndose como aplicado al volver a ese rol.
   const handleToggle = (code) => {
     if (!selectedRp) return;
-    const isEditing = { ...selectedRp };
-    if (isEditing.permissions.includes(code)) {
-      isEditing.permissions = isEditing.permissions.filter(p => p !== code);
-    } else {
-      isEditing.permissions.push(code);
-    }
-    setSelectedRp(isEditing);
+    const actuales = selectedRp.permissions || [];
+    setSelectedRp({
+      ...selectedRp,
+      permissions: actuales.includes(code) ? actuales.filter(p => p !== code) : [...actuales, code],
+    });
   };
+  const esRolAdministrador = selectedRp?.role === 'administrador';
 
   const handleSave = () => mutation.mutate(selectedRp);
 
@@ -391,7 +388,11 @@ const RolePermissionsTab = ({ notify }) => {
                 <h3 style={{ margin: 0, fontSize: 'var(--fs-lg)', color: 'var(--text)' }}>
                   Permisos para: <span className="role-highlight">{selectedRp.role.toUpperCase()}</span>
                 </h3>
-                <p className="ds-muted" style={{ margin: '0.5rem 0 0 0', fontSize: 'var(--fs-sm)' }}>Activa o desactiva módulos para controlar el acceso a la plataforma.</p>
+                <p className="ds-muted" style={{ margin: '0.5rem 0 0 0', fontSize: 'var(--fs-sm)' }}>
+                  {esRolAdministrador
+                    ? 'El administrador también sigue estos permisos. Gestión de usuarios siempre queda activa para no perder el acceso.'
+                    : 'Activa o desactiva módulos para controlar el acceso a la plataforma.'}
+                </p>
               </div>
               {hasPermission('EDITAR_PERMISOS_SISTEMA') && (
                 <Button onClick={handleSave} loading={mutation.isPending}>
@@ -404,14 +405,19 @@ const RolePermissionsTab = ({ notify }) => {
               {FEATURES_CATALOG.map(module => (
                 <div key={module.module} className="module-card">
                   <h4 className="module-title">{module.module}</h4>
+                  {module.soloAdministrador && (
+                    <p className="ds-muted module-nota">Exclusivo del rol administrador; para él siempre está activo.</p>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {module.features.map(f => {
-                      const isChecked = selectedRp.permissions.includes(f.code);
+                      const fijo = !!module.soloAdministrador;
+                      const isChecked = fijo ? esRolAdministrador : selectedRp.permissions.includes(f.code);
+                      const editable = !fijo && hasPermission('EDITAR_PERMISOS_SISTEMA');
                       return (
                         <div 
                           key={f.code} 
-                          className={`feature-toggle ${isChecked ? 'active' : ''}`}
-                          onClick={() => hasPermission('EDITAR_PERMISOS_SISTEMA') && handleToggle(f.code)}
+                          className={`feature-toggle ${isChecked ? 'active' : ''}${fijo ? ' is-fijo' : ''}`}
+                          onClick={() => editable && handleToggle(f.code)}
                         >
                           <span className="feature-label">
                             {f.label}
@@ -421,7 +427,7 @@ const RolePermissionsTab = ({ notify }) => {
                               type="checkbox" 
                               checked={isChecked} 
                               onChange={() => handleToggle(f.code)} 
-                              disabled={!hasPermission('EDITAR_PERMISOS_SISTEMA')}
+                              disabled={!editable}
                             />
                             <span className="slider"></span>
                           </label>

@@ -81,7 +81,7 @@
 .nce-card-icon-badge.badge-blue { background: var(--accent-soft); color: var(--info); }
 .nce-card-icon-badge.badge-green { background: var(--success-soft); color: var(--success); }
 .nce-card-icon-badge.badge-indigo { background: var(--accent-soft); color: var(--accent-texto); }
-.nce-card-icon-badge.badge-purple { background: #f3e8ff; color: #9333ea; }
+.nce-card-icon-badge.badge-purple { background: color-mix(in srgb, #f3e8ff calc(100% - var(--mezcla-fondo)), var(--surface)); color: #9333ea; }
 
 .nce-card-title {
   font-size: 0.92rem;
@@ -228,8 +228,8 @@
   align-items: center;
   margin-top: 0.6rem;
   padding: 0.65rem 0.75rem;
-  background: var(--gray-900);
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border-radius: var(--r-sm);
   font-size: 0.95rem;
   font-weight: 800;
@@ -500,7 +500,7 @@
 
 .nce-descuento-btn.disabled {
   background: var(--danger-soft);
-  color: #e11d48;
+  color: color-mix(in srgb, #e11d48 calc(100% - var(--mezcla-texto)), var(--text));
   border-color: #fda4af;
 }
 

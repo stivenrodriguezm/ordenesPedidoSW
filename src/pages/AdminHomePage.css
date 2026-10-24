@@ -7,7 +7,7 @@
 .adm-eyebrow { display: block; font-size: 0.6rem; letter-spacing: 1.7px; text-transform: uppercase; font-weight: 600; color: var(--gold-dark); }
 
 /* ---- Cabecera negra ---- */
-.adm-cabecera { position: relative; display: flex; align-items: center; gap: 26px; padding: 24px 26px 28px; background: var(--hero-bg); color: #fff; border-radius: var(--r-md); overflow: hidden; }
+.adm-cabecera { position: relative; display: flex; align-items: center; gap: 26px; padding: 24px 26px 28px; background: var(--hero-bg); color: var(--accent-contrast); border-radius: var(--r-md); overflow: hidden; }
 .adm-cabecera::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 85% 0%, var(--hero-glow), transparent 55%); pointer-events: none; }
 .adm-marca { position: relative; padding: 6px 26px 6px 0; border-right: 1px solid #ffffff24; flex-shrink: 0; }
 .adm-marca__nombre { display: block; font-family: var(--font-brand); font-size: 30px; letter-spacing: 1.4px; line-height: 1.25; }

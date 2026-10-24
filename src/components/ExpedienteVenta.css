@@ -312,8 +312,8 @@
 }
 
 .linea-estado-despachado {
-    background: #ede9fe;
-    color: #6d28d9;
+    background: color-mix(in srgb, #ede9fe calc(100% - var(--mezcla-fondo)), var(--surface));
+    color: color-mix(in srgb, #6d28d9 calc(100% - var(--mezcla-texto)), var(--text));
 }
 
 .linea-estado-entregado {

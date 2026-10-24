@@ -53,7 +53,7 @@
 .pf-campo input, .pf-campo textarea { box-sizing: border-box; width: 100%; padding: 0.5rem 0.65rem; border: 1px solid var(--gray-300, var(--border-strong)); border-radius: 8px; background: var(--surface); color: var(--gray-900, var(--text)); font: inherit; font-size: 0.86rem; }
 .pf-campo textarea { min-height: 220px; line-height: 1.55; resize: vertical; padding-bottom: 1.6rem; }
 .pf-campo input:focus, .pf-campo textarea:focus { outline: none; border-color: var(--accent, var(--accent)); box-shadow: 0 0 0 3px var(--accent-ring, rgba(30, 58, 138, 0.18)); }
-.pf-campo.is-error input, .pf-campo.is-error textarea { border-color: #dc2626; background: #fffafa; }
+.pf-campo.is-error input, .pf-campo.is-error textarea { border-color: #dc2626; background: color-mix(in srgb, #fffafa calc(100% - var(--mezcla-fondo)), var(--surface)); }
 .pf-campo em, .pf-error-campo { color: var(--danger); font-size: 0.74rem; font-style: normal; }
 .pf-contador { position: absolute; right: 0.6rem; bottom: 0.45rem; color: var(--gray-400, var(--text-muted)); font-size: 0.7rem; pointer-events: none; }
 .pf-campo.is-error .pf-contador { bottom: 1.75rem; }
@@ -61,7 +61,7 @@
 .pf-iconos { display: grid; grid-template-columns: repeat(6, 36px); gap: 0.35rem; }
 .pf-iconos button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--gray-200, var(--border)); border-radius: 9px; background: var(--surface); color: var(--gray-600, var(--text-secondary)); font-size: 0.95rem; cursor: pointer; transition: all 0.12s; }
 .pf-iconos button:hover { border-color: var(--gray-400, #94a3b8); color: var(--gray-900, var(--text)); }
-.pf-iconos button.is-actual { border-color: var(--accent, var(--accent)); background: var(--accent, var(--accent)); color: #fff; }
+.pf-iconos button.is-actual { border-color: var(--accent, var(--accent)); background: var(--accent, var(--accent)); color: var(--accent-contrast); }
 .pf-colores { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .pf-colores button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 2px solid var(--surface); border-radius: 50%; background: var(--pf-color); color: #fff; font-size: 0.7rem; box-shadow: 0 0 0 1px var(--gray-200, #e2e8f0); cursor: pointer; transition: transform 0.12s; }
 .pf-colores button:hover { transform: scale(1.1); }
@@ -76,7 +76,7 @@
 .pf-area strong { display: block; color: var(--gray-900, var(--text)); font-size: 0.82rem; }
 .pf-area small { display: block; margin-top: 2px; color: var(--gray-500, var(--text-secondary)); font-size: 0.73rem; line-height: 1.4; }
 .pf-area.is-activa { border-color: var(--accent, var(--accent)); background: var(--accent-soft, var(--accent-soft)); }
-.pf-area.is-activa .pf-area__check { border-color: var(--accent, var(--accent)); background: var(--accent, var(--accent)); color: #fff; }
+.pf-area.is-activa .pf-area__check { border-color: var(--accent, var(--accent)); background: var(--accent, var(--accent)); color: var(--accent-contrast); }
 .pf-area:focus-within { box-shadow: 0 0 0 3px var(--accent-ring, rgba(30, 58, 138, 0.18)); }
 
 .pf-subir { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 1.1rem; border: 2px dashed var(--gray-300, var(--border-strong)); border-radius: 12px; background: var(--gray-50, var(--surface-muted)); text-align: center; transition: border-color 0.12s, background 0.12s; }
@@ -91,8 +91,8 @@
 .pf-docs { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
 .pf-doc { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border: 1px solid var(--gray-200, var(--border)); border-radius: 10px; background: var(--surface); }
 .pf-doc.is-pendiente { border-style: dashed; background: var(--gray-50, var(--surface-muted)); }
-.pf-doc__icono { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--info-soft, #e8effd); color: var(--info, var(--accent)); }
-.pf-doc__icono.is-pdf { background: #fdecec; color: var(--danger); }
+.pf-doc__icono { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--info-soft, color-mix(in srgb, #e8effd calc(100% - var(--mezcla-fondo)), var(--surface))); color: var(--info, var(--accent)); }
+.pf-doc__icono.is-pdf { background: color-mix(in srgb, #fdecec calc(100% - var(--mezcla-fondo)), var(--surface)); color: var(--danger); }
 .pf-doc__datos { display: flex; flex-direction: column; min-width: 0; }
 .pf-doc__datos strong { overflow: hidden; color: var(--gray-900, var(--text)); font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
 .pf-doc__datos small { color: var(--gray-500, var(--text-secondary)); font-size: 0.72rem; }
@@ -117,14 +117,14 @@
 .pf-interruptor strong { display: block; color: var(--gray-900, var(--text)); font-size: 0.84rem; }
 .pf-interruptor small { color: var(--gray-500, var(--text-secondary)); font-size: 0.75rem; }
 
-.pf-pie { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: auto; padding: 0.75rem 0 0.9rem; border-top: 1px solid var(--gray-200, var(--border)); background: linear-gradient(to bottom, rgba(248, 250, 252, 0.85), var(--gray-50, var(--surface-muted)) 30%); backdrop-filter: blur(4px); }
+.pf-pie { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: auto; padding: 0.75rem 0 0.9rem; border-top: 1px solid var(--gray-200, var(--border)); background: linear-gradient(to bottom, color-mix(in srgb, var(--surface-muted) 85%, transparent), var(--gray-50, var(--surface-muted)) 30%); backdrop-filter: blur(4px); }
 .pf-pie__estado { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: auto; color: var(--gray-500, var(--text-secondary)); font-size: 0.78rem; }
 .pf-pie__estado svg { color: var(--success); }
 .pf-pie__error { flex-basis: 100%; order: -1; display: flex; align-items: flex-start; gap: 0.4rem; margin: 0; padding: 0.45rem 0.7rem; border-radius: 8px; background: var(--danger-soft); color: var(--danger); font-size: 0.78rem; }
 .pf-pie__error svg { flex-shrink: 0; margin-top: 3px; }
 .pf-btn { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 38px; padding: 0 1rem; border: 1px solid var(--gray-300, var(--border-strong)); border-radius: 9px; background: var(--surface); color: var(--gray-800, var(--text)); font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; }
 .pf-btn:hover { border-color: var(--gray-500, #64748b); }
-.pf-btn--primario { border-color: var(--accent, var(--accent)); background: var(--accent, var(--accent)); color: #fff; }
+.pf-btn--primario { border-color: var(--accent, var(--accent)); background: var(--accent, var(--accent)); color: var(--accent-contrast); }
 .pf-btn--primario:hover { background: var(--accent-hover, #172554); }
 .pf-btn--primario:disabled { opacity: 0.45; cursor: not-allowed; }
 .pf-btn--peligro { border-color: transparent; background: none; color: var(--danger); }
@@ -170,7 +170,7 @@
 .pf-audiencia__roles { display: flex; flex-wrap: wrap; gap: 6px; }
 .pf-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: var(--r-full); font-size: .78rem; cursor: pointer; background: var(--surface); }
 .pf-chip input { position: absolute; opacity: 0; pointer-events: none; }
-.pf-chip.is-activo { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pf-chip.is-activo { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
 .pf-chip svg { font-size: .65rem; color: var(--gold-light); }
 .pf-chip:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
 .pf-audiencia__nota { margin: 0; font-size: .72rem; color: var(--text-secondary); }
@@ -190,4 +190,4 @@
 .pf-audiencia__lista .pf-campo { padding: 0 12px 12px; background: var(--surface); }
 .pf-tarjeta--general { border-style: dashed; }
 @media (max-width: 640px) { .pf-audiencia__modo { grid-template-columns: 1fr; } }
-.pf-pagina-web-ayuda { margin:12px 0 0; padding:12px 14px; border-radius:8px; background:#f4f5ed; color:#65734c; font-size:12px; line-height:1.5; }
+.pf-pagina-web-ayuda { margin:12px 0 0; padding:12px 14px; border-radius:8px; background:color-mix(in srgb, #f4f5ed calc(100% - var(--mezcla-fondo)), var(--surface)); color:#65734c; font-size:12px; line-height:1.5; }

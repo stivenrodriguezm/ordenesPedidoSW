@@ -342,10 +342,10 @@
    Executive Summary Header Card & Toggle Styles
    ========================================================================== */
 .sales-summary-report-wrapper {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-muted) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  border: 1px solid var(--border);
   border-radius: var(--r-xl);
   padding: 0.9rem 1.25rem;
   margin-bottom: 1.25rem;
@@ -354,7 +354,7 @@
 }
 
 .sales-summary-report-wrapper:hover {
-  border-color: rgba(199, 210, 254, 0.9);
+  border-color: var(--accent-line);
   box-shadow: 0 8px 25px -4px rgba(164, 141, 102, 0.08), 0 3px 8px -2px rgba(164, 141, 102, 0.04);
 }
 
@@ -378,7 +378,7 @@
   height: 42px;
   border-radius: var(--r-lg);
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-  color: var(--surface);
+  color: var(--accent-contrast);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,67 +1,96 @@
 /* ==========================================================================
-   GLOBAL APP TOAST NOTIFICATION (app-toast)
+   Aviso global tipo toast (app-toast), arriba a la derecha (2026-10-24)
    ========================================================================== */
 .app-toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--surface);
-    border-radius: var(--r-lg);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    padding: 16px 20px;
-    gap: 12px;
-    z-index: 9999;
-    transform: translateY(150%);
-    opacity: 0;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border-left: 4px solid transparent;
-    max-width: 400px;
+  --toast-color: var(--info);
+  --toast-suave: var(--info-soft);
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 14000;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(380px, calc(100vw - 32px));
+  padding: 14px 12px 16px 14px;
+  overflow: hidden;
+  background: var(--surface-raised, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.22), 0 4px 10px -4px rgba(15, 23, 42, 0.12);
+  animation: app-toast-entra 0.32s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+}
+.app-toast.is-saliendo { animation: app-toast-sale 0.18s ease-in both; }
+
+.app-toast--success { --toast-color: var(--success); --toast-suave: var(--success-soft); }
+.app-toast--error { --toast-color: var(--danger); --toast-suave: var(--danger-soft); }
+.app-toast--warning { --toast-color: var(--warning); --toast-suave: var(--warning-soft); }
+
+.app-toast__icono {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--toast-suave);
+  color: var(--toast-color);
+  font-size: 0.85rem;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--toast-suave) 45%, transparent);
 }
 
-.app-toast--visible {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.app-toast--success {
-    border-left-color: var(--success);
-}
-.app-toast--success .app-toast-icon {
-    color: var(--success);
-    font-size: 1.25rem;
-}
-
-.app-toast--error {
-    border-left-color: var(--danger);
-}
-.app-toast--error .app-toast-icon {
-    color: var(--danger);
-    font-size: 1.25rem;
-}
-
-.app-toast-msg {
-    color: var(--gray-700);
-    font-size: 0.95rem;
-    font-weight: 500;
-    line-height: 1.4;
-}
+.app-toast__texto { flex: 1; min-width: 0; display: grid; gap: 2px; padding-top: 1px; }
+.app-toast__titulo { color: var(--text); font-size: 0.9rem; font-weight: 700; line-height: 1.3; }
+.app-toast-msg { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.4; overflow-wrap: anywhere; }
 
 .app-toast-close {
-    background: transparent;
-    border: none;
-    color: var(--gray-400);
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--r-sm);
-    transition: all 0.2s ease;
-    margin-left: 8px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -2px -2px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--t-fast, 0.15s), color var(--t-fast, 0.15s);
 }
-.app-toast-close:hover {
-    background: var(--gray-100);
-    color: var(--gray-600);
+.app-toast-close:hover { background: var(--surface-muted); color: var(--text); }
+.app-toast-close:focus-visible { outline: 2px solid var(--accent-ring, var(--accent)); outline-offset: 1px; }
+
+/* Barra de tiempo restante: se detiene con el puntero o el foco encima. */
+.app-toast__tiempo {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--toast-color);
+  opacity: 0.55;
+  transform-origin: left;
+  animation: app-toast-tiempo var(--toast-duracion, 4000ms) linear both;
+}
+.app-toast.is-pausado .app-toast__tiempo { animation-play-state: paused; }
+
+@keyframes app-toast-entra {
+  from { opacity: 0; transform: translate3d(24px, -6px, 0) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes app-toast-sale {
+  to { opacity: 0; transform: translate3d(24px, 0, 0) scale(0.97); }
+}
+@keyframes app-toast-tiempo {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (max-width: 640px) {
+  .app-toast { top: 12px; right: 16px; left: 16px; width: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast, .app-toast.is-saliendo { animation-duration: 1ms; }
 }

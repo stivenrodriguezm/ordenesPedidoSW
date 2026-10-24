@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../services/api';
 import { mensajeDeError } from '../services/errores';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import { FaTrashAlt, FaPlus, FaBuilding, FaMapMarkerAlt, FaBoxes } from 'react-icons/fa';
 import AppNotification from './AppNotification';
 import { useDialogo } from '../hooks/useDialogo';
@@ -11,6 +11,7 @@ import './CrearPedidoTelaModal.css';
 
 const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociadaId = '', showNotification }) => {
     const { usuario } = useContext(AppContext) || {};
+    const hasPermission = usePermissions();
     const [ordenes, setOrdenes] = useState([]);
     const [proveedoresTelas, setProveedoresTelas] = useState([]);
     const [direcciones, setDirecciones] = useState([]);
@@ -430,7 +431,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                         <div className="pt-form-group">
                             <label style={{ justifyContent: 'space-between', width: '100%' }}>
                                 <span><FaMapMarkerAlt /> Dirección de Entrega</span>
-                                {(usuario?.role?.toLowerCase() === 'administrador' || usuario?.role?.toLowerCase() === 'auxiliar') && (
+                                {hasPermission('ADMINISTRAR_DIRECCIONES_TELA') && (
                                     <button type="button" className="pt-link-btn" onClick={() => setShowDireccionModal(true)}>
                                         ⚙️ Gestionar
                                     </button>

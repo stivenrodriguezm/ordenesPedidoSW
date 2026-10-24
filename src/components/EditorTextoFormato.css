@@ -7,7 +7,7 @@
 .etf-barra button:hover:not(:disabled) { background: var(--surface); color: var(--accent-texto); }
 .etf-barra button:disabled { opacity: 0.35; cursor: default; }
 .etf-barra .etf-vista { font-weight: 600; }
-.etf-barra .etf-vista.is-activa { background: var(--accent); color: #fff; }
+.etf-barra .etf-vista.is-activa { background: var(--accent); color: var(--accent-contrast); }
 .etf-sep { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
 .etf-area { width: 100%; box-sizing: border-box; min-height: 90px; padding: 0.6rem 0.7rem; border: 1px solid var(--border-strong, var(--gray-300)); border-radius: var(--r-sm); background: var(--surface); color: var(--gray-800); font: inherit; font-size: 0.88rem; line-height: 1.55; resize: vertical; }
 .etf-area:focus { outline: none; border-color: var(--accent-borde); box-shadow: 0 0 0 3px var(--accent-ring, rgba(164, 141, 102, 0.15)); }

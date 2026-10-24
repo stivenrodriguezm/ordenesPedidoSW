@@ -17,7 +17,7 @@
 .pf-pedidos__costo { display: flex; flex-direction: column; align-items: flex-end; font-weight: 700; font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--text, var(--text)); white-space: nowrap; }
 .pf-pedidos__costo small { font-weight: 500; font-size: 0.66rem; color: var(--text-muted, #9b9383); }
 .pf-pedidos__pie { display: flex; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid var(--border); }
-.pf-pedidos__agregar { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.pf-pedidos__agregar { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-contrast); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
 .pf-pedidos__agregar:disabled { opacity: 0.45; cursor: default; }
 .pf-pedidos__vacio { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary, var(--text-secondary)); }
 .nf-sugerido { display: block; margin-top: 4px; font-size: 0.7rem; line-height: 1.4; color: var(--warning); }

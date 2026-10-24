@@ -1,5 +1,6 @@
+import TipoPersonaSelect from '../components/clientes/TipoPersonaSelect';
+import { nombreClienteLabel, documentoClienteLabel } from '../utils/clientes';
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { FaShoppingCart, FaUser, FaFileInvoiceDollar, FaCheckCircle } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
@@ -23,7 +24,7 @@ const NuevaVenta = () => {
   // Un cliente se considera "existente" cuando clienteId tiene valor (encontrado
   // automáticamente al escribir la cédula). No hay pestañas manuales: el sistema
   // detecta si el cliente ya existe.
-  const emptyCliente = { cedula: '', nombre: '', correo: '', direccion: '', barrio: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' };
+  const emptyCliente = { tipo_persona: 'natural', cedula: '', nombre: '', correo: '', direccion: '', barrio: '', ciudad: 'Bogotá', telefono1: '', telefono2: '' };
   const [clienteId, setClienteId] = useState(null);
   const [cedulaCheckStatus, setCedulaCheckStatus] = useState('idle'); // idle | checking | found | not_found | error
   const cedulaDebounceRef = useRef(null);
@@ -44,12 +45,11 @@ const NuevaVenta = () => {
   });
 
   const [observacion, setObservacion] = useState('');
-  const { usuario } = useContext(AppContext);
+  const { usuario, notify } = useContext(AppContext);
   const idempotencia = useIdempotencia();
   const { data: vendedores = [], isError: vendedoresError } = useVendedores();
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
 
   // Cargar fecha por defecto al montar el componente
   useEffect(() => {
@@ -66,10 +66,14 @@ const NuevaVenta = () => {
 
   // Limpia el cliente seleccionado/emparejado y reinicia el formulario
   const resetCliente = () => {
+    clearTimeout(cedulaDebounceRef.current);
+    latestCedulaRef.current = '';
     setClienteId(null);
     setCedulaCheckStatus('idle');
     setClienteData(emptyCliente);
   };
+
+  useEffect(() => () => clearTimeout(cedulaDebounceRef.current), []);
 
   // Verifica en el backend si ya existe un cliente con esa cédula exacta
   const checkCedula = async (cedulaValue) => {
@@ -82,6 +86,7 @@ const NuevaVenta = () => {
       if (match) {
         setClienteId(match.id);
         setClienteData({
+          tipo_persona: match.tipo_persona || 'natural',
           cedula: match.cedula || cedulaValue,
           nombre: match.nombre || '',
           correo: match.correo || '',
@@ -113,7 +118,7 @@ const NuevaVenta = () => {
       // Si el usuario corrige la cédula de un cliente ya emparejado, se descarta ese match
       if (clienteId) {
         setClienteId(null);
-        setClienteData({ ...emptyCliente, cedula: value });
+        setClienteData({ ...emptyCliente, tipo_persona: clienteData.tipo_persona, cedula: value });
       } else {
         setClienteData(prev => ({ ...prev, cedula: value }));
       }
@@ -191,6 +196,7 @@ const NuevaVenta = () => {
       cliente_nuevo: !clienteId,
       cliente: {
         id: clienteId || undefined,
+        tipo_persona: clienteData.tipo_persona,
         nombre: clienteData.nombre,
         cedula: clienteData.cedula,
         correo: clienteData.correo,
@@ -218,15 +224,13 @@ const NuevaVenta = () => {
 
     try {
       // Reintentar el MISMO contenido reusa la clave y no duplica la venta (P08-06).
-      await API.post(`/ventas/crear/`, payload, { headers: idempotencia.cabeceras(payload) });
+      const { data } = await API.post(`/ventas/crear/`, payload, { headers: idempotencia.cabeceras(payload) });
       idempotencia.confirmar();
       borrador.limpiarTrasGuardar();
-      setIsSuccess(true);
-      setNotification({ message: 'Venta creada exitosamente.', type: 'success' });
-      setTimeout(() => {
-        navigate('/ventas');
-      }, 1800);
-      return; // Evitar que el finally limpie el loading/success
+      // Aviso discreto (toast global, sigue visible en Ventas) en vez de la pantalla completa.
+      notify(`Venta ${data?.venta_id ?? ventaData.id} creada exitosamente.`, 'success');
+      navigate('/ventas');
+      return;
     } catch (error) {
       setIsLoading(false);
       // Sin respuesta, permiso, validación por campo, etc.: mensaje legible común (U03).
@@ -235,7 +239,7 @@ const NuevaVenta = () => {
       if (errorData?.venta?.id?.[0]?.includes?.('ya existe')) {
         friendlyError = 'El ID de la venta ya existe.';
       } else if (errorData?.cliente?.cedula?.[0]?.includes?.('ya existe')) {
-        friendlyError = 'La cédula del cliente ya existe.';
+        friendlyError = `El documento (${documentoClienteLabel(clienteData)}) del cliente ya existe.`;
       }
       setNotification({ message: friendlyError, type: 'error' });
     }
@@ -253,19 +257,6 @@ const NuevaVenta = () => {
         type={notification.type}
         onClose={() => setNotification({ message: '', type: '' })}
       />
-      {(isLoading || isSuccess) && createPortal(
-        <div className={`nv-loader-container ${isSuccess ? 'success-overlay' : ''}`}>
-          {isSuccess ? (
-            <div className="nv-success-content">
-              <FaCheckCircle className="nv-success-icon" />
-              <h2>¡Venta Creada!</h2>
-            </div>
-          ) : (
-            <div className="nv-loader"></div>
-          )}
-        </div>,
-        document.body
-      )}
 
       {/* --- HEADER PRINCIPAL --- */}
       <PageHeader
@@ -313,17 +304,18 @@ const NuevaVenta = () => {
 
           <div className="cliente-form">
             <h3>{clienteId ? 'Cliente Existente' : 'Cliente Nuevo'}</h3>
+            <div className="nv-form-group"><TipoPersonaSelect value={clienteData.tipo_persona} onChange={handleClienteChange} /></div>
             <div className="nv-cliente-data-columns">
               <div className="column">
                 <div className="nv-form-group">
-                  <label>Cédula:</label>
+                  <label htmlFor="nv-documento">{documentoClienteLabel(clienteData)}:</label>
                   <div className="nv-cedula-input-wrap">
                     <input
                       type="text"
-                      name="cedula"
+                      id="nv-documento" name="cedula"
                       value={clienteData.cedula}
                       onChange={handleClienteChange}
-                      placeholder="Escribe la cédula para verificar..."
+                      placeholder={`Escribe ${documentoClienteLabel(clienteData)} para verificar...`}
                       autoComplete="off"
                       required
                     />
@@ -331,17 +323,17 @@ const NuevaVenta = () => {
                     {cedulaCheckStatus === 'found' && <FaCheckCircle className="nv-cedula-status-icon icon-found" />}
                   </div>
                   {cedulaCheckStatus === 'not_found' && (
-                    <span className="nv-cedula-hint hint-new">Cédula no registrada — se creará un cliente nuevo.</span>
+                    <span className="nv-cedula-hint hint-new">Documento no registrado — se creará un cliente nuevo.</span>
                   )}
                   {cedulaCheckStatus === 'error' && (
-                    <span className="nv-cedula-hint hint-error">No se pudo verificar la cédula. Continúa y se validará al guardar.</span>
+                    <span className="nv-cedula-hint hint-error">No se pudo verificar el documento. Continúa y se validará al guardar.</span>
                   )}
                 </div>
                 <div className="nv-form-group">
-                  <label>Nombre:</label>
+                  <label htmlFor="nv-nombre">{nombreClienteLabel(clienteData)}:</label>
                   <input
                     type="text"
-                    name="nombre"
+                    id="nv-nombre" name="nombre"
                     value={clienteData.nombre}
                     onChange={handleClienteChange}
                     required

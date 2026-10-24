@@ -1257,7 +1257,7 @@ function FacturasProveedorPage() {
                                                                                                 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Ref:</span> <span title={refsLabel}>{refsLabel}</span>
                                                                                             </div>
                                                                                             <div className="item-tags" style={{ marginTop: '0.2rem' }}>
-                                                                                                <span className="item-tag" style={{ background: 'var(--info)', color: '#ffffff', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
+                                                                                                <span className="item-tag" style={{ background: 'var(--info)', color: 'var(--surface)', fontWeight: 700 }}>{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
                                                                                                 {catLabel && <span className="item-tag">{catLabel}</span>}
                                                                                                 {subcatLabel && <span className="item-tag">{subcatLabel}</span>}
                                                                                             </div>

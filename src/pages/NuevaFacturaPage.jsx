@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import API from '../services/api';
 
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
 import { getTodayStr } from '../utils/dates';
 import {
@@ -166,6 +166,9 @@ export default function NuevaFacturaPage() {
     const queryClient = useQueryClient();
     const { id: facturaId } = useParams();
     const isEditMode = !!facturaId;
+    // Las fechas de una factura ya registrada solo las cambia quien tiene el permiso.
+    const hasPermission = usePermissions();
+    const fechasBloqueadas = isEditMode && !hasPermission('EDITAR_FECHAS_FACTURA');
 
     const [isCreating, setIsCreating] = useState(false);
     const [submitError, setSubmitError] = useState(null);
@@ -894,6 +897,8 @@ export default function NuevaFacturaPage() {
                                     <input 
                                         required 
                                         type="date" 
+                                        disabled={fechasBloqueadas}
+                                        title={fechasBloqueadas ? 'No tienes permiso para cambiar las fechas' : undefined}
                                         onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} 
                                         value={form.fechaFactura}
                                         onChange={e => handleField('fechaFactura', e.target.value)} 
@@ -903,6 +908,8 @@ export default function NuevaFacturaPage() {
                                     <label><FaCalendarAlt /> Fecha de Pago</label>
                                     <input 
                                         type="date" 
+                                        disabled={fechasBloqueadas}
+                                        title={fechasBloqueadas ? 'No tienes permiso para cambiar las fechas' : undefined}
                                         onClick={(e) => { try { e.target.showPicker(); } catch { /* navegador sin showPicker */ } }} 
                                         value={form.fechaPago}
                                         onChange={e => handleField('fechaPago', e.target.value)} 
@@ -1327,7 +1334,7 @@ export default function NuevaFacturaPage() {
                                                                                 {orden.estado} {orden.fecha_esperada ? `• Esperada: ${orden.fecha_esperada}` : ''}
                                                                             </div>
                                                                             {orden.observacion && (
-                                                                                <div style={{ fontSize: '0.75rem', color: '#0f766e', marginTop: '2px', fontStyle: 'italic' }}>
+                                                                                <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '2px', fontStyle: 'italic' }}>
                                                                                     📝 Obs: {orden.observacion}
                                                                                 </div>
                                                                             )}
@@ -1366,7 +1373,7 @@ export default function NuevaFacturaPage() {
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                 📦 Contenido OP #{selectedOp.id}
                                                                 {selectedOp.vendedor && <span style={{ fontWeight: 400, fontSize: '0.75rem' }}>• {selectedOp.vendedor}</span>}
-                                                                {selectedOp.venta && <span style={{ background: '#c9d5dc', color: 'var(--info)', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
+                                                                {selectedOp.venta && <span style={{ background: 'var(--info-soft)', color: 'var(--info)', padding: '1px 7px', borderRadius: '4px', fontSize: '0.72rem' }}>Venta #{selectedOp.venta}</span>}
                                                             </span>
                                                             <span style={{ fontSize: '0.75rem' }}>{opDetailOpen ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
                                                         </div>
@@ -1379,7 +1386,7 @@ export default function NuevaFacturaPage() {
                                                                 fontSize: '0.82rem', color: 'var(--info)'
                                                             }}>
                                                                 {selectedOp.observacion && (
-                                                                    <div style={{ marginBottom: '6px', color: '#0f766e', background: 'var(--success-soft)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--success-line)', fontSize: '0.8rem' }}>
+                                                                    <div style={{ marginBottom: '6px', color: 'var(--success)', background: 'var(--success-soft)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--success-line)', fontSize: '0.8rem' }}>
                                                                         📝 <strong>Observación del Pedido:</strong> {selectedOp.observacion}
                                                                     </div>
                                                                 )}

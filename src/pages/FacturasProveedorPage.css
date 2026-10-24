@@ -126,7 +126,7 @@
 }
 
 .empty-val {
-    color: var(--gray-300);
+    color: var(--text-muted);
 }
 
 .action-btn {
@@ -560,7 +560,7 @@
     cursor: pointer;
     border: none;
     background: var(--accent-hover);
-    color: white;
+    color: var(--accent-contrast);
     transition: all 0.2s;
     box-shadow: 0 2px 8px rgba(164, 141, 102, 0.25);
 }

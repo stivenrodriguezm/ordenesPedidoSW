@@ -542,7 +542,7 @@ main {
 .btn-primary-modal,
 .fact-btn-primary {
   background: var(--accent) !important;
-  color: var(--surface) !important;
+  color: var(--accent-contrast) !important;
   border: none !important;
   border-radius: var(--r-sm) !important;
   font-size: 0.85rem !important;

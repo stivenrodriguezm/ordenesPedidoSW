@@ -19,10 +19,10 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, estados, isLoading, userRo
   const [formState, setFormState] = useState({ costo: '', estado: '', tela: '' });
   const [costoDisplay, setCostoDisplay] = useState('');
 
-  const canEditEstado = hasPermission('EDITAR_ESTADO_ORDEN') || userRole === 'administrador' || userRole === 'auxiliar';
-  const canEditTela = hasPermission('EDITAR_ESTADO_TELA_ORDEN') || userRole === 'vendedor' || userRole === 'administrador' || userRole === 'auxiliar';
+  const canEditEstado = hasPermission('EDITAR_ESTADO_ORDEN');
+  const canEditTela = hasPermission('EDITAR_ESTADO_TELA_ORDEN') || userRole === 'vendedor';
   const canEditCosto = hasPermission('VER_COSTOS_ORDEN') && (userRole === 'administrador' || userRole === 'auxiliar');
-  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || userRole === 'administrador';
+  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO');
 
   const modalEstados = estados.filter(e => {
     if (!e.value) return false;

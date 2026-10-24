@@ -380,7 +380,7 @@
   vertical-align: 1px;
 }
 
-.rl-rel--hoy { background: var(--accent); color: #fff; }
+.rl-rel--hoy { background: var(--accent); color: var(--accent-contrast); }
 .rl-rel--manana { background: var(--accent-soft); color: var(--accent-texto); }
 .rl-rel--atrasada { background: var(--danger-soft); color: var(--danger); }
 

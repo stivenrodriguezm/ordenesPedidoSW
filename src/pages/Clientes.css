@@ -437,3 +437,6 @@
     flex: 1 1 auto;
   }
 }
+
+.cli-tipo-filtro { width: auto; max-width: 100%; }
+@media (max-width: 640px) { .cli-tipo-filtro { width: 100%; } }

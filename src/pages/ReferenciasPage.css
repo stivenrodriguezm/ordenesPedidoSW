@@ -60,7 +60,7 @@
     border-radius: 999px;
     font-size: 0.78rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    background: linear-gradient(135deg, color-mix(in srgb, #ede9fe calc(100% - var(--mezcla-fondo)), var(--surface)), color-mix(in srgb, #ddd6fe calc(100% - var(--mezcla-fondo)), var(--surface)));
     color: var(--accent-texto);
     border: 1px solid #c4b5fd;
     white-space: nowrap;
@@ -73,7 +73,7 @@
     border-radius: 999px;
     font-size: 0.78rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+    background: linear-gradient(135deg, color-mix(in srgb, #ccfbf1 calc(100% - var(--mezcla-fondo)), var(--surface)), color-mix(in srgb, #99f6e4 calc(100% - var(--mezcla-fondo)), var(--surface)));
     color: #0f766e;
     border: 1px solid #5eead4;
     white-space: nowrap;
@@ -279,7 +279,7 @@
     justify-content: space-between;
     padding: 1.5rem 2rem;
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    color: white;
+    color: var(--accent-contrast);
 }
 
 .ref-modal-header h3 {
@@ -388,7 +388,7 @@
 
 .interactive-chip--selected:hover {
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    color: white !important;
+    color: var(--accent-contrast) !important;
     border-color: var(--accent-hover) !important;
     transform: translateY(-1px);
     box-shadow: 0 6px 8px -1px var(--accent-ring);
@@ -579,7 +579,7 @@
     cursor: pointer;
     border: none;
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-    color: white;
+    color: var(--accent-contrast);
     box-shadow: 0 4px 6px -1px var(--accent-ring);
     transition: all 0.2s;
 }
@@ -620,7 +620,7 @@
 }
 
 .subcat-chip--active {
-    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    background: linear-gradient(135deg, color-mix(in srgb, #ede9fe calc(100% - var(--mezcla-fondo)), var(--surface)), color-mix(in srgb, #ddd6fe calc(100% - var(--mezcla-fondo)), var(--surface)));
     border-color: #c4b5fd;
     color: var(--accent-texto);
 }

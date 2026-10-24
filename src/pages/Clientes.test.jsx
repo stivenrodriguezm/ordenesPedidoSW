@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppContext } from '../AppContext';
@@ -52,7 +52,7 @@ describe('Clientes: descarga y alcance', () => {
     const user = userEvent.setup();
     montar();
     const boton = await screen.findByRole('button', { name: 'Exportar Excel' });
-    await user.type(screen.getByPlaceholderText('Buscar por ID, nombre o cédula...'), 'Prueba');
+    await user.type(screen.getByPlaceholderText('Buscar por ID, nombre, razón social o documento...'), 'Prueba');
     expect(boton).toBeDisabled();
     await waitFor(() => expect(API.get).toHaveBeenLastCalledWith('/clientes/', { params: { page: 1, page_size: 30, search: 'Prueba' } }));
     await user.click(screen.getByRole('button', { name: 'Siguiente' }));
@@ -110,5 +110,39 @@ describe('Clientes: descarga y alcance', () => {
     expect(screen.queryByRole('button', { name: 'Observación', exact: true })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Agregar Observación' })).not.toBeInTheDocument();
     expect(screen.getAllByText('+573012345678').length).toBeGreaterThan(0);
+  });
+});
+
+
+describe('Tipo de persona en Clientes', () => {
+  it('aplica el mismo filtro en el directorio y la exportación', async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByRole('button', { name: 'Exportar Excel' });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Filtrar tipo de persona' }), 'juridica');
+    await waitFor(() => expect(API.get).toHaveBeenLastCalledWith('/clientes/', { params: { page: 1, page_size: 30, search: '', tipo_persona: 'juridica' } }));
+    await user.click(screen.getByRole('button', { name: 'Exportar Excel' }));
+    await waitFor(() => expect(API.post).toHaveBeenCalledWith('/clientes/exportar/', {}, { params: { search: '', tipo_persona: 'juridica' }, responseType: 'blob' }));
+  });
+  it('permite reclasificar y renombrar sin perder los datos al fallar el guardado', async () => {
+    const user = userEvent.setup();
+    API.put.mockRejectedValueOnce({ response: { data: { detail: 'Fallo de conexión de prueba' } } });
+    montar(['VER_CLIENTES', 'EDITAR_CLIENTE']);
+    await user.click((await screen.findAllByText('Cliente Prueba'))[0]);
+    await user.click(await screen.findByRole('button', { name: 'Editar', exact: true }));
+    const modal = screen.getByRole('dialog');
+    await user.selectOptions(within(modal).getByLabelText('Tipo de persona'), 'juridica');
+    const razon = within(modal).getByLabelText('Razón social:');
+    const nit = within(modal).getByLabelText('NIT:');
+    await user.clear(razon); await user.type(razon, 'Empresa de prueba SAS');
+    await user.clear(nit); await user.type(nit, '900123456-7');
+    // Correo, ciudad y dirección eran obligatorios en el formulario existente.
+    await user.type(modal.querySelector('[name="correo"]'), 'demo@example.invalid');
+    await user.type(modal.querySelector('[name="direccion"]'), 'Dirección ficticia');
+    await user.type(modal.querySelector('[name="ciudad"]'), 'Bogotá');
+    await user.click(within(modal).getByRole('button', { name: 'Guardar Cambios' }));
+    await waitFor(() => expect(API.put).toHaveBeenCalledWith('/clientes/1/', expect.objectContaining({ tipo_persona: 'juridica', nombre: 'Empresa de prueba SAS', cedula: '900123456-7' })));
+    expect(within(modal).getByLabelText('Razón social:')).toHaveValue('Empresa de prueba SAS');
+    expect(within(modal).getByLabelText('NIT:')).toHaveValue('900123456-7');
   });
 });

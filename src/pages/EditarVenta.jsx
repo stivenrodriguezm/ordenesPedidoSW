@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useContext } from 'react';
+import TipoPersonaSelect from '../components/clientes/TipoPersonaSelect';
+import { nombreClienteLabel, documentoClienteLabel } from '../utils/clientes';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaFileInvoiceDollar } from 'react-icons/fa';
 import API from '../services/api';
@@ -6,15 +8,14 @@ import { mensajeDeError } from '../services/errores';
 import { useVendedores } from '../hooks/useSharedData';
 import AppNotification from '../components/AppNotification';
 import { PageHeader, Button, LoadingBlock, ErrorState } from '../components/ui';
-import { AppContext, usePermissions } from '../AppContext';
+import { usePermissions } from '../AppContext';
 import './EditarVenta.css';
 
 const EditarVenta = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // Get the venta ID from the URL
-  const { usuario } = useContext(AppContext);
   const hasPermission = usePermissions();
-  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO');
 
   const [notification, setNotification] = useState({ message: '', type: '' });
   const showNotification = (message, type = 'success') => {
@@ -23,6 +24,7 @@ const EditarVenta = () => {
 
   // Estados para el cliente
   const [clienteData, setClienteData] = useState({
+    tipo_persona: 'natural',
     nombre: '',
     cedula: '',
     correo: '',
@@ -72,6 +74,7 @@ const EditarVenta = () => {
         // Set cliente data
         setClienteData({
           id: ventaDetails.cliente.id,
+          tipo_persona: ventaDetails.cliente.tipo_persona || 'natural',
           nombre: ventaDetails.cliente.nombre || '',
           cedula: ventaDetails.cliente.cedula || '',
           correo: ventaDetails.cliente.correo || '',
@@ -128,6 +131,7 @@ const EditarVenta = () => {
     const payload = {
       cliente: {
         id: clienteData.id,
+        tipo_persona: clienteData.tipo_persona,
         nombre: clienteData.nombre,
         cedula: clienteData.cedula,
         correo: clienteData.correo,
@@ -193,23 +197,24 @@ const EditarVenta = () => {
         <div className="cliente-section card">
           <div className="cliente-form">
             <h3>Datos del Cliente</h3>
+            <div className="form-group"><TipoPersonaSelect value={clienteData.tipo_persona} onChange={handleClienteChange} /></div>
             <div className="cliente-data-columns">
               <div className="column">
                 <div className="form-group">
-                  <label>Nombre:</label>
+                  <label htmlFor="ev-nombre">{nombreClienteLabel(clienteData)}:</label>
                   <input
                     type="text"
-                    name="nombre"
+                    id="ev-nombre" name="nombre"
                     value={clienteData.nombre}
                     onChange={handleClienteChange}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>Cédula:</label>
+                  <label htmlFor="ev-documento">{documentoClienteLabel(clienteData)}:</label>
                   <input
                     type="text"
-                    name="cedula"
+                    id="ev-documento" name="cedula"
                     value={clienteData.cedula}
                     onChange={handleClienteChange}
                     required

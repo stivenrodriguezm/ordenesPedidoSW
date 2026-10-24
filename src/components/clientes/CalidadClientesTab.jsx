@@ -1,3 +1,4 @@
+import { tipoPersonaLabel, documentoClienteCorto } from '../../utils/clientes';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FaCheckCircle, FaSearch, FaUserCheck } from 'react-icons/fa';
@@ -12,7 +13,9 @@ import * as servicio from '../../services/calidadClientesService';
 import { fechaHora } from '../../utils/tesoreria';
 import './CalidadClientesTab.css';
 
-const ETIQUETAS = { nombre: 'Nombre', cedula: 'Documento', correo: 'Correo', telefono1: 'Teléfono 1', telefono2: 'Teléfono 2', direccion: 'Dirección', barrio: 'Barrio', ciudad: 'Ciudad' };
+const valorFicha = (campo, cliente) => campo === 'tipo_persona' ? tipoPersonaLabel(cliente) : cliente[campo];
+
+const ETIQUETAS = { tipo_persona: 'Tipo de persona', nombre: 'Nombre / Razón social', cedula: 'Documento', correo: 'Correo', telefono1: 'Teléfono 1', telefono2: 'Teléfono 2', direccion: 'Dirección', barrio: 'Barrio', ciudad: 'Ciudad' };
 
 // Motivo corto para la tarjeta; el texto completo queda en el título.
 const motivoCorto = (razon) => (razon.startsWith('Documento') ? 'Mismo documento'
@@ -55,7 +58,7 @@ function FormularioFicha({ id, vista, alGuardar, recargar, recargando }) {
         onSuccess: async (r) => { confirmar(); await qc.invalidateQueries({ queryKey: ['calidad-clientes'] }); alGuardar(r.revision); },
     });
     return <>
-        <p className="cq-muted">Documento {vista.cliente.cedula || '—'}. Marca lo que quieras corregir. Se guardan los valores anteriores; el documento, los saldos y las ventas no cambian.</p>
+        <p className="cq-muted">{documentoClienteCorto(vista.cliente)} {vista.cliente.cedula || '—'} · {tipoPersonaLabel(vista.cliente)}. Marca lo que quieras corregir. Se guardan los valores anteriores; el documento, los saldos y las ventas no cambian.</p>
         {cambios.length ? (
             <form onSubmit={e => { e.preventDefault(); if (seleccion.length && !guardar.isPending) guardar.mutate(); }}>
                 <div className="ds-table-wrap"><div className="ds-table-scroll">
@@ -114,8 +117,8 @@ function Comparacion({ ids, cerrar }) {
                                 return (
                                     <tr key={campo} className={distinto ? 'cq-fila-distinta' : ''}>
                                         <td><strong>{etiqueta}</strong>{distinto && <span className="cq-chip cq-chip--aviso">Diferente</span>}</td>
-                                        <td>{d.origen[campo] || <span className="cq-muted">—</span>}</td>
-                                        <td>{d.destino[campo] || <span className="cq-muted">—</span>}</td>
+                                        <td>{valorFicha(campo, d.origen) || <span className="cq-muted">—</span>}</td>
+                                        <td>{valorFicha(campo, d.destino) || <span className="cq-muted">—</span>}</td>
                                     </tr>
                                 );
                             })}</tbody>
@@ -142,7 +145,7 @@ function GrupoDuplicados({ grupo, comparar }) {
                         <label>
                             <input type="checkbox" checked={elegidos.includes(c.id)} onChange={() => alternar(c.id)} aria-label={`Elegir ficha ${c.id}`} />
                             <span className="cq-ficha__nombre">{c.nombre}<small>#{c.id}</small></span>
-                            <span className="cq-ficha__dato">{c.cedula || '—'}</span>
+                            <span className="cq-ficha__dato">{documentoClienteCorto(c)} {c.cedula || '—'} · {tipoPersonaLabel(c)}</span>
                             <span className="cq-ficha__dato">{c.telefono1 || c.correo || '—'}</span>
                             <span className="cq-ficha__dato cq-ficha__ciudad">{c.ciudad || ''}</span>
                         </label>

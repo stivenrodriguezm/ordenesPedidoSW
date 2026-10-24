@@ -200,6 +200,7 @@
 
 .rr-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.76rem;
   border: 1px solid #cbd5e1;
@@ -213,8 +214,9 @@
   padding: 0.45rem 0.6rem;
   text-align: left;
   font-weight: 700;
-  font-size: 0.6rem;
-  letter-spacing: 0.05rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.025rem;
+  white-space: nowrap;
   text-transform: uppercase;
   color: #ffffff;
 }
@@ -223,22 +225,12 @@
   padding: 0.45rem 0.6rem;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
 .rr-table tbody tr {
   page-break-inside: avoid;
   break-inside: avoid;
-}
-
-.rr-col-num {
-  width: 30px;
-  color: #64748b;
-  text-align: center;
-}
-
-.rr-table th.rr-col-num,
-.rr-table th.rr-col-check {
-  text-align: center;
 }
 
 .rr-col-cant {
@@ -269,20 +261,6 @@
 .rr-col-desc {
   white-space: pre-wrap;
   line-height: 1.4;
-}
-
-.rr-col-check {
-  width: 34px;
-  text-align: center;
-}
-
-.rr-checkbox {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid #64748b;
-  border-radius: 2px;
-  margin-top: 0.1rem;
 }
 
 .rr-prod-name {
@@ -413,6 +391,10 @@
   border: 1px solid #cbd5e1;
   padding: 0.65rem 0.9rem 0.7rem;
 }
+
+/* Conserva la segunda columna y su ancho; solo crece el espacio para firmar. */
+.rr-firma--recibido { grid-column: 2; }
+.rr-firma-line.rr-firma-line--firma { margin-top: 3.8rem; }
 
 .rr-firma-title {
   font-size: 0.6rem;

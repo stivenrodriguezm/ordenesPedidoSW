@@ -187,7 +187,7 @@
 
 .ce-confirm-btn {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-contrast);
   border: none;
   border-radius: var(--r-sm);
   padding: 0.22rem 0.5rem;
@@ -942,7 +942,7 @@
 
 .lottus-btn-submit {
   background: linear-gradient(135deg, var(--info) 0%, var(--accent) 100%);
-  color: var(--surface);
+  color: var(--accent-contrast);
   border: none;
   padding: 0.45rem 1.1rem;
   border-radius: var(--r-sm);

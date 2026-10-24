@@ -185,7 +185,9 @@ describe('Productos de la venta (en la misma vista)', () => {
 
     it('muestra referencia, color, proveedor y cantidad de la tela, y si falta pedirla', async () => {
         montar();
-        expect(await screen.findByText('Tela: Lino · color Arena')).toBeInTheDocument();
+        // La etiqueta dice «Tela» y el valor, la referencia y el color.
+        const valor = await screen.findByText('Lino · color Arena');
+        expect(valor.closest('div')).toHaveTextContent(/^Tela/);
         expect(screen.getByText(/Ariatex · 6 m/)).toBeInTheDocument();
         expect(screen.getByText('Tela por pedir')).toBeInTheDocument();
     });
@@ -424,7 +426,9 @@ describe('Productos de la venta (en la misma vista)', () => {
 
     it('un juego del catálogo entra como conjunto; el grupo de tela solo se pide en la tela de cada pieza', async () => {
         const juego = { id: 40, nombre: 'Qatar · Comedor 6 puestos', categoria: 'Comedores', activo: true, tela: true, juego: '1 Mesa de 6 + 6 Silla de comedor',
-            piezas: [{ variante: 41, nombre: 'Mesa de 6', cantidad: 1, tela: false, grupos: [] }, { variante: 42, nombre: 'Silla de comedor', cantidad: 6, tela: true, grupos: [7] }] };
+            piezas: [{ pieza: 91, variante: 41, nombre: 'Mesa de 6', cantidad: 1, tela: false, grupos: [], proveedor_nombre: 'Tapas SAS' },
+                { pieza: 92, variante: 42, nombre: 'Silla de comedor', cantidad: 6, tela: true, grupos: [7], proveedor_nombre: 'Sillas SAS' }],
+            costos_conjunto: '211200.00', costos_conjunto_nombre: 'Transporte', costos_conjunto_tipo: 'transporte' };
         API.get.mockImplementation(async (url, config) => {
             if (url === '/proveedores-telas/') return { data: { results: [] } };
             if (url === '/productos-venta/catalogo/') {
@@ -456,7 +460,14 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(screen.queryByLabelText('Costo de tela por metro del producto 2')).not.toBeInTheDocument();
         fireEvent.click(within(silla).getByRole('radio', { name: 'Sí, la compramos aparte' }));
         expect(screen.getByLabelText('Costo de tela por metro del producto 2')).toHaveValue(20000);
-        expect(conjunto).toHaveTextContent('2 piezas · se ven juntas, cada una se pide con su referencia');
+        // Dos proveedores: un pedido a cada uno. El Transporte del conjunto va dentro, por 2 conjuntos.
+        expect(conjunto).toHaveTextContent('2 piezas · 2 proveedores (Tapas SAS, Sillas SAS): un pedido a cada uno');
+        expect(conjunto).toHaveTextContent('Transporte del conjunto');
+        expect(conjunto).toHaveTextContent('+ $422.400');
+        expect(screen.queryByLabelText('Descripción Transporte')).not.toBeInTheDocument();
+        // Los textos nunca se autocompletan.
+        expect(document.getElementById('pv-prov-0')).toHaveValue('');
+        expect(document.getElementById('pv-cli-0')).toHaveValue('');
     });
 
     it('se puede guardar aunque se quiten todos los productos', async () => {
@@ -491,5 +502,57 @@ describe('Productos de la venta (en la misma vista)', () => {
         montar();
         expect(await screen.findByText(/Incluye 2 decorativos por unidad/)).toBeInTheDocument();
         expect(screen.getByText(/Incluidos 2 por «Cojines incluidos»: −\$120\.000/)).toBeInTheDocument();
+    });
+
+    it('un conjunto guardado se ve cerrado como un producto y se abre para ver sus piezas', async () => {
+        const conj = { conjunto: 'c-1', conjunto_nombre: 'Comedor Valencia', conjunto_cantidad: 1 };
+        const piezas = [{ ...linea, ...conj, id: 5, producto_nombre: 'Base', proveedor_nombre: 'Metales' },
+                        { ...linea, ...conj, id: 6, producto_nombre: 'Silla', cantidad: 6, proveedor_nombre: 'Sillas' }];
+        API.get.mockImplementation(async (url) => (url === '/productos-venta/catalogo/' ? { data: { grupos: GRUPOS, results: [] } }
+            : url === '/proveedores-telas/' ? { data: { results: [] } } : { data: { ...structuredClone(base), lineas: piezas } }));
+        montar();
+        const tarjeta = (await screen.findByText('Comedor Valencia')).closest('li');
+        expect(tarjeta).not.toHaveClass('is-abierto');
+        expect(tarjeta).toHaveTextContent('1 Base + 6 Silla');
+        expect(tarjeta).toHaveTextContent('Metales · Sillas');
+        expect(screen.queryByText('Fabricar en roble')).toBeNull();  // las piezas no se ven todavía
+        fireEvent.click(screen.getByRole('button', { name: 'Ver las 2 piezas' }));
+        expect(screen.getAllByText('Fabricar en roble')).toHaveLength(2);
+        expect(screen.getByText('Comedor Valencia').closest('li')).toHaveClass('is-abierto');
+
+        // En el editor también entra cerrado y se abre con su botón.
+        fireEvent.click(screen.getByRole('button', { name: /Editar productos/ }));
+        expect(await screen.findByRole('article', { name: 'Conjunto Comedor Valencia' })).toHaveTextContent('Piezas 1 Base + 6 Silla');
+        fireEvent.click(screen.getByRole('button', { name: 'Ver las piezas del conjunto Comedor Valencia' }));
+        const conjunto = await screen.findByRole('region', { name: 'Conjunto Comedor Valencia' });
+        expect(within(conjunto).getByRole('region', { name: 'Compra del producto 1' })).toBeInTheDocument();
+        expect(within(conjunto).getByRole('region', { name: 'Textos del producto 2' })).toBeInTheDocument();
+        expect(within(conjunto).getByRole('button', { name: 'Ocultar detalles del producto 1' })).toHaveAttribute('aria-expanded', 'true');
+        expect(within(conjunto).queryByRole('button', { name: 'Agregar pieza' })).not.toBeInTheDocument();
+        expect(within(conjunto).queryByRole('button', { name: 'Separar en productos sueltos' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Conjunto / })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Agregar de la lista de precios/ })).toBeInTheDocument();
+    });
+
+    it('mantiene los mismos datos visibles en tarjetas con tela y sin tela', async () => {
+        const sinTela = { ...linea, id: 6, producto_nombre: 'Mesa de comedor', tela_modo: 'no_aplica' };
+        API.get.mockImplementation(async () => ({ data: { ...structuredClone(base), lineas: [linea, sinTela] } }));
+        montar();
+        const conTela = (await screen.findByText('Producto especial')).closest('li');
+        const mesa = screen.getByText('Mesa de comedor', { exact: true }).closest('li');
+        expect(within(conTela).getByText('Tela', { exact: true })).toBeInTheDocument();
+        expect(within(mesa).getByText('Tela / Cuero', { exact: true })).toBeInTheDocument();
+        expect(within(mesa).getByText('No lleva', { exact: true })).toBeInTheDocument();
+        expect(conTela.querySelector('dl').children).toHaveLength(4);
+        expect(mesa.querySelector('dl').children).toHaveLength(4);
+    });
+
+    it('ofrece conjuntos desde la lista y no permite crearlos manualmente en Ventas', async () => {
+        montar();
+        fireEvent.click(await screen.findByRole('button', { name: 'Editar productos' }));
+        const agregar = screen.getByRole('group', { name: 'Agregar a la venta' });
+        expect(within(agregar).queryByRole('button', { name: /^Conjunto/ })).not.toBeInTheDocument();
+        fireEvent.click(within(agregar).getByRole('button', { name: /Agregar de la lista de precios/ }));
+        expect(await screen.findByRole('textbox', { name: 'Buscar producto en la lista de precios' })).toBeInTheDocument();
     });
 });

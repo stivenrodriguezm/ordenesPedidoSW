@@ -6,7 +6,7 @@
 
 /* --------------------------------------------------------------------------
    Modos de color (2026-10-21): diurno (azul marino sobre grises claros) y
-   nocturno (verde esmeralda sobre negro verdoso). El modo se guarda por equipo
+   nocturno (azul marino sobre negro azulado; hasta 2026-10-24 era verde). El modo se guarda por equipo
    (localStorage «lottus-tema») y se aplica con data-tema en <html> antes de
    pintar. Los imprimibles (comprobantes, cotización, remisión, imágenes de
    pedido) siempre usan el diurno: son papel.
@@ -28,6 +28,10 @@
   --accent-line: #c5d2df;
   --accent-ring: rgba(31, 58, 82, 0.28);
   --accent-contrast: #ffffff;
+  /* Colores fijos (hex) que deben seguir el modo: de día quedan tal cual; de noche los fondos
+     claros se oscurecen hacia la superficie y los textos oscuros se aclaran hacia el texto. */
+  --mezcla-fondo: 0%;
+  --mezcla-texto: 0%;
   /* El acento como texto, icono o borde sobre una superficie (en nocturno es más claro). */
   --accent-texto: var(--accent);
   --accent-texto-hover: var(--accent-hover);
@@ -132,48 +136,51 @@
 :root[data-tema="nocturno"] {
   color-scheme: dark;
 
-  /* Acento principal: verde profundo #023328 (2026-10-21, a pedido del usuario). Como fondo
-     de botones y activos; como texto o borde sobre fondos oscuros se usa su tono claro. */
-  --accent: #023328;
-  --accent-hover: #04463a;
-  --accent-active: #01261e;
-  --accent-soft: #0a2721;
-  --accent-line: #0f4f41;
-  --accent-ring: rgba(26, 150, 120, 0.45);
+  /* Acento principal: el mismo azul marino del modo diurno (2026-10-24, a pedido del usuario;
+     antes verde #023328). Como fondo de botones y activos; como texto o borde sobre fondos
+     oscuros se usa su tono claro. */
+  --accent: #1f3a52;
+  --accent-hover: #2a4b68;
+  --accent-active: #152a3c;
+  --accent-soft: #15263a;
+  --accent-line: #2a4562;
+  --accent-ring: rgba(96, 150, 204, 0.45);
   --accent-contrast: #ffffff;
-  --accent-texto: #5cc9ab;
-  --accent-texto-hover: #85dcc4;
-  --accent-borde: #1a7a63;
-  --accent-boton-borde: #0f5a49;
+  --mezcla-fondo: 86%;
+  --mezcla-texto: 55%;
+  --accent-texto: #8fb8de;
+  --accent-texto-hover: #b3d0ea;
+  --accent-borde: #3d6a94;
+  --accent-boton-borde: #2f5577;
 
-  --gold: #3fb894;
-  --gold-light: #7fd8c0;
-  --gold-dark: #0f7a61;
-  --gold-soft: #0a2721;
+  --gold: #6f9cc8;
+  --gold-light: #a9c6e3;
+  --gold-dark: #3d6185;
+  --gold-soft: #15263a;
 
-  /* Neutros: escala invertida (50 = superficie oscura, 900 = texto claro) */
-  --gray-50: #17231e;
-  --gray-100: #1b2923;
-  --gray-200: #23342d;
-  --gray-300: #2f443b;
-  --gray-400: #5f726a;
-  --gray-500: #8d9e97;
-  --gray-600: #a9b8b1;
-  --gray-700: #c5d1cb;
-  --gray-800: #dce5e1;
-  --gray-900: #eef3f1;
+  /* Neutros: escala invertida y azulada (50 = superficie oscura, 900 = texto claro) */
+  --gray-50: #161f2b;
+  --gray-100: #1a2533;
+  --gray-200: #223042;
+  --gray-300: #2d3d52;
+  --gray-400: #5d6c7f;
+  --gray-500: #8a98a9;
+  --gray-600: #a8b4c2;
+  --gray-700: #c4ced9;
+  --gray-800: #dce3eb;
+  --gray-900: #eef2f6;
 
-  --bg-app: #0f1814;
-  --surface: #14201b;
-  --surface-muted: #17231e;
-  --surface-raised: #1a2822;
-  --border: #23342d;
-  --border-strong: #2f443b;
+  --bg-app: #0f151d;
+  --surface: #141c26;
+  --surface-muted: #161f2b;
+  --surface-raised: #1a2430;
+  --border: #223042;
+  --border-strong: #2d3d52;
   --overlay: rgba(0, 0, 0, 0.6);
 
-  --text: #e6ece9;
-  --text-secondary: #9fb0a8;
-  --text-muted: #6f817a;
+  --text: #e6ebf1;
+  --text-secondary: #9eabbb;
+  --text-muted: #6d7b8c;
 
   --success: #4ade80;
   --success-soft: #13301f;
@@ -188,30 +195,30 @@
   --danger-line: #6b2b2b;
   --info-line: #224a63;
 
-  /* Menú lateral negro con el activo en verde */
-  --sidebar-bg: #0b100e;
-  --sidebar-header-bg: #000000;
+  /* Menú lateral casi negro con el activo en azul marino */
+  --sidebar-bg: #0b1118;
+  --sidebar-header-bg: #070b10;
   --sidebar-brand: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-text: #b4c1bb;
+  --sidebar-text: #b4bfcc;
   --sidebar-text-hover: #ffffff;
-  --sidebar-subtitle: #6c7c75;
+  --sidebar-subtitle: #6c7a8a;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
   --sidebar-text-active: #ffffff;
-  --sidebar-active-bg: #023328;
-  --sidebar-active-icon: #7fd8c0;
+  --sidebar-active-bg: #1f3a52;
+  --sidebar-active-icon: #a9c6e3;
   --sidebar-active-bar: transparent;
   --sidebar-footer-bg: rgba(0, 0, 0, 0.3);
-  --sidebar-menu-bg: #121b17;
-  --sidebar-avatar-bg: #1d2a24;
-  --sidebar-avatar-text: #7fd8c0;
+  --sidebar-menu-bg: #121a24;
+  --sidebar-avatar-bg: #1a2533;
+  --sidebar-avatar-text: #a9c6e3;
   --sidebar-shadow: 4px 0 22px rgba(0, 0, 0, 0.45);
 
-  --hero-bg: linear-gradient(135deg, #010c0a 0%, #023328 100%);
-  --hero-glow: rgba(63, 184, 148, 0.18);
-  --hero-detalle: #7fd8c0;
-  --hero-acento: #0f7a61;
-  --hero-acento-hover: #139274;
+  --hero-bg: linear-gradient(135deg, #0a121c 0%, #1f3a52 100%);
+  --hero-glow: rgba(111, 156, 200, 0.18);
+  --hero-detalle: #a9c6e3;
+  --hero-acento: #2f5f86;
+  --hero-acento-hover: #3a6e99;
   --hero-acento-texto: #ffffff;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);

@@ -1,3 +1,5 @@
+import { datosDescuento, formatDescuento } from '../utils/descuentosVenta';
+import { nombreClienteLabel, documentoClienteLabel } from '../utils/clientes';
 import { useExportacion } from '../hooks/useExportacion';
 import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import API from '../services/api';
@@ -138,8 +140,7 @@ const Ventas = () => {
     );
     const todosLosVendedores = selectedVendedores.length === vendedoresActivos.length;
 
-    const perms = usuario?.permissions || [];
-    const canSeeAll = perms.includes('VER_TODAS_VENTAS') || perms.includes('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+    const canSeeAll = hasPermission('VER_TODAS_VENTAS');
 
     // Quién cuenta para los totales: un vendedor, solo él; con vendedores desmarcados, solo
     // los marcados; sin filtro, la empresa completa (100 % de cada venta).
@@ -1136,7 +1137,7 @@ const Ventas = () => {
                                 )}
                             </div>
 
-                            {(usuario?.role?.toLowerCase() === 'administrador' || usuario?.role?.toLowerCase() === 'auxiliar') && (
+                            {canSeeAll && (
                                 <div className="v-multi-select-container" ref={vendedoresRef}>
                                     <button
                                         type="button"
@@ -1202,6 +1203,7 @@ const Ventas = () => {
                                         <th className="th-valor">Abono</th>
                                         <th className="th-valor">Saldo</th>
                                         <th className="th-valor">Total</th>
+                                        <th className="th-descuento" title="Descuento frente al valor de lista de esta venta">Dcto.</th>
                                     </>
                                 )}
                                 <th className="th-pedidos" title="Pendiente, atrasada o finalizada: finalizada = ya se pidió todo (productos y telas)">Gestión</th>
@@ -1227,6 +1229,7 @@ const Ventas = () => {
                                                 <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                                                 <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '60px' }}></div></td>
                                                 <td className="td-valor"><div className="skeleton skeleton-text" style={{ width: '80px' }}></div></td>
+                                                <td className="td-descuento"><div className="skeleton skeleton-text" style={{ width: '45px' }} /></td>
                                             </>
                                         )}
                                         <td className="td-pedidos"><div className="skeleton skeleton-badge"></div></td>
@@ -1237,7 +1240,7 @@ const Ventas = () => {
                                 ))
                             ) : ventas.length === 0 ? (
                                 <tr>
-                                    <td colSpan={(hasPermission('VER_PRECIOS_VENTA') ? 13 : 10) + (puedeFacturar ? 1 : 0)} style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                                    <td colSpan={(hasPermission('VER_PRECIOS_VENTA') ? 14 : 10) + (puedeFacturar ? 1 : 0)} style={{ textAlign: 'center', padding: '4rem 2rem' }}>
                                         <div className="empty-state-content">
                                             <p style={{ fontSize: '1.1rem', color: 'var(--ventas-text-medium)', margin: 0 }}>No hay ventas para este periodo.</p>
                                         </div>
@@ -1274,6 +1277,9 @@ const Ventas = () => {
                                                     <td className="td-valor td-valor-total">
                                                         {formatCurrency(venta.valor_total)}
                                                     </td>
+                                                    <td className="td-descuento" title={datosDescuento(venta) ? 'Descuento sobre el valor de lista' : 'Sin valor de lista para calcular el descuento'}>
+                                                        {formatDescuento(datosDescuento(venta)?.porcentaje)}
+                                                    </td>
                                                 </>
                                             )}
                                             <td className="td-pedidos">
@@ -1303,7 +1309,7 @@ const Ventas = () => {
                                         </tr>
                                         {expandedVentaId === venta.id && (
                                             <tr className="expanded-row">
-                                                <td colSpan={puedeFacturar ? 14 : 13} className="expanded-row-content">
+                                                <td colSpan={10 + (hasPermission('VER_PRECIOS_VENTA') ? 4 : 0) + (puedeFacturar ? 1 : 0)} className="expanded-row-content">
                                                     {loadingDetails ? (
                                                         <DetalleEsqueleto />
                                                     ) : detailsError ? (
@@ -1331,11 +1337,11 @@ const Ventas = () => {
                                                             <div className="details-card cliente-info">
                                                                 <h4>Información del Cliente</h4>
                                                                 <div className="info-row">
-                                                                    <span className="label">Nombre:</span>
+                                                                    <span className="label">{nombreClienteLabel(ventaDetails.cliente)}:</span>
                                                                     <span className="value">{ventaDetails.cliente?.nombre || '—'}</span>
                                                                 </div>
                                                                 <div className="info-row">
-                                                                    <span className="label">Cédula/NIT:</span>
+                                                                    <span className="label">{documentoClienteLabel(ventaDetails.cliente)}:</span>
                                                                     <span className="value">{ventaDetails.cliente?.cedula || '—'}</span>
                                                                 </div>
                                                                 <div className="info-row">
@@ -1538,7 +1544,7 @@ const Ventas = () => {
                                                                                             )}
                                                                                         </span>
                                                                                     </div>
-                                                                                    {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
+                                                                                    {hasPermission('VER_COSTOS_ORDEN') && (
                                                                                         <div className="oc-v2-section oc-v2-cost">
                                                                                             <span className="oc-v2-label">Costo</span>
                                                                                             <span className="oc-v2-value success">{formatCurrency(pedido.costo)}</span>
@@ -1665,9 +1671,10 @@ const Ventas = () => {
                                     <div className="summary-row-bottom">
                                         <span className="summary-date">{formatShortDate(venta.fecha_venta)}</span>
                                         {puedeFacturar && <FacturadoVenta venta={venta} onCambio={marcarFacturada} onError={(message) => setNotification({ message, type: 'error' })} />}
-                                        {hasPermission('VER_PRECIOS_VENTA') && (
+                                        {hasPermission('VER_PRECIOS_VENTA') && (<>
                                             <span className="summary-total">{formatCurrency(venta.valor_total)}</span>
-                                        )}
+                                            <span className="summary-descuento">Dcto. {formatDescuento(datosDescuento(venta)?.porcentaje)}</span>
+                                        </>)}
                                     </div>
                                     <div className="summary-expand-icon">
                                         <FaChevronDown />
@@ -1699,11 +1706,11 @@ const Ventas = () => {
                                                     <h4>Información del Cliente</h4>
                                                     <div className="detail-grid">
                                                         <div className="detail-item full-width">
-                                                            <span className="label">Razón Social / Nombre</span>
+                                                            <span className="label">{nombreClienteLabel(ventaDetails.cliente)}</span>
                                                             <span className="value">{ventaDetails.cliente?.nombre || '—'}</span>
                                                         </div>
                                                         <div className="detail-item">
-                                                            <span className="label">NIT / CC</span>
+                                                            <span className="label">{documentoClienteLabel(ventaDetails.cliente)}</span>
                                                             <span className="value">{ventaDetails.cliente?.cedula || '—'}</span>
                                                         </div>
                                                         <div className="detail-item">

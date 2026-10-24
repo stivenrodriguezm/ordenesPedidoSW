@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AppContext, usePermissions } from '../AppContext';
 import API from '../services/api';
 import { mensajeDeError } from '../services/errores';
+import TipoPersonaSelect from './clientes/TipoPersonaSelect';
+import { nombreClienteLabel, documentoClienteLabel } from '../utils/clientes';
 
 const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpdated, setNotification, fetchVentas, fetchReportSales }) => {
   const { usuario } = useContext(AppContext);
@@ -16,6 +18,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   const [formData, setFormData] = useState({
     id: '',
     cliente_id: '',
+    tipo_persona: 'natural',
+    cliente_nombre: '',
+    cliente_documento: '',
     fecha_venta: '',
     vendedor_id: '',
     vendedores_compartidos: [],
@@ -33,6 +38,9 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
       const inicial = {
         id: saleData.id,
         cliente_id: saleData.cliente?.id || '',
+        tipo_persona: saleData.cliente?.tipo_persona || 'natural',
+        cliente_nombre: saleData.cliente?.nombre || '',
+        cliente_documento: saleData.cliente?.cedula || '',
         fecha_venta: saleData.fecha_venta,
         fecha_entrega: saleData.fecha_entrega || '', // Add fecha_entrega
         vendedor_id: saleData.vendedor || '',
@@ -54,14 +62,15 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
   // --- Permissions Logic ---
   const hasPermission = usePermissions();
 
-  const canEditEverything = hasPermission('EDITAR_VENTA') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+  const canEditEverything = hasPermission('EDITAR_VENTA');
+  const canEditCliente = canEditEverything || hasPermission('EDITAR_CLIENTE');
   const canEditEstadoVenta = canEditEverything || hasPermission('EDITAR_ESTADO_VENTA');
   const canEditEstadoPedidos = canEditEverything || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA');
 
   const isEstadoDisabled = !canEditEstadoVenta || (usuario?.role?.toLowerCase() === 'auxiliar' && (formData.estado || '').trim().toLowerCase() === 'entregado');
   const isEstadoPedidosDisabled = !canEditEstadoPedidos || (usuario?.role?.toLowerCase() === 'auxiliar' && formData.estado_pedidos);
 
-  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO') || hasPermission('ALL') || usuario?.role?.toLowerCase() === 'administrador';
+  const canAnularOrden = hasPermission('ANULAR_ORDEN_PEDIDO');
 
   // Nota: el valor real en BD para una venta anulada es 'anulada' (Venta.ESTADO_CHOICES).
   // Se compara con startsWith('anulad') en vez de una igualdad exacta para no romper
@@ -108,9 +117,17 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
       }
     }
 
+    const clientePayload = { id: formData.cliente_id };
+    const inicial = JSON.parse(formInicial || '{}');
+    if (canEditCliente) {
+      // Solo enviar los campos del cliente que realmente se editaron.
+      for (const [local, campo] of [['tipo_persona', 'tipo_persona'], ['cliente_nombre', 'nombre'], ['cliente_documento', 'cedula']]) {
+        if (formData[local] !== inicial[local]) clientePayload[campo] = formData[local];
+      }
+    }
     const payload = {
       venta: ventaPayload,
-      cliente: { id: formData.cliente_id }
+      cliente: clientePayload,
     };
 
     try {
@@ -138,6 +155,19 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
           <label>ID Cliente:</label>
           <input type="text" name="cliente_id" value={formData.cliente_id} onChange={handleChange} disabled />
         </div>
+        {saleData?.cliente?.id && <>
+        <div className="form-group full-width">
+          <TipoPersonaSelect value={formData.tipo_persona} onChange={handleChange} disabled={!canEditCliente} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="edit-sale-cliente-nombre">{nombreClienteLabel(formData)}:</label>
+          <input id="edit-sale-cliente-nombre" name="cliente_nombre" value={formData.cliente_nombre} onChange={handleChange} disabled={!canEditCliente} required />
+        </div>
+        <div className="form-group">
+          <label htmlFor="edit-sale-cliente-documento">{documentoClienteLabel(formData)}:</label>
+          <input id="edit-sale-cliente-documento" name="cliente_documento" value={formData.cliente_documento} onChange={handleChange} disabled={!canEditCliente} required />
+        </div>
+        </>}
 
         {canEditEverything && (
           <>
@@ -153,7 +183,7 @@ const EditSaleModal = ({ show, onClose, saleData, vendedores, estados, onSaleUpd
             <div className="form-group">
               <label>Sede:</label>
               {formData.es_feria_hogar ? (
-                <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem', color: '#78716c', background: '#f5f5f4', borderRadius: '6px' }}>
+                <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--surface-muted)', borderRadius: '6px' }}>
                   No aplica — venta de Feria del Hogar
                 </div>
               ) : (

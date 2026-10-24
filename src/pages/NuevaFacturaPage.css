@@ -106,7 +106,7 @@
 }
 
 .badge-blue { background: var(--accent-soft); color: var(--info); }
-.badge-purple { background: #f3e8ff; color: #9333ea; }
+.badge-purple { background: color-mix(in srgb, #f3e8ff calc(100% - var(--mezcla-fondo)), var(--surface)); color: #9333ea; }
 .badge-indigo { background: var(--accent-soft); color: var(--accent-texto); }
 .badge-locked { background: var(--warning-soft); color: var(--warning); }
 
@@ -318,7 +318,7 @@
 .nf-grupo-chip-count {
     font-size: 0.68rem;
     background: var(--accent);
-    color: var(--surface);
+    color: var(--accent-contrast);
     padding: 0.05rem 0.35rem;
     border-radius: 999px;
     font-weight: 700;
@@ -404,7 +404,7 @@
 
 .nf-btn-add-ref:hover {
     background: var(--accent);
-    color: var(--surface);
+    color: var(--accent-contrast);
 }
 
 .nf-btn-add-ref-large {
@@ -532,9 +532,9 @@
 
 .nf-select-grupo--active {
     border-color: #9333ea !important;
-    background: #faf5ff !important;
+    background: color-mix(in srgb, #faf5ff calc(100% - var(--mezcla-fondo)), var(--surface)) !important;
     font-weight: 700;
-    color: #7e22ce !important;
+    color: color-mix(in srgb, #7e22ce calc(100% - var(--mezcla-texto)), var(--text)) !important;
 }
 
 /* Telas / Cueros Sub-section compact */
@@ -584,7 +584,7 @@
 
 .nf-tc-add-btn:hover {
     background: var(--accent);
-    color: var(--surface);
+    color: var(--accent-contrast);
 }
 
 .nf-tc-empty {
@@ -768,7 +768,7 @@
 }
 
 .nf-summary-sep {
-    color: var(--gray-300);
+    color: var(--text-muted);
 }
 
 .nf-summary-factura {

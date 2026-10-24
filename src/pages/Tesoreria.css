@@ -3,7 +3,7 @@
 .tesoreria-page .tesoreria-filtros { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
 .tesoreria-page .tesoreria-filtros label { display: grid; gap: .4rem; }
 .tesoreria-page .tesoreria-tabla { overflow-x: auto; }
-.tesoreria-page table { width: 100%; border-collapse: collapse; background: var(--color-surface, white); }
+.tesoreria-page table { width: 100%; border-collapse: collapse; background: var(--surface); }
 .tesoreria-page th, .tesoreria-page td { padding: .75rem; text-align: left; border-bottom: 1px solid var(--color-border, var(--gray-200)); }
 .tesoreria-page th { font-size: .85rem; }
 .tesoreria-page td small { display: block; margin-top: .3rem; }

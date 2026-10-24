@@ -68,7 +68,7 @@
 
 .btn-primary-modal {
     background: linear-gradient(135deg, var(--ventas-primary) 0%, var(--accent) 100%);
-    color: white;
+    color: var(--accent-contrast);
     box-shadow: 0 4px 6px -1px rgba(164, 141, 102, 0.2);
 }
 

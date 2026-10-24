@@ -336,7 +336,7 @@
 
 .pt-btn-primary {
     background: var(--accent);
-    color: white; border: none; height: 32px; padding: 0 1.1rem;
+    color: var(--accent-contrast); border: none; height: 32px; padding: 0 1.1rem;
     border-radius: var(--r-sm); font-weight: 600; font-size: 0.8rem; cursor: pointer;
     box-shadow: 0 0 12px rgba(164, 141, 102, 0.35);
     transition: all 0.15s;

@@ -149,7 +149,7 @@ function RemisionDetalle({ rem, perm, esTransportador, onPrint, onEdit, onAccion
                     <div className="rl-kv">
                         <span className="rl-kv__label">Recibe</span>
                         <span className="rl-kv__value">{rem.cliente_nombre || '—'}</span>
-                        {rem.cliente_documento && <span className="rl-kv__sub">C.C. {rem.cliente_documento}</span>}
+                        {rem.cliente_documento && <span className="rl-kv__sub">C.C. / NIT {rem.cliente_documento}</span>}
                     </div>
                     {telefonos.length > 0 && (
                         <div className="rl-kv">

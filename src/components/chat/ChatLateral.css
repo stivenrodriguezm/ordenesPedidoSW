@@ -1,9 +1,9 @@
 .ia-acceso { position:fixed; right:18px; bottom:max(18px,env(safe-area-inset-bottom)); z-index:1020; display:flex; align-items:center; gap:10px; }
 .ia-acceso button { display:flex; align-items:center; gap:7px; min-height:40px; padding:8px 12px; border:1px solid var(--border-strong); border-radius:22px; background:var(--surface-muted); color:#625c50; box-shadow:0 2px 8px #15130f12; font-size:12px; cursor:pointer; }
-.ia-acceso button:hover { background:#eae4d8; color:#27231e; }
+.ia-acceso button:hover { background:color-mix(in srgb, #eae4d8 calc(100% - var(--mezcla-fondo)), var(--surface)); color:color-mix(in srgb, #27231e calc(100% - var(--mezcla-texto)), var(--text)); }
 .ia-acceso button:focus-visible { outline:2px solid #8e7549; outline-offset:3px; }
 .ia-acceso button:disabled { cursor:wait; }
-.ia-acceso p { max-width:260px; margin:0; padding:10px; border:1px solid var(--border-strong); border-radius:8px; background:var(--surface); color:#75402f; font-size:12px; }
+.ia-acceso p { max-width:260px; margin:0; padding:10px; border:1px solid var(--border-strong); border-radius:8px; background:var(--surface); color:color-mix(in srgb, #75402f calc(100% - var(--mezcla-texto)), var(--text)); font-size:12px; }
 
 /* Barra flotante de chat minimizado (conserva el estado actual) */
 .ia-chat-minimizado {

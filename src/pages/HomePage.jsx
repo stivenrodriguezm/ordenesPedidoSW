@@ -16,12 +16,13 @@ const HomePage = () => {
     const hasPermission = usePermissions();
     const role = usuario?.role?.toLowerCase();
 
-    if (role === 'administrador') {
+    const general = hasPermission('VER_DASHBOARD_GENERAL');
+    const personal = hasPermission('VER_DASHBOARD_PERSONAL');
+    // Con ambos permisos, el administrador entra al general y los demás al personal.
+    if (general && (role === 'administrador' || !personal)) {
         return <AdminHomePage />;
-    } else if (hasPermission('VER_DASHBOARD_PERSONAL')) {
+    } else if (personal) {
         return <VendedorHomePage />;
-    } else if (hasPermission('VER_DASHBOARD_GENERAL')) {
-        return <AdminHomePage />;
     } else if (role === 'transportador') {
         return <Navigate to="/suministros/remisiones" replace />;
     } else {

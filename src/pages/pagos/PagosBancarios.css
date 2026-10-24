@@ -32,7 +32,7 @@
 .pb-check input,.pb-candidate > input { width: 17px; height: 17px; flex: 0 0 auto; accent-color: #737e5c; }
 .pb-note { padding: 13px 16px; border-radius: 9px; background: var(--bg-secondary,var(--surface-muted)); font-size: .87rem; line-height: 1.6; }
 .pb-empty { color: var(--text-secondary,var(--text-secondary)); font-size: .9rem; padding: 20px 4px; line-height: 1.5; }
-.pb-error { color: var(--danger-color,#a32929); padding: 10px 0; font-size: .9rem; overflow-wrap: anywhere; }
+.pb-error { color: var(--danger-color,color-mix(in srgb, #a32929 calc(100% - var(--mezcla-texto)), var(--text))); padding: 10px 0; font-size: .9rem; overflow-wrap: anywhere; }
 .pb-cuentas { display: grid; gap: 15px; }
 .pb-cuentas h3 { display: flex; align-items: center; gap: 9px; }
 .pb-account-list { display: grid; gap: 10px; }

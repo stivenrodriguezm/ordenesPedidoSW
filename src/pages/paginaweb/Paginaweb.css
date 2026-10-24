@@ -532,7 +532,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
   font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.03em;

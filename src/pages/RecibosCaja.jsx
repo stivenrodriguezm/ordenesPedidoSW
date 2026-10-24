@@ -1022,7 +1022,7 @@ const RecibosCaja = () => {
                       </button>
                     )
                   )}
-                  {singlePendingPago && usuario?.role === 'administrador' && (
+                  {singlePendingPago && hasPermission('APROBAR_RECIBO') && (
                     <button className="mobile-confirm-btn" onClick={() => { setConfirmTarget({ recibo: item, pago: singlePendingPago }); setShowConfirmModal(true); }}>
                       Confirmar
                     </button>
@@ -1035,7 +1035,7 @@ const RecibosCaja = () => {
                           <span className="rc-pago-detail-metodo">{pago.metodo_pago}</span>
                           <span className="rc-pago-detail-valor font-mono">{formatCurrency(pago.valor)}</span>
                           <Badge tone={pago.estado === 'Confirmado' ? 'success' : pago.estado === 'Anulado' ? 'danger' : 'warning'}>{pago.estado}</Badge>
-                          {pago.estado === 'Pendiente' && usuario?.role === 'administrador' && (
+                          {pago.estado === 'Pendiente' && hasPermission('APROBAR_RECIBO') && (
                             <button className="mobile-confirm-btn" onClick={() => { setConfirmTarget({ recibo: item, pago }); setShowConfirmModal(true); }}>
                               Confirmar
                             </button>

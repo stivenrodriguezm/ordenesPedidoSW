@@ -1,3 +1,5 @@
+import TipoPersonaSelect from '../components/clientes/TipoPersonaSelect';
+import { nombreClienteLabel, documentoClienteLabel, documentoClienteCorto, tipoPersonaLabel } from '../utils/clientes';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import './Clientes.css';
@@ -19,8 +21,10 @@ const estadoTone = (estado) => {
 };
 
 const EditClienteModal = ({ cliente, onSave, onClose }) => {
+  const [guardando, setGuardando] = useState(false);
   const [formData, setFormData] = useState({
     id: cliente.id,
+    tipo_persona: cliente.tipo_persona || 'natural',
     nombre: cliente.nombre || '',
     cedula: cliente.cedula || '',
     correo: cliente.correo || '',
@@ -34,9 +38,11 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    if (guardando) return;
+    setGuardando(true);
+    try { await onSave(formData); } finally { setGuardando(false); }
   };
 
   return (
@@ -47,18 +53,19 @@ const EditClienteModal = ({ cliente, onSave, onClose }) => {
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="cli-edit-form">Guardar Cambios</Button>
+          <Button type="submit" form="cli-edit-form" disabled={guardando} loading={guardando}>Guardar Cambios</Button>
         </>
       }
     >
       <form id="cli-edit-form" onSubmit={handleSubmit}>
+        <div className="ds-field"><TipoPersonaSelect value={formData.tipo_persona} onChange={handleChange} /></div>
         <div className="ds-field">
-          <label className="ds-label">Nombre:</label>
-          <input className="ds-input" type="text" name="nombre" value={formData.nombre} onChange={handleChange} required />
+          <label className="ds-label" htmlFor="cli-nombre">{nombreClienteLabel(formData)}:</label>
+          <input className="ds-input" type="text" id="cli-nombre" name="nombre" value={formData.nombre} onChange={handleChange} required />
         </div>
         <div className="ds-field">
-          <label className="ds-label">Cédula:</label>
-          <input className="ds-input" type="text" name="cedula" value={formData.cedula} onChange={handleChange} required />
+          <label className="ds-label" htmlFor="cli-documento">{documentoClienteLabel(formData)}:</label>
+          <input className="ds-input" type="text" id="cli-documento" name="cedula" value={formData.cedula} onChange={handleChange} required />
         </div>
         <div className="ds-field">
           <label className="ds-label">Correo:</label>
@@ -130,6 +137,7 @@ const Clientes = () => {
   const hasPermission = usePermissions();
   const [clientesData, setClientesData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [tipoPersona, setTipoPersona] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [expandedClienteId, setExpandedClienteId] = useState(null);
   const [expandedData, setExpandedData] = useState(null);
@@ -176,7 +184,8 @@ const Clientes = () => {
       const params = {
         page: page,
         page_size: pageSize,
-        search: search
+        search: search,
+        ...(tipoPersona ? { tipo_persona: tipoPersona } : {}),
       };
       const response = await API.get('/clientes/', { params });
       if (solicitud !== solicitudListado.current) return;
@@ -192,7 +201,7 @@ const Clientes = () => {
     } finally {
       if (solicitud === solicitudListado.current) setIsLoading(false);
     }
-  }, []);
+  }, [tipoPersona]);
 
   // Al cambiar la búsqueda: debounce de 500ms, resetea a página 1 y actualiza
   // el término "efectivo". El fetch ocurre en un único efecto (abajo), por lo
@@ -257,8 +266,13 @@ const Clientes = () => {
       setClientesData(prev => prev.map(c => c.id === updatedCliente.id ? { ...c, ...response.data } : c));
       setNotification({ message: 'Cliente actualizado correctamente.', type: 'success' });
       setShowEditModal(false);
+      if (tipoPersona && response.data.tipo_persona !== tipoPersona) {
+        setExpandedClienteId(null);
+        activeClienteIdRef.current = null;
+      }
+      fetchClientes(currentPage, debouncedSearch);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || error.response?.data?.error || 'Error al editar el cliente.';
+      const errorMsg = mensajeDeError(error, 'Error al editar el cliente.');
       setNotification({ message: errorMsg, type: 'error' });
     }
   };
@@ -298,13 +312,19 @@ const Clientes = () => {
               <FaSearch className="cli-search__icon" />
               <input
                 type="text"
-                placeholder="Buscar por ID, nombre o cédula..."
+                placeholder="Buscar por ID, nombre, razón social o documento..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            <select className="ds-input cli-tipo-filtro" aria-label="Filtrar tipo de persona" value={tipoPersona}
+              onChange={e => { setTipoPersona(e.target.value); setCurrentPage(1); }}>
+              <option value="">Todos los tipos de persona</option>
+              <option value="natural">Persona natural</option>
+              <option value="juridica">Persona jurídica</option>
+            </select>
             {hasPermission('EXPORTAR_CLIENTES') && exportacion?.permitida && (
-              <Button variant="secondary" icon={FaFileExport} onClick={() => descarga.mutate({ search: debouncedSearch })}
+              <Button variant="secondary" icon={FaFileExport} onClick={() => descarga.mutate({ search: debouncedSearch, ...(tipoPersona ? { tipo_persona: tipoPersona } : {}) })}
                 disabled={isLoading || errorListado || searchTerm !== debouncedSearch || descarga.isPending} loading={descarga.isPending} title="Exportar todas las páginas del filtro dentro de tu alcance comercial">
                 Exportar Excel
               </Button>
@@ -325,8 +345,9 @@ const Clientes = () => {
               <thead>
                 <tr>
                   <th className="th-id">ID</th>
-                  <th className="th-nombre">Nombre</th>
-                  <th className="th-cedula">Cédula</th>
+                  <th className="th-nombre">Nombre / Razón social</th>
+                  <th>Tipo de persona</th>
+                  <th className="th-cedula">Cédula / NIT</th>
                   <th className="th-correo">Correo</th>
                   <th className="th-direccion">Dirección</th>
                   <th className="th-ciudad">Ciudad</th>
@@ -339,7 +360,7 @@ const Clientes = () => {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <tr key={index}>
-                      {['40px', '150px', '100px', '120px', '180px', '80px', '90px', '90px', '40px'].map((w, i) => (
+                      {['40px', '150px', '120px', '100px', '120px', '180px', '80px', '90px', '90px', '40px'].map((w, i) => (
                         <td key={i}><Skeleton width={w} /></td>
                       ))}
                     </tr>
@@ -352,6 +373,7 @@ const Clientes = () => {
                       >
                         <td className="td-id">{cliente.id}</td>
                         <td className="td-nombre">{cliente.nombre}</td>
+                        <td>{tipoPersonaLabel(cliente)}</td>
                         <td className="td-cedula">{cliente.cedula}</td>
                         <td className="td-correo">{cliente.correo}</td>
                         <td className="td-direccion">{cliente.direccion}</td>
@@ -366,7 +388,7 @@ const Clientes = () => {
                       </tr>
                       {expandedClienteId === cliente.id && (
                         <tr className="expanded-row">
-                          <td colSpan="9">
+                          <td colSpan="10">
                             {loadingDetails ? (
                               <LoadingBlock message="Cargando detalle del cliente..." />
                             ) : expandedData ? (
@@ -381,7 +403,7 @@ const Clientes = () => {
                                       </div>
                                     </div>
                                     <div className="cli-info-rows">
-                                      <div className="cli-info-row"><span className="cli-info-label">Cédula</span><span className="cli-info-value">{expandedData.cedula}</span></div>
+                                      <div className="cli-info-row"><span className="cli-info-label">{documentoClienteLabel(expandedData)}</span><span className="cli-info-value">{expandedData.cedula}</span></div>
                                       <div className="cli-info-row"><span className="cli-info-label">Correo</span><span className="cli-info-value">{expandedData.correo || '—'}</span></div>
                                       <div className="cli-info-row"><span className="cli-info-label">Dirección</span><span className="cli-info-value">{expandedData.direccion || '—'}</span></div>
                                       <div className="cli-info-row"><span className="cli-info-label">Ciudad</span><span className="cli-info-value">{expandedData.ciudad || '—'}</span></div>
@@ -426,7 +448,7 @@ const Clientes = () => {
                     </React.Fragment>
                   ))
                 ) : (
-                  <tr><td colSpan="9" className="empty-cell">No se encontraron clientes.</td></tr>
+                  <tr><td colSpan="10" className="empty-cell">No se encontraron clientes.</td></tr>
                 )}
               </tbody>
             </table>
@@ -442,7 +464,7 @@ const Clientes = () => {
                 <div className="card-header" onClick={() => handleExpandCliente(cliente.id)}>
                   <div className="card-header-info">
                     <h4 className="card-title">{cliente.nombre}</h4>
-                    <p className="card-subtitle">C.C. {cliente.cedula}</p>
+                    <p className="card-subtitle">{documentoClienteCorto(cliente)} {cliente.cedula} · {tipoPersonaLabel(cliente)}</p>
                   </div>
                   <button className="cli-row-toggle">
                     <FaChevronDown className="chevron-icon" />

@@ -145,6 +145,9 @@ function MultiplicadorFormModal({ isOpen, onClose, multiplicador, onSave, isLoad
             placeholder="Ej: General, Promoción, Distribuidor..." required
           />
         </div>
+        {multiplicador && (
+          <p className="lp-section-hint">Cambiar el valor actualiza la lista de precios; las ventas ya registradas conservan su precio.</p>
+        )}
         <div className="ds-field">
           <label className="ds-label">Valor</label>
           <input
@@ -265,6 +268,7 @@ function MultiplicadoresTab({ notify }) {
   const [nuevoValorSim, setNuevoValorSim] = useState('');
   const [simulando, setSimulando] = useState(false);
   const [asignando, setAsignando] = useState(null);
+  const [eliminando, setEliminando] = useState(null); // { multiplicador, productos, destino }
 
   const { data: multiplicadores = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['lp-multiplicadores'], queryFn: getMultiplicadores,
@@ -282,14 +286,26 @@ function MultiplicadoresTab({ notify }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => deleteMultiplicador(id),
-    onSuccess: () => {
+    mutationFn: ({ id, destino }) => deleteMultiplicador(id, destino),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['lp-multiplicadores'] });
       invalidarListaPrecios(queryClient);
-      notify('Multiplicador eliminado.', 'success');
+      setEliminando(null);
+      notify(data?.reasignados
+        ? `Multiplicador eliminado. ${data.reasignados} producto(s) pasaron a «${data.destino}».`
+        : 'Multiplicador eliminado.', 'success');
     },
-    onError: (err) => notify(err.response?.data?.detail || 'No se pudo eliminar el multiplicador.', 'error'),
+    onError: (err) => notify(err.response?.data?.error || err.response?.data?.detail || 'No se pudo eliminar el multiplicador.', 'error'),
   });
+
+  const pedirEliminar = async (mult) => {
+    try {
+      const data = await getImpactoMultiplicador(mult.id);
+      setEliminando({ multiplicador: mult, productos: data.productos_asignados ?? 0, destino: '' });
+    } catch {
+      notify('No se pudo consultar qué productos usan este multiplicador.', 'error');
+    }
+  };
 
   const verImpacto = async (mult) => {
     try {
@@ -354,7 +370,7 @@ function MultiplicadoresTab({ notify }) {
                       {!m.es_general && (
                         <button
                           className="action-btn" title="Eliminar"
-                          onClick={() => { if (window.confirm(`¿Eliminar el multiplicador "${m.nombre}"?`)) deleteMutation.mutate(m.id); }}
+                          onClick={() => pedirEliminar(m)}
                         >
                           <FaTrash size={14} />
                         </button>
@@ -382,6 +398,31 @@ function MultiplicadoresTab({ notify }) {
         multiplicador={asignando}
         notify={notify}
       />
+
+      <Modal open={!!eliminando} onClose={() => setEliminando(null)} title={`Eliminar «${eliminando?.multiplicador.nombre || ''}»`} size="sm"
+        footer={<>
+          <Button variant="secondary" onClick={() => setEliminando(null)}>Cancelar</Button>
+          <Button variant="danger" icon={FaTrash} loading={deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate({ id: eliminando.multiplicador.id, destino: eliminando.destino || null })}>Eliminar</Button>
+        </>}>
+        {eliminando && (
+          <div>
+            {eliminando.productos > 0 ? (
+              <>
+                <p><strong>{eliminando.productos}</strong> producto(s) de la lista usan este multiplicador (×{fmtMult(eliminando.multiplicador.valor)}). Pasarán a:</p>
+                <select className="ds-input" aria-label="Multiplicador para sus productos" value={eliminando.destino}
+                  onChange={(e) => setEliminando({ ...eliminando, destino: e.target.value })}>
+                  {multiplicadores.filter(x => x.id !== eliminando.multiplicador.id)
+                    .sort((a, b) => Number(b.es_general) - Number(a.es_general))
+                    .map(x => <option key={x.id} value={x.es_general ? '' : x.id}>{x.nombre} (×{fmtMult(x.valor)}){x.es_general ? ' · general' : ''}</option>)}
+                </select>
+                <p className="lp-section-hint">Su precio en la lista de precios cambia con el nuevo multiplicador.</p>
+              </>
+            ) : <p>Ningún producto de la lista lo usa.</p>}
+            <p className="lp-section-hint">Las ventas ya registradas no cambian: cada producto vendido conserva su precio y su multiplicador.</p>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={!!impacto} onClose={() => { setImpacto(null); setSimulacion(null); }} title="Impacto y Simulación de Multiplicador" size="md">
         {impacto && (

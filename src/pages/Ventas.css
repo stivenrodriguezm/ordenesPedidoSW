@@ -216,7 +216,7 @@
 
 .btn-primary {
   background: linear-gradient(135deg, var(--ventas-primary) 0%, var(--accent) 100%);
-  color: white;
+  color: var(--accent-contrast);
   box-shadow: 0 4px 6px -1px rgba(164, 141, 102, 0.2), 0 2px 4px -1px rgba(164, 141, 102, 0.1);
 }
 
@@ -897,7 +897,7 @@
    Skeleton Loading
    ========================================================================== */
 .skeleton {
-  background: linear-gradient(90deg, var(--gray-100) 25%, #e0e0e0 50%, var(--gray-100) 75%);
+  background: linear-gradient(90deg, var(--gray-100) 25%, color-mix(in srgb, #e0e0e0 calc(100% - var(--mezcla-fondo)), var(--surface)) 50%, var(--gray-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -1683,3 +1683,6 @@
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+.th-descuento, .td-descuento { width: 5rem; min-width: 4.5rem; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.summary-descuento { color: var(--text-secondary); font-size: 0.75rem; white-space: nowrap; }

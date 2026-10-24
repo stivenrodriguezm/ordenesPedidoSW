@@ -1,6 +1,8 @@
+import { resumenDescuentos, formatDescuento } from '../utils/descuentosVenta';
 import { fraccionVenta, numeroParticipantes, participantesVenta } from '../utils/ventasCompartidas';
 import React, { useMemo, useContext, lazy, Suspense } from 'react';
-import { AppContext } from '../AppContext';
+import { AppContext, usePermissions } from '../AppContext';
+import useTema, { colorTema } from '../hooks/useTema';
 import {
     FaMoneyBillWave,
     FaShoppingCart,
@@ -26,6 +28,15 @@ const Bar = lazy(() => import('./charts').then(m => ({ default: m.Bar })));
 // completa (100 % de cada venta). Sin la prop, un vendedor cuenta solo su parte.
 const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurrency, cuentaParticipante }) => {
     const { usuario } = useContext(AppContext);
+    // Rankings y comparativos entre vendedores: solo para quien ve las ventas de todos.
+    const veTodas = usePermissions()('VER_TODAS_VENTAS');
+    // Chart.js no entiende var(--…): los colores se leen del modo activo y se repintan al cambiarlo.
+    const [tema] = useTema();
+    const c = useMemo(() => ({
+        linea: colorTema(tema === 'nocturno' ? '--accent-texto' : '--success'), // de noche, el azul del tema superficie: colorTema('--surface'), barra: colorTema('--accent-texto'),
+        estados: [colorTema('--success'), colorTema('--warning'), colorTema('--danger')],
+        rejilla: colorTema('--border'), texto: colorTema('--text-secondary'),
+    }), [tema]);
 
     const {
         kpis,
@@ -259,14 +270,14 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {
                     label: 'Ventas Diarias',
                     data: sortedDates.map(d => salesByDate[d]),
-                    borderColor: '#4c7a4f',
+                    borderColor: c.linea,
                     backgroundColor: 'rgba(164, 141, 102, 0.08)',
                     tension: 0.35,
                     fill: true,
-                    pointBackgroundColor: '#4c7a4f',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: '#4c7a4f',
+                    pointBackgroundColor: c.linea,
+                    pointBorderColor: c.superficie,
+                    pointHoverBackgroundColor: c.superficie,
+                    pointHoverBorderColor: c.linea,
                 }
             ]
         };
@@ -276,7 +287,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             datasets: [
                 {
                     data: [salesByStatus.entregado, salesByStatus.pendiente, salesByStatus.anulado],
-                    backgroundColor: ['#4c7a4f', '#a8732b', '#a8432f'],
+                    backgroundColor: c.estados,
                     borderWidth: 0,
                     hoverOffset: 4
                 }
@@ -290,7 +301,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                 {
                     label: 'Total Vendido',
                     data: top5Vendors.map(v => v.total),
-                    backgroundColor: 'var(--accent)',
+                    backgroundColor: c.barra,
                     borderRadius: 4,
                 }
             ]
@@ -342,7 +353,17 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             allVendorsList: vendorsList
         };
 
-    }, [ventas, vendedores, selectedMonthYear, cuentaParticipante, usuario]);
+    }, [ventas, vendedores, selectedMonthYear, cuentaParticipante, usuario, c]);
+
+    const descuentos = useMemo(() => resumenDescuentos(ventas, cuentaParticipante !== undefined
+        ? cuentaParticipante : (usuario?.role === 'vendedor' ? id => id === String(usuario.id) : null)),
+    [ventas, cuentaParticipante, usuario]);
+    const indicadorDescuento = (datos, etiqueta = 'Dcto.') => (
+        <span className="c-descuento" title="Descuento acumulado ponderado: suma de descuentos / suma de valores de lista. Las ventas sin lista se excluyen.">
+            {etiqueta}: <strong>{formatDescuento(datos?.porcentaje)}</strong>
+            {!!datos?.sinLista && <small> · {datos.sinLista} sin lista</small>}
+        </span>
+    );
 
     const commonOptions = {
         responsive: true,
@@ -369,9 +390,10 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             }
         },
         scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, border: { color: c.rejilla }, ticks: { color: c.texto, font: { size: 10 } } },
             y: {
-                grid: { borderDash: [3, 3], color: '#f2f1eb' },
+                grid: { borderDash: [3, 3], color: c.rejilla },
+                border: { color: c.rejilla },
                 ticks: { display: false }
             }
         }
@@ -381,7 +403,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 6, font: { size: 11 } } }
+            legend: { position: 'right', labels: { color: c.texto, usePointStyle: true, boxWidth: 6, font: { size: 11 } } }
         },
         cutout: '70%',
     };
@@ -418,6 +440,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                         <span className="c-pct-pill teal">{kpis.pctSede1}%</span>
                     </div>
                     <div className="c-sede-val">{formatCurrency(kpis.ventasSede1)}</div>
+                    {indicadorDescuento(descuentos.sedes['Lottus 1'])}
                     <div className="c-sede-footer">
                         <span>Proj: {formatCurrency(kpis.projectionSede1)}</span>
                         <span>{kpis.countSede1} ped.</span>
@@ -434,6 +457,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                         <span className="c-pct-pill indigo">{kpis.pctSede2}%</span>
                     </div>
                     <div className="c-sede-val">{formatCurrency(kpis.ventasSede2)}</div>
+                    {indicadorDescuento(descuentos.sedes['Lottus 2'])}
                     <div className="c-sede-footer">
                         <span>Proj: {formatCurrency(kpis.projectionSede2)}</span>
                         <span>{kpis.countSede2} ped.</span>
@@ -451,6 +475,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                             <span className="c-pct-pill amber">{kpis.pctFeria}%</span>
                         </div>
                         <div className="c-sede-val">{formatCurrency(kpis.ventasFeria)}</div>
+                        {indicadorDescuento(descuentos.feria)}
                         <div className="c-sede-footer">
                             <span>{Math.round(kpis.countFeria)} ped.</span>
                         </div>
@@ -460,6 +485,13 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
 
             {/* === SECONDARY KPIS GRID === */}
             <div className="compact-kpi-grid">
+                <div className="c-kpi-item">
+                    <div className="c-kpi-icon purple"><FaPercentage /></div>
+                    <div><span className="c-kpi-lbl">Descuento acumulado</span>
+                        <span className="c-kpi-val">{formatDescuento(descuentos.total.porcentaje)}</span>
+                        <small className="c-descuento-nota">Ponderado por valor de lista{descuentos.total.sinLista ? ` · ${descuentos.total.sinLista} ventas sin lista` : ''}</small>
+                    </div>
+                </div>
                 <div className="c-kpi-item">
                     <div className="c-kpi-icon blue"><FaCalendarDay /></div>
                     <div>
@@ -530,7 +562,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                     </div>
                 </div>
 
-                {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && (
+                {veTodas && (
                     <>
                         <div className="chart-card">
                             <div className="chart-header">
@@ -555,14 +587,14 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
             </Suspense>
 
             {/* === COMPACT MINIMALIST VENDOR LEADERBOARD === */}
-            {(usuario?.role === 'administrador' || usuario?.role === 'auxiliar') && allVendorsList.length > 0 && (
+            {veTodas && allVendorsList.length > 0 && (
                 <div className="compact-vendor-section">
                     <div className="c-vendor-header">
                         <div className="c-vtitle">
                             <FaTrophy style={{ color: 'var(--warning)' }} />
                             <span>Desempeño de Vendedores</span>
                         </div>
-                        <span className="c-vsub">Venta real ($ COP), pedidos y proyección</span>
+                        <span className="c-vsub">Venta real, descuento acumulado y proyección</span>
                     </div>
 
                     <div className="compact-vendor-list">
@@ -575,6 +607,7 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                                     <div className="c-v-name-box">
                                         <span className="c-v-name">{vendor.name}</span>
                                         <span className="c-v-orders">{vendor.countFormatted} ped.</span>
+                                        {indicadorDescuento(descuentos.vendedores[vendor.id])}
                                     </div>
                                 </div>
 

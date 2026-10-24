@@ -18,6 +18,7 @@ export function faltantesDe(l, grupos = []) {
     const tipo = l.tipo || 'producto';
     if (tipo !== 'producto') {
         if (!texto(l.producto_nombre)) f.producto_nombre = 'Escribe qué es.';
+        if (l.juego) return f; // costos de un conjunto de la lista: el valor lo calcula el servidor
         const valor = Number(l.precio_lista_override);
         if (!valor || (tipo !== 'ajuste' && valor < 0)) f.precio_lista_override = 'Indica el valor.';
         if (tipo === 'articulo' && !(Number(l.cantidad) >= 1)) f.cantidad = 'Indica la cantidad.';

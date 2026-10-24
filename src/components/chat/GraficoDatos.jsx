@@ -1,14 +1,17 @@
 import React, { useRef } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
+import useTema, { colorTema } from '../../hooks/useTema';
 import './GraficoDatos.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend);
 const COLORES = ['#4f46e5', '#0d9488', '#d97706', '#db2777', '#0284c7', '#7c3aed', '#65a30d', '#c2410c', '#475569', '#a21caf'];
 const TIPOS = { barras: Bar, lineas: Line, dona: Doughnut };
 
-export default function GraficoDatos({ grafico: g }) {
+// `claro`: el gráfico va sobre un panel que siempre es claro (informes de la oficina).
+export default function GraficoDatos({ grafico: g, claro = false }) {
     const ref = useRef(null);
+    useTema(); // repinta con los colores del modo activo
     const Componente = TIPOS[g?.tipo];
     if (!Componente || !Array.isArray(g.etiquetas) || !Array.isArray(g.valores) || g.etiquetas.length !== g.valores.length || g.valores.length > 50 || !g.valores.length
         || g.valores.some(v => v !== null && (typeof v !== 'number' || !Number.isFinite(v)))) return null;
@@ -18,11 +21,16 @@ export default function GraficoDatos({ grafico: g }) {
     const datos = { labels: g.etiquetas, datasets: [{ label: g.titulo, data: g.valores,
         backgroundColor: g.tipo === 'dona' ? COLORES : (g.color || '#4f46e5'), borderColor: g.color || '#4f46e5', borderWidth: g.tipo === 'lineas' ? 2 : 0,
         borderRadius: g.tipo === 'barras' ? 4 : undefined, tension: 0, spanGaps: false }] };
+    const texto = claro ? '#5f6b76' : colorTema('--text-secondary'), rejilla = claro ? '#e3e6ea' : colorTema('--border');
+    const eje = { grid: { color: rejilla }, border: { color: rejilla }, ticks: { color: texto } };
     const opciones = {
         responsive: true, maintainAspectRatio: false, animation: false,
         indexAxis: horizontal ? 'y' : 'x',
-        plugins: { legend: { display: g.tipo === 'dona', position: 'bottom' }, tooltip: { callbacks: { label: ctx => formato(g.valores[ctx.dataIndex]) } } },
-        ...(g.tipo !== 'dona' ? { scales: { [horizontal ? 'x' : 'y']: { beginAtZero: true, ticks: { callback: n => formato(n) } } } } : {}),
+        plugins: { legend: { display: g.tipo === 'dona', position: 'bottom', labels: { color: texto } }, tooltip: { callbacks: { label: ctx => formato(g.valores[ctx.dataIndex]) } } },
+        ...(g.tipo !== 'dona' ? { scales: {
+            [horizontal ? 'x' : 'y']: { ...eje, beginAtZero: true, ticks: { ...eje.ticks, callback: n => formato(n) } },
+            [horizontal ? 'y' : 'x']: eje,
+        } } : {}),
     };
     const descargar = () => {
         const url = ref.current?.toBase64Image();

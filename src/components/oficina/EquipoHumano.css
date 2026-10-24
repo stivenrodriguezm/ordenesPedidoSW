@@ -1,5 +1,5 @@
 .oh-directorio { margin:22px 0; color:#39392c; }
-.oh-directorio__titulo { display:flex; align-items:center; gap:10px; margin-bottom:13px; }
+.oh-directorio__titulo { display:flex; align-items:center; gap:10px; margin-bottom:13px; color:color-mix(in srgb, #39392c calc(100% - var(--mezcla-texto)), var(--text)); }
 .oh-directorio__titulo>div { flex:1; } .oh-directorio h2 { font-size:18px; font-weight:500; margin:4px 0; }
 .oh-gestionar { width:30px; height:30px; display:grid; place-items:center; border:1px solid #d3c8b4; border-radius:5px; background:transparent; color:#8e7853; cursor:pointer; }
 .oh-personas { display:grid; grid-template-columns:repeat(auto-fill,minmax(235px,1fr)); gap:10px; }

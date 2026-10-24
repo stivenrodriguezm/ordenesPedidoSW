@@ -18,7 +18,7 @@
   flex-shrink: 0;
   border-radius: var(--r-full);
   background: linear-gradient(135deg, var(--accent) 0%, var(--gray-900) 100%);
-  color: #fff;
+  color: var(--accent-contrast);
   font-size: 1.5rem;
   font-weight: 700;
   display: grid;
@@ -133,7 +133,7 @@
 
 .vendedor-action--primary .vendedor-action__icon {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
 }
 
 .vendedor-action__body {

@@ -232,7 +232,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--r-lg);
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-  color: #ffffff;
+  color: var(--accent-contrast);
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;

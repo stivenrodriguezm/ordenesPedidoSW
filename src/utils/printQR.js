@@ -25,6 +25,13 @@ export const construirEtiquetaQR = (doc, { svg, id, nombre }) => {
   return contenedor;
 };
 
+/** La etiqueta como documento HTML completo (para la impresora de la oficina). */
+export const documentoEtiquetaQR = (datos) => {
+  const doc = document.implementation.createHTMLDocument('Imprimir QR');
+  construirEtiquetaQR(doc, datos);
+  return `<!DOCTYPE html>${doc.documentElement.outerHTML}`;
+};
+
 /** Abre una ventana, arma la etiqueta e imprime. Sin scripts inyectados. */
 export const imprimirEtiquetaQR = ({ svg, id, nombre }) => {
   const ventana = window.open('', '', 'width=400,height=400');

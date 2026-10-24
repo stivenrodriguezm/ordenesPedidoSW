@@ -28,7 +28,7 @@ describe('Acceso rápido personal a IA', () => {
         expect(API.get).not.toHaveBeenCalled();
     });
     it('abre sobre la página actual, conserva el borrador al navegar y lo reinicia al cerrar con X', async () => {
-        montar({ role: 'administrador', acceso_rapido_ia: true });
+        montar({ role: 'administrador', acceso_rapido_ia: true, permissions: ['USAR_ASISTENTE_IA'] });
         fireEvent.click(screen.getByRole('button', { name: 'Abrir chat de IA' }));
         await screen.findByRole('region', { name: 'Chat de IA' });
         const entrada = await screen.findByPlaceholderText(/Escribe tu pregunta para/);
@@ -44,7 +44,7 @@ describe('Acceso rápido personal a IA', () => {
     });
     it('muestra un fallo recuperable sin navegar ni abrir un panel vacío', async () => {
         API.get.mockRejectedValueOnce(new Error('Sin red'));
-        montar({ role: 'administrador', acceso_rapido_ia: true });
+        montar({ role: 'administrador', acceso_rapido_ia: true, permissions: ['USAR_ASISTENTE_IA'] });
         fireEvent.click(screen.getByRole('button', { name: 'Abrir chat de IA' }));
         expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo abrir el chat');
         expect(screen.getByText('/clientes')).toBeInTheDocument();
