@@ -39,4 +39,50 @@ describe('Cargos del producto', () => {
     expect(screen.queryByText(/Unidades por transporte/)).not.toBeInTheDocument();
     expect(screen.queryByText(/se cobra un solo transporte/)).not.toBeInTheDocument();
   });
+
+  it('un cargo normal cambia a %, lleva tela/cuero, se oculta en agrupaciones y limita sus unidades (2026-10-27)', async () => {
+    servicio.updateCargo.mockResolvedValue({});
+    montar([cargo(1, 'Reclino', { opcional: true, modo_valor: 'pesos', en_agrupacion: true }), cargo(2, 'Transporte', { tipo: 'transporte' })]);
+    fireEvent.change(screen.getByLabelText('Tipo de valor de Reclino'), { target: { value: 'porcentaje' } });
+    await waitFor(() => expect(servicio.updateCargo).toHaveBeenCalledWith(1, { modo_valor: 'porcentaje' }));
+    fireEvent.change(screen.getByLabelText('Reclino en agrupaciones'), { target: { value: 'no' } });
+    await waitFor(() => expect(servicio.updateCargo).toHaveBeenCalledWith(1, { en_agrupacion: false }));
+    // Tela y cuero no vienen habilitados: se marcan para indicar el consumo.
+    expect(screen.queryByLabelText('Tela de Reclino')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Cuero de Reclino')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Reclino lleva tela'));
+    const tela = screen.getByLabelText('Tela de Reclino');
+    fireEvent.change(tela, { target: { value: '1,5' } });
+    fireEvent.blur(tela);
+    await waitFor(() => expect(servicio.updateCargo).toHaveBeenCalledWith(1, { metraje_tela: 1.5 }));
+    const maximo = screen.getByLabelText('Máximo de unidades de Reclino');
+    fireEvent.change(maximo, { target: { value: '3' } });
+    fireEvent.blur(maximo);
+    await waitFor(() => expect(servicio.updateCargo).toHaveBeenCalledWith(1, { cantidad_maxima: 3 }));
+    // El transporte solo va en pesos, sin tela ni máximo de unidades.
+    expect(screen.queryByLabelText('Tipo de valor de Transporte')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Transporte lleva tela')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Máximo de unidades de Transporte')).not.toBeInTheDocument();
+  });
+
+  it('un cargo en % muestra su porcentaje y acepta negativos', async () => {
+    servicio.updateCargo.mockResolvedValue({});
+    montar([cargo(1, 'Descuento tela', { modo_valor: 'porcentaje', valor: '15.00' })]);
+    const pct = screen.getByLabelText('Porcentaje de Descuento tela');
+    expect(pct).toHaveValue('15');
+    fireEvent.change(pct, { target: { value: '-5' } });
+    fireEvent.blur(pct);
+    await waitFor(() => expect(servicio.updateCargo).toHaveBeenCalledWith(1, { valor: -5 }));
+  });
+
+  it('un cargo con tela la muestra marcada y al desmarcarla quita el consumo', async () => {
+    servicio.updateCargo.mockResolvedValue({});
+    montar([cargo(1, 'Faldón', { metraje_tela: '1.50', decimetraje_cuero: null })]);
+    expect(screen.getByLabelText('Faldón lleva tela')).toBeChecked();
+    expect(screen.getByLabelText('Tela de Faldón')).toHaveValue('1,5');
+    expect(screen.getByLabelText('Faldón lleva cuero')).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText('Faldón lleva tela'));
+    await waitFor(() => expect(servicio.updateCargo).toHaveBeenCalledWith(1, { metraje_tela: null }));
+    expect(screen.queryByLabelText('Tela de Faldón')).not.toBeInTheDocument();
+  });
 });

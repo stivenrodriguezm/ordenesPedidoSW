@@ -926,16 +926,31 @@ function VarianteEditor({ variante, linea, lineasGrupo, grupos, multiplicadores,
                 <span className="lp-multiplicador-resultado">×{Number(variante.multiplicador_efectivo).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}</span>
               </div>
 
-              <div className="lp-variante-section">
-                <p className="lp-section-label">Cargos <small>Obligatorio va en el precio · opcional habilitado aparece ya seleccionado al cotizar</small></p>
-                <CargosVariante variante={variante} lineaId={linea.id} notify={notify} />
-              </div>
+              {!variante.componentes?.length && <div className="lp-variante-section lp-variacion-cuero">
+                <label className="lp-section-label" htmlFor={`variacion-cuero-${variante.id}`}>Variación en cuero <small>Cambia el costo al tapizar en cuero, antes del multiplicador{variante.variacion_cuero_tipo === 'porcentaje' ? ' · % sobre costo base + cuero' : ''}</small></label>
+                <div className="lp-variacion-cuero-campos">
+                  <select id={`variacion-cuero-${variante.id}`} className="lp-inline-input lp-inline-select" value={variante.variacion_cuero_tipo || ''}
+                    disabled={updateVarianteMut.isPending} onChange={(e) => updateVarianteMut.mutate({ variacion_cuero_tipo: e.target.value })}>
+                    <option value="">Sin variación</option><option value="pesos">En pesos ($)</option><option value="porcentaje">En porcentaje (%)</option>
+                  </select>
+                  {variante.variacion_cuero_tipo === 'pesos' && <CampoPrecio key="pesos" label="Variación en pesos" valor={variante.variacion_cuero_valor} nullable permiteNegativo placeholder="$0"
+                    onCommit={(variacion_cuero_valor) => updateVarianteMut.mutateAsync({ variacion_cuero_valor })} />}
+                  {variante.variacion_cuero_tipo === 'porcentaje' && <CampoPrecio key="pct" tipo="decimal" label="Variación en porcentaje" valor={variante.variacion_cuero_valor} nullable permiteNegativo
+                    min={-99.99} max={1000} sufijo="%" placeholder="0" onCommit={(variacion_cuero_valor) => updateVarianteMut.mutateAsync({ variacion_cuero_valor })} />}
+                </div>
+              </div>}
 
               <div className="lp-variante-section">
                 <p className="lp-section-label"><FaStickyNote size={10} /> Notas</p>
                 <NotasEditor notas={variante.notas} onChange={(nuevas) => updateVarianteMut.mutate({ notas: nuevas })} />
               </div>
 
+            </div>
+
+            {/* Cargos a todo el ancho del detalle (2026-10-27): en computador cada cargo en una línea. */}
+            <div className="lp-variante-section lp-detalle-cargos">
+              <p className="lp-section-label">Cargos <small>Obligatorio va en el precio · opcional habilitado aparece ya seleccionado al cotizar</small></p>
+              <CargosVariante variante={variante} lineaId={linea.id} notify={notify} />
             </div>
           </div>
         );

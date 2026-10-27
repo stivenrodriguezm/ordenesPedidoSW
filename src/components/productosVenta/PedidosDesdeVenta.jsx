@@ -54,7 +54,7 @@ export function PedirProveedor({ datos, pendientes, ocupado, ejecutar, postSegur
             const g = activos.find(x => x.proveedor === o.proveedor);
             return { tipo: 'op', archivo: `pedido_${o.id}.png`, numero: o.id, proveedor: g.nombre, vendedor: datos.vendedor_nombre,
                 ordenCompra: datos.es_feria_hogar ? `${datos.venta} (Feria del hogar)` : datos.venta, fechaPedido: fechaImagen(hoy), fechaEntrega: fechaImagen(g.fecha),
-                productos: g.productos.filter(p => Number(p.pedir) > 0).map(p => ({ cantidad: p.pedir, referencia: p.referencia_nombre, descripcion: p.texto || '-' })),
+                productos: g.productos.filter(p => Number(p.pedir) > 0).map(p => ({ cantidad: p.pedir, referencia: p.referencia_nombre, subcategoria: p.variante_nombre || '', descripcion: p.texto || '-' })),
                 nota: g.observacion };
         });
         await alCrear(`Pedido${r.data.ordenes.length > 1 ? 's' : ''} creado${r.data.ordenes.length > 1 ? 's' : ''}: OP ${r.data.ordenes.join(', ')}.`, imagenes);

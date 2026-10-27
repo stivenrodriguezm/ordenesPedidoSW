@@ -839,6 +839,7 @@ const OrdenesPage = () => {
                                             </td>
                                             <td>
                                               <span className="product-ref-pill">{p.referencia}</span>
+                                              {p.subcategoria_nombre && <div className="product-subcategoria">{p.subcategoria_nombre}</div>}
                                             </td>
                                             <td className="desc-preview">{p.especificaciones || '—'}</td>
                                           </tr>
@@ -998,7 +999,7 @@ const OrdenesPage = () => {
                           <ul className="mobile-products-list">
                             {Array.isArray(orderDetails) && orderDetails.map((p, i) => (
                               <li key={i}>
-                                <strong>{p.referencia}</strong> (x{p.cantidad})
+                                <strong>{p.referencia}</strong>{p.subcategoria_nombre ? ` · ${p.subcategoria_nombre}` : ''} (x{p.cantidad})
                                 <br />
                                 <small>{p.especificaciones}</small>
                               </li>

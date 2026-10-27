@@ -70,15 +70,18 @@ export default function ReferenciaUnificada({ grupo, renderVariante, renderOpcio
   const detalles = new Map(consultas.filter(q => q.data).map(q => [q.data.referencia, q.data]));
   const consultasPorRef = new Map(conLinea.map((r, i) => [r.id, consultas[i]]));
   const lineasGrupo = conLinea.map(r => detalles.get(r.id)).filter(Boolean);
+  // «Agregar costos» crea solo la ficha de la subcategoría pulsada (varias comparten proveedor).
   const configurar = useMutation({
-    mutationFn: ref => ref.linea ? sincronizarSubcategorias(ref.linea.id) : createLinea({ referencia: ref.id, activo: false }),
-    onSuccess: (data, ref) => {
+    mutationFn: ({ ref, subcategoria }) => ref.linea ? sincronizarSubcategorias(ref.linea.id, subcategoria)
+      : createLinea({ referencia: ref.id, subcategoria, activo: false }),
+    onSuccess: (data, { ref }) => {
       client.setQueryData(['lp-linea', data.id], data);
       client.setQueriesData({ queryKey: ['lp-referencias'] }, prev => prev?.map(r => r.id === ref.id ? { ...r, linea: data } : r));
       actualizarLineaEnCache(client, data.id, () => data);
       onConfigurar(ref.id);
     },
   });
+  const configurandoFila = fila => configurar.isPending && configurar.variables?.subcategoria === fila.id;
   const cambiarProveedor = (fila, valor, nodo) => {
     if (pendientes(nodo.closest('.lp-subcategoria-proveedor'))) {
       notify('Confirma o corrige los campos pendientes antes de cambiar el proveedor.', 'warning'); return;
@@ -109,9 +112,10 @@ export default function ReferenciaUnificada({ grupo, renderVariante, renderOpcio
             {!ref ? <span className="lp-section-hint">Elige el proveedor para ver y editar sus costos.</span>
               : consulta?.isPending ? <span role="status">Cargando costos…</span>
                 : consulta?.isError ? <div role="alert">No se pudieron cargar los costos. <button type="button" onClick={() => consulta.refetch()}>Reintentar</button></div>
-                  : <Button size="sm" variant="secondary" loading={configurar.isPending && configurar.variables?.id === ref.id} onClick={() => configurar.mutate(ref)}>Agregar costos</Button>}
+                  : <Button size="sm" variant="secondary" loading={configurandoFila(fila)} disabled={configurar.isPending && !configurandoFila(fila)}
+                    onClick={() => configurar.mutate({ ref, subcategoria: fila.id })}>Agregar costos</Button>}
           </div>}
-          {configurar.isError && configurar.variables?.id === ref?.id && <p role="alert" className="ds-error-box">{mensajeDeError(configurar.error, 'No se pudo configurar. Conservamos tu selección.')}</p>}
+          {configurar.isError && configurar.variables?.subcategoria === fila.id && <p role="alert" className="ds-error-box">{mensajeDeError(configurar.error, 'No se pudo configurar. Conservamos tu selección.')}</p>}
         </div>;
       }}
       </VariantesOrdenables>

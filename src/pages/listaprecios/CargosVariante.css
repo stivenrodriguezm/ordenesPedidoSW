@@ -13,6 +13,7 @@
 .lpc-fila[data-estado-cargo="obligatorio"] .lpc-estado { border-color: var(--gold-dark, var(--gold-dark)); color: var(--text); font-weight: 600; }
 .lpc-fila .action-btn { padding: 4px; }
 .lpc-fila .lp-captura { min-width: 0; position: relative; }
+.lpc-fila .lpc-valor .lp-captura, .lpc-extra .lp-captura { position: relative; }
 .lpc-fila .lp-captura > label, .lpc-fila .lp-captura-estado:empty { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .lpc-fila .lp-captura-control { display: flex; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
 .lpc-fila .lp-captura .lp-inline-input { width: 100%; min-width: 0; height: 30px; min-height: 30px; margin: 0; border: 0; padding: 4px 8px; background: transparent; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -20,6 +21,22 @@
 .lpc-fijo svg { color: var(--gold-dark); }
 .lpc-fijo__detalle { padding: 2px 8px; border-radius: 999px; background: var(--gold-soft, var(--gold-soft)); color: var(--gold-dark); font-size: 10.5px; font-weight: 600; white-space: nowrap; }
 .lpc-acciones { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* (2026-10-27) Valor en $ o %, y segunda línea: tela/cuero, agrupación y máximo de unidades. */
+.lpc-valor { display: flex; gap: 4px; min-width: 0; }
+.lpc-valor .lp-captura { flex: 1; }
+.lpc-modo { width: 40px; flex: none; height: 30px; padding: 0 4px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; text-align: center; cursor: pointer; }
+.lpc-extra { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 0 2px; }
+.lpc-extra .lp-captura { width: 96px; }
+.lpc-material { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 6px; border: 1px dashed var(--border-strong); border-radius: var(--r-md); }
+.lpc-material.is-activo { border-style: solid; padding-right: 2px; }
+.lpc-material-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+.lpc-material.is-activo .lpc-material-toggle { color: var(--text); font-weight: 600; }
+.lpc-material-toggle input { width: 14px; height: 14px; min-height: 0; margin: 0; accent-color: var(--accent); }
+.lpc-material .lp-captura { width: 84px; }
+.lpc-extra .lpc-maximo { width: 84px; }
+.lpc-extra .lp-captura-sufijo { padding: 0 6px; align-self: center; font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.lpc-agrupacion { height: 30px; padding: 0 22px 0 8px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.lpc-agrupacion:has(option[value="no"]:checked) { color: var(--text-secondary); border-style: dashed; }
 
 @media (max-width: 640px) {
   .lpc-fila { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px; row-gap: 4px; padding: 5px 0; }
@@ -42,4 +59,12 @@
   .lpc-nombre { grid-column: 1 / 3; }
   .lpc-fila > .action-btn { grid-column: 3; grid-row: 1; }
   .lpc .lp-variante-asa { top: 5px; }
+}
+
+/* A todo el ancho (computador): cada cargo en una sola línea — nombre, valor, estado, tela,
+   cuero, agrupación y máximo. En espacios angostos sigue en dos líneas. */
+@container (min-width: 900px) {
+  .lpc-fila { grid-template-columns: minmax(150px, 1fr) 150px 160px minmax(0, max-content) 24px; column-gap: 8px; }
+  .lpc-fila > .lpc-extra { grid-column: 4; grid-row: 1; flex-wrap: nowrap; padding: 0; }
+  .lpc-fila > .action-btn { grid-column: 5; grid-row: 1; }
 }

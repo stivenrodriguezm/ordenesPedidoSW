@@ -354,6 +354,26 @@ describe('Una referencia con proveedor independiente por subcategoría', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('«Agregar costos» crea solo la subcategoría pulsada y solo ella muestra el cargando', async () => {
+    const ficha = lineas[0].variantes[0];
+    lineas[0].variantes = [];
+    let responder;
+    servicio.sincronizarSubcategorias.mockImplementation(() => new Promise(r => { responder = r; }));
+    await montarUnificada();
+    fireEvent.change(screen.getByLabelText('Proveedor de Mesa de 6'), { target: { value: '101' } });
+    fireEvent.change(screen.getByLabelText('Proveedor de Silla'), { target: { value: '101' } });
+    const [mesa, silla] = await screen.findAllByRole('button', { name: 'Agregar costos' });
+    fireEvent.click(mesa);
+    await waitFor(() => expect(servicio.sincronizarSubcategorias).toHaveBeenCalledWith(1, 11));
+    expect(mesa.querySelector('.ds-btn__spinner')).toBeInTheDocument();
+    expect(silla.querySelector('.ds-btn__spinner')).not.toBeInTheDocument();
+    expect(silla).toBeDisabled();
+    lineas[0].variantes = [ficha];
+    await act(async () => responder(structuredClone(lineas[0])));
+    expect(await screen.findByRole('button', { name: 'Publicar Mesa de 6' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agregar costos' })).toBeEnabled();
+  });
+
   it('permite volver a borrador solo la subcategoría elegida', async () => {
     lineas[0].variantes.forEach(v => { v.publicado = true; });
     await montarUnificada();

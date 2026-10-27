@@ -35,7 +35,8 @@ const TelasPage = () => {
     const estadosTelas = [
         { value: 'Pendiente', label: 'Pendiente' },
         { value: 'En fabrica', label: 'En fábrica' },
-        { value: 'En Lottus', label: 'En Lottus' }
+        { value: 'En Lottus', label: 'En Lottus' },
+        { value: 'Anulado', label: 'Anulado' }
     ];
 
     const [hasInitializedProveedores, setHasInitializedProveedores] = useState(false);
@@ -44,7 +45,10 @@ const TelasPage = () => {
     const [showProveedorModal, setShowProveedorModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [createdPedidoId, setCreatedPedidoId] = useState(null);
-    const [editEstadoModal, setEditEstadoModal] = useState({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
+    const EDITAR_ESTADO_CERRADO = { open: false, pedidoId: null, currentEstado: '', newEstado: '', motivo: '', pedido: null, guardando: false };
+    const [editEstadoModal, setEditEstadoModal] = useState(EDITAR_ESTADO_CERRADO);
+    const abrirEditarEstado = pedido => setEditEstadoModal({ ...EDITAR_ESTADO_CERRADO, open: true, pedidoId: pedido.id, currentEstado: pedido.estado, newEstado: pedido.estado, pedido });
+    const cerrarEditarEstado = () => setEditEstadoModal(prev => prev.guardando ? prev : EDITAR_ESTADO_CERRADO);
     const [notification, setNotification] = useState({ message: '', type: '' });
     const showNotification = (message, type) => setNotification({ message, type });
     const previewRef = useRef(null);
@@ -161,24 +165,35 @@ const TelasPage = () => {
 
     // Devuelve true si el select de estado debe estar habilitado
     const canEditEstado = (currentEstado) => {
-        if (!usuario) return false;
+        if (!usuario || currentEstado === 'Anulado') return false;
         const role = usuario.role?.toLowerCase();
         if (role === 'administrador') return true;
         // auxiliar y vendedor: solo si NO está en 'En fabrica'
         return currentEstado !== 'En fabrica';
     };
 
+    const anulando = editEstadoModal.newEstado === 'Anulado' && editEstadoModal.currentEstado !== 'Anulado';
     const handleSaveEstado = async () => {
-        if (!editEstadoModal.newEstado) return;
+        if (!editEstadoModal.newEstado || editEstadoModal.guardando) return;
+        const motivo = editEstadoModal.motivo.trim();
+        if (anulando && !motivo) {
+            showNotification('Escribe el motivo de la anulación.', 'error');
+            return;
+        }
+        setEditEstadoModal(prev => ({ ...prev, guardando: true }));
         try {
-            const response = await API.patch(`pedidos-telas/${editEstadoModal.pedidoId}/`, { estado: editEstadoModal.newEstado });
+            const datos = anulando ? { estado: 'Anulado', motivo_anulacion: motivo } : { estado: editEstadoModal.newEstado };
+            const response = await API.patch(`pedidos-telas/${editEstadoModal.pedidoId}/`, datos);
             // Update local list
             setPedidos(prev => prev.map(p =>
-                p.id === editEstadoModal.pedidoId ? { ...p, estado: response.data.estado } : p
+                p.id === editEstadoModal.pedidoId ? { ...p, ...response.data } : p
             ));
-            setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' });
+            setEditEstadoModal(EDITAR_ESTADO_CERRADO);
+            if (anulando) showNotification(`Pedido de tela PT #${response.data.id} anulado.`, 'success');
         } catch (error) {
             console.error('Error actualizando estado:', error);
+            // Se conserva lo escrito (motivo incluido) para corregir y reintentar.
+            setEditEstadoModal(prev => ({ ...prev, guardando: false }));
             showNotification(error.response?.data?.error || 'Error al actualizar el estado.', 'error');
         }
     };
@@ -525,12 +540,7 @@ const TelasPage = () => {
                                                                          <button
                                                                              type="button"
                                                                              className="btn-edit-estado-badge"
-                                                                             onClick={() => setEditEstadoModal({
-                                                                                 open: true,
-                                                                                 pedidoId: pedido.id,
-                                                                                 currentEstado: pedido.estado,
-                                                                                 newEstado: pedido.estado
-                                                                             })}
+                                                                             onClick={() => abrirEditarEstado(pedido)}
                                                                              title="Clic para editar estado del pedido de tela"
                                                                          >
                                                                              <span className={`status-badge ${pedido.estado?.toLowerCase().replace(/ /g, '-')}`}>
@@ -570,6 +580,13 @@ const TelasPage = () => {
                                                                  <div className="tela-info-item" style={{ marginBottom: '1rem' }}>
                                                                      <span className="tela-info-label">Observación</span>
                                                                      <span className="tela-info-value" style={{ whiteSpace: 'pre-line' }}>{pedido.observacion}</span>
+                                                                 </div>
+                                                             )}
+
+                                                             {pedido.estado === 'Anulado' && (
+                                                                 <div className="tela-info-item tela-anulacion" style={{ marginBottom: '1rem' }}>
+                                                                     <span className="tela-info-label">Anulado{pedido.anulado_por_nombre ? ` por ${pedido.anulado_por_nombre}` : ''}{pedido.anulado_en ? ` el ${new Date(pedido.anulado_en).toLocaleDateString('es-CO')}` : ''}</span>
+                                                                     <span className="tela-info-value" style={{ whiteSpace: 'pre-line' }}>{pedido.motivo_anulacion || 'Sin motivo registrado.'}</span>
                                                                  </div>
                                                              )}
 
@@ -676,12 +693,7 @@ const TelasPage = () => {
                                                 size="sm" 
                                                 icon={FaEdit}
                                                 style={{ width: '100%', justifyContent: 'center', marginBottom: '1rem' }}
-                                                onClick={() => setEditEstadoModal({
-                                                    open: true,
-                                                    pedidoId: pedido.id,
-                                                    currentEstado: pedido.estado,
-                                                    newEstado: pedido.estado
-                                                })}
+                                                onClick={() => abrirEditarEstado(pedido)}
                                             >
                                                 Editar Estado
                                             </Button>
@@ -724,23 +736,25 @@ const TelasPage = () => {
             {/* Modal Editar Estado de Pedido Tela */}
             <Modal
                 open={editEstadoModal.open}
-                onClose={() => setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}
+                onClose={cerrarEditarEstado}
                 title="Editar Estado de Tela"
                 size="sm"
                 footer={
                     <>
                         <Button 
                             variant="secondary" 
-                            onClick={() => setEditEstadoModal({ open: false, pedidoId: null, currentEstado: '', newEstado: '' })}
+                            onClick={cerrarEditarEstado}
+                            disabled={editEstadoModal.guardando}
                         >
                             Cancelar
                         </Button>
                         <Button 
-                            variant="primary" 
+                            variant={anulando ? 'danger' : 'primary'} 
                             onClick={handleSaveEstado} 
-                            disabled={!canEditEstado(editEstadoModal.currentEstado)}
+                            loading={editEstadoModal.guardando}
+                            disabled={!canEditEstado(editEstadoModal.currentEstado) || (anulando && !editEstadoModal.motivo.trim())}
                         >
-                            Guardar Cambios
+                            {anulando ? 'Anular pedido' : 'Guardar Cambios'}
                         </Button>
                     </>
                 }
@@ -753,13 +767,37 @@ const TelasPage = () => {
                         className="ds-select"
                         value={editEstadoModal.newEstado}
                         onChange={(e) => setEditEstadoModal(prev => ({ ...prev, newEstado: e.target.value }))}
-                        disabled={!canEditEstado(editEstadoModal.currentEstado)}
+                        disabled={!canEditEstado(editEstadoModal.currentEstado) || editEstadoModal.guardando}
+                        aria-label="Nuevo estado del pedido de tela"
                     >
                         <option value="Pendiente">Pendiente</option>
                         <option value="En fabrica">En fabrica</option>
                         <option value="En Lottus">En Lottus</option>
+                        {(hasPermission('ANULAR_PEDIDO_TELA') || editEstadoModal.currentEstado === 'Anulado') && <option value="Anulado">Anulado</option>}
                     </select>
-                    {!canEditEstado(editEstadoModal.currentEstado) && (
+                    {anulando && (
+                        <div className="tela-anular" style={{ marginTop: '0.75rem' }}>
+                            <p className="ds-field__hint" style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>
+                                El pedido no se borra: queda anulado con su motivo y la tela de sus productos vuelve a quedar por pedir. No se puede deshacer.
+                            </p>
+                            <label className="ds-label" htmlFor="motivo-anulacion-tela">Motivo de la anulación</label>
+                            <textarea
+                                id="motivo-anulacion-tela"
+                                className="ds-textarea"
+                                rows={3}
+                                maxLength={1000}
+                                value={editEstadoModal.motivo}
+                                onChange={(e) => setEditEstadoModal(prev => ({ ...prev, motivo: e.target.value }))}
+                                disabled={editEstadoModal.guardando}
+                                placeholder="Ej.: se pidió con el color equivocado"
+                            />
+                        </div>
+                    )}
+                    {editEstadoModal.currentEstado === 'Anulado' ? (
+                        <p className="ds-field__hint" style={{ marginTop: '0.5rem' }}>
+                            Pedido anulado{editEstadoModal.pedido?.anulado_por_nombre ? ` por ${editEstadoModal.pedido.anulado_por_nombre}` : ''}: {editEstadoModal.pedido?.motivo_anulacion || 'sin motivo registrado'}. Su estado ya no cambia.
+                        </p>
+                    ) : !canEditEstado(editEstadoModal.currentEstado) && (
                         <p className="ds-field__hint" style={{ color: 'var(--danger, var(--danger))', marginTop: '0.5rem' }}>
                             🔒 No se puede editar un pedido en estado "En fabrica".
                         </p>

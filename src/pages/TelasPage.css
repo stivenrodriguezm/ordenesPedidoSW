@@ -349,3 +349,10 @@
   color: var(--accent-texto) !important;
   border: 1px solid var(--accent-line) !important;
 }
+
+.status-badge.anulado {
+  background-color: var(--danger-soft) !important;
+  color: var(--danger) !important;
+  border: 1px solid var(--danger-line, var(--danger-soft)) !important;
+  text-decoration: line-through;
+}

@@ -32,7 +32,7 @@ export default function CampoPrecio({ valor, onCommit, label, tipo = 'moneda', s
     if (!tocado.current || estado === 'guardando') return;
     let nuevo;
     try {
-      nuevo = tipo === 'moneda' ? nullable && texto === '' ? null : leerPesos(texto, permiteNegativo) : tipo === 'texto' ? texto.trim() : leerDecimal(texto, { nullable, min, max });
+      nuevo = tipo === 'moneda' ? nullable && texto === '' ? null : leerPesos(texto, permiteNegativo) : tipo === 'texto' ? texto.trim() : leerDecimal(texto, { nullable, min, max, permiteNegativo });
       if (tipo === 'texto' && (!nuevo || nuevo.length > (max || 150))) throw new Error(`Escribe un nombre de 1 a ${max || 150} caracteres.`);
     } catch (e) { setError(e.message); setEstado('error'); return; }
     if (nuevo === (vigente.current == null ? null : tipo === 'texto' ? vigente.current : Number(vigente.current))) {
@@ -60,12 +60,15 @@ export default function CampoPrecio({ valor, onCommit, label, tipo = 'moneda', s
     <div className="lp-captura-control">
       <input id={id} ref={entrada} type="text" inputMode={tipo === 'moneda' ? 'numeric' : tipo === 'texto' ? undefined : 'decimal'}
         value={texto} disabled={disabled || estado === 'guardando'} aria-label={label} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined}
-        placeholder={placeholder} autoComplete="off" spellCheck={false} className="lp-inline-input"
+        placeholder={placeholder ?? (tipo === 'moneda' ? '$0' : undefined)} autoComplete="off" spellCheck={false} className="lp-inline-input"
         onClick={(e) => e.stopPropagation()} onChange={(e) => {
           if (tipo === 'moneda') cursorDigitos.current = e.target.value.slice(0, e.target.selectionStart).replace(/\D/g, '').length;
           cambiar(e.target.value, e.nativeEvent.inputType, e.nativeEvent.data);
         }}
-        onBlur={guardar} onPaste={tipo === 'moneda' ? (e) => {
+        // Un campo en cero se vacía al entrar (2026-10-27): así lo que se escribe no queda pegado al
+        // «0» ($0 → $1.500.000 en vez de $15.000.000). Si se sale sin escribir, vuelve el cero.
+        onFocus={() => { if (!tocado.current && tipo !== 'texto' && vigente.current != null && Number(vigente.current) === 0) setTexto(''); }}
+        onBlur={() => { if (!tocado.current) setTexto(formato(vigente.current)); guardar(); }} onPaste={tipo === 'moneda' ? (e) => {
           e.preventDefault(); const pegado = e.clipboardData.getData('text');
           try { const nuevo = leerPesos(pegado, permiteNegativo); cambiar(String(nuevo)); }
           catch (err) { tocado.current = true; setTexto(pegado); setEstado('error'); setError(err.message); }

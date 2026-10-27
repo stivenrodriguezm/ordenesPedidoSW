@@ -160,6 +160,34 @@ export function lineasProductos(rem) {
     return filas;
 }
 
+/**
+ * Productos iguales en una sola fila con su cantidad (2026-10-27): 6 sillas = «6 · Silla», no 6
+ * renglones. Iguales = misma categoría, subcategoría, referencia, descripción y tapizado, dentro
+ * del mismo juego. Las unidades de inventario conservan sus códigos en `codigos`.
+ */
+export function agruparFilas(filas) {
+    const salida = [];
+    let vistas = new Map();
+    filas.forEach(f => {
+        if (f.tipo === 'grupo') {
+            salida.push(f);
+            vistas = new Map();
+            return;
+        }
+        const clave = [f.anidado ? 'juego' : 'suelto', f.categoria, f.subcategoria, f.referencia, f.descripcion, f.tela].join('\u0001');
+        const previa = vistas.get(clave);
+        if (previa) {
+            previa.cantidad += Number(f.cantidad) || 1;
+            if (f.codigo) previa.codigos.push(f.codigo);
+            return;
+        }
+        const fila = { ...f, cantidad: Number(f.cantidad) || 1, codigos: f.codigo ? [f.codigo] : [] };
+        vistas.set(clave, fila);
+        salida.push(fila);
+    });
+    return salida;
+}
+
 /** Nombre del transportador asignado (usuario interno o externo), '' si no hay. */
 export const nombreTransportador = rem => rem?.transportador_usuario_nombre || rem?.transportador || '';
 

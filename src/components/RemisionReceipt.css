@@ -394,6 +394,7 @@
 
 /* Conserva la segunda columna y su ancho; solo crece el espacio para firmar. */
 .rr-firma--recibido { grid-column: 2; }
+.rr-firma--despacho { grid-column: 1; grid-row: 1; }
 .rr-firma-line.rr-firma-line--firma { margin-top: 3.8rem; }
 
 .rr-firma-title {

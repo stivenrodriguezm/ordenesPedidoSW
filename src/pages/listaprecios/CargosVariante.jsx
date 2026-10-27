@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FaCouch, FaPlus, FaStar, FaTrash, FaTruck } from 'react-icons/fa';
 import { Button } from '../../components/ui';
@@ -19,7 +19,34 @@ export const ESTADOS_CARGO = [
 // «Transporte» (2026-10-21): uno por envío. El servidor lo crea con $120.000; cada transporte
 // lleva hasta «unidades por transporte» del producto y en un conjunto se cobra uno solo.
 const esTransporte = (c) => c.tipo === 'transporte';
+// (2026-10-27) Un cargo normal (sin tipo) puede ir en % del costo base y llevar tela o cuero,
+// cobrados con el grupo que se elige para el producto. Transporte y cojines, solo en pesos.
+const esNormal = (c) => !c.tipo;
+const admiteUnidades = (c) => c.opcional && c.tipo !== 'transporte' && c.tipo !== 'decorativos';
 export const estadoCargo = (c) => (!c.opcional ? 'obligatorio' : c.preseleccionado ? 'habilitado' : 'deshabilitado');
+
+/** Tela o cuero de un cargo (2026-10-27): no todos llevan; se marca para habilitarlo y al
+ *  desmarcarlo se quita el consumo. Se cobra con el grupo que se elige para el producto. */
+function MaterialCargo({ cargo, material, onCommit }) {
+  const campo = material === 'cuero' ? 'decimetraje_cuero' : 'metraje_tela';
+  const valor = cargo[campo];
+  const nombre = material === 'cuero' ? 'Cuero' : 'Tela';
+  const [activo, setActivo] = useState(valor != null);
+  const [guardando, setGuardando] = useState(false);
+  useEffect(() => { if (valor != null) setActivo(true); }, [valor]);
+  const cambiar = async (marcar) => {
+    setActivo(marcar);
+    if (marcar || valor == null) return;
+    setGuardando(true);
+    try { await onCommit(null); } catch { setActivo(true); } finally { setGuardando(false); }
+  };
+  return <div className={`lpc-material${activo ? ' is-activo' : ''}`}>
+    <label className="lpc-material-toggle"><input type="checkbox" checked={activo} disabled={guardando}
+      aria-label={`${cargo.descripcion} lleva ${nombre.toLowerCase()}`} onChange={(e) => cambiar(e.target.checked)} /> {nombre}</label>
+    {activo && <CampoPrecio tipo="decimal" label={`${nombre} de ${cargo.descripcion}`} valor={valor} nullable min={0.01} max={999.99}
+      sufijo={material === 'cuero' ? 'dm' : 'm'} placeholder="Cant." className="lpc-consumo" onCommit={onCommit} />}
+  </div>;
+}
 
 /** Cargos de un producto. Son uno solo: los mismos se ven y se editan desde el producto y
  *  desde cada agrupación donde es pieza; todo cambio se guarda en el producto. */
@@ -57,12 +84,34 @@ export default function CargosVariante({ variante, notify, lineaId = variante.li
             /* Enter confirma el nombre sin enviar el formulario de la agrupación que lo contenga. */
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
             onBlur={(e) => { const v = e.target.value.trim(); if (!v) e.target.value = c.descripcion === 'Nuevo cargo' ? '' : c.descripcion; else if (v !== c.descripcion) actualizar.mutate({ id: c.id, descripcion: v }); }} />
-          <CampoPrecio label={`Valor de ${c.descripcion}`} valor={c.valor} permiteNegativo onCommit={(valor) => actualizar.mutateAsync({ id: c.id, valor })} />
+          <div className="lpc-valor">
+            {esNormal(c) && <select className="lpc-modo" aria-label={`Tipo de valor de ${c.descripcion}`} value={c.modo_valor || 'pesos'} disabled={actualizar.isPending}
+              title="En pesos o en % del costo base del producto" onChange={(e) => actualizar.mutate({ id: c.id, modo_valor: e.target.value })}>
+              <option value="pesos">$</option><option value="porcentaje">%</option>
+            </select>}
+            {c.modo_valor === 'porcentaje'
+              ? <CampoPrecio key="pct" tipo="decimal" label={`Porcentaje de ${c.descripcion}`} valor={c.valor} min={-99.99} max={1000} permiteNegativo sufijo="%"
+                  onCommit={(valor) => actualizar.mutateAsync({ id: c.id, valor })} />
+              : <CampoPrecio key="cop" label={`Valor de ${c.descripcion}`} valor={c.valor} permiteNegativo onCommit={(valor) => actualizar.mutateAsync({ id: c.id, valor })} />}
+          </div>
           <select className="lpc-estado" aria-label={`Estado de ${c.descripcion}`} value={estadoCargo(c)} disabled={actualizar.isPending}
             onChange={(e) => actualizar.mutate({ id: c.id, ...ESTADOS_CARGO.find((o) => o.valor === e.target.value).datos })}>
             {ESTADOS_CARGO.map((o) => <option key={o.valor} value={o.valor}>{o.texto}</option>)}
           </select>
           <button type="button" className="action-btn" aria-label={`Quitar ${c.descripcion}`} onClick={() => quitar.mutate(c.id)}><FaTrash size={11} /></button>
+          <div className="lpc-extra" role="group" aria-label={`Más opciones de ${c.descripcion}`}>
+            {esNormal(c) && <>
+              <MaterialCargo cargo={c} material="tela" onCommit={(metraje_tela) => actualizar.mutateAsync({ id: c.id, metraje_tela })} />
+              <MaterialCargo cargo={c} material="cuero" onCommit={(decimetraje_cuero) => actualizar.mutateAsync({ id: c.id, decimetraje_cuero })} />
+            </>}
+            <select className="lpc-agrupacion" aria-label={`${c.descripcion} en agrupaciones`} value={c.en_agrupacion === false ? 'no' : 'si'} disabled={actualizar.isPending}
+              title="Si el producto es pieza de una agrupación, ¿este cargo aparece y se cobra allí?"
+              onChange={(e) => actualizar.mutate({ id: c.id, en_agrupacion: e.target.value === 'si' })}>
+              <option value="si">Se muestra en agrupación</option><option value="no">No se muestra en agrupación</option>
+            </select>
+            {admiteUnidades(c) && <CampoPrecio tipo="decimal" label={`Máximo de unidades de ${c.descripcion}`} valor={c.cantidad_maxima} nullable min={1} max={99}
+              sufijo="máx." placeholder="9" className="lpc-maximo" onCommit={(cantidad_maxima) => actualizar.mutateAsync({ id: c.id, cantidad_maxima })} />}
+          </div>
         </div>
       )}
       </VariantesOrdenables>

@@ -14,7 +14,7 @@ import { formatCOP } from '../utils/formatCOP';
 import { getTodayStr, parseLocalDate } from '../utils/dates';
 import {
     ESTADOS_REMISION, ESTADOS_ACTIVOS, metodoPagoLabel, fmtFranja, fmtFranjaCorta, fmtFechaLarga, fmtFechaCorta,
-    fechaRelativa, totalUnidades, nombreTransportador, whatsappNumero, lineasProductos,
+    fechaRelativa, totalUnidades, nombreTransportador, whatsappNumero, lineasProductos, agruparFilas,
 } from '../utils/remisiones';
 import { AppContext, usePermissions } from '../AppContext';
 import { PageHeader, Button, Badge, Modal, EmptyState, ErrorState } from '../components/ui';
@@ -124,7 +124,7 @@ function RemisionDetalle({ rem, perm, esTransportador, onPrint, onEdit, onAccion
     const edicion = modoEdicion(rem, perm);
     const eventos = [...(rem.eventos || [])].reverse();
 
-    const productos = lineasProductos(rem);
+    const productos = agruparFilas(lineasProductos(rem));
 
     return (
         <div className="rl-detail">
@@ -196,7 +196,7 @@ function RemisionDetalle({ rem, perm, esTransportador, onPrint, onEdit, onAccion
                                         {p.descripcion && <span className="rl-products__detail">{p.descripcion}</span>}
                                         {p.tela && <span className="rl-products__detail">Tapizado: {p.tela}</span>}
                                     </span>
-                                    {p.codigo && <span className="rl-code">{p.codigo}</span>}
+                                    {p.codigos.length > 0 && <span className="rl-code">{p.codigos.join(', ')}</span>}
                                 </li>
                             )))}
                         </ul>

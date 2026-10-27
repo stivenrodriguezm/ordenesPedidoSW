@@ -18,10 +18,10 @@ export function leerPesos(texto, permiteNegativo = false) {
   return numero;
 }
 
-export function leerDecimal(texto, { nullable = false, max = 999999.99, min = 0.01 } = {}) {
+export function leerDecimal(texto, { nullable = false, max = 999999.99, min = 0.01, permiteNegativo = false } = {}) {
   const limpio = String(texto).trim();
   if (!limpio && nullable) return null;
-  if (!/^\d+(?:[.,]\d{1,2})?$/.test(limpio)) throw new Error('Usa un número con máximo dos decimales.');
+  if (!(permiteNegativo ? /^-?\d+(?:[.,]\d{1,2})?$/ : /^\d+(?:[.,]\d{1,2})?$/).test(limpio)) throw new Error('Usa un número con máximo dos decimales.');
   const numero = Number(limpio.replace(',', '.'));
   if (!Number.isFinite(numero) || numero < min || numero > max) throw new Error(`El valor debe estar entre ${min} y ${max}.`);
   return numero;

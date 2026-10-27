@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatCOP } from '../utils/formatCOP';
 import {
-    ESTADOS_REMISION, fmtFechaLarga, fmtFranja, lineasProductos, metodoPagoLabel, numeroRemision,
+    ESTADOS_REMISION, agruparFilas, fmtFechaLarga, fmtFranja, lineasProductos, metodoPagoLabel, numeroRemision,
     nombreTransportador, totalUnidades,
 } from '../utils/remisiones';
 
@@ -16,7 +16,7 @@ import {
 const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
     if (!remision) return null;
     const rem = remision;
-    const filas = lineasProductos(rem);
+    const filas = agruparFilas(lineasProductos(rem));
     const unidades = totalUnidades(rem);
     const ventas = rem.ventas?.length ? rem.ventas : (rem.orden_asociada ? [rem.orden_asociada] : []);
     const telefonos = [rem.cliente_telefono1, rem.cliente_telefono2].filter(Boolean).join(' / ');
@@ -106,7 +106,7 @@ const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
                                 <td className="rr-col-sub">{f.subcategoria || '—'}</td>
                                 <td className="rr-col-ref">
                                     <div className="rr-prod-name">{f.referencia || '—'}</div>
-                                    {f.codigo && <div className="rr-prod-code">{f.codigo}</div>}
+                                    {f.codigos.length > 0 && <div className="rr-prod-code">{f.codigos.join(', ')}</div>}
                                 </td>
                                 <td className="rr-col-desc">
                                     {f.descripcion || (f.tela ? '' : '—')}
@@ -143,6 +143,15 @@ const RemisionReceipt = React.forwardRef(({ remision }, ref) => {
             </div>
 
             <div className="rr-firmas">
+                {/* Se llena a mano con esfero al despachar (2026-10-27). */}
+                <div className="rr-firma rr-firma--despacho">
+                    <div className="rr-firma-title">Despacho</div>
+                    <div className="rr-firma-line">Nombre de quien despacha</div>
+                    <div className="rr-firma-line rr-firma-line--firma">
+                        Firma del transportador{nombreTransportador(rem) ? ` · ${nombreTransportador(rem)}` : ''}
+                    </div>
+                    <div className="rr-firma-line">Fecha y hora de salida</div>
+                </div>
                 <div className="rr-firma rr-firma--recibido">
                     <div className="rr-firma-title">Recibí a satisfacción</div>
                     <div className="rr-firma-line">Nombre y documento</div>

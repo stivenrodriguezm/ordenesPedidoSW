@@ -6,6 +6,23 @@ import CampoPrecio, { ConsumoMaterial } from './CampoPrecio';
 import { leerPesos } from '../../utils/capturaPrecios';
 
 describe('Captura exacta en COP', () => {
+  it('un campo en $0 se vacía al entrar: lo escrito no queda pegado al cero, y si no se escribe vuelve el $0', async () => {
+    const guardar = vi.fn().mockResolvedValue({});
+    const user = userEvent.setup();
+    render(<CampoPrecio valor="0.00" onCommit={guardar} label="Costo" />);
+    const input = screen.getByLabelText('Costo');
+    expect(input).toHaveValue('$0');
+    await user.click(input);
+    expect(input).toHaveValue('');
+    await user.tab();
+    expect(input).toHaveValue('$0');
+    expect(guardar).not.toHaveBeenCalled();
+    await user.click(input);
+    await user.type(input, '150000');
+    expect(input).toHaveValue('$150.000');
+    await user.tab();
+    await waitFor(() => expect(guardar).toHaveBeenCalledWith(150000));
+  });
   it.each(['3000000', '3000000.00', '$3.000.000', '3.000.000,00'])('interpreta %s como tres millones', (texto) => {
     expect(leerPesos(texto)).toBe(3000000);
   });

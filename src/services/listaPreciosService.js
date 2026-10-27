@@ -291,7 +291,8 @@ export const getBibliotecaEspeciales = async () => {
   return response.data;
 };
 
-export const sincronizarSubcategorias = (id) => API.post(`/listaprecios/lineas/${id}/sincronizar-subcategorias/`).then(r => r.data);
+// Con `subcategoria` crea solo esa ficha de costos; sin ella, las de todas las subcategorías.
+export const sincronizarSubcategorias = (id, subcategoria) => API.post(`/listaprecios/lineas/${id}/sincronizar-subcategorias/`, subcategoria ? { subcategoria } : undefined).then(r => r.data);
 
 export const guardarDisposicionSubcategorias = (referencia, datos) => API.post(`/listaprecios/referencias/${referencia}/disposicion/`, datos).then(r => r.data);
 export const renombrarSubcategoria = (subcategoria, nombre) => API.post(`/listaprecios/subcategorias/${subcategoria}/renombrar/`, { nombre }).then(r => r.data);

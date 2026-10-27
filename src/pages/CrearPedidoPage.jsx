@@ -52,7 +52,7 @@ function CrearPedidoPage() {
     vendedor: user?.id || "",
     fecha: "",
     nota: "",
-    productos: [{ cantidad: 1, referencia: "", descripcion: "" }],
+    productos: [{ cantidad: 1, referencia: "", subcategoria: "", descripcion: "" }],
     ordenCompra: initialVentaId,
   });
 
@@ -100,7 +100,7 @@ function CrearPedidoPage() {
       vendedor: user?.id || "",
       fecha: "",
       nota: "",
-      productos: [{ cantidad: 1, referencia: "", descripcion: "" }],
+      productos: [{ cantidad: 1, referencia: "", subcategoria: "", descripcion: "" }],
       ordenCompra: initialVentaId,
     });
   };
@@ -139,13 +139,24 @@ function CrearPedidoPage() {
   const handleProveedorChange = (e) => {
     const id = e.target.value;
     setProveedorId(id);
-    setPedido({ ...pedido, proveedor: id, productos: [{ cantidad: 1, referencia: "", descripcion: "" }] });
+    setPedido({ ...pedido, proveedor: id, productos: [{ cantidad: 1, referencia: "", subcategoria: "", descripcion: "" }] });
+  };
+
+  // Subcategorías de una referencia (2026-10-27): el pedido se basa en referencia y subcategoría.
+  const subcategoriasDe = (refId) => {
+    const ref = referencias.find((r) => String(r.id) === String(refId));
+    return (ref?.subcategorias || []).map((id, i) => ({ id, nombre: ref.subcategorias_nombres?.[i] || `Subcategoría ${id}` }));
   };
 
   const handleChange = (e, index, field) => {
     if (field) {
       const updatedProductos = [...pedido.productos];
       updatedProductos[index][field] = e.target.value;
+      if (field === "referencia") {
+        // Otra referencia, otras subcategorías: con una sola, queda elegida.
+        const opciones = subcategoriasDe(e.target.value);
+        updatedProductos[index].subcategoria = opciones.length === 1 ? String(opciones[0].id) : "";
+      }
       setPedido({ ...pedido, productos: updatedProductos });
     } else {
       setPedido({ ...pedido, [e.target.name]: e.target.value });
@@ -155,7 +166,7 @@ function CrearPedidoPage() {
   const handleAddProduct = () => {
     setPedido({
       ...pedido,
-      productos: [...pedido.productos, { cantidad: 1, referencia: "", descripcion: "" }],
+      productos: [...pedido.productos, { cantidad: 1, referencia: "", subcategoria: "", descripcion: "" }],
     });
   };
 
@@ -190,6 +201,10 @@ function CrearPedidoPage() {
       showError('Por favor seleccione una referencia para cada producto.');
       return;
     }
+    if (pedido.productos.some(p => !p.subcategoria && subcategoriasDe(p.referencia).length > 0)) {
+      showError('Por favor seleccione la subcategoría de cada producto.');
+      return;
+    }
 
     createOrderMutation.mutate({
       proveedor: parseInt(pedido.proveedor),
@@ -199,6 +214,7 @@ function CrearPedidoPage() {
       detalles: pedido.productos.map((producto) => ({
         cantidad: parseInt(producto.cantidad) || 1,
         referencia: parseInt(producto.referencia),
+        subcategoria: producto.subcategoria ? parseInt(producto.subcategoria) : null,
         especificaciones: producto.descripcion || '-',
       })),
       tela: llevaTela ? "Por pedir" : "Sin tela",
@@ -389,7 +405,7 @@ function CrearPedidoPage() {
               <div className="products-table-header">
                 <span className="th-badge">#</span>
                 <span className="th-cant">Cant.</span>
-                <span className="th-ref">Referencia</span>
+                <span className="th-ref">Referencia / Subcategoría</span>
                 <span className="th-desc">Descripción / Especificaciones</span>
                 <span className="th-action"></span>
               </div>
@@ -398,10 +414,20 @@ function CrearPedidoPage() {
                   <div key={index} className="product-compact-row">
                     <span className="product-row-badge">#{index + 1}</span>
                     <input type="number" value={producto.cantidad} onChange={(e) => handleChange(e, index, "cantidad")} required placeholder="1" className="input-cantidad-v3" min="1" />
-                    <select value={producto.referencia} onChange={(e) => handleChange(e, index, "referencia")} required className="select-referencia-v3" disabled={referenciasLoading || !proveedorId}>
-                      <option value="">{referenciasLoading ? "Cargando..." : "Seleccionar referencia"}</option>
-                      {referencias.map((ref) => <option key={ref.id} value={ref.id}>{ref.nombre}</option>)}
-                    </select>
+                    <div className="ref-sub-v3">
+                      <select value={producto.referencia} onChange={(e) => handleChange(e, index, "referencia")} required className="select-referencia-v3" disabled={referenciasLoading || !proveedorId}
+                        aria-label={`Referencia del producto ${index + 1}`}>
+                        <option value="">{referenciasLoading ? "Cargando..." : "Seleccionar referencia"}</option>
+                        {referencias.map((ref) => <option key={ref.id} value={ref.id}>{ref.nombre}</option>)}
+                      </select>
+                      {subcategoriasDe(producto.referencia).length > 0 && (
+                        <select value={producto.subcategoria} onChange={(e) => handleChange(e, index, "subcategoria")} required className="select-referencia-v3 select-subcategoria-v3"
+                          aria-label={`Subcategoría del producto ${index + 1}`}>
+                          <option value="">Seleccionar subcategoría</option>
+                          {subcategoriasDe(producto.referencia).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                        </select>
+                      )}
+                    </div>
                     <textarea value={producto.descripcion} onChange={(e) => handleChange(e, index, "descripcion")} placeholder="Detalles de la referencia (opcional)..." className="textarea-descripcion-v3" rows="1" />
                     {pedido.productos.length > 1 ? (
                       <button type="button" className="btn-remove-row-v3" onClick={() => handleRemoveProduct(index)} title="Eliminar producto">
@@ -447,6 +473,7 @@ function CrearPedidoPage() {
             referencia: referencias.length > 0 && producto.referencia
               ? referencias.find((r) => String(r.id) === String(producto.referencia))?.nombre || "No seleccionado"
               : "Cargando...",
+            subcategoria: subcategoriasDe(producto.referencia).find((s) => String(s.id) === String(producto.subcategoria))?.nombre || "",
             descripcion: producto.descripcion,
           }))}
           nota={pedido.nota}

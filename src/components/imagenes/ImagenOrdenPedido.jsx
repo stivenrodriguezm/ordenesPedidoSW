@@ -5,11 +5,13 @@ import './ImagenOrdenPedido.css';
 /**
  * Imagen de la orden de pedido que se descarga y se envía al proveedor. La misma
  * plantilla en Crear pedido (/ordenes/nuevo) y en Ventas (una por orden generada).
- * productos: [{ cantidad, referencia, descripcion }]
+ * productos: [{ cantidad, referencia, subcategoria?, descripcion }]
  */
 const ImagenOrdenPedido = forwardRef(function ImagenOrdenPedido(
     { numero, proveedor, vendedor, ordenCompra, fechaPedido, fechaEntrega, productos = [], nota }, ref
 ) {
+    // Subcategoría (2026-10-27): columna propia cuando algún producto la trae.
+    const conSubcategoria = productos.some(p => p.subcategoria);
     return (
         <div className="preview-container" ref={ref}>
             <div className="preview-header">
@@ -38,6 +40,7 @@ const ImagenOrdenPedido = forwardRef(function ImagenOrdenPedido(
                     <tr>
                         <th>Cantidad</th>
                         <th>Referencia</th>
+                        {conSubcategoria && <th>Subcategoría</th>}
                         <th>Descripción</th>
                     </tr>
                 </thead>
@@ -46,6 +49,7 @@ const ImagenOrdenPedido = forwardRef(function ImagenOrdenPedido(
                         <tr key={i}>
                             <td>{p.cantidad}</td>
                             <td>{p.referencia}</td>
+                            {conSubcategoria && <td>{p.subcategoria || '—'}</td>}
                             <td className="desc-preview">{p.descripcion || 'Sin descripción'}</td>
                         </tr>
                     ))}

@@ -216,7 +216,8 @@ const FEATURES_CATALOG = [
       { code: "VER_PROPIOS_PEDIDOS_TELAS", label: "Acceso a pedidos de telas propios" },
       { code: "CREAR_PEDIDO_TELA", label: "Crear nuevo pedido de tela" },
       { code: "EDITAR_ESTADO_TELA_ORDEN", label: "Editar estado de tela (En progreso, fábrica, etc.)" },
-      { code: "ELIMINAR_PEDIDO_TELA", label: "Eliminar/Anular pedido de tela" },
+      { code: "ELIMINAR_PEDIDO_TELA", label: "Eliminar pedido de tela" },
+      { code: "ANULAR_PEDIDO_TELA", label: "Anular pedido de tela (en Editar estado; queda con su motivo, no se borra)" },
       { code: "DESCARGAR_PEDIDO_TELA", label: "Habilitar descarga de PDF del pedido" },
       { code: "ADMINISTRAR_PROVEEDORES_TELA", label: "Crear/Editar proveedores de tela" },
       { code: "ADMINISTRAR_DIRECCIONES_TELA", label: "Crear/Editar direcciones de entrega de tela" }

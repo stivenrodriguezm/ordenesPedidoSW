@@ -317,7 +317,7 @@ function TelaProducto({ linea, n, cambiar, proveedores, grupos = [], requiere = 
                     )}
                 </div>
             )}
-            {pedida && <small className="pv-muted">Ya pedida (PT {linea.tela_pedidos.map(t => t.id).join(', ')}). Para cambiarla, elimina ese pedido en Telas; el grupo y el costo sí se pueden completar.</small>}
+            {pedida && <small className="pv-muted">Ya pedida (PT {linea.tela_pedidos.map(t => t.id).join(', ')}). Para cambiarla, anula ese pedido en Telas; el grupo y el costo sí se pueden completar.</small>}
             <div className="pv-tela__acciones">{copiarTela && lleva && <button type="button" className="pv-link pv-tela__copiar" onClick={copiarTela}>Usar esta tela en las demás piezas del conjunto</button>}</div>
         </div>
     );

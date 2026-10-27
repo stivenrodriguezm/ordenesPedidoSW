@@ -306,6 +306,17 @@
   font-size: 0.815rem !important;
 }
 
+/* Referencia y, debajo, su subcategoría (2026-10-27). */
+.ref-sub-v3 {
+  flex: 1;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.ref-sub-v3 .select-referencia-v3 { max-width: none; flex: none; width: 100%; }
+
 .textarea-descripcion-v3 {
   flex: 2;
   min-height: 34px;
@@ -383,7 +394,7 @@
   .product-compact-row {
     flex-wrap: wrap;
   }
-  .select-referencia-v3, .textarea-descripcion-v3 {
+  .select-referencia-v3, .textarea-descripcion-v3, .ref-sub-v3 {
     max-width: 100%;
     flex: 1 1 100%;
   }

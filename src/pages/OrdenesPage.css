@@ -799,3 +799,6 @@
 .recibidas-linea { margin-top: 4px; font-size: 0.7rem; font-weight: 600; color: var(--warning); white-space: nowrap; }
 .recibidas-linea.is-completa { color: var(--success); }
 .rechazadas-linea { margin-top: 2px; font-size: 0.7rem; font-weight: 600; color: var(--danger); white-space: nowrap; }
+
+/* Subcategoría del producto pedido, debajo de su referencia (2026-10-27). */
+.product-subcategoria { margin-top: 0.25rem; font-size: 0.78rem; color: var(--text-secondary); }

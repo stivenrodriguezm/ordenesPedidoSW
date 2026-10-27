@@ -161,7 +161,7 @@ export default function ConfiguradorPrecio({ linea, inicial, onClose, onAgregar,
               {activo && op.multiple && <span className="lp-opcional-cantidad" role="group" aria-label={`Unidades de ${op.descripcion}`}>
                 <button type="button" aria-label={`Quitar una unidad de ${op.descripcion}`} onClick={() => cambiarOpcionales((ids) => { const k = ids.indexOf(op.id); return ids.filter((_, j) => j !== k); })}><FaMinus /></button>
                 <output aria-label={`Unidades de ${op.descripcion}`}>{unidades}</output>
-                <button type="button" aria-label={`Agregar una unidad de ${op.descripcion}`} disabled={unidades >= 9} onClick={() => cambiarOpcionales((ids) => [...ids, op.id])}><FaPlus /></button>
+                <button type="button" aria-label={`Agregar una unidad de ${op.descripcion}`} disabled={unidades >= (op.maximo || 9)} title={unidades >= (op.maximo || 9) ? `Máximo ${op.maximo || 9}` : undefined} onClick={() => cambiarOpcionales((ids) => [...ids, op.id])}><FaPlus /></button>
               </span>}
             </span>;
           })}</div>
