@@ -1,0 +1,1 @@
+import{cd as s,Z as a,j as c}from"./index-nI0dzU17.js";function u({perfil:o,tamano:t=34,className:n=""}){const{Icono:r}=s[o==null?void 0:o.icono]||s.robot,d=(a[o==null?void 0:o.color]||a.azul).valor;return c.jsx("span",{className:`pf-avatar ${n}`,"aria-hidden":"true",style:{"--pf-color":d,width:t,height:t,fontSize:Math.round(t*.45)},children:c.jsx(r,{})})}export{u as A};

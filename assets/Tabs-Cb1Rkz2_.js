@@ -1,0 +1,1 @@
+import{j as e}from"./index-nI0dzU17.js";const l=({tabs:i,active:a,onChange:t})=>e.jsx("div",{className:"ds-tabs",role:"tablist",children:i.map(s=>e.jsx("button",{role:"tab","aria-selected":a===s.id,className:`ds-tabs__tab ${a===s.id?"ds-tabs__tab--active":""}`,onClick:()=>t(s.id),children:s.label},s.id))});export{l as T};
