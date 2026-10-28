@@ -1837,3 +1837,9 @@
     width: 15px;
     height: 15px;
 }
+
+/* Adicionales de la factura en el detalle (2026-10-28) */
+.fp-ajustes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 10px; }
+.fp-ajustes__titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gray-500); }
+.fp-ajuste { padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--success-soft); color: var(--success); }
+.fp-ajuste.is-resta { background: var(--danger-soft); color: var(--danger); }

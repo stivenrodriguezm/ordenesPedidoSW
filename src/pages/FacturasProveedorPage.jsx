@@ -1081,6 +1081,17 @@ function FacturasProveedorPage() {
                                                                 </div>
                                                             </div>
 
+                                                            {/* Adicionales de la factura (2026-10-28): suman o restan al total. */}
+                                                            {f.ajustes?.length > 0 && (
+                                                                <div className="fp-ajustes" aria-label="Adicionales de la factura">
+                                                                    <span className="fp-ajustes__titulo">Adicionales</span>
+                                                                    {f.ajustes.map(a => (
+                                                                        <span key={a.id} className={`fp-ajuste${a.tipo === 'resta' ? ' is-resta' : ''}`}>
+                                                                            {a.concepto} <strong>{a.tipo === 'resta' ? '−' : '+'}{formatCOP(parseInt(a.valor, 10))}</strong>
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                             <div className="expanded-items-section">
                                                                 {f.productos && f.productos.length > 0 ? (
                                                                     <div className="expanded-items-list">

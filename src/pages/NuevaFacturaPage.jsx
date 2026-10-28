@@ -16,6 +16,8 @@ import {
 import '../components/AppNotification';
 import { PageHeader, Button } from '../components/ui';
 import PedidosPorFacturar from '../components/facturas/PedidosPorFacturar';
+import AdicionalesFactura from '../components/facturas/AdicionalesFactura';
+import { adicionalIncompleto, netoAdicionales } from '../utils/adicionalesFactura';
 import './NuevaFacturaPage.css';
 
 const emptyRef = () => ({ 
@@ -41,6 +43,7 @@ const emptyRef = () => ({
 });
 
 const emptyForm = () => ({
+    ajustes: [],
     idManual: '',
     valor: '',
     valorDisplay: '',
@@ -332,6 +335,7 @@ export default function NuevaFacturaPage() {
                 estado: fData.estado || 'pendiente',
                 productos: rows.length > 0 ? rows : [emptyRef()],
                 grupoInstances: [],
+                ajustes: (fData.ajustes || []).map(a => ({ id: a.id, concepto: a.concepto, tipo: a.tipo, valor: String(parseInt(a.valor, 10)) })),
             });
         }).catch(err => {
             if (cancelled) return;
@@ -656,7 +660,10 @@ export default function NuevaFacturaPage() {
         return acc + (prodCosto * (parseInt(p.cantidad) || 1));
     }, 0);
     const totalCostosBloqueados = lockedItems.reduce((acc, it) => acc + (parseInt(it.costo_especifico) || 0), 0);
-    const totalCostos = totalCostosEditable + totalCostosBloqueados;
+    // Los adicionales (transporte, descuento…) suman o restan al total de la factura.
+    const totalAdicionales = netoAdicionales(form.ajustes);
+    const totalCostos = totalCostosEditable + totalCostosBloqueados + totalAdicionales;
+    const [faltanAdicionales, setFaltanAdicionales] = useState(false);
     const valorFactura = parseInt(form.valor) || 0;
     const isTotalMatching = valorFactura > 0 && totalCostos === valorFactura;
 
@@ -668,8 +675,13 @@ export default function NuevaFacturaPage() {
             showToast('Por favor complete los campos obligatorios y asegúrese de que el total sea mayor a 0.', 'error');
             return;
         }
+        if ((form.ajustes || []).some(adicionalIncompleto)) {
+            setFaltanAdicionales(true);
+            showToast('Completa los adicionales (concepto y valor) o quítalos.', 'error');
+            return;
+        }
         if (totalCostos !== valorFactura) {
-            showToast(`Error de validación: La suma de los productos agregados (${formatCOPInt(totalCostos)}) no coincide con el Valor Total de la factura (${formatCOPInt(valorFactura)}).`, 'error');
+            showToast(`Error de validación: La suma de los productos${totalAdicionales ? ' con los adicionales' : ''} agregados (${formatCOPInt(totalCostos)}) no coincide con el Valor Total de la factura (${formatCOPInt(valorFactura)}).`, 'error');
             return;
         }
 
@@ -710,6 +722,7 @@ export default function NuevaFacturaPage() {
             proveedor: form.proveedorId ? parseInt(form.proveedorId) : null,
             estado: isEditMode ? form.estado : 'pendiente',
             observaciones: form.observaciones,
+            ajustes: (form.ajustes || []).map(a => ({ concepto: a.concepto.trim(), tipo: a.tipo, valor: Number(a.valor) })),
             productos: form.productos.filter(p => p.referenciaId).map(p => ({
                 // Si la cantidad bajó, las unidades sobrantes se omiten y el
                 // backend solo las quita si no tienen entregas ni historial.
@@ -806,7 +819,7 @@ export default function NuevaFacturaPage() {
                 actions={
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                         <div className="nf-footer-summary" style={{ background: 'transparent', padding: 0, border: 'none', boxShadow: 'none' }}>
-                            <span className="nf-summary-label">Suma Productos:</span>
+                            <span className="nf-summary-label">{totalAdicionales ? 'Productos + adicionales:' : 'Suma Productos:'}</span>
                             <span className={`nf-summary-total ${isTotalMatching ? 'total-match' : valorFactura > 0 ? 'total-mismatch' : ''}`}>
                                 {formatCOPInt(totalCostos)}
                             </span>
@@ -1633,6 +1646,8 @@ export default function NuevaFacturaPage() {
                             <button type="button" className="nf-btn-add-ref-large" onClick={addRefRow}>
                                 <FaPlus /> Agregar otra Referencia
                             </button>
+                            <AdicionalesFactura ajustes={form.ajustes || []} formatear={formatCOPInt} mostrarFaltas={faltanAdicionales}
+                                onChange={ajustes => setForm(prev => ({ ...prev, ajustes }))} />
                         </div>
                     </div>
                 </div>
