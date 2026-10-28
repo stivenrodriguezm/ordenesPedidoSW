@@ -13,6 +13,11 @@ export const TIPOS_ADICIONAL = {
 const texto = (v) => String(v ?? '').trim();
 export const recargoListo = (a) => texto(a.descripcion) && Number(a.importe_lista) > 0;
 
+// «Agregar especial» (2026-10-28): producto fuera de la lista con su costo total; el precio de
+// lista lo calcula el servidor con el costo, el consumo del grupo y el multiplicador general.
+export const esEspecialPorCosto = (l) => !l.variante && (l.tipo || 'producto') === 'producto'
+    && Boolean(l._por_costo || l.costo_especial != null || l.metraje_especial != null);
+
 export function faltantesDe(l, grupos = []) {
     const f = {};
     const tipo = l.tipo || 'producto';
@@ -29,8 +34,13 @@ export function faltantesDe(l, grupos = []) {
     if (!(Number(l.cantidad) >= 1)) f.cantidad = 'Indica la cantidad.';
     // El grupo se elige en la sección Tela; en un producto de catálogo define el precio.
     if (l._requiere_grupo && !l.grupo_catalogo) f.tela_grupo = 'Elige el grupo: define el precio de lista.';
-    if (especial && !(Number(l.precio_lista_override) > 0)) f.precio_lista_override = 'Indica el precio de lista.';
-    if ((especial || l.precio_lista_override) && !texto(l.motivo_precio)) f.motivo_precio = 'Explica el precio especial.';
+    if (esEspecialPorCosto(l)) {
+        if (!(Number(l.costo_especial) > 0)) f.costo_especial = 'Indica el costo por unidad.';
+        if (l.grupo_catalogo && !(Number(l.metraje_especial) > 0)) f.metraje_especial = 'Indica el consumo por unidad.';
+    } else {
+        if (especial && !(Number(l.precio_lista_override) > 0)) f.precio_lista_override = 'Indica el precio de lista.';
+        if ((especial || l.precio_lista_override) && !texto(l.motivo_precio)) f.motivo_precio = 'Explica el precio especial.';
+    }
     if (l._precio_error) f.precio = l._precio_error;
     if (!l.referencia && !l.inventario_origen) f.referencia = 'Elige la referencia de compra.';
     if (!l.tela_modo) {
@@ -64,6 +74,6 @@ const NOMBRES = {
     motivo_precio: 'motivo del precio', precio: 'precio de lista', referencia: 'referencia de compra', tela_modo: 'si lleva tela',
     tela_referencia: 'referencia de la tela', tela_color: 'color de la tela', tela_proveedor: 'proveedor de la tela',
     tela_cantidad: 'cantidad de tela', texto_proveedor: 'texto para el proveedor', texto_cliente: 'texto para el cliente',
-    adicionales: 'recargo', tela_grupo: 'grupo de la tela', tela_costo: 'costo de la tela', conjunto_nombre: 'nombre del conjunto',
+    adicionales: 'recargo', costo_especial: 'costo', metraje_especial: 'consumo de tela', tela_grupo: 'grupo de la tela', tela_costo: 'costo de la tela', conjunto_nombre: 'nombre del conjunto',
 };
 export const nombreCampo = (campo) => NOMBRES[campo] || campo;

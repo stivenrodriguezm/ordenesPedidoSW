@@ -9,7 +9,8 @@ import { Button } from './ui';
 import { formatCOP } from '../utils/formatCOP';
 import { AppContext } from '../AppContext';
 import { GeneradorImagenes, PedirProveedor, PedirTelas } from './productosVenta/PedidosDesdeVenta';
-import { TIPOS_ADICIONAL, faltantesDe, nombreCampo, recargoListo } from './productosVenta/faltantes';
+import { TIPOS_ADICIONAL, esEspecialPorCosto, faltantesDe, nombreCampo, recargoListo } from './productosVenta/faltantes';
+import { leerDecimal, leerPesos, mostrarPesos } from '../utils/capturaPrecios';
 import useAlturaUniforme from './productosVenta/useAlturaUniforme';
 import './ProductosVenta.css';
 
@@ -77,6 +78,8 @@ const entrada = (l) => ({
     conjunto: l.conjunto || '', conjunto_nombre: l.conjunto ? (l.conjunto_nombre || '') : '', conjunto_cantidad: l.conjunto ? (Number(l.conjunto_cantidad) || 1) : 1,
     // Una venta guardada conserva sus precios; solo con «Actualizar» toma los de la lista actual.
     recalcular: Boolean(l.recalcular),
+    // Especial por costo: costo total por unidad y consumo del grupo (el precio lo calcula el servidor).
+    ...(esEspecialPorCosto(l) ? { costo_especial: l.costo_especial ?? null, metraje_especial: l.grupo_catalogo ? (l.metraje_especial ?? null) : null } : {}),
 });
 // Grupo de la tela: el elegido o, si coincide el material, el del precio del catálogo.
 const grupoDeTela = (l, grupos) => {
@@ -85,6 +88,8 @@ const grupoDeTela = (l, grupos) => {
     const precio = grupos.find(g => g.id === l.grupo_catalogo);
     return precio && precio.tipo === material ? precio : null;
 };
+// Las líneas guardadas como «especial por costo» lo siguen siendo aunque se borre el costo al editar.
+const marcarPorCosto = (lineas) => lineas.map(l => (l.costo_especial != null ? { ...l, _por_costo: true } : l));
 const nombreConDetalle = (l) => (l.variante_nombre ? `${l.producto_nombre} · ${l.variante_nombre}` : l.producto_nombre);
 // Marca de campo incompleto: borde rojo y el mensaje debajo (solo tras intentar guardar).
 const conFalta = (base, m) => `${base}${m ? ' is-falta' : ''}`;
@@ -172,7 +177,7 @@ function BuscadorCatalogo({ alElegir, cerrar, titulo }) {
     );
 }
 
-function Referencia({ linea, opciones, cambiar, canonica = false }) {
+function Referencia({ linea, opciones, cambiar, canonica = false, especial = false }) {
     const [buscar, setBuscar] = useState(false);
     const [q, setQ] = useState('');
     const [res, setRes] = useState([]);
@@ -203,8 +208,8 @@ function Referencia({ linea, opciones, cambiar, canonica = false }) {
                     {!opciones.some(o => o.id === linea.referencia) && linea.referencia && <option value={linea.referencia}>{nombre}</option>}
                     {opciones.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
                 </select>
-            ) : <span className="pv-ref__nombre" title={nombre}>{nombre || 'Se asigna al guardar'}</span>}
-            {!canonica && <button type="button" className="pv-link" onClick={() => setBuscar(true)}>Cambiar</button>}
+            ) : <span className="pv-ref__nombre" title={nombre}>{nombre || (especial ? 'Sin proveedor' : 'Se asigna al guardar')}</span>}
+            {!canonica && <button type="button" className="pv-link" onClick={() => setBuscar(true)}>{especial && !nombre ? 'Elegir proveedor' : 'Cambiar'}</button>}
         </div>
     );
 }
@@ -370,6 +375,56 @@ function Cantidad({ valor, cambiar, n, falta }) {
     );
 }
 
+// Campo de texto que valida al salir (pesos sin centavos o un consumo con hasta 2 decimales):
+// conserva lo escrito si es inválido y muestra el error, en vez de convertirlo en cero.
+function CampoValidado({ valor, leer, mostrar, onCommit, falta, ...props }) {
+    const [texto, setTexto] = useState(mostrar(valor));
+    const [error, setError] = useState('');
+    useEffect(() => { setTexto(mostrar(valor)); }, [valor]); // eslint-disable-line react-hooks/exhaustive-deps
+    const confirmar = () => {
+        if (!texto.trim()) { setError(''); onCommit(null); return; }
+        try { const n = leer(texto); setError(''); onCommit(String(n)); setTexto(mostrar(n)); } catch (e) { setError(e.message); }
+    };
+    return <>
+        <input {...props} aria-invalid={!!(error || falta)} className={error || falta ? 'is-falta' : undefined} value={texto}
+            onChange={e => setTexto(e.target.value)} onBlur={confirmar} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirmar(); } }} />
+        <Falta m={error || falta} />
+    </>;
+}
+
+// «Agregar especial» (2026-10-28): costo total por unidad (ya con cargos), grupo y consumo de
+// tela o cuero si aplica. El precio de lista = (costo + consumo × costo del grupo) × multiplicador.
+function CostoEspecial({ linea, n, cambiar, grupos = [], faltas = {} }) {
+    const grupo = grupos.find(g => g.id === linea.grupo_catalogo);
+    const cuero = grupo?.tipo === 'cuero';
+    const unidad = cuero ? 'dm' : 'm';
+    return (
+        <div className="pv-tela__grid pv-costo-especial">
+            <label className={conFalta('pv-campo', faltas.costo_especial)}><span>Costo por unidad *</span>
+                <CampoValidado aria-label={`Costo por unidad del producto ${n}`} inputMode="numeric" placeholder="$0 · con cargos incluidos"
+                    valor={linea.costo_especial} leer={t => { const v = leerPesos(t); if (v < 1) throw new Error('El costo debe ser mayor a $0.'); return v; }}
+                    mostrar={mostrarPesos} falta={faltas.costo_especial} onCommit={v => cambiar({ costo_especial: v })} />
+            </label>
+            <label className="pv-campo"><span>Grupo de tela o cuero</span>
+                <select aria-label={`Grupo de tela o cuero del producto ${n}`} value={linea.grupo_catalogo || ''}
+                    onChange={e => { const g = grupos.find(x => x.id === Number(e.target.value));
+                        cambiar({ grupo_catalogo: g?.id || null, grupo_es_cuero: g?.tipo === 'cuero', ...(g ? {} : { metraje_especial: null }) }); }}>
+                    <option value="">No aplica (sin tela ni cuero)</option>
+                    {grupos.map(g => <option key={g.id} value={g.id}>{g.nombre}{g.tipo === 'cuero' ? ' (cuero)' : ''}</option>)}
+                </select>
+            </label>
+            {grupo && (
+                <label className={conFalta('pv-campo', faltas.metraje_especial)}><span>Consumo por unidad ({unidad}) *</span>
+                    <CampoValidado aria-label={`Consumo de ${cuero ? 'cuero' : 'tela'} por unidad del producto ${n}`} inputMode="decimal" placeholder={cuero ? 'Ej.: 120' : 'Ej.: 8,5'}
+                        valor={linea.metraje_especial} leer={t => leerDecimal(t, { max: 99999 })} mostrar={v => (v == null || v === '' ? '' : String(Number(v)).replace('.', ','))}
+                        falta={faltas.metraje_especial} onCommit={v => cambiar({ metraje_especial: v })} />
+                </label>
+            )}
+            <small className="pv-muted pv-costo-especial__nota">El precio de lista se calcula con el costo{grupo ? `, el consumo × el costo del ${grupo.nombre}` : ''} y el multiplicador general. No lleva cargos: inclúyelos en el costo.</small>
+        </div>
+    );
+}
+
 function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPermission, proveedoresTela, grupos = [], enConjunto = false, faltas = {}, copiarTela, actualizarPrecio }) {
     const catalogo = useQuery({
         queryKey: ['productos-venta-catalogo', 'detalle', linea.variante],
@@ -384,6 +439,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
     // Abrir un conjunto muestra sus piezas con el mismo editor completo de un producto.
     const [abierto, setAbierto] = useState(!linea.id || enConjunto);
     const especial = !linea.variante;
+    const porCosto = esEspecialPorCosto(linea);
     // «Cojines incluidos»: obligatorio desde el catálogo; si es opcional, cuenta al elegirlo.
     const cupoDecorativos = meta?.decorativos_incluidos || (meta?.opcionales?.some(o => o.decorativos && linea.opcionales.includes(o.id)) ? 2 : 0);
     const puedeAjustar = hasPermission('AJUSTAR_PRECIO_LISTA_VENTA');
@@ -400,10 +456,12 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
     // El precio de lista se calcula solo con lo elegido (sin botón). Solo cuentan los
     // recargos completos, para no fallar mientras se escribe.
     const calc = entrada(linea);
-    const clave = JSON.stringify([calc.variante, calc.grupo_catalogo, calc.opcionales, calc.adicionales, calc.precio_lista_override, calc.motivo_precio, calc.producto_nombre, calc.recalcular]);
+    const clave = JSON.stringify([calc.variante, calc.grupo_catalogo, calc.opcionales, calc.adicionales, calc.precio_lista_override, calc.motivo_precio, calc.producto_nombre, calc.recalcular, calc.costo_especial, calc.metraje_especial]);
     useEffect(() => {
         if (meta?.tela && !linea.grupo_catalogo) { setPrecio({ estado: 'falta', valor: null, error: 'Elige el grupo de la tela' }); return undefined; }
-        if (especial && !linea.precio_lista_override) { setPrecio({ estado: 'falta', valor: null, error: 'Indica el precio' }); return undefined; }
+        if (porCosto && !linea.costo_especial) { setPrecio({ estado: 'falta', valor: null, error: 'Indica el costo' }); return undefined; }
+        if (porCosto && linea.grupo_catalogo && !linea.metraje_especial) { setPrecio({ estado: 'falta', valor: null, error: 'Indica el consumo' }); return undefined; }
+        if (especial && !porCosto && !linea.precio_lista_override) { setPrecio({ estado: 'falta', valor: null, error: 'Indica el precio' }); return undefined; }
         if (linea.variante && !meta) return undefined;
         const c = new AbortController();
         setPrecio(p => ({ ...p, estado: 'calculando' }));
@@ -427,7 +485,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
     // Nombre «Línea · Detalle»: de catálogo viene unido al agregar y separado al guardar.
     const [nombre, detalle] = linea.variante_nombre ? [linea.producto_nombre, linea.variante_nombre] : String(linea.producto_nombre || '').split(' · ');
     const nombreRemision = nombreConDetalle({ ...linea, producto_nombre: nombre, variante_nombre: detalle || '' }) || 'el nombre del producto';
-    const hayExtras = !!meta?.opcionales?.length || puedeAjustar;
+    const hayExtras = !porCosto && (!!meta?.opcionales?.length || puedeAjustar);
 
     return (
         <article className={conFalta(`pv-card${enConjunto ? ' pv-card--pieza' : ''}${verDetalle ? ' is-abierto' : ''}`, nFaltas)} aria-label={`Producto ${n}`}>
@@ -446,7 +504,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                     <div className="pv-card__pasos">
                         <Paso ok={listo.compra} texto="Compra" /><Paso ok={listo.tela} texto="Tela / Cuero" /><Paso ok={listo.textos} texto="Textos" />
                         {meta?.juego && <small className="pv-juego" title="Juego: se vende y se pide como un solo producto">Incluye {meta.juego}</small>}
-                        {especial && <small className="pv-juego">Producto especial</small>}
+                        {especial && <small className="pv-juego">{porCosto ? 'Especial por costo' : 'Producto especial'}</small>}
                         {nFaltas > 0 && <span className="pv-faltan-chip">Falta{nFaltas === 1 ? '' : 'n'} {nFaltas} dato{nFaltas === 1 ? '' : 's'}</span>}
                     </div>
                 </div>
@@ -484,10 +542,16 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                 </p>
             ) : (
                 <div className="pv-card__cuerpo">
+                    {porCosto && (
+                        <section className="pv-sec pv-sec--costo" aria-label={`Costo del producto ${n}`}>
+                            <h6 className="pv-sec__titulo" title="El precio de lista sale de este costo">Costo</h6>
+                            <CostoEspecial linea={linea} n={n} cambiar={cambiar} grupos={grupos} faltas={faltas} />
+                        </section>
+                    )}
                     <section className="pv-sec pv-sec--compra" aria-label={`Compra del producto ${n}`}>
-                        <h6 className="pv-sec__titulo" title="A quién se le pide este mueble">Compra</h6>
+                        <h6 className="pv-sec__titulo" title="A quién se le pide este mueble">{especial ? 'Proveedor' : 'Compra'}</h6>
                         <div className={conFalta('pv-campo pv-sec__compra', faltas.referencia)}>
-                            <Referencia linea={linea} opciones={meta?.referencias || []} cambiar={cambiar} canonica={meta?.catalogo_actual} />
+                            <Referencia linea={linea} opciones={meta?.referencias || []} cambiar={cambiar} canonica={meta?.catalogo_actual} especial={especial} />
                             <Falta m={faltas.referencia} />
                         </div>
                     </section>
@@ -911,7 +975,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
     const puedePedir = ['CREAR_ORDEN', 'CREAR_PROPIAS_ORDENES', 'CREAR_ORDENES_OTROS'].some(hasPermission);
     const verPrecios = hasPermission('VER_PRECIOS_VENTA');
 
-    const recibir = (d) => { setDatos(d); setLineas(d.lineas); setVinculos({}); setIntentoGuardar(false); setFaltasServidor({}); };
+    const recibir = (d) => { setDatos(d); setLineas(marcarPorCosto(d.lineas)); setVinculos({}); setIntentoGuardar(false); setFaltasServidor({}); };
     // Proveedores de tela: solo cuando se editan productos.
     useEffect(() => {
         if (!editando || catalogoTela.cargado) return undefined;
@@ -995,7 +1059,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
         recibir(r.data); setMensaje(accion === 'finalizar' ? 'Gestión finalizada: ya solo queda esperar que llegue y entregar.' : 'La gestión volvió a pendiente.');
         await onActualizada?.();
     });
-    const cancelar = () => { if (window.confirm('¿Descartar los cambios de productos?')) { setLineas(datos.lineas); setEditando(false); setBuscando(false); setError(''); setIntentoGuardar(false); setFaltasServidor({}); } };
+    const cancelar = () => { if (window.confirm('¿Descartar los cambios de productos?')) { setLineas(marcarPorCosto(datos.lineas)); setEditando(false); setBuscando(false); setError(''); setIntentoGuardar(false); setFaltasServidor({}); } };
     // Solo la lista de precios define los conjuntos y sus piezas; Ventas los agrega completos.
     const agregarDelCatalogo = (p) => {
         const clave = p.piezas?.length ? crypto.randomUUID() : '';
@@ -1112,6 +1176,9 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                         <div className="pv-agregar" role="group" aria-label="Agregar a la venta">
                             <button type="button" className="pv-agregar__op" onClick={() => setBuscando(true)}>
                                 <FaPlus aria-hidden="true" /><span><strong>Agregar de la lista de precios</strong><small>Productos y conjuntos con sus precios</small></span>
+                            </button>
+                            <button type="button" className="pv-agregar__op" onClick={() => setLineas(ls => [...ls, nueva({ clave: crypto.randomUUID(), _por_costo: true, costo_especial: null, metraje_especial: null })])}>
+                                <FaBoxOpen aria-hidden="true" /><span><strong>Agregar especial</strong><small>No está en la lista: das el costo y se calcula el precio</small></span>
                             </button>
                             {hasPermission('AJUSTAR_PRECIO_LISTA_VENTA') && (
                                 <button type="button" className="pv-agregar__op" onClick={() => setLineas(ls => [...ls, nueva({ clave: crypto.randomUUID() })])}>

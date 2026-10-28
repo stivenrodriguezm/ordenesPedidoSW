@@ -551,3 +551,9 @@ button.pv-tj__nombre strong { display: inline-flex; align-items: center; gap: 6p
 @supports not (grid-template-columns: subgrid) {
   .pv-editor__productos, .pv-conj__piezas, .pv .pv-tarjetas, .pv .pv-tarjetas--piezas { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* «Agregar especial» por costo (2026-10-28): su sección Costo ocupa todo el ancho, arriba. */
+.pv-sec--costo { background: var(--surface-muted); }
+.pv-card__cuerpo > .pv-sec--costo { grid-column: 1 / -1; }
+.pv-costo-especial .pv-campo input.is-falta { border-color: var(--danger); }
+.pv-costo-especial__nota { grid-column: 1 / -1; }

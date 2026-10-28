@@ -28,13 +28,17 @@ import {
   FaEdit,
   FaLock,
   FaBan,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaCamera
 } from 'react-icons/fa';
 import AppNotification from '../components/AppNotification';
 import Modal from '../components/Modal';
 import { PageHeader, Button, Badge } from '../components/ui';
 
 import { formatCOP } from '../utils/formatCOP';
+import { AdjuntarComprobantes, FotosReciboModal } from '../components/recibos/FotosComprobante';
+import { miniatura } from '../utils/comprobantesRecibo';
+import '../components/recibos/FotosComprobante.css';
 import { usePendientesIds } from '../hooks/useSharedData';
 
 // --- Helper Components ---
@@ -58,22 +62,39 @@ const PAYMENT_METHODS = [
 
 const emptyPago = () => ({ metodo_pago: '', valor: '' });
 
+// Número automático o manual (2026-10-28): el formulario siempre abre en Manual (pedido del usuario).
+
 const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
   const todayStr = getTodayStr();
 
   const [newRC, setNewRC] = useState({ id: '', fecha: todayStr, venta: '', nota: '', pagos: [emptyPago()] });
   const [ventaSearch, setVentaSearch] = useState('');
   const [showVentaDropdown, setShowVentaDropdown] = useState(false);
+  const [numeroAutomatico, setNumeroAutomatico] = useState(false);
+  const [siguienteNumero, setSiguienteNumero] = useState(null);
+  const [comprobantes, setComprobantes] = useState([]);
+  const [subiendoFotos, setSubiendoFotos] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
       setNewRC({ id: '', fecha: todayStr, venta: '', nota: '', pagos: [emptyPago()] });
       setVentaSearch('');
       setShowVentaDropdown(false);
+      setComprobantes([]);
+      setNumeroAutomatico(false);
     }
   }, [isOpen]);
 
-  const handleChange = (e) => setNewRC({ ...newRC, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (!isOpen || !numeroAutomatico) return undefined;
+    let vigente = true;
+    setSiguienteNumero(null);
+    API.get('/recibos-caja/siguiente-numero/').then(({ data }) => { if (vigente) setSiguienteNumero(data.numero); }).catch(() => {});
+    return () => { vigente = false; };
+  }, [isOpen, numeroAutomatico]);
+
+
+  const handleChange = (e) => setNewRC({ ...newRC, [e.target.name]: e.target.name === 'id' ? e.target.value.replace(/[^0-9]/g, '') : e.target.value });
 
   const handlePagoMetodo = (index, metodo) => {
     const pagos = [...newRC.pagos];
@@ -92,14 +113,17 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const pagosValidos = newRC.pagos.filter(p => p.metodo_pago && (parseInt(p.valor) || 0) > 0);
-    if (pagosValidos.length === 0) return;
+    if (pagosValidos.length === 0 || subiendoFotos > 0) return;
+    const { id, ...resto } = newRC;
     onSave({
-      ...newRC,
+      ...resto,
+      ...(numeroAutomatico ? { numero_automatico: true } : { id: parseInt(id, 10) }),
+      comprobantes,
       pagos: pagosValidos.map(p => ({ metodo_pago: p.metodo_pago, valor: parseInt(p.valor) || 0 })),
     });
   };
 
-  const hayCambios = Boolean(newRC.venta || newRC.nota || newRC.pagos.some(p => p.metodo_pago || p.valor));
+  const hayCambios = Boolean(newRC.venta || newRC.nota || comprobantes.length || newRC.pagos.some(p => p.metodo_pago || p.valor));
   const dialogoRef = useDialogo(isOpen, onClose, { hayCambios });
 
   if (!isOpen) return null;
@@ -132,8 +156,14 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
           {/* Row: ID + Fecha */}
           <div className="lottus-form-row">
             <div className="lottus-form-group">
-              <label>No. Recibo <span className="lottus-req">*</span></label>
-              <input type="text" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ej: RC-001" className="lottus-input" />
+              <label id="rc-numero-label">No. Recibo <span className="lottus-req">*</span></label>
+              <div className="rc-numero-modo" role="group" aria-labelledby="rc-numero-label">
+                <button type="button" aria-pressed={numeroAutomatico} onClick={() => setNumeroAutomatico(true)}>Automático</button>
+                <button type="button" aria-pressed={!numeroAutomatico} onClick={() => setNumeroAutomatico(false)}>Manual</button>
+              </div>
+              {numeroAutomatico
+                ? <div className="rc-numero-auto" aria-live="polite">{siguienteNumero ? `Siguiente: No. ${siguienteNumero}` : 'Se asigna al guardar'}</div>
+                : <input type="text" inputMode="numeric" name="id" value={newRC.id} onChange={handleChange} required placeholder="Ej: 4756" className="lottus-input" aria-label="No. Recibo manual" />}
             </div>
             <div className="lottus-form-group">
               <label>Fecha <span className="lottus-req">*</span></label>
@@ -239,6 +269,12 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
             </p>
           </div>
 
+          {/* Fotos del comprobante (opcional) */}
+          <div className="lottus-form-group full">
+            <label>Comprobante de pago <span className="lottus-hint">(opcional · se comprime sola)</span></label>
+            <AdjuntarComprobantes urls={comprobantes} onChange={setComprobantes} onSubiendo={setSubiendoFotos} deshabilitado={isLoading} />
+          </div>
+
           {/* Nota */}
           <div className="lottus-form-group full">
             <label>Notas / Observaciones <span className="lottus-hint">(opcional)</span></label>
@@ -250,8 +286,8 @@ const CreateRCModal = ({ isOpen, onClose, onSave, ventas, isLoading }) => {
             <button type="button" className="lottus-btn-cancel" onClick={onClose} disabled={isLoading}>
               Cancelar
             </button>
-            <button type="submit" className="lottus-btn-submit" disabled={isLoading || pagosValidos.length === 0 || !newRC.id || !newRC.venta || totalVal <= 0}>
-              {isLoading ? 'Guardando...' : 'Crear Recibo'}
+            <button type="submit" className="lottus-btn-submit" disabled={isLoading || subiendoFotos > 0 || pagosValidos.length === 0 || (!numeroAutomatico && !newRC.id) || !newRC.venta || totalVal <= 0}>
+              {isLoading ? 'Guardando...' : subiendoFotos > 0 ? 'Subiendo fotos…' : 'Crear Recibo'}
             </button>
           </div>
         </form>
@@ -594,6 +630,7 @@ const RecibosCaja = () => {
   });
   const [isCreatingRC, setIsCreatingRC] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [fotosTarget, setFotosTarget] = useState(null);
   const { data: pendientesIds = [], isError: pendientesIdsError, error: pendientesIdsErr } = usePendientesIds();
   const ventas = useMemo(() => pendientesIds.map(id => ({ id_venta: id })), [pendientesIds]);
   const editVentas = useMemo(() => {
@@ -694,9 +731,9 @@ const RecibosCaja = () => {
     setIsSubmitting(true);
     setNotification({ message: '', type: '' });
     try {
-      await API.post(`/recibos-caja/crear/`, rcData, { headers: idempotencia.cabeceras(rcData) });
+      const { data: creado } = await API.post(`/recibos-caja/crear/`, rcData, { headers: idempotencia.cabeceras(rcData) });
       idempotencia.confirmar();
-      setNotification({ message: 'Recibo creado exitosamente.', type: 'success' });
+      setNotification({ message: rcData.numero_automatico ? `Recibo No. ${creado.id} creado exitosamente.` : 'Recibo creado exitosamente.', type: 'success' });
       setIsCreatingRC(false);
       fetchData(filters, 1);
     } catch (error) {
@@ -760,6 +797,7 @@ const RecibosCaja = () => {
   };
 
   const exportData = () => exportar(filters);
+  const puedeAdjuntar = hasPermission('CREAR_RECIBO') || hasPermission('EDITAR_RECIBO');
 
   return (
     <div className="ds-page recibos-page ds-fade-in">
@@ -915,6 +953,17 @@ const RecibosCaja = () => {
                           </Badge>
                         </td>
                         <td className="actions-cell">
+                          {(item.comprobantes?.length > 0 || puedeAdjuntar) && (
+                            <button
+                              className="action-btn rc-fotos-btn"
+                              onClick={(e) => { e.stopPropagation(); setFotosTarget(item); }}
+                              title={item.comprobantes?.length ? `Ver comprobantes (${item.comprobantes.length})` : 'Adjuntar comprobante'}
+                              aria-label={`Comprobantes del recibo ${item.id}`}
+                            >
+                              <FaCamera />
+                              {item.comprobantes?.length > 0 && <span className="rc-fotos-count">{item.comprobantes.length}</span>}
+                            </button>
+                          )}
                           {hasPermission('EDITAR_RECIBO') && (
                             item.estado === 'Anulado' ? (
                               <button
@@ -1027,6 +1076,11 @@ const RecibosCaja = () => {
                       Confirmar
                     </button>
                   )}
+                  {(item.comprobantes?.length > 0 || puedeAdjuntar) && (
+                    <button className="mobile-edit-btn" onClick={() => setFotosTarget(item)}>
+                      <FaCamera /> {item.comprobantes?.length ? `Fotos (${item.comprobantes.length})` : 'Adjuntar foto'}
+                    </button>
+                  )}
                   {isMultiple && (
                     <div className="rc-pagos-detail" style={{ marginTop: '0.5rem' }}>
                       {pagos.map(pago => (
@@ -1082,6 +1136,19 @@ const RecibosCaja = () => {
         isLoading={isSubmitting}
       />
 
+      {fotosTarget && (
+        <FotosReciboModal
+          recibo={fotosTarget}
+          onClose={() => setFotosTarget(null)}
+          puedeAgregar={puedeAdjuntar && fotosTarget.estado !== 'Anulado'}
+          puedeQuitar={hasPermission('EDITAR_RECIBO')}
+          onActualizado={(recibo) => {
+            setFotosTarget(recibo);
+            setRecibosData(prev => prev.map(r => (r.id === recibo.id ? { ...r, comprobantes: recibo.comprobantes } : r)));
+          }}
+        />
+      )}
+
       {confirmTarget && (
         <ConfirmModal
           isOpen={showConfirmModal}
@@ -1116,6 +1183,18 @@ const RecibosCaja = () => {
               <div className="rc-confirm-row">
                 <span className="rc-confirm-label">Fecha</span>
                 <span className="rc-confirm-val">{confirmTarget.recibo.fecha}</span>
+              </div>
+            )}
+            {confirmTarget.recibo.comprobantes?.length > 0 && (
+              <div className="rc-confirm-fotos">
+                <span className="rc-confirm-label">Comprobantes del cliente</span>
+                <ul className="fc-grid">
+                  {confirmTarget.recibo.comprobantes.map(foto => (
+                    <li key={foto.id} className="fc-item">
+                      <a href={foto.url} target="_blank" rel="noreferrer" title="Ver la foto completa"><img src={miniatura(foto.url)} alt="Comprobante de pago" loading="lazy" /></a>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

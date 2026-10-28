@@ -470,6 +470,38 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(document.getElementById('pv-cli-0')).toHaveValue('');
     });
 
+    it('«Agregar especial»: el vendedor da el costo, el grupo y el consumo, y el precio lo calcula el servidor', async () => {
+        API.get.mockImplementation(async url => url === '/productos-venta/catalogo/' ? { data: { grupos: GRUPOS, results: [] } }
+            : url === '/proveedores-telas/' ? { data: { results: [] } } : { data: { ...structuredClone(base), lineas: [] } });
+        API.post.mockImplementation(async (url) => (url.endsWith('/calcular/') ? { data: { precio_lista_unitario: '2060000' } } : { data: { ...base, revision: 5 } }));
+        render(conConsultas(<MemoryRouter><ProductosVenta ventaId={12} hasPermission={c => c !== 'AJUSTAR_PRECIO_LISTA_VENTA'} /></MemoryRouter>));
+        fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
+        const cerrar = screen.queryByRole('button', { name: 'Cerrar búsqueda' });
+        if (cerrar) fireEvent.click(cerrar);
+        expect(screen.queryByRole('button', { name: /Producto especial/ })).not.toBeInTheDocument();  // ese pide permiso de precio
+        fireEvent.click(screen.getByRole('button', { name: /Agregar especial/ }));
+        const tarjeta = await screen.findByRole('article', { name: 'Producto 1' });
+        expect(within(tarjeta).getByText('Especial por costo')).toBeInTheDocument();
+        fireEvent.change(within(tarjeta).getByLabelText('Nombre del producto 1'), { target: { value: 'Mueble TV a medida' } });
+        const costo = within(tarjeta).getByLabelText('Costo por unidad del producto 1');
+        fireEvent.change(costo, { target: { value: '1.000.000,50' } });
+        fireEvent.blur(costo);
+        expect(within(tarjeta).getByText(/sin centavos/)).toBeInTheDocument();  // no trunca los centavos
+        fireEvent.change(costo, { target: { value: '1.000.000' } });
+        fireEvent.blur(costo);
+        expect(costo).toHaveValue('$1.000.000');
+        fireEvent.change(within(tarjeta).getByLabelText('Grupo de tela o cuero del producto 1'), { target: { value: '7' } });
+        expect(within(tarjeta).getByText('Indica el consumo')).toBeInTheDocument();
+        const consumo = within(tarjeta).getByLabelText('Consumo de tela por unidad del producto 1');
+        fireEvent.change(consumo, { target: { value: '3' } });
+        fireEvent.blur(consumo);
+        await waitFor(() => expect(API.post).toHaveBeenCalledWith('/ventas/12/productos/calcular/', expect.objectContaining({
+            variante: null, costo_especial: '1000000', metraje_especial: '3', grupo_catalogo: 7, producto_nombre: 'Mueble TV a medida' }), expect.anything()));
+        expect(await within(tarjeta).findByText('$2.060.000')).toBeInTheDocument();
+        expect(within(tarjeta).queryByText('+ Recargo o precio especial')).not.toBeInTheDocument();  // sin cargos: van en el costo
+        expect(within(tarjeta).getByRole('button', { name: 'Elegir proveedor' })).toBeInTheDocument();
+    });
+
     it('se puede guardar aunque se quiten todos los productos', async () => {
         await editar();
         fireEvent.click(screen.getByRole('button', { name: 'Quitar producto 1' }));

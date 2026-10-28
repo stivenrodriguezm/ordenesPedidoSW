@@ -105,3 +105,20 @@
 .nvc-pagos__titulo { color: var(--gray-500); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
 .nvc-pago { padding: 0.2rem 0.55rem; border-radius: var(--r-sm); background: var(--gray-50); border: 1px solid var(--gray-200); font-size: 0.75rem; }
 .nom-tabla td.nom-col-pago { min-width: 11rem; }
+
+/* Detalle de la venta en comisiones (2026-10-28): todo lo pedido y los abonos, lado a lado en computador. */
+.nvc-datos__cliente { grid-column: span 2; }
+.nvc-bloques { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0.9rem; margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px dashed var(--gray-200); }
+.nvc-bloque { min-width: 0; overflow-x: auto; }
+.nvc-bloque__titulo { margin: 0 0 0.35rem; color: var(--gray-700); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.nvc-bloque__titulo small { margin-left: 0.35rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--gray-500); }
+.nvc-pedido-item { display: block; }
+.nvc-tabla tr.is-anulado td { color: var(--gray-400); text-decoration: line-through; text-decoration-color: var(--gray-300); }
+.nvc-tabla tr.is-anulado td span { text-decoration: none; }
+@media (max-width: 900px) {
+  .nvc-bloques { grid-template-columns: 1fr; }
+  .nvc-datos__cliente { grid-column: auto; }
+}
+/* El detalle expandido ocupa el ancho visible de la tabla (que se desliza a lo ancho) y no se corta. */
+.nom-tabla-wrap { container-type: inline-size; }
+.nom-tabla-wrap .nvc { position: sticky; left: 0; box-sizing: border-box; width: 100cqw; max-width: 100cqw; overflow-x: auto; }

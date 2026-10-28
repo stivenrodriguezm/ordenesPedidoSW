@@ -8,10 +8,76 @@ import { ESTADO_VENTA, cop, fecha } from '../../utils/nomina';
 /*
  * Detalle de una venta dentro de la comisión: productos con su precio de lista y precio
  * de venta, y pagos recibidos, para validar contra la venta física que todo cuadre.
+ * (2026-10-28) También todo lo pedido (proveedores y telas) y los abonos con su estado.
  */
 
 const TIPO = { transporte: 'Servicio', articulo: 'Artículo', ajuste: 'Ajuste' };
 const ESTADO_PAGO = { Confirmado: 'nom-ok', Pendiente: 'nom-falta', Anulado: 'nom-muted' };
+const ESTADO_PEDIDO = { pendiente: 'nom-falta', en_proceso: 'nom-falta', finalizado: 'nom-ok', recibido: 'nom-ok', anulado: 'nom-muted',
+    Pendiente: 'nom-falta', 'En fabrica': 'nom-falta', 'En Lottus': 'nom-ok', Anulado: 'nom-muted' };
+const ubicacion = (v) => [v.direccion, v.barrio, v.ciudad].filter(Boolean).join(' · ');
+const suma = (pagos, estado) => pagos.filter(p => p.estado === estado).reduce((n, p) => n + Number(p.valor || 0), 0);
+
+function Pedidos({ pedidos = [], telas = [] }) {
+    if (!pedidos.length && !telas.length) return <p className="nom-vacio">No hay pedidos a proveedores ni de telas para esta venta.</p>;
+    return (
+        <table className="nvc-tabla nvc-tabla--pedidos">
+            <thead><tr><th>Pedido</th><th>Proveedor</th><th>Qué se pidió</th><th>Fecha</th><th>Estado</th></tr></thead>
+            <tbody>
+                {pedidos.map(o => (
+                    <tr key={`op-${o.id}`} className={o.estado === 'anulado' ? 'is-anulado' : undefined}>
+                        <td><strong>OP {o.id}</strong></td>
+                        <td>{o.proveedor}</td>
+                        <td>
+                            {o.detalles.length ? o.detalles.map((d, i) => (
+                                <span key={i} className="nvc-pedido-item">{d.cantidad} × {[d.referencia, d.subcategoria].filter(Boolean).join(' · ') || 'Producto'}
+                                    {d.especificaciones && <small className="nom-sub">{d.especificaciones}</small>}</span>
+                            )) : '—'}
+                            {o.tela && <small className="nom-sub">Tela: {o.tela}</small>}
+                        </td>
+                        <td>{fecha(o.fecha_creacion)}<small className="nom-sub">Entrega {fecha(o.fecha_esperada)}</small></td>
+                        <td><span className={ESTADO_PEDIDO[o.estado] || ''}>{o.estado_nombre || o.estado}</span></td>
+                    </tr>
+                ))}
+                {telas.map(p => (
+                    <tr key={`pt-${p.id}`} className={p.estado === 'Anulado' ? 'is-anulado' : undefined}>
+                        <td><strong>PT {p.id}</strong><span className="nvc-tipo">Tela</span></td>
+                        <td>{p.proveedor}</td>
+                        <td>
+                            {p.detalles.map((d, i) => <span key={i} className="nvc-pedido-item">{d.tela} · {Number(d.cantidad).toLocaleString('es-CO')} {d.unidad}</span>)}
+                            {p.orden && <small className="nom-sub">Para OP {p.orden}</small>}
+                        </td>
+                        <td>{fecha(p.fecha_creacion)}</td>
+                        <td><span className={ESTADO_PEDIDO[p.estado] || ''}>{p.estado}</span></td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+function Abonos({ pagos }) {
+    if (!pagos.length) return <p className="nom-vacio">Sin recibos de caja.</p>;
+    const confirmado = suma(pagos, 'Confirmado');
+    const pendiente = suma(pagos, 'Pendiente');
+    return (
+        <table className="nvc-tabla nvc-tabla--abonos">
+            <thead><tr><th>Recibo</th><th>Fecha</th><th>Medio</th><th className="num">Valor</th><th>Estado</th></tr></thead>
+            <tbody>
+                {pagos.map((p, i) => (
+                    <tr key={`${p.recibo}-${i}`} className={p.estado === 'Anulado' ? 'is-anulado' : undefined}>
+                        <td>RC {p.recibo}</td><td>{fecha(p.fecha)}</td><td>{p.metodo}</td>
+                        <td className="num">{cop(p.valor)}</td><td><span className={ESTADO_PAGO[p.estado] || ''}>{p.estado}</span></td>
+                    </tr>
+                ))}
+            </tbody>
+            <tfoot>
+                <tr><th colSpan={3}>Confirmado{pendiente > 0 ? ' · pendiente' : ''}</th>
+                    <th className="num">{cop(confirmado)}{pendiente > 0 && <small className="nom-sub nom-falta">+ {cop(pendiente)} pendiente</small>}</th><th /></tr>
+            </tfoot>
+        </table>
+    );
+}
 
 function Cuadre({ ok, texto, alerta }) {
     return ok
@@ -23,11 +89,11 @@ export default function VentaComision({ lineaId }) {
     const q = useQuery({ queryKey: ['nomina', 'venta-linea', lineaId], queryFn: () => ventaDeLinea(lineaId), staleTime: 30000 });
     if (q.isPending) return <div className="nvc nvc--cargando" role="status">Cargando productos de la venta…</div>;
     if (q.isError) return <div className="nvc" role="alert">{mensajeDeError(q.error)}</div>;
-    const { venta: v, productos, totales: t, pagos } = q.data;
+    const { venta: v, productos, totales: t, pagos, pedidos, pedidos_tela: telas } = q.data;
     return (
         <div className="nvc">
             <dl className="nvc-datos">
-                <div><dt>Cliente</dt><dd>{v.cliente || '—'}</dd></div>
+                <div className="nvc-datos__cliente"><dt>Cliente</dt><dd>{v.cliente || '—'}{ubicacion(v) && <small className="nom-sub">{ubicacion(v)}</small>}</dd></div>
                 <div><dt>Asesor</dt><dd>{v.vendedor || '—'}{v.compartida_con.length > 0 && <small> · compartida con {v.compartida_con.join(', ')}</small>}</dd></div>
                 <div><dt>Sede</dt><dd>{v.sede || '—'}</dd></div>
                 <div><dt>Estado</dt><dd>{ESTADO_VENTA[v.estado] || v.estado}</dd></div>
@@ -44,7 +110,7 @@ export default function VentaComision({ lineaId }) {
                     <thead>
                         <tr>
                             <th>Producto</th><th className="num">Cant.</th><th>Tela / grupo</th>
-                            <th className="num">Lista unitario</th><th className="num">Lista total</th><th className="num">Precio venta</th><th className="num">Desc.</th>
+                            <th className="num">Lista unitario</th><th className="num">Lista total</th><th className="num">Precio venta</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -59,7 +125,6 @@ export default function VentaComision({ lineaId }) {
                                 <td className="num">{p.precio_lista_unitario ? cop(p.precio_lista_unitario) : <span className="nom-falta">Sin precio</span>}</td>
                                 <td className="num">{p.precio_lista_total ? cop(p.precio_lista_total) : '—'}</td>
                                 <td className="num">{cop(p.precio_venta)}</td>
-                                <td className="num">{Number(p.descuento) ? cop(p.descuento) : '—'}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -68,7 +133,6 @@ export default function VentaComision({ lineaId }) {
                             <th colSpan={4}>Total productos</th>
                             <th className="num">{t.precio_lista ? cop(t.precio_lista) : '—'}</th>
                             <th className="num">{cop(t.precio_venta)}</th>
-                            <th />
                         </tr>
                     </tfoot>
                 </table>
@@ -82,13 +146,15 @@ export default function VentaComision({ lineaId }) {
                 </div>
             )}
 
-            <div className="nvc-pagos">
-                <span className="nvc-pagos__titulo">Pagos</span>
-                {pagos.length === 0 ? <span className="nom-muted">Sin recibos de caja.</span> : pagos.map((p, i) => (
-                    <span key={`${p.recibo}-${i}`} className="nvc-pago">
-                        RC {p.recibo} · {fecha(p.fecha)} · {p.metodo} · <strong>{cop(p.valor)}</strong> · <span className={ESTADO_PAGO[p.estado] || ''}>{p.estado}</span>
-                    </span>
-                ))}
+            <div className="nvc-bloques">
+                <section className="nvc-bloque nvc-bloque--pedidos" aria-label="Todo lo pedido">
+                    <h6 className="nvc-bloque__titulo">Todo lo pedido <small>proveedores y telas</small></h6>
+                    <Pedidos pedidos={pedidos} telas={telas} />
+                </section>
+                <section className="nvc-bloque nvc-bloque--abonos" aria-label="Abonos">
+                    <h6 className="nvc-bloque__titulo">Abonos <small>{cop(v.abono)} abonado · saldo {cop(v.saldo)}</small></h6>
+                    <Abonos pagos={pagos} />
+                </section>
             </div>
         </div>
     );
