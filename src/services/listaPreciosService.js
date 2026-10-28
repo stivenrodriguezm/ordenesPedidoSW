@@ -295,4 +295,6 @@ export const getBibliotecaEspeciales = async () => {
 export const sincronizarSubcategorias = (id, subcategoria) => API.post(`/listaprecios/lineas/${id}/sincronizar-subcategorias/`, subcategoria ? { subcategoria } : undefined).then(r => r.data);
 
 export const guardarDisposicionSubcategorias = (referencia, datos) => API.post(`/listaprecios/referencias/${referencia}/disposicion/`, datos).then(r => r.data);
-export const renombrarSubcategoria = (subcategoria, nombre) => API.post(`/listaprecios/subcategorias/${subcategoria}/renombrar/`, { nombre }).then(r => r.data);
+// (2026-10-28) Con `referencia`, el nombre cambia solo en esa referencia (y su grupo), no en las demás.
+export const renombrarSubcategoria = (subcategoria, nombre, referencia) => API.post(`/listaprecios/subcategorias/${subcategoria}/renombrar/`, { nombre, ...(referencia ? { referencia } : {}) }).then(r => r.data);
+export const agregarSubcategoriaNueva = (referencia, datos) => API.post(`/listaprecios/referencias/${referencia}/subcategoria-nueva/`, datos).then(r => r.data);

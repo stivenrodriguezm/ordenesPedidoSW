@@ -31,6 +31,7 @@ import ProveedoresAgrupacion from './ProveedoresAgrupacion';
 import ReferenciaUnificada from './ReferenciaUnificada';
 import PublicacionSubcategoria from './PublicacionSubcategoria';
 import NombreSubcategoria from './NombreSubcategoria';
+import AgregarSubcategoria from './AgregarSubcategoria';
 import { ordenarSubcategorias } from './disposicionSubcategorias';
 import { subcategoriasReferencia } from './subcategoriasReferencia';
 import CargosVariante from './CargosVariante';
@@ -822,7 +823,7 @@ function VarianteEditor({ variante, linea, lineasGrupo, grupos, multiplicadores,
     <div className={`lp-variante-card${proveedorControl || variante.componentes?.length ? ' lp-variante-card--proveedor' : ''}${expandido ? ' lp-variante-card--open' : ''}`} data-estado={updateVarianteMut.isPending || updatePrecioMut.isPending || clearPrecioMut.isPending || deletePrecioMut.isPending ? 'guardando' : undefined}>
       <div className="lp-variante-header lp-variante-captura">
         <div className="lp-captura-identidad">
-          {linea.referencia ? <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={variante.subcategoria} nombre={variante.nombre} /><span>{variante.categoria_nombre}</span>{variante.costo_confirmado === false && <em>Pendiente de costo</em>}</div>
+          {linea.referencia ? <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={variante.subcategoria} nombre={variante.nombre} referencia={linea.referencia} /><span>{variante.categoria_nombre}</span>{variante.costo_confirmado === false && <em>Pendiente de costo</em>}</div>
             : <CampoPrecio tipo="texto" label="Producto / medida" valor={variante.nombre} onCommit={(nombre) => updateVarianteMut.mutateAsync({ nombre })} />}
           <div className="lp-captura-insignias">{variante.cargos.some((c) => c.tipo === 'decorativos') && <span className="lp-decorativos-badge" title="Cojines incluidos: 2 decorativos por unidad"><FaCouch size={9} /> Decorativos x2</span>}
             {!!variante.componentes?.length && <span className="lp-juego-badge" title={variante.componentes.map(c => `${c.cantidad} ${c.variante_nombre}`).join(' + ')}><FaLayerGroup size={10} /> Conjunto</span>}
@@ -1123,8 +1124,16 @@ function GrupoReferencias({ grupo, modo, busqueda, notify, children }) {
     setAbierto(!abierto); setMontado(true);
   };
   const proveedores = new Set(grupo.referencias.map(r => r.proveedor ?? r.proveedor_nombre)).size;
-  const subcategorias = subcategoriasReferencia(grupo.referencias).length;
-  return <section className="lp-grupo-referencias" ref={contenedor}>
+  const filasSub = subcategoriasReferencia(grupo.referencias);
+  const subcategorias = filasSub.length;
+  const hasPermission = usePermissions();
+  const [agregando, setAgregando] = useState(false);
+  const puedeAgregar = modo === 'referencia' && (hasPermission('EDITAR_LISTA_PRECIOS') || hasPermission('ADMINISTRAR_REFERENCIAS'));
+  return <section className={`lp-grupo-referencias${puedeAgregar ? ' lp-grupo-referencias--con-accion' : ''}`} ref={contenedor}>
+    {/* (2026-10-28) Nueva subcategoría para esta referencia, a la vista sin tener que abrirla. */}
+    {puedeAgregar && <button type="button" className="lp-grupo-nueva-sub" onClick={() => setAgregando(true)} aria-label={`Nueva subcategoría en ${grupo.nombre}`}>
+      <FaPlus aria-hidden="true" /> Subcategoría</button>}
+    {agregando && <AgregarSubcategoria grupo={grupo} visibles={filasSub.map(f => f.id)} notify={notify} onClose={() => setAgregando(false)} />}
     <button type="button" className="lp-grupo-cabecera" onClick={cambiar} aria-expanded={abierto} aria-label={`${abierto ? 'Contraer' : 'Expandir'} ${modo === 'referencia' ? 'referencia' : 'proveedor'} ${grupo.nombre}`}>
       <FaLayerGroup aria-hidden="true" /><strong>{modo === 'referencia' ? `Referencia · ${grupo.nombre}` : grupo.nombre}</strong>
       <span>{modo === 'referencia' ? `${subcategorias} ${subcategorias === 1 ? 'subcategoría' : 'subcategorías'} · ${proveedores} ${proveedores === 1 ? 'proveedor' : 'proveedores'}` : `${grupo.referencias.length} referencias`}</span>

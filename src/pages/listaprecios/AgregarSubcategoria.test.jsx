@@ -7,12 +7,17 @@ import * as servicio from '../../services/listaPreciosService';
 import AgregarSubcategoria from './AgregarSubcategoria';
 
 vi.mock('../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
-vi.mock('../../services/listaPreciosService', () => ({ guardarDisposicionSubcategorias: vi.fn() }));
+vi.mock('../../services/listaPreciosService', () => ({ guardarDisposicionSubcategorias: vi.fn(), agregarSubcategoriaNueva: vi.fn() }));
+vi.mock('../../AppContext', () => ({ usePermissions: () => () => true }));
 
 const ref = (id, proveedor, subs, retiradas = []) => ({ id, nombre: 'Valencia', proveedor, proveedor_nombre: `Proveedor ${proveedor}`,
   categorias: [{ id: 1, nombre: 'Comedor' }], subcategorias: subs.map((s) => ({ id: s, categoria: 1 })), disposicion: { revision: 3, retiradas, orden: [] } });
-const montar = (grupo, props = {}) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-  <AgregarSubcategoria grupo={grupo} visibles={[11]} notify={vi.fn()} onClose={vi.fn()} {...props} /></QueryClientProvider>);
+const montar = (grupo, props = {}, catalogo = true) => {
+  const r = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <AgregarSubcategoria grupo={grupo} visibles={[11]} notify={vi.fn()} onClose={vi.fn()} {...props} /></QueryClientProvider>);
+  if (catalogo) fireEvent.click(screen.getByRole('button', { name: 'Elegir del catálogo' }));
+  return r;
+};
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -61,6 +66,22 @@ describe('Agregar subcategoría a una referencia', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Base 6p.' }));
     fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
     await waitFor(() => expect(servicio.guardarDisposicionSubcategorias).toHaveBeenCalledWith(101, { revision: 3, retiradas: [] }));
+    expect(API.patch).not.toHaveBeenCalled();
+  });
+
+  it('«Nueva»: crea la subcategoría solo para el proveedor elegido', async () => {
+    const onClose = vi.fn();
+    servicio.agregarSubcategoriaNueva.mockResolvedValue({ id: 40, nombre: 'Banca' });
+    montar({ nombre: 'Valencia', referencias: [ref(101, 7, [11]), ref(102, 8, [11])] }, { onClose }, false);
+    fireEvent.change(screen.getByLabelText('Nombre de la subcategoría'), { target: { value: '  Banca ' } });
+    expect(await screen.findByRole('option', { name: 'Sala' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Categoría de la subcategoría'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Elige el proveedor');
+    fireEvent.change(screen.getByLabelText('Proveedor'), { target: { value: '102' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(servicio.agregarSubcategoriaNueva).toHaveBeenCalledWith(102, { nombre: 'Banca', categoria: 1, todas: false });
     expect(API.patch).not.toHaveBeenCalled();
   });
 });

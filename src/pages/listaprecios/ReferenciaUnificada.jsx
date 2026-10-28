@@ -108,7 +108,7 @@ export default function ReferenciaUnificada({ grupo, renderVariante, renderOpcio
         </label>;
         return <div className="lp-subcategoria-proveedor" key={fila.id}>
           {variante ? renderVariante({ variante, linea, proveedorControl: control, lineasGrupo }) : <div className="lp-subcategoria-sin-costo">
-            <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={fila.id} nombre={fila.nombre} /><span>{fila.categoria_nombre}</span></div>{control}
+            <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={fila.id} nombre={fila.nombre} referencia={fila.referencias[0]?.id} /><span>{fila.categoria_nombre}</span></div>{control}
             {!ref ? <span className="lp-section-hint">Elige el proveedor para ver y editar sus costos.</span>
               : consulta?.isPending ? <span role="status">Cargando costos…</span>
                 : consulta?.isError ? <div role="alert">No se pudieron cargar los costos. <button type="button" onClick={() => consulta.refetch()}>Reintentar</button></div>
@@ -119,7 +119,7 @@ export default function ReferenciaUnificada({ grupo, renderVariante, renderOpcio
         </div>;
       }}
       </VariantesOrdenables>
-      {hasPermission('ADMINISTRAR_REFERENCIAS') && <button type="button" className="lp-agregar-subcategoria" onClick={() => setAgregando(true)}>
+      {(hasPermission('EDITAR_LISTA_PRECIOS') || hasPermission('ADMINISTRAR_REFERENCIAS')) && <button type="button" className="lp-agregar-subcategoria" onClick={() => setAgregando(true)}>
         <FaPlus aria-hidden="true" /> Agregar subcategoría</button>}
     </div>
     {agregando && <AgregarSubcategoria grupo={grupo} visibles={filas.map(f => f.id)} notify={notify} onClose={() => setAgregando(false)} />}

@@ -242,6 +242,9 @@ export default function NuevaFacturaPage() {
     const [cargandoPedidoOrigen, setCargandoPedidoOrigen] = useState(false);
     // Producto pedido al proveedor → fila de la factura (2026-10-15): referencia, cantidad
     // pendiente, venta, pedido, detalle, telas y el costo sugerido desde la lista de precios.
+    // Telas de una línea pendiente (de sus pedidos de tela o del producto de la venta), por unidad.
+    const telasDeFila = (p) => (p.telas || []).map(t => ({ tipo: t.tipo || 'tela', referencia: t.referencia || '', color: t.color || '',
+        cantidad: t.cantidad || '', costo_unidad: t.costo_unidad ? String(parseInt(t.costo_unidad, 10)) : '' }));
     const filaDesdePedido = (p) => {
         const ref = referencias.find(r => String(r.id) === String(p.referencia));
         const categoriaOk = p.categoria && (!ref || !ref.categorias?.length || ref.categorias.map(String).includes(String(p.categoria)));
@@ -253,8 +256,7 @@ export default function NuevaFacturaPage() {
             variacion: p.detalle || '', costo, costoDisplay: costo ? formatCOP(parseInt(costo, 10)) : '',
             ventaId: String(p.venta || ''), opId: String(p.pedido), detallePedidoId: String(p.detalle_pedido),
             observacion: p.descripcion && p.descripcion !== '-' ? p.descripcion : '', disponibilidad: p.venta ? 'cliente' : 'exhibicion',
-            telas_cueros: (p.telas || []).map(t => ({ tipo: t.tipo || 'tela', referencia: t.referencia || '', color: t.color || '',
-                cantidad: t.cantidad || '', costo_unidad: t.costo_unidad ? String(parseInt(t.costo_unidad, 10)) : '' })),
+            telas_cueros: telasDeFila(p), _telasDePedido: true,
             _sugerido: p.costo_sugerido || null,
         };
     };
@@ -373,6 +375,9 @@ export default function NuevaFacturaPage() {
         });
     }, [form.productos, ordenesCompletasMap]);
 
+    // Telas por línea de OP (detalle → telas), desde la recepción del pedido (2026-10-28).
+    const [telasPorDetalle, setTelasPorDetalle] = useState({});
+
     // Estado de buscador de OP por fila
     const [opSearchState, setOpSearchState] = useState({});
 
@@ -433,9 +438,13 @@ export default function NuevaFacturaPage() {
 
         // Cargar detalles completos de la OP de forma lazy
         try {
-            const res = await API.get(`/ordenes-pedido/${ordenBase.id}/completo/`);
+            const [res, recepcion] = await Promise.all([
+                API.get(`/ordenes-pedido/${ordenBase.id}/completo/`),
+                API.get(`/productos-venta/pedidos/${ordenBase.id}/recepcion/`).catch(() => null),
+            ]);
             const ordenCompleta = res.data;
-            const nuevasTelas = parseTelasFromOrden(ordenCompleta);
+            const porDetalle = Object.fromEntries((recepcion?.data?.productos || []).map(p => [String(p.detalle_pedido), telasDeFila(p)]));
+            setTelasPorDetalle(prev => ({ ...prev, ...porDetalle }));
 
             setForm(prev => {
                 const prods = [...prev.productos];
@@ -444,13 +453,18 @@ export default function NuevaFacturaPage() {
                 setOrdenesCompletasMap(prev => ({ ...prev, [String(ordenCompleta.id)]: ordenCompleta }));
                 // Si solo una línea tiene pendiente, se elige sola; si hay varias, la elige el usuario.
                 const conPendiente = (ordenCompleta.detalles || []).filter(d => (d.recibidas ?? 0) < d.cantidad);
+                const detalle = conPendiente.length === 1 ? String(conPendiente[0].id) : '';
+                // Las telas de la línea que llega (pedidos de tela de la OP, sin los anulados, por unidad);
+                // sin recepción disponible, las de la orden completa.
+                const nuevasTelas = detalle && porDetalle[detalle] ? porDetalle[detalle] : (recepcion ? [] : parseTelasFromOrden(ordenCompleta));
                 prods[index] = {
                     ...prods[index],
                     opId: String(ordenCompleta.id),
-                    detallePedidoId: conPendiente.length === 1 ? String(conPendiente[0].id) : '',
+                    detallePedidoId: detalle,
                     ventaId: ventaId,
                     disponibilidad: ventaId ? 'cliente' : prods[index].disponibilidad,
                     telas_cueros: nuevasTelas.length > 0 ? nuevasTelas : prods[index].telas_cueros,
+                    _telasDePedido: nuevasTelas.length > 0 || prods[index]._telasDePedido,
                     _opLoading: false,
                 };
                 return { ...prev, productos: prods };
@@ -480,7 +494,7 @@ export default function NuevaFacturaPage() {
         setForm(prev => {
             const prods = [...prev.productos];
             const tc = prods[rowIndex].telas_cueros || [];
-            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: [...tc, { tipo: 'tela', referencia: '', color: '', costo_unidad: '', cantidad: '' }] };
+            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: [...tc, { tipo: 'tela', referencia: '', color: '', costo_unidad: '', cantidad: '' }], _telasDePedido: false };
             return { ...prev, productos: prods };
         });
     };
@@ -490,7 +504,7 @@ export default function NuevaFacturaPage() {
             const prods = [...prev.productos];
             const tc = [...(prods[rowIndex].telas_cueros || [])];
             tc[tcIndex] = { ...tc[tcIndex], [field]: value };
-            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: tc };
+            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: tc, _telasDePedido: false };
             return { ...prev, productos: prods };
         });
     };
@@ -499,7 +513,7 @@ export default function NuevaFacturaPage() {
         setForm(prev => {
             const prods = [...prev.productos];
             const tc = (prods[rowIndex].telas_cueros || []).filter((_, i) => i !== tcIndex);
-            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: tc };
+            prods[rowIndex] = { ...prods[rowIndex], telas_cueros: tc, _telasDePedido: false };
             return { ...prev, productos: prods };
         });
     };
@@ -1426,7 +1440,14 @@ export default function NuevaFacturaPage() {
                                                             className="nf-select"
                                                             value={row.detallePedidoId}
                                                             disabled={!op}
-                                                            onChange={e => handleRefRow(index, 'detallePedidoId', e.target.value)}
+                                                            onChange={e => {
+                                                                const id = e.target.value;
+                                                                handleRefRow(index, 'detallePedidoId', id);
+                                                                // Al elegir la línea, sus telas (si las de la fila vinieron del pedido o no hay).
+                                                                if (telasPorDetalle[id] && (row._telasDePedido || !row.telas_cueros?.length)) {
+                                                                    setForm(prev => ({ ...prev, productos: prev.productos.map((r, j) => (j === index ? { ...r, telas_cueros: telasPorDetalle[id], _telasDePedido: true } : r)) }));
+                                                                }
+                                                            }}
                                                         >
                                                             <option value="">{op ? 'Sin indicar' : 'Cargando la orden…'}</option>
                                                             {detalles.map(d => (

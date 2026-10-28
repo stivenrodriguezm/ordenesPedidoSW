@@ -509,7 +509,7 @@ describe('Una referencia con proveedor independiente por subcategoría', () => {
     const nombre = within(screen.getByRole('listitem', { name: 'Mesa de 6' })).getByLabelText('Subcategoría');
     fireEvent.change(nombre, { target: { value: 'Mesa grande' } }); fireEvent.blur(nombre);
     await screen.findByRole('listitem', { name: 'Mesa grande' });
-    expect(servicio.renombrarSubcategoria).toHaveBeenCalledWith(11, 'Mesa grande');
+    expect(servicio.renombrarSubcategoria).toHaveBeenCalledWith(11, 'Mesa grande', expect.any(Number));
     expect(client.getQueryData(['lp-referencias']).map(r => r.linea.variantes[0].nombre)).toEqual(['Mesa grande', 'Mesa grande']);
     expect(client.getQueryData(['lp-referencias']).map(r => r.linea.variantes[0].costo_base)).toEqual(['100000', '200000']);
     expect(servicio.updateVariante).not.toHaveBeenCalled();

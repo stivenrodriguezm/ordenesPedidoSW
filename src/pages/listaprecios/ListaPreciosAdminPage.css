@@ -918,3 +918,21 @@
 .lp-admin-page .lp-variante-body > .lp-detalle-cargos { grid-column: 1 / -1; min-width: 0; padding: 7px 9px; border: 1px solid var(--color-border, var(--gray-200)); border-radius: var(--r-sm); background: var(--surface); }
 .lp-admin-page .lp-detalle-cargos .lp-section-label small { margin-left: 6px; }
 .lp-admin-page .lp-detalle-cargos .lp-captura .lp-inline-input { height: 30px; min-height: 30px; font-size: 12.5px; }
+
+/* Nueva subcategoría en la cabecera de cada referencia (2026-10-28) */
+.lp-admin-page .lp-grupo-referencias--con-accion { position: relative; }
+.lp-admin-page .lp-grupo-referencias--con-accion > .lp-grupo-cabecera > span { margin-right: 128px; }
+.lp-admin-page .lp-grupo-nueva-sub { position: absolute; top: 10px; right: 42px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px;
+  border: 1px dashed var(--border-strong, var(--gray-300)); border-radius: var(--r-sm); background: var(--surface); color: var(--info); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.lp-admin-page .lp-grupo-nueva-sub:hover { background: var(--accent-soft); border-color: var(--info); }
+.lp-agregar-sub__modo { display: flex; width: max-content; margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+.lp-agregar-sub__modo button { border: 0; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 700; background: var(--surface); color: var(--text-secondary); cursor: pointer; }
+.lp-agregar-sub__modo button[aria-pressed='true'] { background: var(--accent-soft); color: var(--info); }
+@media (max-width: 640px) {
+  .lp-admin-page .lp-grupo-referencias--con-accion > .lp-grupo-cabecera { padding-bottom: 48px; }
+  .lp-admin-page .lp-grupo-referencias--con-accion > .lp-grupo-cabecera > span { margin-right: 0; }
+  .lp-admin-page .lp-grupo-referencias--con-accion { display: flex; flex-direction: column; }
+  .lp-admin-page .lp-grupo-referencias--con-accion > .lp-grupo-cabecera { order: 0; }
+  .lp-admin-page .lp-grupo-nueva-sub { position: static; order: 1; align-self: flex-start; margin: -42px 12px 12px; }
+  .lp-admin-page .lp-grupo-referencias--con-accion > .lp-grupo-contenido { order: 2; }
+}

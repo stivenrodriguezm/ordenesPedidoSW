@@ -3,12 +3,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renombrarSubcategoria } from '../../services/listaPreciosService';
 import CampoPrecio from './CampoPrecio';
 
-export default function NombreSubcategoria({ subcategoria, nombre }) {
+export default function NombreSubcategoria({ subcategoria, nombre, referencia }) {
   const client = useQueryClient();
   const renombrar = useMutation({
     scope: { id: `lp-subcategoria-${subcategoria}` },
-    mutationFn: nombre => renombrarSubcategoria(subcategoria, nombre),
+    mutationFn: nombre => renombrarSubcategoria(subcategoria, nombre, referencia),
     onSuccess: async data => {
+      // Si la usaban otras referencias, esta quedó con una subcategoría propia (otro id): se recarga todo.
+      if (data.separada) {
+        await Promise.all(['lp-referencias', 'lp-linea', 'lp-lineas', 'listaprecios-catalogo', 'productos-venta-catalogo', 'lp-precio-variante', 'referencias', 'suministros-subcategorias']
+          .map(k => client.invalidateQueries({ queryKey: [k] })));
+        return;
+      }
       const cambiarSub = s => s.id === data.id ? { ...s, nombre: data.nombre } : s;
       const cambiarLinea = l => l && ({ ...l,
         subcategorias: l.subcategorias?.map(cambiarSub),
@@ -27,7 +33,7 @@ export default function NombreSubcategoria({ subcategoria, nombre }) {
       ]);
     },
   });
-  return <div className="lp-nombre-subcategoria" title="Nombre del catálogo: se actualiza en todas las referencias que usan esta subcategoría.">
+  return <div className="lp-nombre-subcategoria" title="Nombre en esta referencia: las demás referencias que usan esta subcategoría no cambian.">
     <CampoPrecio tipo="texto" label="Subcategoría" valor={nombre} max={100} onCommit={nuevo => renombrar.mutateAsync(nuevo)} />
   </div>;
 }
