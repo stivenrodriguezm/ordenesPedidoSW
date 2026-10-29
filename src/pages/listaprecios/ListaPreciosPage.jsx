@@ -135,7 +135,15 @@ function ListaPreciosPage() {
     onSuccess: (data) => { setPrintData(data); setCartOpen(false); },
   });
 
-  const lineaSeleccionada = seleccion && lineas.find(l => l.id === seleccion.linea.id || l.variantes.some(v => v.id === seleccion.inicial?.varianteId));
+  const lineaCompleta = seleccion && lineas.find(l => l.id === seleccion.linea.id || l.variantes.some(v => v.id === seleccion.inicial?.varianteId));
+  // Con una categoría elegida, la referencia solo muestra sus subcategorías de esa categoría (salvo que se
+  // edite un producto de la cotización que es de otra).
+  const lineaSeleccionada = useMemo(() => {
+    if (!lineaCompleta || !categoria) return lineaCompleta;
+    const variantes = lineaCompleta.variantes.filter((v) => String(v.categoria) === String(categoria));
+    const inicial = seleccion?.inicial?.varianteId;
+    return variantes.length && (inicial == null || variantes.some((v) => v.id === inicial)) ? { ...lineaCompleta, variantes } : lineaCompleta;
+  }, [lineaCompleta, categoria, seleccion]);
   const configurador = lineaSeleccionada ? <ConfiguradorPrecio key={`${lineaSeleccionada.id}-${seleccion.inicial?.id || 'consulta'}-${seleccion.inicial?.varianteId}-${seleccion.inicial?.grupoId}`} inline={escritorio} linea={lineaSeleccionada} inicial={seleccion.inicial} confirmando={confirmando} onClose={() => setSeleccion(null)}
       onAgregar={(item) => seleccion.inicial?.id ? cart.actualizarItem(seleccion.inicial.id, item) : cart.agregarItem(item)} onVerCotizacion={() => { setSeleccion(null); setCartOpen(true); }} /> : null;
 

@@ -297,4 +297,5 @@ export const sincronizarSubcategorias = (id, subcategoria) => API.post(`/listapr
 export const guardarDisposicionSubcategorias = (referencia, datos) => API.post(`/listaprecios/referencias/${referencia}/disposicion/`, datos).then(r => r.data);
 // (2026-10-28) Con `referencia`, el nombre cambia solo en esa referencia (y su grupo), no en las demás.
 export const renombrarSubcategoria = (subcategoria, nombre, referencia) => API.post(`/listaprecios/subcategorias/${subcategoria}/renombrar/`, { nombre, ...(referencia ? { referencia } : {}) }).then(r => r.data);
+export const cambiarCategoriaSubcategoria = (subcategoria, categoria, referencia) => API.post(`/listaprecios/subcategorias/${subcategoria}/categoria/`, { categoria, referencia }).then(r => r.data);
 export const agregarSubcategoriaNueva = (referencia, datos) => API.post(`/listaprecios/referencias/${referencia}/subcategoria-nueva/`, datos).then(r => r.data);

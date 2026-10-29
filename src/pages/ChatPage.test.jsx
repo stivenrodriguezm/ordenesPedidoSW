@@ -1,6 +1,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import API from '../services/api';
 import ChatPage from './ChatPage';
 
@@ -11,6 +12,7 @@ const listo = { ...procesando, estado: 'listo', texto: '**Vamos bien.**\n\n| Mes
 
 beforeEach(() => {
     vi.resetAllMocks();
+    localStorage.clear();  // el menú lateral recuerda grupos y si está abierto
     let consultas = 0;
     API.get.mockImplementation(async (url) => {
         if (url === '/asistente/estado/') return { data: { configurado: true, modelo: 'gemini-3.7-flash', modelos: [{ id: 'gemini-3.7-flash' }, { id: 'gemini-3.6-flash' }] } };
@@ -37,11 +39,12 @@ describe('Chat: asesor gerencial', () => {
         const coach = { id: 7, nombre: 'Coach comercial', rol: 'Te ayuda a vender', icono: 'personas', color: 'verde', areas: [], activo: true, documentos: [] };
         const antes = API.get.getMockImplementation();
         API.get.mockImplementation(async (url) => url === '/asistente/estado/' ? { data: { configurado: true, modelos: [], general: { visible: false } } }
-            : url === '/asistente/perfiles/' ? { data: [coach] } : antes(url));
+            : url === '/asistente/perfiles/' ? { data: [coach] } : url === '/asistente/conversaciones/' ? { data: [] } : antes(url));
         API.post.mockResolvedValue({ data: { conversacion: { id: 9, titulo: 'x', perfil: { id: 7, nombre: 'Coach comercial' } }, pregunta: { id: 10, rol: 'usuario', texto: 'Hola', estado: 'listo' }, respuesta: { ...listo, id: 12 } } });
         render(<ChatPage />);
         expect(await screen.findByRole('heading', { name: 'Hola, soy Coach comercial' })).toBeInTheDocument();
-        expect(screen.queryByRole('radio', { name: /IA Lottus/ })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Nuevo chat con Coach comercial' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Nuevo chat con IA Lottus' })).not.toBeInTheDocument();
         fireEvent.change(screen.getByLabelText('Pregunta para el asesor'), { target: { value: 'Hola' } });
         fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
         await waitFor(() => expect(API.post).toHaveBeenCalledWith('/asistente/preguntar/', { texto: 'Hola', conversacion: null, perfil: 7 }));
@@ -73,6 +76,7 @@ describe('Chat: asesor gerencial', () => {
         API.post.mockResolvedValueOnce({ data: { conversacion: { id: 5 }, pregunta: { id: 10, rol: 'usuario', texto: 'Hola', estado: 'listo' },
             respuesta: { ...procesando, estado: 'error', error: 'Gemini rechazó la solicitud por cuota (429).' } } });
         render(<ChatPage />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Opciones del chat' }));
         const selector = await screen.findByLabelText('Modelo de IA');
         await screen.findByRole('option', { name: 'gemini-3.6-flash' });
         fireEvent.change(selector, { target: { value: 'gemini-3.7-flash' } });
@@ -114,9 +118,10 @@ describe('Chat: asesor gerencial', () => {
         });
         API.post.mockResolvedValueOnce({ data: { conversacion: { id: 7, titulo: 'x', perfil }, pregunta: { id: 10, rol: 'usuario', texto: 'Hola', estado: 'listo' }, respuesta: { ...listo, id: 13 } } });
         render(<ChatPage />);
-        fireEvent.click(await screen.findByRole('radio', { name: /Cobranza/ }));
-        expect(screen.queryByRole('radio', { name: /Pausado/ })).not.toBeInTheDocument();
+        fireEvent.click(await screen.findByRole('button', { name: 'Nuevo chat con Cobranza' }));
+        expect(screen.queryByRole('button', { name: 'Nuevo chat con Pausado' })).not.toBeInTheDocument();  // pausado y sin chats
         expect(screen.getByRole('heading', { name: 'Hola, soy Cobranza' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Opciones del chat' }));
         fireEvent.click(screen.getByRole('button', { name: /Lo aprendido/ }));
         expect(await screen.findByText('Cifras en millones')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
@@ -128,19 +133,22 @@ describe('Chat: asesor gerencial', () => {
 
 describe('Chat por agente desde la oficina', () => {
     const perfil = {id:4,nombre:'Analista comercial',rol:'Revisa ventas',icono:'grafica',color:'verde',activo:true,areas:['ventas']};
-    it('filtra el historial en el servidor y envía al perfil de la ruta',async()=>{
+    it('agrupa los chats por agente, despliega el de la ruta y le envía la pregunta',async()=>{
         const anterior=API.get.getMockImplementation();
-        API.get.mockImplementation(async(url,opciones)=>{
+        API.get.mockImplementation(async(url)=>{
             if(url==='/asistente/perfiles/')return {data:[perfil]};
-            if(url==='/asistente/conversaciones/')return {data:opciones?.params?.perfil===4?[{id:8,titulo:'Propia',perfil}]:[{id:9,titulo:'Otro agente'}]};
+            if(url==='/asistente/conversaciones/')return {data:[{id:8,titulo:'Propia',perfil},{id:9,titulo:'Otro agente'}]};
             return anterior(url);
         });
         API.post.mockResolvedValue({data:{conversacion:{id:8,perfil},pregunta:{id:20,rol:'usuario',texto:'Hola',estado:'listo'},respuesta:{...listo,id:21}}});
         render(<ChatPage perfilInicial={4}/>);
         await screen.findByRole('heading',{name:'Hola, soy Analista comercial'});
-        expect(API.get).toHaveBeenCalledWith('/asistente/conversaciones/',{params:{sin_ejecuciones:'1',perfil:4}});
-        expect(screen.queryByText('Otro agente')).not.toBeInTheDocument();
-        expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+        expect(API.get).toHaveBeenCalledWith('/asistente/conversaciones/',{params:{sin_ejecuciones:'1'}});
+        expect(await screen.findByRole('button',{name:'Propia'})).toBeInTheDocument();
+        expect(screen.getByRole('button',{name:'Otro agente'})).toBeInTheDocument();  // la primera vez, todos los grupos con chats desplegados
+        fireEvent.click(screen.getByRole('button',{name:/^IA Lottus/,expanded:true}));
+        expect(screen.queryByRole('button',{name:'Otro agente'})).not.toBeInTheDocument();
+        expect(JSON.parse(localStorage.getItem('chat-ia:grupos'))).toEqual(['4']);  // se recuerda lo plegado
         fireEvent.change(screen.getByLabelText('Pregunta para el asesor'),{target:{value:'Hola'}});
         fireEvent.click(screen.getByRole('button',{name:'Enviar'}));
         await waitFor(()=>expect(API.post).toHaveBeenCalledWith('/asistente/preguntar/',{texto:'Hola',conversacion:null,perfil:4}));
@@ -183,12 +191,12 @@ describe('Chat por agente desde la oficina', () => {
         fireEvent.click(screen.getByRole('button',{name:'Enviar'}));
         await waitFor(()=>expect(API.post).toHaveBeenCalledWith('/asistente/preguntar/',{texto:'Validar venta',conversacion:8}));
     });
-    it('abre el historial pedido y rechaza una conversación de otro perfil',async()=>{
+    it('abre el chat pedido aunque sea de otro agente y muestra con quién es',async()=>{
         const anterior=API.get.getMockImplementation();
         API.get.mockImplementation(async(url,opciones)=>url==='/asistente/perfiles/'?{data:[perfil]}:anterior(url,opciones));
         render(<ChatPage perfilInicial={4} conversacionInicial={5}/>);
-        expect(await screen.findByRole('alert')).toHaveTextContent('pertenece a otro agente');
-        expect(screen.queryByText('Vamos bien.')).not.toBeInTheDocument();
+        expect(await screen.findByText('Vamos bien.')).toBeInTheDocument();
+        expect(screen.getByRole('heading',{name:'IA Lottus'})).toBeInTheDocument();
     });
     it('si el agente desaparece, no envía silenciosamente una pregunta al general',async()=>{
         const anterior=API.get.getMockImplementation();
@@ -212,14 +220,58 @@ describe('Chat por agente desde la oficina', () => {
             return antes(url, opciones);
         });
         render(<ChatPage />);
-        fireEvent.click(await screen.findByRole('tab', { name: /Equipo IA/ }));
+        const grupo = await screen.findByRole('button', { name: /^Equipo IA/ });
+        expect(grupo).toHaveTextContent('1');
+        fireEvent.click(grupo);
+        fireEvent.click(screen.getByRole('button', { name: /IA Lottus y Alan/ }));
         expect(await screen.findByRole('heading', { name: 'IA Lottus y Alan' })).toBeInTheDocument();
         expect(screen.getByText('Por favor, Alan: cambia la fecha de entrega.')).toBeInTheDocument();
         expect(screen.getByText('Alan está trabajando en la tarea…')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Ejecución #31 · Trabajando/ })).toBeInTheDocument();
-        expect(screen.getByRole('tab', { name: /Equipo IA/ })).toHaveTextContent('1');
-        // Volver a «Mis chats» muestra de nuevo las conversaciones del usuario.
-        fireEvent.click(screen.getByRole('tab', { name: /Mis chats/ }));
-        expect(await screen.findByText('Ventas de septiembre')).toBeInTheDocument();
+        // Un chat propio vuelve a la conversación con el agente.
+        fireEvent.click(screen.getByRole('button', { name: 'Ventas de septiembre' }));
+        expect(await screen.findByText('¿Cómo vamos?')).toBeInTheDocument();
+    });
+});
+
+describe('Menú lateral del chat', () => {
+    it('se oculta y se muestra en un clic, y deja una barra con los agentes', async () => {
+        render(<ChatPage />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Ocultar chats' }));
+        const riel = screen.getByRole('navigation', { name: 'Agentes' });
+        expect(localStorage.getItem('chat-ia:lateral')).toBe('false');
+        fireEvent.click(within(riel).getByRole('button', { name: 'Ver chats de IA Lottus' }));
+        expect(screen.getByRole('button', { name: 'Ocultar chats' })).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.queryByRole('navigation', { name: 'Agentes' })).not.toBeInTheDocument();
+    });
+
+    it('borra un chat guardado con confirmación y busca entre los chats', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        API.delete.mockResolvedValue({});
+        render(<ChatPage />);
+        await screen.findByRole('button', { name: 'Ventas de septiembre' });
+        fireEvent.change(screen.getByLabelText('Buscar chats'), { target: { value: 'compras' } });
+        expect(screen.queryByRole('button', { name: 'Ventas de septiembre' })).not.toBeInTheDocument();
+        fireEvent.change(screen.getByLabelText('Buscar chats'), { target: { value: 'septiembre' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Borrar Ventas de septiembre' }));
+        expect(window.confirm).toHaveBeenCalled();
+        await waitFor(() => expect(API.delete).toHaveBeenCalledWith('/asistente/conversaciones/5/'));
+    });
+
+    it('el Desarrollador muestra sus pedidos: nuevo pedido y borrar los cerrados', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        API.delete.mockResolvedValue({});
+        const dev = { id: 9, nombre: 'Desarrollador', rol: 'Mejora la plataforma', icono: 'idea', color: 'morado', activo: true, desarrollador: true };
+        const antes = API.get.getMockImplementation();
+        API.get.mockImplementation(async (url, opciones) => url === '/asistente/perfiles/' ? { data: [dev] }
+            : url === '/desarrollador/tareas/' ? { data: [{ id: 3, pedido: 'Sidebar azul', estado: 'deshecha', estado_nombre: 'Deshecha' },
+                { id: 4, pedido: 'Menú del perfil', estado: 'aplicada', estado_nombre: 'Aplicada en la plataforma' }] } : antes(url, opciones));
+        render(<QueryClientProvider client={new QueryClient()}><ChatPage /></QueryClientProvider>);
+        fireEvent.click(await screen.findByRole('button', { name: 'Nuevo pedido al Desarrollador' }));
+        expect(screen.getByLabelText('¿Qué quieres mejorar?')).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: /Sidebar azul/ })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Borrar pedido #4' })).not.toBeInTheDocument();  // aplicada: aún se puede deshacer
+        fireEvent.click(screen.getByRole('button', { name: 'Borrar pedido #3' }));
+        await waitFor(() => expect(API.delete).toHaveBeenCalledWith('/desarrollador/tareas/3/'));
     });
 });

@@ -1470,9 +1470,15 @@ export default function NuevaFacturaPage() {
                                                                 </option>
                                                             ))}
                                                         </select>
-                                                        {elegida && !row.itemIds?.length && (parseInt(row.cantidad) || 1) > pendiente && (
+                                                        {/* Una factura puede traer más que lo pendiente (la línea «Juego de 6 sillas» pide 1 y llegan 6). */}
+                                                        {elegida && !row.itemIds?.length && pendiente === 0 && (
                                                             <small role="alert" style={{ color: 'var(--danger)' }}>
-                                                                Esta línea tiene {pendiente} pendiente{pendiente === 1 ? '' : 's'}: la cantidad de la fila no puede ser mayor.
+                                                                Esta línea ya está recibida completa: elige otra línea o déjala sin indicar.
+                                                            </small>
+                                                        )}
+                                                        {elegida && !row.itemIds?.length && pendiente > 0 && (parseInt(row.cantidad) || 1) > pendiente && (
+                                                            <small style={{ color: 'var(--text-muted)' }}>
+                                                                La línea pedía {pendiente}; las {parseInt(row.cantidad) || 1} unidades de esta fila quedan ligadas a ella (por ejemplo, un juego de sillas).
                                                             </small>
                                                         )}
                                                     </div>

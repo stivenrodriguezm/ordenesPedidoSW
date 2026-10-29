@@ -794,6 +794,11 @@
 .lp-admin-page .lp-subcategoria-identidad > strong { font-size: 14px; overflow-wrap: anywhere; }
 .lp-admin-page .lp-subcategoria-identidad > span { font-size: 12px; color: var(--gray-500); }
 .lp-admin-page .lp-subcategoria-identidad > em { font-size: 11px; font-style: normal; color: var(--warning); }
+.lp-admin-page .lp-categoria-subcategoria { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.lp-admin-page .lp-categoria-subcategoria > span { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--gray-500); }
+.lp-admin-page .lp-categoria-subcategoria select { min-width: 0; max-width: 100%; height: 28px; padding: 0 22px 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; text-overflow: ellipsis; }
+.lp-admin-page .lp-categoria-subcategoria select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.lp-admin-page .lp-categoria-subcategoria > small { flex-basis: 100%; font-size: 11px; color: var(--danger); }
 .lp-admin-page .lp-ref-tipos { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
 .lp-admin-page .lp-ref-tipos > span { padding: 5px 9px; border-radius: 7px; background: var(--gray-50); border: 1px solid var(--border); font-size: 12px; }
 .lp-admin-page .lp-ref-tipos small { display: block; color: var(--gray-500); font-size: 10px; }

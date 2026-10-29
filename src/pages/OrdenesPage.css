@@ -211,6 +211,13 @@
   border-bottom: 1px solid var(--gray-100);
 }
 
+/* Descargar (permiso DESCARGAR_ORDEN_PEDIDO) y Editar, juntos a la derecha. */
+.orden-card-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .orden-card-header .card-header-left {
   display: flex;
   align-items: center;
@@ -560,6 +567,10 @@
 
 .mobile-expanded-content {
   padding: 1rem;
+}
+
+.mobile-expanded-content > .ds-btn + .ds-btn {
+  margin-top: 0.5rem;
 }
 
 .mobile-section {

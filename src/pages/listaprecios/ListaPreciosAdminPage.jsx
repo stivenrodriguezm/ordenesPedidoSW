@@ -31,6 +31,7 @@ import ProveedoresAgrupacion from './ProveedoresAgrupacion';
 import ReferenciaUnificada from './ReferenciaUnificada';
 import PublicacionSubcategoria from './PublicacionSubcategoria';
 import NombreSubcategoria from './NombreSubcategoria';
+import CategoriaSubcategoria from './CategoriaSubcategoria';
 import AgregarSubcategoria from './AgregarSubcategoria';
 import { ordenarSubcategorias } from './disposicionSubcategorias';
 import { subcategoriasReferencia } from './subcategoriasReferencia';
@@ -823,7 +824,7 @@ function VarianteEditor({ variante, linea, lineasGrupo, grupos, multiplicadores,
     <div className={`lp-variante-card${proveedorControl || variante.componentes?.length ? ' lp-variante-card--proveedor' : ''}${expandido ? ' lp-variante-card--open' : ''}`} data-estado={updateVarianteMut.isPending || updatePrecioMut.isPending || clearPrecioMut.isPending || deletePrecioMut.isPending ? 'guardando' : undefined}>
       <div className="lp-variante-header lp-variante-captura">
         <div className="lp-captura-identidad">
-          {linea.referencia ? <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={variante.subcategoria} nombre={variante.nombre} referencia={linea.referencia} /><span>{variante.categoria_nombre}</span>{variante.costo_confirmado === false && <em>Pendiente de costo</em>}</div>
+          {linea.referencia ? <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={variante.subcategoria} nombre={variante.nombre} referencia={linea.referencia} /><CategoriaSubcategoria subcategoria={variante.subcategoria} nombre={variante.nombre} categoria={variante.categoria} categoriaNombre={variante.categoria_nombre} referencia={linea.referencia} />{variante.costo_confirmado === false && <em>Pendiente de costo</em>}</div>
             : <CampoPrecio tipo="texto" label="Producto / medida" valor={variante.nombre} onCommit={(nombre) => updateVarianteMut.mutateAsync({ nombre })} />}
           <div className="lp-captura-insignias">{variante.cargos.some((c) => c.tipo === 'decorativos') && <span className="lp-decorativos-badge" title="Cojines incluidos: 2 decorativos por unidad"><FaCouch size={9} /> Decorativos x2</span>}
             {!!variante.componentes?.length && <span className="lp-juego-badge" title={variante.componentes.map(c => `${c.cantidad} ${c.variante_nombre}`).join(' + ')}><FaLayerGroup size={10} /> Conjunto</span>}
@@ -1155,6 +1156,7 @@ function LineasTab({ notify }) {
   const [editing, setEditing] = useState(null);
   const [agrupando, setAgrupando] = useState(null);
   const [nuevaReferencia, setNuevaReferencia] = useState(false);
+  const [nuevaSubcategoria, setNuevaSubcategoria] = useState(false);
   const hasPermission = usePermissions();
   const { data: categorias = [] } = useQuery({ queryKey: ['lp-categorias'], queryFn: getCategorias });
   const { data: grupos = [] } = useQuery({ queryKey: ['lp-grupos'], queryFn: getGruposTela });
@@ -1193,8 +1195,10 @@ function LineasTab({ notify }) {
       <label className="v-select-pill"><span>Agrupar por</span><select aria-label="Agrupar por" value={agrupacion} onChange={e => cambiarVista(() => setAgrupacion(e.target.value))}><option value="referencia">Referencia</option><option value="proveedor">Proveedor</option></select></label>
       <label className="v-select-pill"><span>Categoría</span><select aria-label="Filtrar categoría" value={categoriaId} onChange={e => cambiarVista(() => setCategoriaId(e.target.value))}><option value="">Todas</option>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
       {agrupacion === 'proveedor' && <Button size="sm" variant="secondary" icon={FaLayerGroup} onClick={() => cambiarVista(() => setAgrupando({ grupo: null }))}>Crear agrupación</Button>}
+      {(hasPermission('EDITAR_LISTA_PRECIOS') || hasPermission('ADMINISTRAR_REFERENCIAS')) && <Button size="sm" variant="secondary" icon={FaPlus} onClick={() => setNuevaSubcategoria(true)}>Nueva subcategoría</Button>}
       {hasPermission('ADMINISTRAR_REFERENCIAS') && <Button size="sm" icon={FaPlus} onClick={() => setNuevaReferencia(true)}>Nueva referencia</Button>}
     </div>
+    {nuevaSubcategoria && <AgregarSubcategoria grupos={gruposCompletos} categoriaInicial={categoriaId} notify={notify} onClose={() => setNuevaSubcategoria(false)} />}
     {/* La referencia nueva queda a la vista: búsqueda con su nombre y sin filtros que la oculten. */}
     {nuevaReferencia && <NuevaReferencia notify={notify} onClose={() => setNuevaReferencia(false)}
       onCreada={ref => { setNuevaReferencia(false); cambiarVista(() => { setAgrupacion('referencia'); setCategoriaId(''); setEstado('todas'); setSearch(ref.nombre); }); }} />}

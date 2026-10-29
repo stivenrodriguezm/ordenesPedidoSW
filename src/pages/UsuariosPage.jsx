@@ -207,6 +207,7 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_ESTADO_ORDEN", label: "Editar estado del pedido" },
       { code: "EDITAR_ESTADO_TELA_ORDEN", label: "Editar estado de tela en pedido" },
       { code: "ANULAR_ORDEN_PEDIDO", label: "Anular órdenes de pedido" },
+      { code: "DESCARGAR_ORDEN_PEDIDO", label: "Volver a descargar la imagen de la orden de pedido (mismo formato)" },
       { code: "VER_COSTOS_ORDEN", label: "Ver costo del proveedor en pedidos" }
     ] 
   },

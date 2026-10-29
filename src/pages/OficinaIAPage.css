@@ -326,3 +326,126 @@
 .of-general--equipo:hover { background:#36322a; }
 .of-general--equipo .of-general__icono { color:#d9c69f; }
 @media(max-width:1000px) { .of-abajo { grid-template-columns:1fr; } }
+
+/* ==========================================================================
+   Modo Nocturno
+   ========================================================================== */
+:root[data-tema-contenido="nocturno"] .of-page {
+    --of-ink: var(--text);
+    --of-muted: var(--text-muted);
+    --of-line: var(--border);
+    --of-gold: #c8b58f;
+    color: var(--of-ink);
+}
+:root[data-tema-contenido="nocturno"] .of-cabecera {
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-boton {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-boton:hover {
+    background: var(--bg-app);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-vistas {
+    background: var(--bg-app);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-vistas button[aria-pressed=true] {
+    background: var(--surface);
+    color: var(--text);
+}
+:root[data-tema-contenido="nocturno"] .of-lienzo {
+    background: var(--bg-app);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-buscar,
+:root[data-tema-contenido="nocturno"] .of-zona-form input,
+:root[data-tema-contenido="nocturno"] .of-zona-form select {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-agente-tarjeta {
+    background: var(--surface);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-agente-abrir {
+    color: var(--text);
+}
+:root[data-tema-contenido="nocturno"] .of-agente-ubicacion {
+    background: var(--bg-app);
+    border-top-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-crear-tarjeta {
+    background: var(--bg-app);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+:root[data-tema-contenido="nocturno"] .of-config-zonas {
+    background: var(--surface);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-config-zonas button {
+    background: var(--bg-app);
+    color: var(--text);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-estacion__nombre.is-persona,
+:root[data-tema-contenido="nocturno"] .of-estacion__accion,
+:root[data-tema-contenido="nocturno"] .of-bocadillo,
+:root[data-tema-contenido="nocturno"] .of-zona-enlace {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-bocadillo:hover,
+:root[data-tema-contenido="nocturno"] .of-zona-enlace:hover {
+    background: var(--bg-app);
+}
+:root[data-tema-contenido="nocturno"] .of-cargando {
+    background: var(--bg-app);
+    color: var(--text-muted);
+}
+:root[data-tema-contenido="nocturno"] .of-error {
+    background: #3e2017;
+    color: #eba38d;
+    border-color: #5c3327;
+}
+
+/* Modales y utilidades flotantes asociados a la Oficina */
+:root[data-tema-contenido="nocturno"] .ai-auto,
+:root[data-tema-contenido="nocturno"] .of-ficha,
+:root[data-tema-contenido="nocturno"] .eh-modal,
+:root[data-tema-contenido="nocturno"] .ia-informes,
+:root[data-tema-contenido="nocturno"] .ea-modal,
+:root[data-tema-contenido="nocturno"] .colab-bandeja,
+:root[data-tema-contenido="nocturno"] .of-chat-dock,
+:root[data-tema-contenido="nocturno"] .ac-modal {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-ficha__identidad strong,
+:root[data-tema-contenido="nocturno"] .of-ficha__dato strong,
+:root[data-tema-contenido="nocturno"] .of-ficha__resultado strong {
+    color: var(--text);
+}
+:root[data-tema-contenido="nocturno"] .of-ficha__estado,
+:root[data-tema-contenido="nocturno"] .of-ficha__resultado,
+:root[data-tema-contenido="nocturno"] .of-ficha__objetivo,
+:root[data-tema-contenido="nocturno"] .of-ficha__iniciativa {
+    background: var(--bg-app);
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-ficha__tareas button {
+    border-color: var(--border);
+}
+:root[data-tema-contenido="nocturno"] .of-ficha__acciones button {
+    background: var(--bg-app);
+    color: var(--text);
+    border-color: var(--border);
+}

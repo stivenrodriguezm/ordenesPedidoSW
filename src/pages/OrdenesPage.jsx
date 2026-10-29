@@ -6,6 +6,7 @@ import './VentasImprovements.css';
 import { AppContext, usePermissions } from '../AppContext';
 import AppNotification from '../components/AppNotification';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
+import DescargarOrdenPedido from '../components/imagenes/DescargarOrdenPedido';
 import { Button, PageHeader, Badge, Modal, LoadingBlock, ErrorState, EmptyState } from '../components/ui';
 import API from '../services/api';
 import { formatCOP } from '../utils/formatCOP';
@@ -746,6 +747,10 @@ const OrdenesPage = () => {
                               <div className="orden-card orden-info-card">
                                 <div className="orden-card-header">
                                   <h4>Información de la Orden</h4>
+                                  <div className="orden-card-acciones">
+                                  {hasPermission('DESCARGAR_ORDEN_PEDIDO') && (
+                                    <DescargarOrdenPedido orden={orden} detalles={orderDetails} size="sm" onError={(m) => showNotification(m, 'error')} />
+                                  )}
                                   {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
                                     <Button
                                       variant="secondary"
@@ -763,6 +768,7 @@ const OrdenesPage = () => {
                                       </Button>
                                     )
                                   )}
+                                  </div>
                                 </div>
                                 <div className="orden-info-grid">
                                   <div className="info-item">
@@ -1007,6 +1013,9 @@ const OrdenesPage = () => {
                           </ul>
                         </div>
 
+                        {hasPermission('DESCARGAR_ORDEN_PEDIDO') && (
+                          <DescargarOrdenPedido orden={orden} detalles={orderDetails} block onError={(m) => showNotification(m, 'error')} />
+                        )}
                         {orden.estado === 'anulado' && !hasPermission('ADMIN_MODERACION') ? (
                           <Button
                             variant="secondary"

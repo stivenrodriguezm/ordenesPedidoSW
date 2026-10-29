@@ -30,7 +30,7 @@ const cuando = (iso) => new Date(iso).toDateString() === new Date().toDateString
     ? hora(iso) : new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 const mensajeError = (e) => e.response?.data?.error || e.response?.data?.detail || 'No se pudo cargar la conversación.';
 
-function Pareja({ participantes, tamano = 22 }) {
+export function Pareja({ participantes, tamano = 22 }) {
     return <span className="eq-pareja" aria-hidden="true">
         <AvatarPerfil perfil={perfilDe(participantes[0])} tamano={tamano} />
         <AvatarPerfil perfil={perfilDe(participantes[1])} tamano={tamano} className="eq-pareja__segundo" />
@@ -68,7 +68,8 @@ function Trabajo({ t }) {
     </div>;
 }
 
-export function HiloEquipo({ clave, onMenu }) {
+// sinCabecera: dentro del chat de IA el encabezado lo pone la ventana.
+export function HiloEquipo({ clave, onMenu, sinCabecera = false }) {
     const [datos, setDatos] = useState(null);
     const [error, setError] = useState('');
     const lista = useRef(null);
@@ -91,14 +92,14 @@ export function HiloEquipo({ clave, onMenu }) {
     const ejecutor = a && b ? (trabajando ? [a, b].find(p => p.perfil?.ejecutor) || b : null) : null;
     let diaPrevio = '';
     return <section className="chat-panel eq-hilo" aria-label={a && b ? `Conversación entre ${a.nombre} y ${b.nombre}` : 'Conversación del equipo'}>
-        <header className="chat-cabecera eq-hilo__cabecera">
+        {!sinCabecera && <header className="chat-cabecera eq-hilo__cabecera">
             <button type="button" className="chat-menu" aria-label="Ver conversaciones" onClick={onMenu}><FaBars /></button>
             {a && b && <Pareja participantes={[a, b]} tamano={34} />}
             <div className="chat-cabecera__texto">
                 <h1>{a && b ? `${a.nombre} y ${b.nombre}` : 'Equipo IA'}</h1>
                 <small>Conversación entre agentes · se actualiza sola</small>
             </div>
-        </header>
+        </header>}
         <div className="chat-mensajes eq-mensajes" ref={lista}>
             {error ? <p className="chat-error" role="alert">{error}<button type="button" onClick={cargar}>Reintentar</button></p>
                 : !datos ? <p className="chat-abriendo" role="status">Abriendo conversación…</p>
@@ -121,7 +122,7 @@ export function HiloEquipo({ clave, onMenu }) {
                     })}
             {ejecutor && <div className="eq-escribiendo" role="status"><span className="chat-puntos" aria-hidden="true"><i /><i /><i /></span>{ejecutor.nombre} está trabajando en la tarea…</div>}
         </div>
-        <p className="chat-aviso eq-aviso"><FaComments aria-hidden="true" /> Solo lectura. Para pedir un cambio, escríbele a IA Lottus en «Mis chats»: se lo encargará al agente ejecutor y su conversación aparecerá aquí.</p>
+        <p className="chat-aviso eq-aviso"><FaComments aria-hidden="true" /> Solo lectura. Para pedir un cambio, escríbele a IA Lottus: se lo encargará al agente ejecutor y su conversación aparecerá aquí.</p>
     </section>;
 }
 

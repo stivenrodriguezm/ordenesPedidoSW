@@ -38,6 +38,20 @@ describe('Consulta de showroom', () => {
     expect(within(region).getByRole('button', { name: 'Subcategoría actual' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Consultar Colección anterior' })).not.toBeInTheDocument();
   });
+  it('con una categoría elegida, la referencia solo muestra sus subcategorías de esa categoría', async () => {
+    servicio.getCatalogo.mockResolvedValue([{ id: 5, referencia: 101, nombre: 'Valencia', fotos: [], variantes: [
+      { id: 50, subcategoria: 71, nombre: 'Sofá 3p.', categoria: 1, categoria_nombre: 'Salas', precios: [grupo(1, 3000000)], opcionales: [], notas: [] },
+      { id: 51, subcategoria: 72, nombre: 'Silla de comedor', categoria: 2, categoria_nombre: 'Comedores', precios: [grupo(1, 900000)], opcionales: [], notas: [] },
+    ] }]);
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Comedores' }));
+    const region = within(await consultar('Valencia')).getByRole('region', { name: 'Subcategoría' });
+    expect(within(region).getByRole('button', { name: 'Silla de comedor' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(region).queryByRole('button', { name: 'Sofá 3p.' })).not.toBeInTheDocument();
+    // Sin filtro vuelve a mostrar todas.
+    fireEvent.click(screen.getByRole('button', { name: 'Todas' }));
+    expect(within(within(screen.getByRole('dialog')).getByRole('region', { name: 'Subcategoría' })).getByRole('button', { name: 'Sofá 3p.' })).toBeInTheDocument();
+  });
   it('presenta una sola referencia con sus proveedores y busca la ficha del proveedor correcto', async () => {
     servicio.getCatalogo.mockResolvedValue([
       { ...sofa, referencia: 101, proveedor: 7, proveedor_nombre: 'Fabricante Andino', variantes: [{ ...sofa.variantes[0], subcategoria: 71 }] },

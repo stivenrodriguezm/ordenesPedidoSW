@@ -14,8 +14,10 @@ const iniciales = (nombre = '', apellido = '') => `${nombre ? nombre[0] : ''}${a
 function UsuarioSidebar({ isCollapsed, onNavegar }) {
   const { usuario, setUsuario } = useContext(AppContext) || {};
   const [abierto, setAbierto] = useState(false);
-  const [tema, cambiarTema] = useTema();
-  const nocturno = tema === 'nocturno';
+  const [temaSidebar, cambiarTemaSidebar] = useTema('sidebar');
+  const [temaContenido, cambiarTemaContenido] = useTema('contenido');
+  const nocturnoSidebar = temaSidebar === 'nocturno';
+  const nocturnoContenido = temaContenido === 'nocturno';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const ref = useRef(null);
@@ -60,9 +62,14 @@ function UsuarioSidebar({ isCollapsed, onNavegar }) {
             <FaUserShield /><span>Gestión de Usuarios</span>
           </button>
         )}
-        <button type="button" role="switch" aria-checked={nocturno} className="sidebar-user__opcion sidebar-user__tema"
-          onClick={() => cambiarTema(nocturno ? 'diurno' : 'nocturno')} title={titulo(nocturno ? 'Modo nocturno: activado' : 'Modo nocturno: desactivado')}>
-          {nocturno ? <FaMoon /> : <FaSun />}<span>Modo nocturno</span>
+        <button type="button" role="switch" aria-checked={nocturnoSidebar} className="sidebar-user__opcion sidebar-user__tema"
+          onClick={() => cambiarTemaSidebar(nocturnoSidebar ? 'diurno' : 'nocturno')} title={titulo(nocturnoSidebar ? 'Sidebar oscuro: activado' : 'Sidebar oscuro: desactivado')}>
+          {nocturnoSidebar ? <FaMoon /> : <FaSun />}<span>Sidebar</span>
+          <span className="sidebar-user__interruptor" aria-hidden="true"><span /></span>
+        </button>
+        <button type="button" role="switch" aria-checked={nocturnoContenido} className="sidebar-user__opcion sidebar-user__tema"
+          onClick={() => cambiarTemaContenido(nocturnoContenido ? 'diurno' : 'nocturno')} title={titulo(nocturnoContenido ? 'Contenido oscuro: activado' : 'Contenido oscuro: desactivado')}>
+          {nocturnoContenido ? <FaMoon /> : <FaSun />}<span>Contenido</span>
           <span className="sidebar-user__interruptor" aria-hidden="true"><span /></span>
         </button>
         <button type="button" className="sidebar-user__opcion sidebar-user__opcion--salir" onClick={cerrarSesion} title={titulo('Cerrar Sesión')}>

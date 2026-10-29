@@ -33,6 +33,7 @@ const TelasPage = lazy(() => import("./pages/TelasPage"));
 
 const FacturasProveedorPage = lazy(() => import("./pages/FacturasProveedorPage"));
 const NuevaFacturaPage = lazy(() => import("./pages/NuevaFacturaPage"));
+const DesarrolladorPage = lazy(() => import("./pages/DesarrolladorPage"));
 const RemisionesPage = lazy(() => import("./pages/RemisionesPage"));
 const NuevaRemisionPage = lazy(() => import("./pages/NuevaRemisionPage"));
 const InventarioPage = lazy(() => import("./pages/InventarioPage"));
@@ -160,6 +161,7 @@ function App() {
                   <Route path="/IA" element={<PrivateRoute feature="ACCESO_OFICINA"><OficinaIAPage /></PrivateRoute>} />
                   <Route path="/IA/general" element={<PrivateRoute feature="USAR_ASISTENTE_IA"><ChatGeneralPage /></PrivateRoute>} />
                   <Route path="/IA/agentes/:perfilId" element={<PrivateRoute feature="USAR_ASISTENTE_IA"><ChatAgentePage /></PrivateRoute>} />
+                  <Route path="/IA/desarrollador" element={<PrivateRoute feature="USAR_ASISTENTE_IA"><DesarrolladorPage /></PrivateRoute>} />
                   <Route path="/IA/configuracion" element={<PrivateRoute feature="GESTIONAR_PERFILES_IA"><ConfiguracionIAPage /></PrivateRoute>} />
                   <Route path="/chat" element={<Navigate to="/IA" replace />} />
                   <Route path="/comisiones" element={<Navigate to="/nomina" replace />} />

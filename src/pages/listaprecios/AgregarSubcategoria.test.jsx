@@ -84,4 +84,20 @@ describe('Agregar subcategoría a una referencia', () => {
     expect(servicio.agregarSubcategoriaNueva).toHaveBeenCalledWith(102, { nombre: 'Banca', categoria: 1, todas: false });
     expect(API.patch).not.toHaveBeenCalled();
   });
+
+  it('desde la barra de la lista pide primero la referencia', async () => {
+    servicio.agregarSubcategoriaNueva.mockResolvedValue({ id: 40, nombre: 'Butaco', categoria: 2 });
+    const onClose = vi.fn();
+    const grupos = [{ clave: 'valencia', nombre: 'Valencia', referencias: [ref(101, 7, [11])] }, { clave: 'cairo', nombre: 'Cairo', referencias: [{ ...ref(103, 9, []), nombre: 'Cairo' }] }];
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <AgregarSubcategoria grupos={grupos} categoriaInicial="2" notify={vi.fn()} onClose={onClose} /></QueryClientProvider>);
+    expect(screen.getByRole('dialog', { name: 'Nueva subcategoría' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Nombre de la subcategoría'), { target: { value: 'Butaco' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Elige la referencia');
+    fireEvent.change(screen.getByLabelText('Referencia'), { target: { value: 'cairo' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(servicio.agregarSubcategoriaNueva).toHaveBeenCalledWith(103, { nombre: 'Butaco', categoria: 2, todas: false });
+  });
 });

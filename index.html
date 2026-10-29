@@ -12,14 +12,22 @@
     <script>
       // Modo diurno/nocturno guardado en este equipo: se aplica antes de pintar (sin parpadeo).
       try {
-        var tema = localStorage.getItem('lottus-tema');
-        if (tema === 'nocturno') {
-          document.documentElement.dataset.tema = 'nocturno';
+        var temaAntiguo = localStorage.getItem('lottus-tema');
+        var temaSidebar = localStorage.getItem('lottus-tema-sidebar') || temaAntiguo || 'diurno';
+        var temaContenido = localStorage.getItem('lottus-tema-contenido') || temaAntiguo || 'diurno';
+        
+        document.documentElement.dataset.temaSidebar = temaSidebar;
+        document.documentElement.dataset.temaContenido = temaContenido;
+        
+        if (temaSidebar === 'nocturno') {
           document.querySelector('meta[name="theme-color"]').setAttribute('content', '#070b10');
         } else {
-          document.documentElement.dataset.tema = 'diurno';
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f4f5f7');
         }
-      } catch (e) { document.documentElement.dataset.tema = 'diurno'; }
+      } catch (e) { 
+        document.documentElement.dataset.temaSidebar = 'diurno';
+        document.documentElement.dataset.temaContenido = 'diurno';
+      }
     </script>
   </head>
   <script>

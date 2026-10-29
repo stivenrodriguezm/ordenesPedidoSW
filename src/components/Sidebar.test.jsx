@@ -56,20 +56,32 @@ describe('Perfil al pie del menú', () => {
         expect(screen.getByText('Pantalla de perfil')).toBeInTheDocument();
     });
 
-    it('cambia entre modo diurno y nocturno y lo recuerda en este equipo', () => {
-        localStorage.removeItem('lottus-tema');
-        document.documentElement.dataset.tema = 'diurno';
+    it('cambia entre modo diurno y nocturno y lo recuerda en este equipo (separado)', () => {
+        localStorage.removeItem('lottus-tema-sidebar');
+        localStorage.removeItem('lottus-tema-contenido');
+        document.documentElement.dataset.temaSidebar = 'diurno';
+        document.documentElement.dataset.temaContenido = 'diurno';
         montar('/', admin);
         fireEvent.click(screen.getByRole('button', { name: 'Cuenta de Ana Ruiz' }));
-        const modo = screen.getByRole('switch', { name: /Modo nocturno/ });
-        expect(modo).toHaveAttribute('aria-checked', 'false');
-        fireEvent.click(modo);
-        expect(modo).toHaveAttribute('aria-checked', 'true');
-        expect(document.documentElement.dataset.tema).toBe('nocturno');
-        expect(localStorage.getItem('lottus-tema')).toBe('nocturno');
-        fireEvent.click(modo);
-        expect(document.documentElement.dataset.tema).toBe('diurno');
-        expect(localStorage.getItem('lottus-tema')).toBe('diurno');
+        const modoSidebar = screen.getByRole('switch', { name: /Sidebar/ });
+        const modoContenido = screen.getByRole('switch', { name: /Contenido/ });
+        
+        expect(modoSidebar).toHaveAttribute('aria-checked', 'false');
+        expect(modoContenido).toHaveAttribute('aria-checked', 'false');
+        
+        fireEvent.click(modoSidebar);
+        expect(modoSidebar).toHaveAttribute('aria-checked', 'true');
+        expect(document.documentElement.dataset.temaSidebar).toBe('nocturno');
+        expect(localStorage.getItem('lottus-tema-sidebar')).toBe('nocturno');
+        
+        fireEvent.click(modoContenido);
+        expect(modoContenido).toHaveAttribute('aria-checked', 'true');
+        expect(document.documentElement.dataset.temaContenido).toBe('nocturno');
+        expect(localStorage.getItem('lottus-tema-contenido')).toBe('nocturno');
+        
+        fireEvent.click(modoSidebar);
+        expect(document.documentElement.dataset.temaSidebar).toBe('diurno');
+        expect(localStorage.getItem('lottus-tema-sidebar')).toBe('diurno');
     });
 
     it('oculta Gestión de usuarios a quien no es administrador', () => {

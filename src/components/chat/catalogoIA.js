@@ -144,3 +144,6 @@ export const resumenAudiencia = (valor, roles = []) => {
     const nombres = roles.filter(r => valor.roles_visibles.includes(r.id)).map(r => r.nombre);
     return nombres.length ? nombres.join(', ') : 'Nadie aún';
 };
+
+// Clave de un agente en el chat (la IA general no tiene id).
+export const claveAgente = (a) => String(a?.id ?? 'general');

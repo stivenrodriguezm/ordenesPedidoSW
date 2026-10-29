@@ -103,9 +103,9 @@ describe('Oficina virtual LOTTUS',()=>{
         const chat=screen.getByRole('region',{name:'Conversación en la oficina'});
         const pregunta=await within(chat).findByRole('textbox',{name:'Pregunta para el asesor'});
         fireEvent.change(pregunta,{target:{value:'Validar mi venta física'}});
-        fireEvent.change(within(chat).getByLabelText('Elegir agente para conversar'),{target:{value:'general'}});
+        fireEvent.click(await within(chat).findByRole('button',{name:'Nuevo chat con IA Lottus'}));
         expect(await within(chat).findByRole('textbox',{name:'Pregunta para el asesor'})).toHaveValue('');
-        fireEvent.change(within(chat).getByLabelText('Elegir agente para conversar'),{target:{value:'4'}});
+        fireEvent.click(within(chat).getByRole('button',{name:'Nuevo chat con Analista comercial'}));
         expect(await within(chat).findByRole('textbox',{name:'Pregunta para el asesor'})).toHaveValue('Validar mi venta física');
         fireEvent.click(within(chat).getByRole('button',{name:'Cerrar chat y volver a la oficina'}));
         await waitFor(()=>expect(screen.queryByRole('region',{name:'Conversación en la oficina'})).not.toBeInTheDocument());
@@ -123,9 +123,10 @@ describe('Oficina virtual LOTTUS',()=>{
         const chat=screen.getByRole('region',{name:'Conversación en la oficina'});
         expect(screen.getByLabelText('Oficina virtual de agentes LOTTUS')).toBeInTheDocument();
         expect(await within(chat).findByRole('region',{name:/Chat con/})).toBeInTheDocument();
-        fireEvent.click(within(chat).getByRole('button',{name:'Ver conversaciones'}));
-        expect(within(chat).getByRole('complementary',{name:'Conversaciones'})).toHaveTextContent('Revisión comercial');
-        fireEvent.click(within(chat).getByRole('button',{name:'Cerrar historial'}));
+        // El menú lateral con los agentes y sus chats está abierto en computador y se oculta en un clic.
+        expect(within(chat).getByRole('complementary',{name:'Chats'})).toHaveTextContent('Revisión comercial');
+        fireEvent.click(within(chat).getByRole('button',{name:'Ocultar chats'}));
+        expect(within(chat).getByRole('button',{name:'Mostrar chats'})).toHaveAttribute('aria-expanded','false');
         fireEvent.keyDown(document,{key:'Escape'});
         await waitFor(()=>expect(screen.queryByRole('region',{name:'Conversación en la oficina'})).not.toBeInTheDocument());
         expect(screen.getByTestId('ruta')).toHaveTextContent(/^\/IA$/);
