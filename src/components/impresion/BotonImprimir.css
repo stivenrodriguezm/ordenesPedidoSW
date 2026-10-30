@@ -39,6 +39,7 @@
 .bi-estado p { margin: 0.3rem 0 0; color: var(--text-secondary); }
 .bi-estado--impreso > svg { color: var(--success); }
 .bi-estado--error > svg { color: var(--danger); }
+.bi-estado--pendiente > svg, .bi-estado--procesando > svg, .bi-estado--enviado > svg { color: var(--warning); }
 .bi-girando {
   display: inline-block; border-radius: 50%; border: 3px solid var(--accent-soft); border-top-color: var(--accent-texto);
   animation: bi-girar 0.9s linear infinite;

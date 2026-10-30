@@ -85,4 +85,41 @@ describe('Botón Imprimir con elección de impresora', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Imprimir' }).at(-1));
     expect(await screen.findByRole('alert')).toHaveTextContent('La impresora no está disponible.');
   });
+
+  it('avisa si la computadora está conectada pero no encuentra la impresora', async () => {
+    API.get.mockResolvedValue({ data: [{ ...RICOH, impresora_encontrada: false }] });
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimir' }));
+    expect(await screen.findByText('Impresora no encontrada')).toBeInTheDocument();
+    expect(screen.queryByText('En línea')).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: /Ricoh SP 3710SF/ }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/no encuentra la impresora/);
+  });
+
+  const enviar = async (trabajoEnServidor) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    API.get.mockImplementation(url => Promise.resolve({ data: url === '/impresion/impresoras/' ? [RICOH] : trabajoEnServidor }));
+    API.post.mockResolvedValue({ data: { id: 9, estado: 'pendiente', estado_nombre: 'En cola', titulo: 'CE-1', copias: 1, detalle: '', impresora: 1, en_linea: true } });
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimir' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Ricoh SP 3710SF/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Imprimir' }).at(-1));
+    await screen.findByRole('status');
+  };
+
+  it('muestra el error del agente cuando la impresora no aparece y deja de cargar', async () => {
+    await enviar({ id: 9, estado: 'error', estado_nombre: 'Error', titulo: 'CE-1', copias: 1, impresora: 1, detalle: 'La computadora de la oficina no encuentra la impresora. No se imprimió: vuelve a enviarlo.' });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3100); });
+    expect(screen.getByRole('status')).toHaveTextContent(/No se imprimió: vuelve a enviarlo/);
+    expect(document.querySelector('.bi-girando')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Listo' })).toBeInTheDocument();
+  });
+
+  it('a los 2 minutos sin confirmación deja de cargar y lo dice', async () => {
+    await enviar({ id: 9, estado: 'enviado', estado_nombre: 'Enviado a la impresora', titulo: 'CE-1', copias: 1, impresora: 1, detalle: '' });
+    expect(document.querySelector('.bi-girando')).not.toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(125000); });
+    expect(document.querySelector('.bi-girando')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(/más de 2 minutos sin imprimirse/);
+  });
 });

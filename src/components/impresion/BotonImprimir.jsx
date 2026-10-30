@@ -8,6 +8,7 @@ import './BotonImprimir.css';
 
 const EN_CURSO = ['pendiente', 'procesando', 'enviado'];
 const SEGUIR_MS = 120000;
+const SIN_IMPRESORA = 'La computadora de la oficina está conectada, pero no encuentra la impresora: revisa que esté encendida y en la misma red que esa computadora.';
 
 const haceCuanto = iso => {
   if (!iso) return 'sin conexión reciente';
@@ -111,7 +112,7 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
       <Modal open onClose={onClose} title="Impresión en la oficina" size="sm" className="bi-modal"
         footer={<Button variant={enCurso ? 'secondary' : 'primary'} onClick={onClose}>{enCurso ? 'Cerrar (sigue en cola)' : 'Listo'}</Button>}>
         <div className={`bi-estado bi-estado--${trabajo.estado}`} role="status" aria-live="polite">
-          {trabajo.estado === 'impreso' ? <FaCheckCircle aria-hidden /> : trabajo.estado === 'error' ? <FaExclamationTriangle aria-hidden /> : <span className="bi-girando" aria-hidden />}
+          {trabajo.estado === 'impreso' ? <FaCheckCircle aria-hidden /> : trabajo.estado === 'error' || sinSeguir ? <FaExclamationTriangle aria-hidden /> : <span className="bi-girando" aria-hidden />}
           <div>
             <strong>{trabajo.estado_nombre}</strong>
             <p>
@@ -122,7 +123,7 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
             {trabajo.estado === 'pendiente' && !trabajo.en_linea && (
               <p className="bi-detalle">La computadora de la oficina no está conectada: se imprimirá cuando se conecte (hasta 12 horas).</p>
             )}
-            {sinSeguir && <p className="bi-detalle">Puedes cerrar: el documento sigue en la cola de la oficina.</p>}
+            {sinSeguir && <p className="bi-detalle">Lleva más de 2 minutos sin imprimirse y la impresora no ha confirmado. Revisa la impresora de la oficina antes de volver a enviarlo, para que no salga doble.</p>}
           </div>
         </div>
       </Modal>
@@ -151,8 +152,8 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
             <span>
               <strong>{i.nombre}</strong>
               <small>{i.ubicacion || 'Impresora remota'}</small>
-              <span className={`bi-conexion${i.en_linea ? ' is-en-linea' : ''}`}>
-                {i.en_linea ? 'En línea' : `Desconectada · ${haceCuanto(i.ultima_conexion)}`}
+              <span className={`bi-conexion${i.en_linea && i.impresora_encontrada !== false ? ' is-en-linea' : ''}`}>
+                {!i.en_linea ? `Desconectada · ${haceCuanto(i.ultima_conexion)}` : i.impresora_encontrada === false ? 'Impresora no encontrada' : 'En línea'}
               </span>
             </span>
           </label>
@@ -165,6 +166,7 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
             onChange={e => setCopias(e.target.value.replace(/\D/g, ''))} aria-invalid={!copiasValidas} />
           {!copiasValidas && <span className="bi-detalle">De 1 a 10.</span>}
           {!remota.en_linea && <p className="bi-detalle">Se enviará igual y saldrá cuando la computadora de la oficina se conecte.</p>}
+          {remota.en_linea && remota.impresora_encontrada === false && <p className="bi-error" role="alert">{SIN_IMPRESORA}</p>}
         </div>
       )}
       {error && <p className="bi-error" role="alert">{error}</p>}
