@@ -100,6 +100,8 @@ describe('CotizacionReceipt (P08-09 / U08)', () => {
     expect(screen.getByText(/Patas metálicas/)).toBeInTheDocument()
     expect(screen.getByText(/Entrega en piso 3/)).toBeInTheDocument()
     expect(screen.getByText(/Doc v1\.0/)).toBeInTheDocument()
-    expect(screen.getByText(/Aceptación del cliente/i)).toBeInTheDocument()
+    // Sin recuadro de aceptación y lo que incluye va sin valores en pesos.
+    expect(screen.queryByText(/Aceptación del cliente/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Incluye: Patas metálicas/).textContent).not.toContain('$')
   })
 })

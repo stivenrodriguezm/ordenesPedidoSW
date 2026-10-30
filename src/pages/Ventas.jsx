@@ -1575,7 +1575,7 @@ const Ventas = () => {
                                                                                                         <div className="product-item-v2" key={detalle.id || idx}>
                                                                                                             <div className="pi-qty">{detalle.cantidad}x</div>
                                                                                                             <div className="pi-details">
-                                                                                                                <span className="pi-ref">{detalle.referencia_nombre || detalle.referencia || 'Producto'}</span>
+                                                                                                                <span className="pi-ref">{detalle.referencia_nombre || detalle.referencia || 'Producto'}{detalle.subcategoria_nombre ? ` · ${detalle.subcategoria_nombre}` : ''}</span>
                                                                                                                 {detalle.especificaciones && <span className="pi-spec">{detalle.especificaciones}</span>}
                                                                                                             </div>
                                                                                                         </div>

@@ -64,3 +64,29 @@ describe('Anular un pedido de tela desde Editar estado', () => {
     expect(opciones).toEqual(['Pendiente', 'En fabrica', 'En Lottus']);
   });
 });
+
+describe('Volver a descargar la imagen del pedido de tela', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    API.get.mockImplementation(async url => ({ data: url.startsWith('proveedores-telas') ? [{ id: 5, nombre_empresa: 'Ariatex ficticia' }]
+      : url.startsWith('pedidos-telas') ? { results: [{ ...pedido }] } : [] }));
+  });
+
+  const abrir = async () => {
+    render(<TelasPage />);
+    const fila = (await screen.findAllByText('Ariatex ficticia')).find(n => n.closest('tr'));
+    fireEvent.click(fila.closest('tr'));
+  };
+
+  it('con el permiso aparece «Descargar» en el pedido abierto', async () => {
+    permisos.actuales = new Set(['VER_PEDIDOS_TELAS', 'DESCARGAR_IMAGEN_PEDIDO_TELA']);
+    await abrir();
+    expect(screen.getAllByRole('button', { name: /descargar/i }).length).toBeGreaterThan(0);
+  });
+
+  it('sin el permiso no aparece', async () => {
+    permisos.actuales = new Set(['VER_PEDIDOS_TELAS']);
+    await abrir();
+    expect(screen.queryByRole('button', { name: /descargar/i })).not.toBeInTheDocument();
+  });
+});

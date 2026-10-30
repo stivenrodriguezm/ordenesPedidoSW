@@ -1,15 +1,15 @@
 /* Cotización — plantilla imprimible/vista previa. Mismo lenguaje visual que
    ComprobanteEgresoReceipt.css (negro/blanco corporativo) para que todos los
-   documentos impresos del ERP se vean consistentes. */
+   documentos impresos del ERP se vean consistentes. Va en hoja carta: el margen
+   lo pone @page (y el cuerpo del iframe en la vista previa), no la página. */
 
 .cot-page {
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+  margin: 0;
   background: #ffffff;
   color: #0f172a;
   font-family: "Segoe UI", Arial, sans-serif;
-  padding: 2.5rem 2.75rem;
+  padding: 0;
   box-sizing: border-box;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -100,6 +100,7 @@
 
 .cot-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.78rem;
   border: 1px solid #cbd5e1;
@@ -124,8 +125,12 @@
   vertical-align: top;
 }
 
-.cot-center { text-align: center; }
-.cot-right { text-align: right; }
+.cot-col-cant { width: 64px; }
+.cot-col-valor { width: 140px; }
+
+.cot-table thead th { white-space: nowrap; }
+.cot-table .cot-center { text-align: center; }
+.cot-table .cot-right { text-align: right; white-space: nowrap; }
 .cot-bold { font-weight: 700; }
 
 .cot-item-nombre { font-weight: 700; color: #0f172a; }
@@ -195,34 +200,6 @@
   line-height: 1.5;
 }
 
-.cot-firma-box {
-  border: 1px solid #cbd5e1;
-  padding: 1rem 1.1rem;
-  min-height: 100px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.cot-firma-label {
-  font-size: 0.6rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #475569;
-  letter-spacing: 0.05rem;
-}
-
-.cot-firma-line {
-  border-top: 1.5px solid #0f172a;
-  padding-top: 0.45rem;
-}
-
-.cot-firma-sub {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
 .cot-footer {
   margin-top: 1.5rem;
   padding-top: 0.5rem;
@@ -251,7 +228,6 @@
   }
   .cot-table tr,
   .cot-total-card,
-  .cot-firma-box,
   .cot-condiciones,
   .cot-meta-grid {
     page-break-inside: avoid !important;

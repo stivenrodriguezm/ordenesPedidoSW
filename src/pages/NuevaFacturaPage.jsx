@@ -1424,7 +1424,7 @@ export default function NuevaFacturaPage() {
                                                                             {selectedOp.detalles.map((d, dIdx) => (
                                                                                 <div key={dIdx} style={{ background: 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: '1px solid #eaeff1', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
                                                                                     <span style={{ fontWeight: 700, color: 'var(--info)', background: 'var(--info-soft)', padding: '1px 6px', borderRadius: '4px' }}>{d.cantidad}x</span>
-                                                                                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{d.referencia_nombre || 'Referencia'}</span>
+                                                                                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{d.referencia_nombre || 'Referencia'}{d.subcategoria_nombre ? ` · ${d.subcategoria_nombre}` : ''}</span>
                                                                                     {d.especificaciones && <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>({d.especificaciones})</span>}
                                                                                 </div>
                                                                             ))}
@@ -1465,7 +1465,7 @@ export default function NuevaFacturaPage() {
                                                             <option value="">{op ? 'Sin indicar' : 'Cargando la orden…'}</option>
                                                             {detalles.map(d => (
                                                                 <option key={d.id} value={d.id}>
-                                                                    {d.referencia_nombre} · recibidas {d.recibidas ?? 0} de {d.cantidad}
+                                                                    {d.referencia_nombre}{d.subcategoria_nombre ? ` · ${d.subcategoria_nombre}` : ''} · recibidas {d.recibidas ?? 0} de {d.cantidad}
                                                                     {d.especificaciones && d.especificaciones !== '-' ? ` · ${d.especificaciones.slice(0, 60)}` : ''}
                                                                 </option>
                                                             ))}

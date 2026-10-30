@@ -219,7 +219,8 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_ESTADO_TELA_ORDEN", label: "Editar estado de tela (En progreso, fábrica, etc.)" },
       { code: "ELIMINAR_PEDIDO_TELA", label: "Eliminar pedido de tela" },
       { code: "ANULAR_PEDIDO_TELA", label: "Anular pedido de tela (en Editar estado; queda con su motivo, no se borra)" },
-      { code: "DESCARGAR_PEDIDO_TELA", label: "Habilitar descarga de PDF del pedido" },
+      { code: "DESCARGAR_PEDIDO_TELA", label: "Exportar pedidos de tela a Excel" },
+      { code: "DESCARGAR_IMAGEN_PEDIDO_TELA", label: "Volver a descargar la imagen del pedido de tela o cuero (mismo formato)" },
       { code: "ADMINISTRAR_PROVEEDORES_TELA", label: "Crear/Editar proveedores de tela" },
       { code: "ADMINISTRAR_DIRECCIONES_TELA", label: "Crear/Editar direcciones de entrega de tela" }
     ]

@@ -492,7 +492,7 @@ function VentaProductos({
                                 <div key={p.detalle_id} className="nr-prod is-disabled">
                                     <input type="checkbox" className="nr-check" disabled checked={false} readOnly />
                                     <ProductoInfo
-                                        titulo={p.referencia_nombre || 'Producto del pedido'}
+                                        titulo={[p.referencia_nombre, p.subcategoria_nombre].filter(Boolean).join(' · ') || 'Producto del pedido'}
                                         meta={p.especificaciones}
                                     >
                                         <span className="nr-tag nr-tag--muted">Ya remisionado en #{p.remision_previa}</span>

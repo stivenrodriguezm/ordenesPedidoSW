@@ -255,7 +255,9 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                     rank: idx + 1,
                     projection: proj,
                     pctOfTotal,
-                    countFormatted: Math.round(v.count)
+                    countFormatted: Math.round(v.count),
+                    // Con ventas compartidas el conteo lleva fracciones: el ticket usa el conteo real.
+                    ticketPromedio: v.count > 0 ? Math.round(v.total / v.count) : 0
                 };
             });
 
@@ -606,14 +608,16 @@ const SalesSummaryReport = ({ ventas, vendedores, selectedMonthYear, formatCurre
                                     </span>
                                     <div className="c-v-name-box">
                                         <span className="c-v-name">{vendor.name}</span>
-                                        <span className="c-v-orders">{vendor.countFormatted} ped.</span>
-                                        {indicadorDescuento(descuentos.vendedores[vendor.id])}
                                     </div>
                                 </div>
 
+                                {/* En fila a la derecha de la proyección: ventas, ticket promedio y descuento. */}
                                 <div className="c-v-mid">
                                     <span className="c-v-amount">{formatCurrency(vendor.total)}</span>
                                     <span className="c-v-proj">Proj: <strong>{formatCurrency(vendor.projection)}</strong></span>
+                                    <span className="c-v-proj">Ventas: <strong className="c-v-dato">{vendor.countFormatted}</strong></span>
+                                    <span className="c-v-proj">Ticket prom.: <strong className="c-v-dato">{formatCurrency(vendor.ticketPromedio)}</strong></span>
+                                    {indicadorDescuento(descuentos.vendedores[vendor.id])}
                                 </div>
 
                                 <div className="c-v-bar">

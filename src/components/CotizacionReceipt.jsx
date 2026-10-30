@@ -44,6 +44,13 @@ const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, fo
       </div>
 
       <table className="cot-table">
+        {/* Vr. Unitario y Subtotal anchos: el valor nunca se parte en dos líneas. */}
+        <colgroup>
+          <col />
+          <col className="cot-col-cant" />
+          <col className="cot-col-valor" />
+          <col className="cot-col-valor" />
+        </colgroup>
         <thead>
           <tr>
             <th>Producto</th>
@@ -62,7 +69,7 @@ const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, fo
                 </div>
                 {item.opcionales?.length > 0 && (
                   <div className="cot-item-opcionales">
-                    Incluye: {item.opcionales.map((o) => `${o.cantidad > 1 ? `${o.cantidad} × ` : ''}${o.descripcion} (+${formatCOP(Number(o.valor) * (Number(o.cantidad) || 1))})`).join(', ')}
+                    Incluye: {item.opcionales.map((o) => `${o.cantidad > 1 ? `${o.cantidad} × ` : ''}${o.descripcion}`).join(', ')}
                   </div>
                 )}
                 {item.notas && <div className="cot-item-notas">{item.notas}</div>}
@@ -79,7 +86,7 @@ const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, fo
 
       <div className="cot-total-card">
         {descVal > 0 && (
-          <div style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border, #e2e8f0)', marginBottom: '0.5rem' }}>
+          <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: 'var(--slate-600, #475569)', fontSize: '0.9rem' }}>
               <span>Subtotal</span>
               <span>{formatCOP(subtotal)}</span>
@@ -102,13 +109,6 @@ const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, fo
           <li>Precios sujetos a cambio sin previo aviso. Válidos por 15 días desde la fecha de emisión.</li>
           <li>Tiempos de entrega e instalación se confirman al momento del pedido.</li>
         </ul>
-      </div>
-
-      <div className="cot-firma-box">
-        <div className="cot-firma-label">Aceptación del cliente</div>
-        <div className="cot-firma-line">
-          <div className="cot-firma-sub">Firma y fecha de aceptación</div>
-        </div>
       </div>
 
       <div className="cot-footer">

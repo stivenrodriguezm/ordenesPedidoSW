@@ -12,6 +12,7 @@ import { useDialogo } from '../hooks/useDialogo';
 import { FaPlus, FaChevronDown, FaChevronUp, FaTrashAlt, FaCog, FaFileExport, FaSearch, FaLayerGroup, FaEdit } from 'react-icons/fa';
 import '../assets/logoFinal.png';
 import CrearPedidoTelaModal from '../components/CrearPedidoTelaModal';
+import DescargarPedidoTela from '../components/imagenes/DescargarPedidoTela';
 import AppNotification from '../components/AppNotification';
 import { PageHeader, Button, Modal } from '../components/ui';
 
@@ -536,6 +537,9 @@ const TelasPage = () => {
                                                                      <span className="tela-meta-prov">{pedido.proveedor_nombre || 'Proveedor de Tela'}</span>
                                                                  </div>
                                                                  <div className="tela-expanded-actions">
+                                                                     {hasPermission('DESCARGAR_IMAGEN_PEDIDO_TELA') && (
+                                                                         <DescargarPedidoTela pedido={pedido} size="sm" onError={(m) => setNotification({ message: m, type: 'error' })} />
+                                                                     )}
                                                                      {hasPermission('EDITAR_ESTADO_TELA_ORDEN') ? (
                                                                          <button
                                                                              type="button"
@@ -685,6 +689,11 @@ const TelasPage = () => {
                                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Observación</div>
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'pre-line' }}>{pedido.observacion}</div>
                                             </div>
+                                        )}
+
+                                        {hasPermission('DESCARGAR_IMAGEN_PEDIDO_TELA') && (
+                                            <DescargarPedidoTela pedido={pedido} size="sm" style={{ width: '100%', justifyContent: 'center', marginBottom: '0.5rem' }}
+                                                onError={(m) => setNotification({ message: m, type: 'error' })} />
                                         )}
 
                                         {hasPermission('EDITAR_ESTADO_TELA_ORDEN') && (

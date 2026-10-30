@@ -194,6 +194,8 @@ const OrdenesPage = () => {
   // los detalles de la orden que se está mostrando ahora (mismo bug que en Ventas.jsx).
   const activeOrderIdRef = useRef(null);
   const [orderDetails, setOrderDetails] = useState(null);
+  // Pedidos nuevos traen subcategoría; los antiguos no: la columna sale solo si alguna línea la tiene.
+  const conSubcategoria = Array.isArray(orderDetails) && orderDetails.some(p => p.subcategoria_nombre);
   const [orderTelas, setOrderTelas] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
@@ -827,6 +829,7 @@ const OrdenesPage = () => {
                                       <tr>
                                         <th style={{ width: '70px', textAlign: 'center' }}>Cant.</th>
                                         <th style={{ width: '130px' }}>Referencia</th>
+                                        {conSubcategoria && <th style={{ width: '150px' }}>Subcategoría</th>}
                                         <th>Especificaciones / Descripción</th>
                                       </tr>
                                     </thead>
@@ -845,14 +848,14 @@ const OrdenesPage = () => {
                                             </td>
                                             <td>
                                               <span className="product-ref-pill">{p.referencia}</span>
-                                              {p.subcategoria_nombre && <div className="product-subcategoria">{p.subcategoria_nombre}</div>}
                                             </td>
+                                            {conSubcategoria && <td className="product-subcategoria">{p.subcategoria_nombre || '—'}</td>}
                                             <td className="desc-preview">{p.especificaciones || '—'}</td>
                                           </tr>
                                         ))
                                       ) : (
                                         <tr>
-                                          <td colSpan="3" className="text-muted text-center" style={{ padding: '1.5rem' }}>Sin productos registrados.</td>
+                                          <td colSpan={conSubcategoria ? 4 : 3} className="text-muted text-center" style={{ padding: '1.5rem' }}>Sin productos registrados.</td>
                                         </tr>
                                       )}
                                     </tbody>
