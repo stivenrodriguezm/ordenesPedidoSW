@@ -92,7 +92,7 @@ const CotizacionReceipt = React.forwardRef(({ items, cliente, vendedorNombre, fo
               <span>{formatCOP(subtotal)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#b91c1c', fontSize: '0.9rem', fontWeight: 600 }}>
-              <span>Descuento Comercial</span>
+              <span>Descuento general ({String(Math.round((descVal / subtotal) * 10000) / 100).replace('.', ',')} %)</span>
               <span>-{formatCOP(descVal)}</span>
             </div>
           </div>

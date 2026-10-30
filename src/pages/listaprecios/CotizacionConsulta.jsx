@@ -2,15 +2,26 @@ import React, { useState } from 'react';
 import { FaEdit, FaFileInvoice, FaLayerGroup, FaMinus, FaPlus, FaTrash } from 'react-icons/fa';
 import { Modal, Button } from '../../components/ui';
 import { formatCOP } from '../../utils/formatCOP';
+import { mostrarPesos } from '../../utils/capturaPrecios';
+import { TOPE_ESTANDAR, calcularDescuento, textoPorcentaje } from './descuentoCotizacion';
 
 export default function CotizacionConsulta({ open, cart, onClose, onEditar, onGenerar, guardando, error }) {
   const [cliente, setCliente] = useState('');
-  const [descuento, setDescuento] = useState('');
+  // Descuento general sobre todo el negocio: se escribe el % o el precio final; el otro se calcula.
+  const [modoDescuento, setModoDescuento] = useState(null); // 'porcentaje' | 'final'
+  const [textoDescuento, setTextoDescuento] = useState('');
   const [seleccion, setSeleccion] = useState([]);
   const [nombre, setNombre] = useState('');
   const [confirmarVaciar, setConfirmarVaciar] = useState(false);
-  const descuentoNumero = Number(descuento || 0);
-  const descuentoValido = Number.isFinite(descuentoNumero) && descuentoNumero >= 0 && descuentoNumero <= cart.total * 0.25;
+  const subtotal = Math.round(cart.total);
+  const calculo = calcularDescuento(subtotal, modoDescuento, textoDescuento);
+  const descuentoNumero = calculo.descuento;
+  const sobreTope = descuentoNumero > subtotal * TOPE_ESTANDAR;
+  const descuentoValido = !calculo.error && !sobreTope;
+  const escribir = (modo) => (e) => { setModoDescuento(modo); setTextoDescuento(e.target.value); };
+  // Cada campo muestra lo escrito o lo calculado desde el otro.
+  const valorPorcentaje = modoDescuento === 'porcentaje' ? textoDescuento : (descuentoNumero > 0 ? textoPorcentaje(calculo.porcentaje) : '');
+  const valorFinal = modoDescuento === 'final' ? textoDescuento : (descuentoNumero > 0 ? mostrarPesos(calculo.final) : '');
   const grupos = new Map();
   cart.items.forEach((item) => {
     const key = item.conjuntoId || item.id;
@@ -53,15 +64,24 @@ export default function CotizacionConsulta({ open, cart, onClose, onEditar, onGe
             cart.agrupar(seleccionActual, nombre.trim()); setSeleccion([]); setNombre('');
           }}>Agrupar ({seleccionActual.length})</Button></div></div>
       <div className="lp-cotizacion-datos"><label className="ds-field">Cliente (opcional)<input className="ds-input" value={cliente} onChange={(e) => setCliente(e.target.value)} maxLength={200} disabled={guardando} placeholder="Nombre del cliente" /></label>
-        <label className="ds-field">Descuento en pesos<input className="ds-input" type="number" inputMode="numeric" min="0" max={cart.total * 0.25} value={descuento} onChange={(e) => setDescuento(e.target.value)} disabled={guardando} placeholder="0" />
-          <small>Tope estándar: {formatCOP(cart.total * 0.25)} (25%).</small></label></div>
-      {!descuentoValido && <p className="lp-aviso" role="alert">El descuento debe estar entre cero y el tope permitido.</p>}
+        <div className="lp-descuento-general">
+          <label className="ds-field">Descuento general
+            <span className="lp-campo-sufijo"><input className="ds-input" type="text" inputMode="decimal" aria-label="Porcentaje de descuento general" value={valorPorcentaje}
+              onChange={escribir('porcentaje')} disabled={guardando} placeholder="0" /><span aria-hidden="true">%</span></span></label>
+          <label className="ds-field">Precio final
+            <input className="ds-input" type="text" inputMode="numeric" aria-label="Precio final de la cotización" value={valorFinal}
+              onChange={escribir('final')} onBlur={() => { if (modoDescuento === 'final' && !calculo.error && textoDescuento.trim()) setTextoDescuento(mostrarPesos(calculo.final)); }}
+              disabled={guardando} placeholder={mostrarPesos(subtotal)} /></label>
+          <small>Sobre todo el negocio, no por producto. Escribe el % o el precio final y el otro se calcula. Tope estándar: {formatCOP(subtotal * TOPE_ESTANDAR)} (25 %).</small>
+        </div></div>
+      {calculo.error && <p className="lp-aviso" role="alert">{calculo.error}</p>}
+      {!calculo.error && sobreTope && <p className="lp-aviso" role="alert">El descuento supera el tope estándar del 25 %.</p>}
       <div className="lp-cotizacion-total">{(cart.incluido > 0 || cart.transporteCompartido > 0) && <div><span>Productos</span><span>{formatCOP(cart.bruto)}</span></div>}
         {cart.incluido > 0 && <div><span>Decorativos incluidos</span><span>−{formatCOP(cart.incluido)}</span></div>}
         {cart.transporteCompartido > 0 && <div><span>Transporte compartido</span><span>−{formatCOP(cart.transporteCompartido)}</span></div>}
         <div><span>Subtotal</span><span>{formatCOP(cart.total)}</span></div>
-        {descuentoNumero > 0 && <div><span>Descuento</span><span>−{formatCOP(descuentoNumero)}</span></div>}
-        <div><strong>Total de la propuesta</strong><strong>{formatCOP(Math.max(0, cart.total - (descuentoValido ? descuentoNumero : 0)))}</strong></div></div>
+        {descuentoNumero > 0 && <div><span>Descuento general ({textoPorcentaje(calculo.porcentaje)} %)</span><span>−{formatCOP(descuentoNumero)}</span></div>}
+        <div><strong>Total de la propuesta</strong><strong>{formatCOP(calculo.final)}</strong></div></div>
       {error && <p className="lp-aviso" role="alert">{error}</p>}
       <div className="lp-vaciar">{confirmarVaciar ? <><span>¿Quitar todos los productos?</span><Button variant="danger-soft" onClick={cart.vaciar} disabled={guardando}>Sí, vaciar</Button><Button variant="ghost" onClick={() => setConfirmarVaciar(false)}>Cancelar</Button></>
         : <Button variant="ghost" icon={FaTrash} onClick={() => setConfirmarVaciar(true)} disabled={guardando}>Vaciar cotización</Button>}</div>

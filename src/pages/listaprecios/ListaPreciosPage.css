@@ -109,6 +109,11 @@ body:has(.lp-page) .ia-acceso, body:has(.lp-page) .ia-chat-wrapper.is-minimizado
 .lp-cotizacion-datos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
 .lp-cotizacion-datos label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary); }
 .lp-cotizacion-datos small { font-size: 11px; }
+.lp-descuento-general { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.lp-descuento-general > small { grid-column: 1 / -1; color: var(--text-secondary); }
+.lp-campo-sufijo { display: flex; align-items: stretch; }
+.lp-campo-sufijo .ds-input { flex: 1; min-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.lp-campo-sufijo > span { display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--border); border-left: 0; border-radius: 0 var(--r-md) var(--r-md) 0; background: var(--gray-50); color: var(--text-secondary); font-size: 13px; }
 .lp-cotizacion-total { display: flex; flex-direction: column; gap: 12px; color: var(--text); padding: 16px; border: 1px solid var(--border-strong); border-radius: var(--r-lg); }
 .lp-cotizacion-total > div { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; }
 .lp-cotizacion-total > div:last-child { border-top: 1px solid var(--border); padding-top: 12px; font-size: 18px; }

@@ -234,13 +234,32 @@ describe('Consulta de showroom', () => {
     fireEvent.click(within(modal).getByRole('button', { name: 'Agregar', exact: true }));
     fireEvent.click(within(modal).getByRole('button', { name: 'Ver cotización' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Cliente (opcional)' }), { target: { value: 'Cliente de prueba' } });
-    fireEvent.change(screen.getByRole('spinbutton', { name: /Descuento en pesos/ }), { target: { value: '100000' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Porcentaje de descuento general' }), { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: 'Editar Detroit Sofá 235 cm' }));
     fireEvent.click(screen.getByRole('button', { name: /Grupo 2/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambio' }));
     fireEvent.click(screen.getByRole('button', { name: 'Ver cotización' }));
     expect(screen.getByRole('textbox', { name: 'Cliente (opcional)' })).toHaveValue('Cliente de prueba');
-    expect(screen.getByRole('spinbutton', { name: /Descuento en pesos/ })).toHaveValue(100000);
+    expect(screen.getByRole('textbox', { name: 'Porcentaje de descuento general' })).toHaveValue('10');
+  });
+
+  it('el precio final calcula el % de descuento general y viaja en pesos', async () => {
+    montar();
+    const modal = await consultar('Detroit');
+    fireEvent.click(within(modal).getByRole('button', { name: 'Agregar', exact: true }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'Ver cotización' }));
+    const final = screen.getByRole('textbox', { name: 'Precio final de la cotización' });
+    const subtotal = Number(final.getAttribute('placeholder').replace(/[^0-9]/g, ''));
+    const deseado = Math.round(subtotal * 0.9);
+    fireEvent.change(final, { target: { value: String(deseado) } });
+    expect(screen.getByRole('textbox', { name: 'Porcentaje de descuento general' })).toHaveValue('10');
+    fireEvent.change(final, { target: { value: '3.500.000,50' } });
+    expect(screen.getByRole('alert')).toHaveTextContent(/sin centavos/);
+    expect(screen.getByRole('button', { name: 'Generar cotización' })).toBeDisabled();
+    fireEvent.change(final, { target: { value: String(deseado) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generar cotización' }));
+    await waitFor(() => expect(servicio.createCotizacion).toHaveBeenCalled());
+    expect(servicio.createCotizacion.mock.calls.at(-1)[0].descuento).toBe(subtotal - deseado);
   });
 });
 
