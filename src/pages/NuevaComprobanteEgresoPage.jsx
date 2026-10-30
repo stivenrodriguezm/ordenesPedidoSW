@@ -279,7 +279,6 @@ export default function NuevaComprobanteEgresoPage() {
   const tieneAlgoQuePagar = facturasSeleccionadas.length > 0
     || otrosConceptos.some(o => o.descripcion.trim() && (parseInt(o.valor) || 0) > 0);
   const isFormInvalid = proveedorInvalido
-    || (medioPago === 'Transferencia' && !isProveedorOtro && !cuentaDestino)
     || !medioPago
     || (medioPago === 'Otro' && !motivoOtro.trim())
     || !recibidoPor.trim()
@@ -416,7 +415,7 @@ export default function NuevaComprobanteEgresoPage() {
                 </div>
               )}
 
-              {medioPago === 'Transferencia' && proveedor && !isProveedorOtro && <div className="nce-form-group"><SelectorCuenta titular={titularCuenta} value={cuentaDestino} onChange={setCuentaDestino} administrar required /><span className="nce-hint">La cuenta debe quedar asignada antes de descargar el archivo bancario.</span></div>}
+              {medioPago === 'Transferencia' && proveedor && !isProveedorOtro && <div className="nce-form-group"><SelectorCuenta titular={titularCuenta} value={cuentaDestino} onChange={setCuentaDestino} label="Cuenta destino (opcional por ahora)" administrar /><span className="nce-hint">Puedes crear el comprobante sin cuenta; asígnala antes de pagar (en Editar comprobante o en Preparar pagos).</span></div>}
 
               <div className="nce-form-group">
                 <label><FaUserCheck /> Recibido por (persona que recibe) <span className="nce-req">*</span></label>

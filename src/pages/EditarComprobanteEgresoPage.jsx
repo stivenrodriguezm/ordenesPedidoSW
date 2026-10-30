@@ -219,7 +219,6 @@ export default function EditarComprobanteEgresoPage() {
 
   const proveedorInvalido = isProveedorOtro ? !proveedorOtroNombre.trim() : !proveedor;
   const isFormInvalid = proveedorInvalido
-    || (medioPago === 'Transferencia' && !isProveedorOtro && !cuentaDestino)
     || !medioPago
     || !estado
     || !recibidoPor.trim()
@@ -341,7 +340,7 @@ export default function EditarComprobanteEgresoPage() {
                 </div>
               )}
 
-              {medioPago === 'Transferencia' && proveedor && !isProveedorOtro && <div className="nce-form-group"><SelectorCuenta titular={titularCuenta} value={cuentaDestino} onChange={setCuentaDestino} administrar required /></div>}
+              {medioPago === 'Transferencia' && proveedor && !isProveedorOtro && <div className="nce-form-group"><SelectorCuenta titular={titularCuenta} value={cuentaDestino} onChange={setCuentaDestino} label="Cuenta destino (opcional por ahora)" administrar /><span className="nce-hint">Asígnala antes de pagar; también se puede elegir en Preparar pagos.</span></div>}
 
               <div className="nce-form-group">
                 <label><FaUserCheck /> Recibido por (persona que recibe) <span className="nce-req">*</span></label>
