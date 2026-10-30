@@ -1201,7 +1201,7 @@ export default function NuevaFacturaPage() {
                                             </div>
 
                                             <div className="nf-form-group">
-                                                <label>Detalle</label>
+                                                <label>Detalle <span className="nf-optional">(opcional)</span></label>
                                                 <input 
                                                     type="text" 
                                                     placeholder="Ej: Mesa de 6, color, tamaño"

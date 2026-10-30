@@ -622,6 +622,18 @@
   flex-shrink: 0;
 }
 
+/* Si el concepto suma o resta al valor del comprobante. */
+.nce-otro-concepto-row .nce-otro-concepto-tipo {
+  flex: 0 0 108px;
+  width: 108px;
+  min-width: 0;
+}
+
+.nce-otro-concepto-row .nce-otro-concepto-desc {
+  flex: 1 1 auto;
+  width: auto;
+}
+
 .nce-otro-concepto-remove {
   background: var(--danger-soft);
   color: var(--danger);
@@ -672,4 +684,10 @@
   padding: 0.65rem 0.85rem;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* El verde de .nce-prefix-input va con !important: lo que resta va en rojo. */
+.nce-otro-concepto-valor.is-resta .nce-prefix,
+.nce-otro-concepto-valor.is-resta .nce-prefix-input {
+  color: var(--danger) !important;
 }

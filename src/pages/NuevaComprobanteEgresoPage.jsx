@@ -11,6 +11,7 @@ import { describirError } from '../services/errores';
 import API from '../services/api';
 import { AppContext } from '../AppContext';
 import { getTodayStr } from '../utils/dates';
+import { esResta, totalOtrosConceptos } from '../utils/otrosConceptos';
 import { formatCOP } from '../utils/formatCOP';
 import { PageHeader, Button } from '../components/ui';
 import ComprobanteEgresoPrintModal from '../components/ComprobanteEgresoPrintModal';
@@ -198,7 +199,7 @@ export default function NuevaComprobanteEgresoPage() {
   };
 
   const addOtroConcepto = () => {
-    setOtrosConceptos(prev => [...prev, { id: newOtroConceptoId(), descripcion: '', valor: '' }]);
+    setOtrosConceptos(prev => [...prev, { id: newOtroConceptoId(), descripcion: '', valor: '', tipo: 'suma' }]);
   };
   const updateOtroConcepto = (ocId, field, value) => {
     setOtrosConceptos(prev => prev.map(o => (o.id === ocId ? { ...o, [field]: value } : o)));
@@ -217,7 +218,7 @@ export default function NuevaComprobanteEgresoPage() {
     const fact = facturasDisponibles.find(f => f.id === fId);
     return sum + (fact ? (parseFloat(fact.valor) || 0) : 0);
   }, 0);
-  const otrosTotal = otrosConceptos.reduce((sum, o) => sum + (parseInt(o.valor) || 0), 0);
+  const otrosTotal = totalOtrosConceptos(otrosConceptos.map(o => ({ ...o, valor: parseInt(o.valor) || 0 })));
   const numericVal = facturasTotal + otrosTotal;
 
   // El % de descuento global solo aplica a facturas de proveedor, no a conceptos libres.
@@ -297,7 +298,7 @@ export default function NuevaComprobanteEgresoPage() {
     // pueda mostrar como lista/tabla en vez de texto plano.
     const otrosConceptosPayload = otrosConceptos
       .filter(o => o.descripcion.trim() && (parseInt(o.valor) || 0) > 0)
-      .map(o => ({ descripcion: o.descripcion.trim(), valor: parseInt(o.valor) || 0 }));
+      .map(o => ({ descripcion: o.descripcion.trim(), valor: parseInt(o.valor) || 0, tipo: esResta(o) ? 'resta' : 'suma' }));
 
     const notasFinal = [
       montoRedondeo !== 0
@@ -535,7 +536,7 @@ export default function NuevaComprobanteEgresoPage() {
                     {otrosConceptosValidos.map(o => (
                       <div key={o.id} className="nce-producto-incluido-item">
                         <span className="nce-producto-incluido-nombre">{o.descripcion}</span>
-                        <span className="nce-producto-incluido-costo">{formatCOP(parseInt(o.valor) || 0)}</span>
+                        <span className="nce-producto-incluido-costo">{esResta(o) ? '−' : ''}{formatCOP(parseInt(o.valor) || 0)}</span>
                       </div>
                     ))}
                   </div>
@@ -667,7 +668,16 @@ export default function NuevaComprobanteEgresoPage() {
                           onChange={e => updateOtroConcepto(o.id, 'descripcion', e.target.value)}
                           className="nce-otro-concepto-desc"
                         />
-                        <div className="nce-prefix-wrap nce-otro-concepto-valor">
+                        <select
+                          className="nce-otro-concepto-tipo"
+                          aria-label={`Suma o resta del concepto ${idx + 1}`}
+                          value={o.tipo || 'suma'}
+                          onChange={e => updateOtroConcepto(o.id, 'tipo', e.target.value)}
+                        >
+                          <option value="suma">+ Suma</option>
+                          <option value="resta">− Resta</option>
+                        </select>
+                        <div className={`nce-prefix-wrap nce-otro-concepto-valor${esResta(o) ? ' is-resta' : ''}`}>
                           <span className="nce-prefix">$</span>
                           <input
                             type="text"

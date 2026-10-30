@@ -62,6 +62,22 @@ describe('ComprobanteEgresoReceipt (P08-09 / U08)', () => {
     expect(screen.getByText(/Pago quincenal de suministros/)).toBeInTheDocument()
   })
 
+  it('un concepto que resta sale con signo menos y no se confunde con descuento', () => {
+    render(<ComprobanteEgresoReceipt comprobante={{
+      id: 43, fecha: '2026-10-30', medio_pago: 'Transferencia', estado: 'Pagado', proveedor_nombre: 'Maderas El Roble',
+      valor: '850000',
+      facturas_detalle: [{ id: 301, id_manual: 'FC-301', fecha_factura: '2026-10-01', valor: '1000000', productos: [] }],
+      otros_conceptos: [
+        { descripcion: 'Transporte', valor: 50000, tipo: 'suma' },
+        { descripcion: 'Abono anterior', valor: 200000, tipo: 'resta' },
+      ],
+    }} />)
+    expect(screen.getByText('Abono anterior').closest('tr')).toHaveTextContent('−$200.000')
+    expect(screen.getByText('Transporte').closest('tr')).toHaveTextContent('$50.000')
+    expect(screen.queryByText(/Descuento comercial/)).not.toBeInTheDocument()
+    expect(screen.getByText('Conceptos adicionales').parentElement).toHaveTextContent('−$150.000')
+  })
+
   it('no falla si el comprobante es nulo', () => {
     const { container } = render(<ComprobanteEgresoReceipt comprobante={null} />)
     expect(container).toBeEmptyDOMElement()

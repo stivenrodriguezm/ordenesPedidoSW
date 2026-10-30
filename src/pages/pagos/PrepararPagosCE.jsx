@@ -10,11 +10,12 @@ import CuentasBancarias, { SelectorCuenta } from './CuentasBancarias';
 import { etiquetaCuenta } from './cuentas';
 import { mostrarPesosAPI as cop } from './pesos';
 import './PagosBancarios.css';
+import { esResta } from '../../utils/otrosConceptos';
 
 const ErrorPago = ({ error }) => error ? <p className="pb-error" role="alert">{mensajeDeError(error)}</p> : null;
 
 export function ProductosCE({ ce }) {
-    return <div className="pb-ce-products">{(ce.facturas_detalle || []).map(f => <div key={f.id}><div className="pb-ce-invoice"><strong>Factura #{f.id_manual || f.id}</strong><span>{cop(f.valor)}</span></div>{f.productos?.map((p, i) => <div className="pb-ce-product" key={`${p.id}-${i}`}><span>{[p.referencia_nombre, p.categoria_nombre, p.subcategoria_nombre, p.variacion].filter(Boolean).join(' · ')}</span><b>{cop(p.costo)}</b></div>)}</div>)}{ce.otros_conceptos?.map((c, i) => <div className="pb-ce-product" key={`otro-${i}`}><span>{c.descripcion || c.concepto || 'Otro concepto'}</span><b>{cop(c.valor)}</b></div>)}{!ce.facturas_detalle?.length && !ce.otros_conceptos?.length && <p className="pb-muted">{ce.concepto || 'Sin productos o facturas asociados a este CE.'}</p>}</div>;
+    return <div className="pb-ce-products">{(ce.facturas_detalle || []).map(f => <div key={f.id}><div className="pb-ce-invoice"><strong>Factura #{f.id_manual || f.id}</strong><span>{cop(f.valor)}</span></div>{f.productos?.map((p, i) => <div className="pb-ce-product" key={`${p.id}-${i}`}><span>{[p.referencia_nombre, p.categoria_nombre, p.subcategoria_nombre, p.variacion].filter(Boolean).join(' · ')}</span><b>{cop(p.costo)}</b></div>)}</div>)}{ce.otros_conceptos?.map((c, i) => <div className="pb-ce-product" key={`otro-${i}`}><span>{c.descripcion || c.concepto || 'Otro concepto'}</span><b>{esResta(c) ? '−' : ''}{cop(c.valor)}</b></div>)}{!ce.facturas_detalle?.length && !ce.otros_conceptos?.length && <p className="pb-muted">{ce.concepto || 'Sin productos o facturas asociados a este CE.'}</p>}</div>;
 }
 
 export function CuentaFilaCE({ ce, value, cambiar, administrar, asociar, abrirArchivo, editable }) {

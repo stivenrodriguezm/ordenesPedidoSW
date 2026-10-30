@@ -1,4 +1,5 @@
 import React from 'react';
+import { esResta, totalOtrosConceptos } from '../utils/otrosConceptos';
 import { formatCOP } from '../utils/formatCOP';
 import { parseLocalDate } from '../utils/dates';
 import { groupProductos } from '../utils/groupProductos';
@@ -21,7 +22,7 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
 
   const facturas = comprobante.facturas_detalle || [];
   const otrosConceptosList = Array.isArray(comprobante.otros_conceptos) ? comprobante.otros_conceptos : [];
-  const otrosConceptosTotalReal = otrosConceptosList.reduce((sum, o) => sum + (parseFloat(o.valor) || 0), 0);
+  const otrosConceptosTotalReal = totalOtrosConceptos(otrosConceptosList);
   const beneficiario = comprobante.proveedor_nombre || comprobante.proveedor_otro_nombre || 'N/A';
   const totalProductos = facturas.reduce((sum, f) => sum + (f.productos?.length || 0), 0);
 
@@ -37,8 +38,10 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
       descuentoGlobalMonto = parseFloat(match[1].replace(/[^\d]/g, ''));
     }
   }
-  if (!descuentoGlobalMonto && diferencia > 0) {
-    descuentoGlobalMonto = diferencia;
+  // Lo que falta por explicar tras los conceptos estructurados (que pueden restar) es el descuento.
+  const sinExplicar = otrosConceptosList.length > 0 ? diferencia + otrosConceptosTotalReal : diferencia;
+  if (!descuentoGlobalMonto && sinExplicar > 0) {
+    descuentoGlobalMonto = sinExplicar;
   }
   
   const descuentoRatio = totalFacturas > 0 && descuentoGlobalMonto > 0
@@ -179,7 +182,7 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
               {otrosConceptosList.map((o, i) => (
                 <tr key={i}>
                   <td>{o.descripcion}</td>
-                  <td className="cer-right cer-bold">{formatCOP(o.valor)}</td>
+                  <td className="cer-right cer-bold">{esResta(o) ? '−' : ''}{formatCOP(o.valor)}</td>
                 </tr>
               ))}
             </tbody>
@@ -208,10 +211,10 @@ const ComprobanteEgresoReceipt = React.forwardRef(({ comprobante }, ref) => {
                 <span>-{formatCOP(descuentoGlobalMonto)}</span>
               </div>
             )}
-            {otrosConceptosMonto > 0.01 && (
+            {Math.abs(otrosConceptosMonto) > 0.01 && (
               <div className="cer-total-row">
                 <span>Conceptos adicionales</span>
-                <span>+{formatCOP(otrosConceptosMonto)}</span>
+                <span>{otrosConceptosMonto < 0 ? '−' : '+'}{formatCOP(Math.abs(otrosConceptosMonto))}</span>
               </div>
             )}
           </div>

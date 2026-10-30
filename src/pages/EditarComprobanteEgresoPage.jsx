@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import API from '../services/api';
 import { AppContext, usePermissions } from '../AppContext';
+import { esResta, totalOtrosConceptos } from '../utils/otrosConceptos';
 import { formatCOP } from '../utils/formatCOP';
 import { groupProductos } from '../utils/groupProductos';
 import { PageHeader, Button } from '../components/ui';
@@ -112,7 +113,7 @@ export default function EditarComprobanteEgresoPage() {
     setDescripcion(comprobante.descripcion || '');
     setOtrosConceptos(
       Array.isArray(comprobante.otros_conceptos)
-        ? comprobante.otros_conceptos.map(o => ({ id: newOtroConceptoId(), descripcion: o.descripcion || '', valor: o.valor != null ? String(o.valor) : '' }))
+        ? comprobante.otros_conceptos.map(o => ({ id: newOtroConceptoId(), descripcion: o.descripcion || '', valor: o.valor != null ? String(o.valor) : '', tipo: esResta(o) ? 'resta' : 'suma' }))
         : []
     );
     const vinculadas = Array.isArray(comprobante.facturas_detalle) ? comprobante.facturas_detalle : [];
@@ -163,7 +164,7 @@ export default function EditarComprobanteEgresoPage() {
     setExpandedFacturaIds(prev => prev.includes(fId) ? prev.filter(x => x !== fId) : [...prev, fId]);
   };
 
-  const addOtroConcepto = () => setOtrosConceptos(prev => [...prev, { id: newOtroConceptoId(), descripcion: '', valor: '' }]);
+  const addOtroConcepto = () => setOtrosConceptos(prev => [...prev, { id: newOtroConceptoId(), descripcion: '', valor: '', tipo: 'suma' }]);
   const updateOtroConcepto = (ocId, field, value) => setOtrosConceptos(prev => prev.map(o => (o.id === ocId ? { ...o, [field]: value } : o)));
   const removeOtroConcepto = (ocId) => setOtrosConceptos(prev => prev.filter(o => o.id !== ocId));
 
@@ -185,7 +186,7 @@ export default function EditarComprobanteEgresoPage() {
       const fact = facturasDisponibles.find(f => f.id === fId);
       return sum + (fact ? (parseFloat(fact.valor) || 0) : 0);
     }, 0);
-    const otrosTotal = otrosConceptos.reduce((sum, o) => sum + (parseInt(o.valor) || 0), 0);
+    const otrosTotal = totalOtrosConceptos(otrosConceptos.map(o => ({ ...o, valor: parseInt(o.valor) || 0 })));
     return vinculadasTotal + nuevasTotal + otrosTotal;
   }, [facturasVinculadas, facturasVinculadasKeep, facturasNuevasSeleccionadas, facturasDisponibles, otrosConceptos]);
 
@@ -234,7 +235,7 @@ export default function EditarComprobanteEgresoPage() {
 
     const otrosConceptosPayload = otrosConceptos
       .filter(o => o.descripcion.trim() && (parseInt(o.valor) || 0) > 0)
-      .map(o => ({ descripcion: o.descripcion.trim(), valor: parseInt(o.valor) || 0 }));
+      .map(o => ({ descripcion: o.descripcion.trim(), valor: parseInt(o.valor) || 0, tipo: esResta(o) ? 'resta' : 'suma' }));
 
     const payload = {
       fecha,
@@ -575,7 +576,16 @@ export default function EditarComprobanteEgresoPage() {
                           onChange={e => updateOtroConcepto(o.id, 'descripcion', e.target.value)}
                           className="nce-otro-concepto-desc"
                         />
-                        <div className="nce-prefix-wrap nce-otro-concepto-valor">
+                        <select
+                          className="nce-otro-concepto-tipo"
+                          aria-label={`Suma o resta del concepto ${idx + 1}`}
+                          value={o.tipo || 'suma'}
+                          onChange={e => updateOtroConcepto(o.id, 'tipo', e.target.value)}
+                        >
+                          <option value="suma">+ Suma</option>
+                          <option value="resta">− Resta</option>
+                        </select>
+                        <div className={`nce-prefix-wrap nce-otro-concepto-valor${esResta(o) ? ' is-resta' : ''}`}>
                           <span className="nce-prefix">$</span>
                           <input
                             type="text"

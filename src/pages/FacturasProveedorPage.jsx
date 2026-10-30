@@ -1626,7 +1626,7 @@ function FacturasProveedorPage() {
 
                                                 {/* Variación */}
                                                 <div className="fct-field">
-                                                    <label>Detalle</label>
+                                                    <label>Detalle <span className="fct-grupo-optional">(opcional)</span></label>
                                                     <input type="text" placeholder="Ej: Color, tamaño"
                                                         value={row.variacion} onChange={e => handleRefRow(index, 'variacion', e.target.value)} />
                                                 </div>
