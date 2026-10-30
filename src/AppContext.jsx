@@ -31,6 +31,12 @@ export const usePermissions = () => {
       return permissions.includes('ACCESO_EGRESOS') || permissions.includes('VER_COMPROBANTES_EGRESO') || permissions.includes('VER_NOMINA');
     }
 
+    // Mismas equivalencias del servidor (PERMISSION_ALIASES): Gestión de usuarios ofrece
+    // ACCESO_EGRESOS y los alcances, no este código. VER_NOMINA abre la página, no la tabla.
+    if (feature === 'VER_COMPROBANTES_EGRESO') {
+      return ['VER_COMPROBANTES_EGRESO', 'ACCESO_EGRESOS', 'VER_TODOS_EGRESOS', 'VER_PROPIOS_EGRESOS'].some(p => permissions.includes(p));
+    }
+
     if (feature === 'VER_VENTAS') {
       return permissions.includes('VER_TODAS_VENTAS') || permissions.includes('VER_PROPIAS_VENTAS');
     }
