@@ -213,10 +213,9 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(screen.getByLabelText('Cantidad de cuero del producto 1')).toHaveValue(null);
         expect(screen.getByText('Cantidad (dm)')).toBeInTheDocument();
         fireEvent.change(screen.getByLabelText('Cantidad de cuero del producto 1'), { target: { value: '1200' } });
-        // El grupo de tela no sirve para cuero: hay que elegir uno de cuero (su costo es por decímetro).
+        // El grupo de tela no sirve para cuero: hay que elegir uno de cuero; su costo por decímetro se envía sin campo.
         expect(screen.getByLabelText('Grupo de cuero del producto 1')).toHaveValue('');
         fireEvent.change(screen.getByLabelText('Grupo de cuero del producto 1'), { target: { value: '9' } });
-        expect(screen.getByLabelText('Costo de cuero por decímetro del producto 1')).toHaveValue(3500);
         fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
         await screen.findByText(/Productos guardados/);
         expect(guardados()[0][1].lineas[0]).toMatchObject({ tela_material: 'cuero', tela_cantidad: '1200', tela_grupo: 9, tela_costo: '3500' });
@@ -288,9 +287,6 @@ describe('Productos de la venta (en la misma vista)', () => {
         fireEvent.change(screen.getByDisplayValue('Texto del cliente'), { target: { value: '' } });
         expect(screen.getByPlaceholderText('Si lo dejas vacío, la remisión dirá «Producto especial»')).toBeInTheDocument();
         fireEvent.change(screen.getByLabelText('Color de tela del producto 1'), { target: { value: '' } });
-        // Sin costo escrito vale el del grupo en la lista de precios: no bloquea.
-        fireEvent.change(screen.getByLabelText('Costo de tela por metro del producto 1'), { target: { value: '' } });
-        expect(screen.getByLabelText('Costo de tela por metro del producto 1')).toHaveAttribute('placeholder', '20000');
         fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
         expect(await screen.findByRole('alert')).toHaveTextContent('faltan datos en Producto 1 (Producto especial): color de la tela.');
         expect(guardados()).toHaveLength(0);
@@ -302,23 +298,38 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(screen.queryByText('Escribe el color de la tela.')).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
         await screen.findByText(/Productos guardados/);
-        expect(guardados()[0][1].lineas[0]).toMatchObject({ texto_cliente: '', tela_costo: null, tela_grupo: 7 });
+        expect(guardados()[0][1].lineas[0]).toMatchObject({ texto_cliente: '', tela_costo: '20000.00', tela_grupo: 7 });
     });
 
-    it('sin grupo con costo, la tela comprada aparte pide el costo del proveedor', async () => {
+    it('la tela comprada aparte no pide costo, aunque su grupo no lo tenga (2026-11-04)', async () => {
         API.get.mockImplementation(async (url) => {
             if (url === '/proveedores-telas/') return { data: { results: [{ id: 3, nombre_empresa: 'Ariatex' }] } };
             if (url === '/productos-venta/catalogo/') return { data: { grupos: [{ ...GRUPOS[0], precio_por_metro: '0' }, GRUPOS[1]], results: [] } };
             return { data: { ...structuredClone(base), lineas: [{ ...linea, tela_costo: null }] } };
         });
         await editar();
-        fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
-        expect(await screen.findByRole('alert')).toHaveTextContent('costo de la tela');
-        expect(screen.getByText('Indica el costo del proveedor por metro.')).toBeInTheDocument();
-        fireEvent.change(screen.getByLabelText('Costo de tela por metro del producto 1'), { target: { value: '18000' } });
+        expect(screen.queryByLabelText(/Costo de tela/)).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
         await screen.findByText(/Productos guardados/);
-        expect(guardados()[0][1].lineas[0]).toMatchObject({ tela_costo: '18000', tela_grupo: 7 });
+        expect(guardados()[0][1].lineas[0]).toMatchObject({ tela_costo: null, tela_grupo: 7 });
+    });
+
+    it('«No pedir»: la tela queda registrada sin proveedor obligatorio ni «Pedir telas» (2026-11-04)', async () => {
+        await editar();
+        fireEvent.change(screen.getByLabelText('Proveedor de tela del producto 1'), { target: { value: '' } });
+        fireEvent.click(screen.getByLabelText('No pedir la tela del producto 1'));
+        fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
+        await screen.findByText(/Productos guardados/);
+        expect(guardados()[0][1].lineas[0]).toMatchObject({ tela_modo: 'aparte', tela_referencia: 'Lino', tela_color: 'Arena', tela_proveedor: null, tela_sin_pedir: true });
+    });
+
+    it('una tela marcada «No pedir» no aparece por pedir', async () => {
+        API.get.mockImplementation(async (url) => (url === '/ventas/12/productos/'
+            ? { data: { ...structuredClone(base), lineas: [{ ...linea, tela_sin_pedir: true }, { ...linea, id: 6, producto_nombre: 'Poltrona' }] } } : { data: { results: [] } }));
+        montar();
+        expect(await screen.findByText('No se pide')).toBeInTheDocument();
+        expect(screen.getAllByText('Tela por pedir')).toHaveLength(1);  // solo la Poltrona
+        expect(screen.getByRole('button', { name: 'Pedir telas (1)' })).toBeInTheDocument();
     });
 
     it('los errores por campo del servidor se marcan en el formulario', async () => {
@@ -456,10 +467,7 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(within(silla).queryByRole('radio', { name: 'No' })).not.toBeInTheDocument();
         fireEvent.click(within(silla).getByRole('radio', { name: 'Sí, la pone el proveedor' }));
         fireEvent.change(screen.getByLabelText('Grupo de tela del producto 2'), { target: { value: '7' } });
-        // La pone el proveedor: sin costo; si la compramos aparte, arranca con el del grupo.
-        expect(screen.queryByLabelText('Costo de tela por metro del producto 2')).not.toBeInTheDocument();
         fireEvent.click(within(silla).getByRole('radio', { name: 'Sí, la compramos aparte' }));
-        expect(screen.getByLabelText('Costo de tela por metro del producto 2')).toHaveValue(20000);
         // Dos proveedores: un pedido a cada uno. El Transporte del conjunto va dentro, por 2 conjuntos.
         expect(conjunto).toHaveTextContent('2 piezas · 2 proveedores (Tapas SAS, Sillas SAS): un pedido a cada uno');
         expect(conjunto).toHaveTextContent('Transporte del conjunto');
@@ -468,6 +476,35 @@ describe('Productos de la venta (en la misma vista)', () => {
         // Los textos nunca se autocompletan.
         expect(document.getElementById('pv-prov-0')).toHaveValue('');
         expect(document.getElementById('pv-cli-0')).toHaveValue('');
+    });
+
+    it('en un conjunto: la pieza no ofrece lo marcado «Mostrar en agrupación: No» y el transporte opcional se quita (2026-11-04)', async () => {
+        const juego = { id: 40, nombre: 'Cairo · Alcoba 1.60', categoria: 'Alcobas', activo: true, tela: false, juego: '1 Cama 1.60',
+            piezas: [{ pieza: 91, variante: 41, nombre: 'Cama 1.60', cantidad: 1, tela: false, grupos: [], proveedor_nombre: 'MCIA' }],
+            costos_conjunto: '211200.00', costos_conjunto_nombre: 'Transporte', costos_conjunto_tipo: 'transporte', costos_conjunto_opcional: true };
+        API.get.mockImplementation(async (url, config) => {
+            if (url === '/proveedores-telas/') return { data: { results: [] } };
+            if (url === '/productos-venta/catalogo/') {
+                const id = config?.params?.id;
+                if (id === 40) return { data: { grupos: GRUPOS, results: [juego] } };
+                if (id === 41) return { data: { grupos: GRUPOS, results: [{ id: 41, nombre: 'Cairo · Cama 1.60', tela: false, grupos: [], referencias: [{ id: 81, nombre: 'Cama Cairo · MCIA' }],
+                    opcionales: [{ id: 5, descripcion: 'Transporte', preseleccionado: true, en_agrupacion: false }, { id: 6, descripcion: 'Luz led', preseleccionado: true, en_agrupacion: true }] }] } };
+                return { data: { grupos: GRUPOS, results: config?.params?.q !== undefined ? [juego] : [] } };
+            }
+            return { data: { ...structuredClone(base), lineas: [] } };
+        });
+        montar();
+        fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
+        fireEvent.click(await screen.findByRole('button', { name: /Cairo · Alcoba 1.60/ }));
+        const conjunto = await screen.findByRole('region', { name: 'Conjunto Cairo · Alcoba 1.60' });
+        const cama = screen.getByRole('article', { name: 'Producto 1' });
+        expect(await within(cama).findByRole('button', { name: 'Luz led' })).toHaveClass('is-activo');
+        expect(within(cama).queryByRole('button', { name: 'Transporte' })).not.toBeInTheDocument();
+        expect(conjunto).toHaveTextContent('+ $211.200');
+        fireEvent.click(await within(conjunto).findByRole('button', { name: 'Quitar Transporte del conjunto' }));
+        expect(conjunto).not.toHaveTextContent('+ $211.200');
+        fireEvent.click(within(conjunto).getByRole('button', { name: '+ Transporte del conjunto' }));
+        expect(conjunto).toHaveTextContent('+ $211.200');
     });
 
     it('«Agregar especial»: el vendedor da el costo, el grupo y el consumo, y el precio lo calcula el servidor', async () => {
@@ -515,12 +552,9 @@ describe('Productos de la venta (en la misma vista)', () => {
 
     it('si la tela la pone el proveedor (tela o cuero) no pide ni envía costo', async () => {
         await editar();
-        expect(screen.getByLabelText('Costo de tela por metro del producto 1')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('radio', { name: 'Sí, la pone el proveedor' }));
-        expect(screen.queryByLabelText('Costo de tela por metro del producto 1')).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('radio', { name: 'Cuero (dm)' }));
         fireEvent.change(screen.getByLabelText('Grupo de cuero del producto 1'), { target: { value: '9' } });
-        expect(screen.queryByLabelText('Costo de cuero por decímetro del producto 1')).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
         await screen.findByText(/Productos guardados/);
         expect(guardados()[0][1].lineas[0]).toMatchObject({ tela_modo: 'incluida', tela_material: 'cuero', tela_grupo: 9, tela_costo: null });

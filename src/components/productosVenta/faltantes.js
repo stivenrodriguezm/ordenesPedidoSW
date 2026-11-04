@@ -49,18 +49,17 @@ export function faltantesDe(l, grupos = []) {
         const de = (l.tela_material || (l.grupo_es_cuero ? 'cuero' : 'tela')) === 'cuero' ? 'del cuero' : 'de la tela';
         if (!texto(l.tela_referencia)) f.tela_referencia = `Escribe la referencia ${de}.`;
         if (!texto(l.tela_color)) f.tela_color = `Escribe el color ${de}.`;
-        if (l.tela_modo === 'aparte' && !l.tela_proveedor) f.tela_proveedor = `Elige el proveedor ${de}.`;
-        if (l.tela_modo === 'aparte' && !(Number(l.tela_cantidad) > 0)) f.tela_cantidad = `Indica la cantidad ${de}.`;
-        // Ya pedida: el pedido de tela no cambia, el grupo y el costo se completan cuando se pueda.
+        // «No pedir»: queda registrada, sin proveedor ni cantidad obligatorios.
+        const pedirla = l.tela_modo === 'aparte' && !l.tela_sin_pedir;
+        if (pedirla && !l.tela_proveedor) f.tela_proveedor = `Elige el proveedor ${de}.`;
+        if (pedirla && !(Number(l.tela_cantidad) > 0)) f.tela_cantidad = `Indica la cantidad ${de}.`;
+        // Ya pedida: el pedido de tela no cambia, el grupo se completa cuando se pueda.
         const pedida = !!l.tela_pedidos?.length;
         const material = de === 'del cuero' ? 'cuero' : 'tela';
         const precio = grupos.find(g => g.id === l.grupo_catalogo);
         const tieneGrupo = l.tela_grupo || (precio ? precio.tipo === material : (l.grupo_catalogo && !grupos.length));
+        // El costo de la tela no se pide (2026-11-04): es el del grupo en la lista de precios, si lo tiene.
         if (!pedida && !tieneGrupo && !f.tela_grupo) f.tela_grupo = `Elige el grupo ${de}.`;
-        // Sin costo escrito vale el del grupo en la lista de precios (lo aplica el servidor).
-        const grupo = l.tela_grupo ? grupos.find(g => g.id === l.tela_grupo) : (precio && precio.tipo === material ? precio : null);
-        const sinCosto = l.tela_costo === '' || l.tela_costo == null;
-        if (!pedida && l.tela_modo === 'aparte' && sinCosto && !(Number(grupo?.precio_por_metro) > 0)) f.tela_costo = `Indica el costo del proveedor por ${material === 'cuero' ? 'decímetro' : 'metro'}.`;
     }
     if (l.conjunto && !texto(l.conjunto_nombre)) f.conjunto_nombre = 'Ponle nombre al conjunto.';
     if (!l.sin_texto_proveedor && !texto(l.texto_proveedor) && !l.inventario_origen) f.texto_proveedor = 'Escribe el texto para el proveedor o marca "No aplica".';

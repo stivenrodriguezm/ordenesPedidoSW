@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { FaBoxOpen, FaCheckCircle, FaChevronDown, FaEdit, FaLayerGroup, FaPlus, FaSearch, FaTimes, FaTruck } from 'react-icons/fa';
@@ -11,7 +11,6 @@ import { AppContext } from '../AppContext';
 import { GeneradorImagenes, PedirProveedor, PedirTelas } from './productosVenta/PedidosDesdeVenta';
 import { TIPOS_ADICIONAL, esEspecialPorCosto, faltantesDe, nombreCampo, recargoListo } from './productosVenta/faltantes';
 import { leerDecimal, leerPesos, mostrarPesos } from '../utils/capturaPrecios';
-import useAlturaUniforme from './productosVenta/useAlturaUniforme';
 import './ProductosVenta.css';
 
 /*
@@ -55,8 +54,10 @@ const errorTexto = (e) => {
 const nueva = (extra = {}) => ({ cantidad: 1, opcionales: [], adicionales: [], texto_cliente: '', texto_proveedor: '', sin_texto_proveedor: false,
     motivo_precio: '', referencia: null, referencia_nombre: '', grupo_catalogo: null, variante: null, producto_nombre: '',
     tela_modo: '', tela_material: '', tela_referencia: '', tela_color: '', tela_proveedor: null, tela_cantidad: null, tela_pedidos: [],
-    tela_grupo: null, tela_costo: null, conjunto: '', conjunto_nombre: '', conjunto_cantidad: 1, ...extra });
+    tela_grupo: null, tela_costo: null, tela_sin_pedir: false, conjunto: '', conjunto_nombre: '', conjunto_cantidad: 1, ...extra });
 const esCuero = (l) => (l.tela_material || (l.grupo_es_cuero ? 'cuero' : 'tela')) === 'cuero';
+// «No pedir» (2026-11-04): comprada aparte pero no se pide desde la venta; solo queda registrada.
+const telaPorPedir = (l) => l.tela_modo === 'aparte' && !l.tela_sin_pedir && !l.tela_pedidos?.length;
 const MODOS_TELA = [['no_aplica', 'No'], ['incluida', 'Sí, la pone el proveedor'], ['aparte', 'Sí, la compramos aparte']];
 const GESTION = { pendiente: ['Pendiente', 'pendiente'], atrasada: ['Atrasada', 'atrasada'], finalizada: ['Finalizada', 'ok'] };
 const fechaCorta = (iso) => (iso ? new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '');
@@ -75,6 +76,7 @@ const entrada = (l) => ({
     tela_cantidad: l.tela_modo === 'aparte' && l.tela_cantidad ? l.tela_cantidad : null,
     tela_grupo: l.tela_modo && l.tela_modo !== 'no_aplica' ? (l.tela_grupo || null) : null,
     tela_costo: l.tela_modo === 'aparte' && l.tela_costo !== '' && l.tela_costo != null ? l.tela_costo : null,
+    tela_sin_pedir: l.tela_modo === 'aparte' && Boolean(l.tela_sin_pedir),
     conjunto: l.conjunto || '', conjunto_nombre: l.conjunto ? (l.conjunto_nombre || '') : '', conjunto_cantidad: l.conjunto ? (Number(l.conjunto_cantidad) || 1) : 1,
     // Una venta guardada conserva sus precios; solo con «Actualizar» toma los de la lista actual.
     recalcular: Boolean(l.recalcular),
@@ -234,20 +236,20 @@ function TelaProducto({ linea, n, cambiar, proveedores, grupos = [], requiere = 
         const g = grupos.find(x => x.id === id);
         cambiar({ tela_grupo: id, tela_grupo_nombre: g?.nombre || '',
             ...(requiere ? { grupo_catalogo: id, grupo_es_cuero: g?.tipo === 'cuero' } : {}),
-            // El costo (solo si la compramos aparte) arranca con el del grupo en la lista de precios.
-            ...(modo === 'aparte' && !linea._costo_manual ? { tela_costo: costoGrupo(g) } : {}) });
+            // El costo (solo si la compramos aparte) es el del grupo en la lista de precios.
+            ...(modo === 'aparte' ? { tela_costo: costoGrupo(g) } : {}) });
     };
     const elegirMaterial = (v) => {
         if (v === material) return;
         cambiar({ tela_material: v, grupo_es_cuero: v === 'cuero', tela_grupo: null, ...(requiere ? { grupo_catalogo: null } : {}),
-            ...(v === 'cuero' ? { tela_cantidad: null } : {}), ...(!linea._costo_manual ? { tela_costo: null } : {}) });
+            ...(v === 'cuero' ? { tela_cantidad: null } : {}), tela_costo: null });
     };
     // Si la pone el proveedor del mueble (tela o cuero) va dentro de su precio: sin costo aparte.
     const elegirModo = (v) => cambiar({ tela_modo: v,
         // Al comprarla aparte, la cantidad arranca con el metraje sugerido (tela).
         ...(v === 'aparte' && !linea.tela_cantidad && consumoSugerido ? { tela_cantidad: String(consumoSugerido) } : {}),
-        ...(v === 'aparte' && !linea._costo_manual && linea.tela_costo == null && costoGrupo(grupo) ? { tela_costo: costoGrupo(grupo) } : {}),
-        ...(v !== 'aparte' ? { tela_costo: null, _costo_manual: false } : {}) });
+        ...(v === 'aparte' && linea.tela_costo == null && costoGrupo(grupo) ? { tela_costo: costoGrupo(grupo) } : {}),
+        ...(v !== 'aparte' ? { tela_costo: null, tela_sin_pedir: false } : {}) });
     // Un producto cuyo precio depende de la tela siempre la lleva.
     const modos = MODOS_TELA.filter(([v]) => !(requiere && v === 'no_aplica' && modo !== 'no_aplica'));
     const verGrupo = lleva || (requiere && modo === 'no_aplica');
@@ -312,18 +314,18 @@ function TelaProducto({ linea, n, cambiar, proveedores, grupos = [], requiere = 
                             <Falta m={faltas.tela_cantidad} />
                         </label>
                     </>}
-                    {modo === 'aparte' && (
-                        <label className={conFalta('pv-campo', faltas.tela_costo)}><span>Costo ($/{unidad})</span>
-                            <input aria-invalid={!!faltas.tela_costo} type="number" min="0" step={cuero ? '100' : '1000'} aria-label={`Costo de ${material} por ${cuero ? 'decímetro' : 'metro'} del producto ${n}`}
-                                placeholder={costoGrupo(grupo) || `$ por ${unidad}`} value={linea.tela_costo ?? ''}
-                                onChange={e => cambiar({ tela_costo: e.target.value === '' ? null : e.target.value, _costo_manual: true })} />
-                            <Falta m={faltas.tela_costo} />
-                        </label>
-                    )}
                 </div>
             )}
-            {pedida && <small className="pv-muted">Ya pedida (PT {linea.tela_pedidos.map(t => t.id).join(', ')}). Para cambiarla, anula ese pedido en Telas; el grupo y el costo sí se pueden completar.</small>}
-            <div className="pv-tela__acciones">{copiarTela && lleva && <button type="button" className="pv-link pv-tela__copiar" onClick={copiarTela}>Usar esta tela en las demás piezas del conjunto</button>}</div>
+            {pedida && <small className="pv-muted">Ya pedida (PT {linea.tela_pedidos.map(t => t.id).join(', ')}). Para cambiarla, anula ese pedido en Telas; el grupo sí se puede completar.</small>}
+            <div className="pv-tela__acciones">
+                {copiarTela && lleva && <button type="button" className="pv-link pv-tela__copiar" onClick={copiarTela}>Usar esta tela en las demás piezas del conjunto</button>}
+                {modo === 'aparte' && !pedida && (
+                    <label className="pv-noaplica pv-tela__sin-pedir" title="Queda guardada con qué tela se vendió, pero no se pide desde la venta">
+                        <input type="checkbox" checked={Boolean(linea.tela_sin_pedir)} aria-label={`No pedir ${cuero ? 'el cuero' : 'la tela'} del producto ${n}`}
+                            onChange={e => cambiar({ tela_sin_pedir: e.target.checked })} /> No pedir{linea.tela_sin_pedir ? ': solo queda registrada' : ''}
+                    </label>
+                )}
+            </div>
         </div>
     );
 }
@@ -360,7 +362,7 @@ function resumenTela(l, grupos) {
     const cuero = esCuero(l);
     const partes = [`${cuero ? 'Cuero' : 'Tela'} ${[l.tela_referencia, l.tela_color].filter(Boolean).join(' · ') || 'sin indicar'}`, g && g.nombre,
         l.tela_modo === 'incluida' ? 'la pone el proveedor del mueble' : [`la compramos a ${l.tela_proveedor_nombre || 'proveedor sin elegir'}`,
-            l.tela_cantidad && `${Number(l.tela_cantidad).toLocaleString('es-CO')} ${cuero ? 'dm' : 'm'}`].filter(Boolean).join(' · ')];
+            l.tela_cantidad && `${Number(l.tela_cantidad).toLocaleString('es-CO')} ${cuero ? 'dm' : 'm'}`, l.tela_sin_pedir && 'no se pide'].filter(Boolean).join(' · ')];
     return partes.filter(Boolean).join(' · ');
 }
 
@@ -431,7 +433,10 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
         queryFn: ({ signal }) => buscarProductosVenta({ id: linea.variante }, { signal }),
         enabled: !!linea.variante, staleTime: 60000, retry: false,
     });
-    const meta = catalogo.data?.results[0];
+    const enLista = catalogo.data?.results[0];
+    // Una pieza de un conjunto no ofrece los cargos marcados «Mostrar en agrupación: No».
+    const meta = useMemo(() => (enLista && linea.pieza
+        ? { ...enLista, opcionales: (enLista.opcionales || []).filter(o => o.en_agrupacion !== false) } : enLista), [enLista, linea.pieza]);
     const gruposPrecio = catalogo.data?.grupos || [];
     const [precio, setPrecio] = useState({ estado: 'listo', valor: linea.precio_lista_unitario, error: '' });
     const [verEspecial, setVerEspecial] = useState(Boolean(linea.precio_lista_override));
@@ -452,7 +457,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
         const pre = (m.opcionales || []).filter(o => o.preseleccionado).map(o => o.id);
         if (!linea.id && !linea.opcionales?.length && pre.length) cambiar({ opcionales: pre }, false);
         cambiar({ _requiere_grupo: Boolean(m.tela) }, false);
-    }, [meta, linea.variante]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [enLista, linea.variante]); // eslint-disable-line react-hooks/exhaustive-deps
     // El precio de lista se calcula solo con lo elegido (sin botón). Solo cuentan los
     // recargos completos, para no fallar mientras se escribe.
     const calc = entrada(linea);
@@ -636,8 +641,16 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
 }
 
 // Costos propios de un conjunto de la lista (su Transporte…): los calcula la lista de precios.
+// `p` es el conjunto en el catálogo; la línea vale lo de un conjunto × cuántos conjuntos.
+const lineaCostosConjunto = (p, conj) => {
+    const veces = conj.conjunto_cantidad || 1;
+    return nueva({ tipo: p.costos_conjunto_tipo || 'transporte', juego: p.id,
+        producto_nombre: p.costos_conjunto_nombre || 'Transporte', precio_lista_override: String(Number(p.costos_conjunto) * veces),
+        precio_lista_unitario: String(Number(p.costos_conjunto) * veces), _costo_por_conjunto: Number(p.costos_conjunto),
+        tela_modo: 'no_aplica', sin_texto_proveedor: true, clave: crypto.randomUUID(), ...conj });
+};
 const esCostoConjunto = (l) => (l.tipo || 'producto') !== 'producto' && Boolean(l.juego);
-function CostosConjunto({ costos, verPrecios = true }) {
+function CostosConjunto({ costos, verPrecios = true, quitar }) {
     if (!costos.length) return null;
     return (
         <ul className="pv-conj__costos">
@@ -646,6 +659,7 @@ function CostosConjunto({ costos, verPrecios = true }) {
                     <span className={`pv-adic__tipo pv-adic__tipo--${l.tipo}`}>{TIPOS_ADICIONAL[l.tipo]}</span>
                     <span>{l.producto_nombre} del conjunto <small className="pv-muted">· {l.recalcular ? 'se actualiza a la lista actual al guardar' : 'de la lista de precios, no se pide a ningún proveedor'}</small></span>
                     {verPrecios && <strong>{conSigno(Number(l.precio_lista_unitario) * (Number(l.cantidad) || 1))}</strong>}
+                    {quitar && <button type="button" className="pv-icono" aria-label={`Quitar ${l.producto_nombre} del conjunto`} title="Es opcional en la lista de precios: se puede quitar" onClick={quitar}><FaTimes /></button>}
                 </li>
             ))}
         </ul>
@@ -653,9 +667,18 @@ function CostosConjunto({ costos, verPrecios = true }) {
 }
 
 // Conjunto en edición: nombre y cuántos conjuntos; las piezas van dentro.
-// Conjunto cerrado (2026-10-24): una tarjeta como la de un producto, en una sola casilla de la
-// grilla; abierto, ocupa toda la fila con sus piezas. Uno nuevo o con datos faltantes abre solo.
-function EditorConjunto({ nombre, cantidad, piezas, costos = [], faltaNombre, faltan = 0, renombrar, cambiarCantidad, quitar, children }) {
+// Conjunto cerrado (2026-10-24): una tarjeta como la de un producto. Abierto (2026-11-04): una caja
+// del ancho de sus piezas, no de toda la fila. Uno nuevo o con datos faltantes abre solo.
+function EditorConjunto({ nombre, cantidad, piezas, costos = [], faltaNombre, faltan = 0, renombrar, cambiarCantidad, quitar, quitarCostos, agregarCostos, children }) {
+    // El conjunto en la lista: si sus costos propios (su Transporte) son opcionales, se pueden quitar y volver a poner.
+    const juego = piezas[0]?.juego;
+    const catalogoJuego = useQuery({
+        queryKey: ['productos-venta-catalogo', 'detalle', juego],
+        queryFn: ({ signal }) => buscarProductosVenta({ id: juego }, { signal }),
+        enabled: !!juego, staleTime: 60000, retry: false,
+    });
+    const metaJuego = catalogoJuego.data?.results[0];
+    const costosOpcionales = !!metaJuego?.costos_conjunto_opcional;
     const total = [...piezas, ...costos].reduce((s, l) => s + (Number(l.precio_lista_unitario) || 0) * (Number(l.cantidad) || 0), 0);
     const proveedores = [...new Set(piezas.map(l => l.proveedor_nombre).filter(Boolean))];
     const bloqueado = piezas.some(l => l.pedidos?.length || l.inventario_origen);
@@ -722,7 +745,10 @@ function EditorConjunto({ nombre, cantidad, piezas, costos = [], faltaNombre, fa
             </header>
             {faltaNombre && <Falta m={faltaNombre} />}
             <div className="pv-conj__piezas">{children}</div>
-            <CostosConjunto costos={costos} />
+            <CostosConjunto costos={costos} quitar={costosOpcionales ? quitarCostos : undefined} />
+            {costosOpcionales && !costos.length && (
+                <div className="pv-conj__pie"><button type="button" className="pv-link" onClick={() => agregarCostos(metaJuego)}>+ {metaJuego.costos_conjunto_nombre || 'Transporte'} del conjunto</button></div>
+            )}
         </section>
     );
 }
@@ -816,7 +842,9 @@ function TelaResumen({ l, corto = false }) {
             {l.tela_modo === 'aparte' && <>
                 <span className="pv-muted"> · {l.tela_proveedor_nombre || 'sin proveedor'}{l.tela_cantidad ? ` · ${Number(l.tela_cantidad).toLocaleString('es-CO')} ${cuero ? 'dm' : 'm'}` : ''}</span>
                 {' '}{/* deja partir la línea antes del chip para que no se salga de la tarjeta */}
-                {pedido ? <span className="pv-tela-chip is-ok">PT {pedido.id} · {pedido.estado}</span> : <span className="pv-tela-chip is-falta">{cuero ? 'Cuero' : 'Tela'} por pedir</span>}
+                {pedido ? <span className="pv-tela-chip is-ok">PT {pedido.id} · {pedido.estado}</span>
+                    : l.tela_sin_pedir ? <span className="pv-tela-chip is-registrada" title="Queda registrada con qué tela se vendió, pero no se pide">No se pide</span>
+                    : <span className="pv-tela-chip is-falta">{cuero ? 'Cuero' : 'Tela'} por pedir</span>}
             </>}
         </span>
     );
@@ -898,7 +926,7 @@ function TarjetaConjunto({ nombre, cantidad, piezas, verPrecios, costos = [] }) 
     const estado = porPedir ? { tono: 'pendiente', texto: `Por pedir ${porPedir}` } : estados.every(e => e.tono === 'ok') ? { tono: 'ok', texto: 'Recibido' } : { tono: 'curso', texto: 'Pedido' };
     const resumen = piezas.map(l => `${l.cantidad} ${l.variante_nombre || l.producto_nombre}`).join(' + ');
     const telas = piezas.filter(l => l.tela_modo && l.tela_modo !== 'no_aplica');
-    const telaPorPedir = telas.some(l => l.tela_modo === 'aparte' && !l.tela_pedidos?.length);
+    const conTelaPorPedir = telas.some(telaPorPedir);
     const cabeza = (
         <header className="pv-tj__cab">
             <span className="pv-tj__cant">{cantidad}<small>×</small></span>
@@ -918,7 +946,7 @@ function TarjetaConjunto({ nombre, cantidad, piezas, verPrecios, costos = [] }) 
                 <dl className="pv-tj__datos">
                     <div><dt>Piezas</dt><dd title={resumen}>{resumen}</dd></div>
                     <div><dt>Se compra a</dt><dd>{proveedores.length ? <b>{proveedores.join(' · ')}</b> : <em className="pv-aviso">Sin referencia</em>}</dd></div>
-                    <div><dt>Tela / Cuero</dt><dd>{telas.length ? <>{telas.length} pieza{telas.length === 1 ? '' : 's'} {telaPorPedir
+                    <div><dt>Tela / Cuero</dt><dd>{telas.length ? <>{telas.length} pieza{telas.length === 1 ? '' : 's'} {conTelaPorPedir
                         ? <span className="pv-tela-chip is-falta">por pedir</span> : <span className="pv-muted">con tela definida</span>}</> : <span className="pv-muted">No lleva</span>}</dd></div>
                     {verPrecios && costos.map(l => <div key={l.id}><dt>{l.producto_nombre}</dt><dd>{conSigno(Number(l.precio_lista_unitario) * (Number(l.cantidad) || 1))}</dd></div>)}
                 </dl>
@@ -966,8 +994,6 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
     const { usuario } = useContext(AppContext) || {};
     const [catalogoTela, setCatalogoTela] = useState({ proveedores: [] });
     const [gruposTela, setGruposTela] = useState([]);
-    const productosRef = useRef(null);
-    useAlturaUniforme(productosRef, editando);
     const mutex = useRef(false);
     const intento = useRef(null);
     const navigate = useNavigate();
@@ -1068,10 +1094,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
         const conj = clave ? { conjunto: clave, conjunto_nombre: p.nombre, conjunto_cantidad: veces } : {};
         // Conjunto de la lista: cada pieza con su proveedor (un pedido por proveedor) y su precio
         // dentro del conjunto; lo propio del conjunto (su Transporte…) va en una línea aparte.
-        const costos = p.piezas?.length && Number(p.costos_conjunto) ? [nueva({ tipo: p.costos_conjunto_tipo || 'transporte', juego: p.id,
-            producto_nombre: p.costos_conjunto_nombre || 'Transporte', precio_lista_override: String(Number(p.costos_conjunto) * veces),
-            precio_lista_unitario: String(Number(p.costos_conjunto) * veces), _costo_por_conjunto: Number(p.costos_conjunto),
-            tela_modo: 'no_aplica', sin_texto_proveedor: true, clave: crypto.randomUUID(), ...conj })] : [];
+        const costos = p.piezas?.length && Number(p.costos_conjunto) ? [lineaCostosConjunto(p, conj)] : [];
         const nuevas = p.piezas?.length
             ? [...p.piezas.map(pz => nueva({ variante: pz.variante, referencia: pz.referencia || null, juego: p.id, pieza: pz.pieza,
                 producto_nombre: pz.referencia_nombre || coleccion, variante_nombre: pz.nombre, proveedor_nombre: pz.proveedor_nombre || '',
@@ -1095,6 +1118,12 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
             return { conjunto_cantidad: n, cantidad: Math.max(1, Math.round((Number(l.cantidad) || 1) / antes) * n) };
         }),
         quitar: () => { if (window.confirm('¿Quitar el conjunto completo con todas sus piezas?')) setLineas(ls => ls.filter(l => l.conjunto !== clave)); },
+        quitarCostos: () => setLineas(ls => ls.filter(l => !(l.conjunto === clave && esCostoConjunto(l)))),
+        agregarCostos: (p) => setLineas(ls => {
+            const pieza = ls.find(l => l.conjunto === clave);
+            if (!pieza || ls.some(l => l.conjunto === clave && esCostoConjunto(l))) return ls;
+            return [...ls, lineaCostosConjunto(p, { conjunto: clave, conjunto_nombre: pieza.conjunto_nombre, conjunto_cantidad: Number(pieza.conjunto_cantidad) || 1 })];
+        }),
     });
     // «Usar esta tela en las demás piezas»: copia la tela a las piezas del conjunto que
     // llevan tela (o cuyo precio depende de ella), sin tocar las que ya se pidieron.
@@ -1102,7 +1131,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
         const o = lineas[i];
         const campos = { tela_modo: o.tela_modo, tela_material: esCuero(o) ? 'cuero' : 'tela', grupo_es_cuero: esCuero(o), tela_referencia: o.tela_referencia,
             tela_color: o.tela_color, tela_proveedor: o.tela_proveedor, tela_proveedor_nombre: o.tela_proveedor_nombre, tela_costo: o.tela_costo,
-            tela_grupo: o.tela_grupo || o.grupo_catalogo || null, _costo_manual: o._costo_manual };
+            tela_grupo: o.tela_grupo || o.grupo_catalogo || null };
         setLineas(ls => ls.map((l, j) => (j !== i && l.conjunto === o.conjunto && !l.tela_pedidos?.length && (l._requiere_grupo || (l.tela_modo && l.tela_modo !== 'no_aplica'))
             ? { ...l, ...campos, ...(l._requiere_grupo ? { grupo_catalogo: campos.tela_grupo } : {}) } : l)));
         setMensaje('La tela se copió a las demás piezas del conjunto. Revisa la cantidad de cada una.');
@@ -1118,7 +1147,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
     const margenes = datos.lineas.map(l => l.margen).filter(m => m != null);
     const margen = hasPermission('VER_MARGENES') && margenes.length ? margenes.reduce((s, m) => s + Number(m), 0) : null;
     const unidadesPorPedir = pendientes.reduce((s, l) => s + l.por_pedir, 0);
-    const telasPorPedir = datos.lineas.filter(l => l.tela_modo === 'aparte' && !l.tela_pedidos?.length);
+    const telasPorPedir = datos.lineas.filter(telaPorPedir);
     const esProducto = (l) => (l.tipo || 'producto') === 'producto';
     const productosVista = datos.lineas.filter(esProducto);
     const productosEditados = lineas.filter(esProducto);
@@ -1147,7 +1176,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                 <div className="pv-editor">
                     <p className="pv-guia">Cada producto necesita tres cosas: <b>a quién se compra</b>, <b>si lleva tela o cuero</b> y <b>el texto para el proveedor</b>. Las marcas ✓ te dicen qué está listo.</p>
                     {/* Tarjetas en grilla (2026-10-24): varias por fila en pantallas anchas. */}
-                    <div className="pv-editor__productos" ref={productosRef}>
+                    <div className="pv-editor__productos">
                     {bloques(lineas.map((l, i) => ({ ...l, _i: i })).filter(esProducto)).map(b => {
                         const editor = ({ l }) => {
                             const i = l._i;

@@ -631,7 +631,7 @@ const RecibosCaja = () => {
   const [isCreatingRC, setIsCreatingRC] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [fotosTarget, setFotosTarget] = useState(null);
-  const { data: pendientesIds = [], isError: pendientesIdsError, error: pendientesIdsErr } = usePendientesIds();
+  const { data: pendientesIds = [], isError: pendientesIdsError, error: pendientesIdsErr } = usePendientesIds({ para: 'recibos' });
   const ventas = useMemo(() => pendientesIds.map(id => ({ id_venta: id })), [pendientesIds]);
   const editVentas = useMemo(() => {
     if (!editTarget || ventas.some(v => v.id_venta === editTarget.venta)) return ventas;
