@@ -62,9 +62,13 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
 
     const fetchOrdenes = async () => {
         try {
-            const response = await API.get('listar-pedidos/?estado=en_proceso&tela=Por pedir');
+            // Todas las órdenes abiertas que el usuario puede ver (2026-11-04), no solo las «Por pedir»:
+            // una orden mal marcada («Sin tela», «Pendiente»…) nunca debe impedir pedir su tela.
+            // Primero las que esperan tela.
+            const response = await API.get('listar-pedidos/?estado=en_proceso');
             const data = Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
-            setOrdenes(data);
+            const prioridad = (o) => (['Por pedir', 'Pendiente'].includes(o.tela) ? 0 : !o.tela || o.tela === 'Sin tela' ? 1 : 2);
+            setOrdenes([...data].sort((a, b) => prioridad(a) - prioridad(b) || b.id - a.id));
         } catch (error) {
             console.error("Error fetching ordenes:", error);
         }
@@ -346,7 +350,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                                     <select required={usuario?.role?.toLowerCase() !== 'administrador'} name="orden_asociada_id" value={newPedido.orden_asociada_id} onChange={handlePedidoChange} aria-label="Orden asociada">
                                         <option value="">{usuario?.role?.toLowerCase() === 'administrador' ? '(Opcional) ' : ''}Seleccione orden...</option>
                                         {ordenes.map(o => (
-                                            <option key={o.id} value={o.id}>Orden #{o.id} - {o.proveedor_nombre}</option>
+                                            <option key={o.id} value={o.id}>Orden #{o.id}{o.venta ? ` · Venta ${o.venta}` : ''} - {o.proveedor_nombre}{o.tela ? ` (tela: ${o.tela})` : ''}</option>
                                         ))}
                                     </select>
                                 </div>

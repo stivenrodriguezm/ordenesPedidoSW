@@ -49,7 +49,7 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, estados, isLoading, userRo
       setFormState({
         costo: rawVal,
         estado: orden.estado || '',
-        tela: orden.tela || ''
+        tela: orden.tela === 'Pendiente' ? 'Por pedir' : (orden.tela || '')
       });
       setCostoDisplay(rawVal ? formatCOP(rawVal) : '');
     }
@@ -82,8 +82,9 @@ const OrdenModal = ({ isOpen, onClose, onSave, orden, estados, isLoading, userRo
   };
 
   const modalTelasOptions = useMemo(() => {
-    const defaultOptions = ['Sin tela', 'Pendiente', 'Pedida'];
-    if (orden?.tela && !defaultOptions.includes(orden.tela)) {
+    // «Por pedir» es el valor que habilita pedir tela; «Pendiente» era su nombre antiguo.
+    const defaultOptions = ['Sin tela', 'Por pedir', 'Pedida'];
+    if (orden?.tela && orden.tela !== 'Pendiente' && !defaultOptions.includes(orden.tela)) {
       return [orden.tela, ...defaultOptions];
     }
     return defaultOptions;
@@ -229,7 +230,7 @@ const OrdenesPage = () => {
     { value: 'recibido', label: 'Recibido' },
     { value: 'anulado', label: 'Anulado' },
   ];
-  const telas = ['Sin tela', 'Pendiente', 'Pedida'];
+  const telas = ['Sin tela', 'Por pedir', 'Pedida'];
 
   const displayedOrdenes = useMemo(() => {
     if (!debouncedSearchTerm) return filteredOrdenes;
