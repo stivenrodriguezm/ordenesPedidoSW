@@ -8,7 +8,12 @@ export const TIPOS_ADICIONAL = {
     transporte: 'Transporte',
     articulo: 'Artículo adicional',
     ajuste: 'Ajuste',
+    bold: 'Bold',
 };
+
+// Bold (2026-11-10): se escribe lo recibido por Bold y a la lista se suma su costo (5 %).
+export const PORCENTAJE_BOLD = 5;
+export const costoBold = (recibido) => Math.round((Number(recibido) || 0) * PORCENTAJE_BOLD / 100);
 
 const texto = (v) => String(v ?? '').trim();
 export const recargoListo = (a) => texto(a.descripcion) && Number(a.importe_lista) > 0;
@@ -25,6 +30,10 @@ export function faltantesDe(l, grupos = []) {
     if (tipo !== 'producto') {
         if (!texto(l.producto_nombre)) f.producto_nombre = 'Escribe qué es.';
         if (l.juego) return f; // costos de un conjunto de la lista: el valor lo calcula el servidor
+        if (tipo === 'bold') {
+            if (!(Number(l.bold_recibido) > 0)) f.bold_recibido = 'Indica cuánto se recibió por Bold.';
+            return f;
+        }
         const valor = Number(l.precio_lista_override);
         if (!valor || (tipo !== 'ajuste' && valor < 0)) f.precio_lista_override = 'Indica el valor.';
         if (tipo === 'articulo' && !(Number(l.cantidad) >= 1)) f.cantidad = 'Indica la cantidad.';
@@ -74,6 +83,6 @@ const NOMBRES = {
     motivo_precio: 'motivo del precio', precio: 'precio de lista', referencia: 'referencia de compra', tela_modo: 'si lleva tela',
     tela_referencia: 'referencia de la tela', tela_color: 'color de la tela', tela_proveedor: 'proveedor de la tela',
     tela_cantidad: 'cantidad de tela', texto_proveedor: 'texto para el proveedor', texto_cliente: 'texto para el cliente',
-    adicionales: 'recargo', costo_especial: 'costo', metraje_especial: 'consumo de tela', tela_grupo: 'grupo de la tela', tela_costo: 'costo de la tela', conjunto_nombre: 'nombre del conjunto',
+    adicionales: 'recargo', bold_recibido: 'valor recibido por Bold', costo_especial: 'costo', metraje_especial: 'consumo de tela', tela_grupo: 'grupo de la tela', tela_costo: 'costo de la tela', conjunto_nombre: 'nombre del conjunto',
 };
 export const nombreCampo = (campo) => NOMBRES[campo] || campo;

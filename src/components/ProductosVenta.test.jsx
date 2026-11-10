@@ -572,6 +572,26 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(within(tarjeta).getByRole('button', { name: 'Elegir proveedor' })).toBeInTheDocument();
     });
 
+    it('Bold: se escribe lo recibido y a la lista se suma el 5 % (2026-11-10)', async () => {
+        await editar();
+        fireEvent.click(screen.getByRole('button', { name: '+ Bold' }));
+        const bold = screen.getByLabelText('Bold');
+        expect(within(bold).getByDisplayValue('Bold')).toBeInTheDocument();
+        fireEvent.change(within(bold).getByLabelText('Valor recibido por Bold'), { target: { value: '1000000' } });
+        expect(bold).toHaveTextContent('Suma a la lista $50.000 (5 %)');
+        fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
+        await screen.findByText(/Productos guardados/);
+        expect(guardados()[0][1].lineas.at(-1)).toMatchObject({ tipo: 'bold', producto_nombre: 'Bold', bold_recibido: '1000000', precio_lista_override: '50000' });
+    });
+
+    it('Bold sin valor recibido no se guarda', async () => {
+        await editar();
+        fireEvent.click(screen.getByRole('button', { name: '+ Bold' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent(/valor recibido por Bold/);
+        expect(guardados()).toHaveLength(0);
+    });
+
     it('se puede guardar aunque se quiten todos los productos', async () => {
         await editar();
         fireEvent.click(screen.getByRole('button', { name: 'Quitar producto 1' }));

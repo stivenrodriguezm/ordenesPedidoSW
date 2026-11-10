@@ -9,7 +9,7 @@ import { Button } from './ui';
 import { formatCOP } from '../utils/formatCOP';
 import { AppContext } from '../AppContext';
 import { GeneradorImagenes, PedirProveedor, PedirTelas } from './productosVenta/PedidosDesdeVenta';
-import { TIPOS_ADICIONAL, esEspecialPorCosto, faltantesDe, nombreCampo, recargoListo } from './productosVenta/faltantes';
+import { PORCENTAJE_BOLD, TIPOS_ADICIONAL, costoBold, esEspecialPorCosto, faltantesDe, nombreCampo, recargoListo } from './productosVenta/faltantes';
 import { leerDecimal, leerPesos, mostrarPesos } from '../utils/capturaPrecios';
 import './ProductosVenta.css';
 
@@ -80,6 +80,7 @@ const entrada = (l) => ({
     conjunto: l.conjunto || '', conjunto_nombre: l.conjunto ? (l.conjunto_nombre || '') : '', conjunto_cantidad: l.conjunto ? (Number(l.conjunto_cantidad) || 1) : 1,
     // Una venta guardada conserva sus precios; solo con «Actualizar» toma los de la lista actual.
     recalcular: Boolean(l.recalcular),
+    ...(l.tipo === 'bold' ? { bold_recibido: l.bold_recibido || null } : {}),
     // Especial por costo: costo total por unidad y consumo del grupo (el precio lo calcula el servidor).
     ...(esEspecialPorCosto(l) ? { costo_especial: l.costo_especial ?? null, metraje_especial: l.grupo_catalogo ? (l.metraje_especial ?? null) : null } : {}),
 });
@@ -775,6 +776,7 @@ const PLACEHOLDER_ADICIONAL = {
     transporte: 'Ej.: Transporte a Chía, subida por escaleras…',
     articulo: 'Ej.: Jarrón decorativo',
     ajuste: 'Ej.: No lleva cojines, negociación…',
+    bold: 'Ej.: Abono con tarjeta por Bold',
 };
 const conSigno = (v) => `${Number(v) < 0 ? '− ' : '+ '}${formatCOP(Math.abs(Number(v)))}`;
 
@@ -789,6 +791,30 @@ function EditorAdicional({ linea, cambiar, quitar, faltas = {} }) {
         cambiar({ precio_lista_override: v, precio_lista_unitario: v, _signo: s });
     };
     const etiqueta = TIPOS_ADICIONAL[tipo];
+    if (tipo === 'bold') {
+        // Lo recibido por Bold; a la lista se suma su costo (5 %), que calcula también el servidor.
+        const costo = costoBold(linea.bold_recibido);
+        return (
+            <div className={conFalta('pv-adic pv-adic--bold', Object.keys(faltas).length)} aria-label={etiqueta}>
+                <span className="pv-adic__tipo">{etiqueta}</span>
+                <label className="pv-campo pv-adic__desc"><span>Descripción</span>
+                    <input aria-label={`Descripción ${etiqueta}`} placeholder={PLACEHOLDER_ADICIONAL.bold}
+                        value={linea.producto_nombre} onChange={e => cambiar({ producto_nombre: e.target.value })} />
+                </label>
+                <label className={conFalta('pv-campo pv-adic__valor', faltas.bold_recibido)}><span>Recibido por Bold</span>
+                    <input type="number" min="0" step="1000" aria-invalid={!!faltas.bold_recibido} aria-label="Valor recibido por Bold"
+                        value={linea.bold_recibido ?? ''} onChange={e => {
+                            const recibido = e.target.value || null;
+                            const v = recibido ? String(costoBold(recibido)) : null;
+                            cambiar({ bold_recibido: recibido, precio_lista_override: v, precio_lista_unitario: v });
+                        }} />
+                    <Falta m={faltas.bold_recibido} />
+                </label>
+                <span className="pv-adic__bold" aria-live="polite">{costo ? `Suma a la lista ${formatCOP(costo)} (${PORCENTAJE_BOLD} %)` : `Suma el ${PORCENTAJE_BOLD} % a la lista`}</span>
+                <button type="button" className="pv-icono" aria-label={`Quitar ${etiqueta}`} onClick={quitar}><FaTimes /></button>
+            </div>
+        );
+    }
     return (
         <div className={conFalta(`pv-adic pv-adic--${tipo}`, Object.keys(faltas).length)} aria-label={etiqueta}>
             <span className="pv-adic__tipo">{etiqueta}</span>
@@ -828,7 +854,7 @@ function Servicios({ lineas, verPrecios }) {
                 {lineas.map(l => (
                     <li key={l.id}>
                         <span className={`pv-adic__tipo pv-adic__tipo--${l.tipo}`}>{TIPOS_ADICIONAL[l.tipo]}</span>
-                        <span className="pv-servicios__desc">{l.cantidad > 1 ? `${l.cantidad} × ` : ''}{l.producto_nombre}</span>
+                        <span className="pv-servicios__desc">{l.cantidad > 1 ? `${l.cantidad} × ` : ''}{l.producto_nombre}{l.tipo === 'bold' && l.bold_recibido ? ` · recibido ${formatCOP(Number(l.bold_recibido))}` : ''}</span>
                         {verPrecios && <strong className={Number(l.precio_lista_unitario) < 0 ? 'is-resta' : ''}>{conSigno(Number(l.precio_lista_unitario) * l.cantidad)}</strong>}
                     </li>
                 ))}
@@ -1156,7 +1182,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
         setMensaje('La tela se copió a las demás piezas del conjunto. Revisa la cantidad de cada una.');
     };
     const agregarAdicional = (tipo) => setLineas(ls => [...ls, nueva({ tipo, clave: crypto.randomUUID(), tela_modo: 'no_aplica', sin_texto_proveedor: true,
-        producto_nombre: tipo === 'transporte' ? 'Transporte' : '', precio_lista_override: null, _signo: -1 })]);
+        producto_nombre: tipo === 'transporte' ? 'Transporte' : tipo === 'bold' ? 'Bold' : '', precio_lista_override: null, _signo: -1 })]);
 
     if (error && !datos) return <section className="pv"><p role="alert" className="pv-error">{error}</p></section>;
     if (!datos) return <ProductosEsqueleto />;
@@ -1244,6 +1270,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                             <button type="button" className="pv-link" onClick={() => agregarAdicional('transporte')}>+ Transporte</button>
                             <button type="button" className="pv-link" onClick={() => agregarAdicional('articulo')}>+ Artículo adicional</button>
                             <button type="button" className="pv-link" onClick={() => agregarAdicional('ajuste')}>+ Ajuste (suma o resta)</button>
+                            <button type="button" className="pv-link" onClick={() => agregarAdicional('bold')}>+ Bold</button>
                         </div>
                     </div>
                     <footer className="pv-pie">
