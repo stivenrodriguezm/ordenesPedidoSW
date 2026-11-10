@@ -592,6 +592,23 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(guardados()).toHaveLength(0);
     });
 
+    it('los valores de recargo y servicios se escriben en pesos COP (2026-11-10)', async () => {
+        await editar();
+        fireEvent.click(screen.getByRole('button', { name: '+ Recargo' }));
+        const valor = screen.getByLabelText('Valor del recargo 1');
+        fireEvent.change(valor, { target: { value: '$1.500.000x' } });
+        expect(valor).toHaveValue('$1.500.000');
+        fireEvent.change(screen.getByLabelText('Descripción del recargo 1'), { target: { value: 'Patas en acero' } });
+        fireEvent.click(screen.getByRole('button', { name: '+ Transporte' }));
+        fireEvent.change(screen.getByLabelText('Valor Transporte'), { target: { value: '250000' } });
+        expect(screen.getByLabelText('Valor Transporte')).toHaveValue('$250.000');
+        fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
+        await screen.findByText(/Productos guardados/);
+        const [producto, transporte] = guardados()[0][1].lineas;
+        expect(producto.adicionales).toEqual([{ descripcion: 'Patas en acero', importe_lista: '1500000' }]);
+        expect(transporte).toMatchObject({ tipo: 'transporte', precio_lista_override: '250000' });
+    });
+
     it('se puede guardar aunque se quiten todos los productos', async () => {
         await editar();
         fireEvent.click(screen.getByRole('button', { name: 'Quitar producto 1' }));

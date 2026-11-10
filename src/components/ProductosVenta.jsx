@@ -378,6 +378,14 @@ function Cantidad({ valor, cambiar, n, falta }) {
     );
 }
 
+// Valor en pesos COP mientras se escribe (2026-11-10): «$1.234.567», solo pesos enteros.
+// `alCambiar` recibe los dígitos ('' si está vacío), como antes recibía el número.
+function CampoPesos({ valor, alCambiar, ...props }) {
+    const digitos = valor == null || valor === '' ? '' : String(Math.round(Math.abs(Number(valor))));
+    return <input {...props} type="text" inputMode="numeric" autoComplete="off" value={digitos ? mostrarPesos(digitos) : ''}
+        onChange={e => alCambiar(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''))} />;
+}
+
 // Campo de texto que valida al salir (pesos sin centavos o un consumo con hasta 2 decimales):
 // conserva lo escrito si es inválido y muestra el error, en vez de convertirlo en cero.
 function CampoValidado({ valor, leer, mostrar, onCommit, falta, ...props }) {
@@ -627,17 +635,17 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                                     <div className="pv-extra" key={i}>
                                         <span className="pv-extra__tipo">Recargo</span>
                                         <input aria-label={`Descripción del recargo ${i + 1}`} placeholder="¿Qué es? Ej.: patas en acero" value={a.descripcion} onChange={e => cambiarRecargo(i, { descripcion: e.target.value })} />
-                                        <input aria-label={`Valor del recargo ${i + 1}`} className="pv-extra__valor" type="number" min="0" step="1000" placeholder="Valor por unidad"
-                                            value={a.importe_lista} onChange={e => cambiarRecargo(i, { importe_lista: e.target.value })} />
+                                        <CampoPesos aria-label={`Valor del recargo ${i + 1}`} className="pv-extra__valor" placeholder="$ por unidad"
+                                            valor={a.importe_lista} alCambiar={d => cambiarRecargo(i, { importe_lista: d })} />
                                         <button type="button" className="pv-icono" aria-label={`Quitar recargo ${i + 1}`} onClick={() => cambiar({ adicionales: linea.adicionales.filter((_, j) => j !== i) })}><FaTimes /></button>
                                     </div>
                                 ))}
                                 {(especial || verEspecial) && (
                                     <div className="pv-extra">
                                         <span className="pv-extra__tipo">Precio especial</span>
-                                        <input aria-invalid={!!faltas.precio_lista_override} aria-label="Precio de lista especial por unidad" className={conFalta('pv-extra__valor', faltas.precio_lista_override)} type="number" min="1" step="1000" placeholder={especial ? 'Precio de lista por unidad' : 'Reemplaza el del catálogo'}
-                                            value={linea.precio_lista_override ?? ''} onChange={e => cambiar({ precio_lista_override: e.target.value || null })} />
-                                        <input aria-invalid={!!faltas.motivo_precio} className={faltas.motivo_precio ? 'is-falta' : ''} aria-label="Motivo del precio especial" placeholder="¿Por qué?" value={linea.motivo_precio} onChange={e => cambiar({ motivo_precio: e.target.value })} />
+                                        <input aria-invalid={!!faltas.motivo_precio} className={faltas.motivo_precio ? 'is-falta' : ''} aria-label="Motivo del precio especial" placeholder="¿Por qué? Ej.: autorizado por gerencia" value={linea.motivo_precio} onChange={e => cambiar({ motivo_precio: e.target.value })} />
+                                        <CampoPesos aria-invalid={!!faltas.precio_lista_override} aria-label="Precio de lista especial por unidad" className={conFalta('pv-extra__valor', faltas.precio_lista_override)} placeholder={especial ? '$ lista por unidad' : '$ reemplaza el de lista'}
+                                            valor={linea.precio_lista_override} alCambiar={d => cambiar({ precio_lista_override: d || null })} />
                                         {!especial && <button type="button" className="pv-icono" aria-label="Quitar precio especial" onClick={() => { cambiar({ precio_lista_override: null, motivo_precio: '' }); setVerEspecial(false); }}><FaTimes /></button>}
                                     </div>
                                 )}
@@ -802,10 +810,10 @@ function EditorAdicional({ linea, cambiar, quitar, faltas = {} }) {
                         value={linea.producto_nombre} onChange={e => cambiar({ producto_nombre: e.target.value })} />
                 </label>
                 <label className={conFalta('pv-campo pv-adic__valor', faltas.bold_cobrado)}><span>Recibido por Bold</span>
-                    <input type="number" min="0" step="1" aria-invalid={!!faltas.bold_cobrado} aria-label="Valor recibido por Bold"
-                        value={linea.bold_cobrado ?? ''} onChange={e => {
+                    <CampoPesos aria-invalid={!!faltas.bold_cobrado} aria-label="Valor recibido por Bold" placeholder="$0"
+                        valor={linea.bold_cobrado} alCambiar={d => {
                             // Pesos enteros (el servidor no admite centavos en lo cobrado por Bold).
-                            const recibido = e.target.value ? String(Math.round(Number(e.target.value))) : null;
+                            const recibido = d || null;
                             const v = recibido ? String(costoBold(recibido)) : null;
                             cambiar({ bold_cobrado: recibido, precio_lista_override: v, precio_lista_unitario: v });
                         }} />
@@ -837,8 +845,8 @@ function EditorAdicional({ linea, cambiar, quitar, faltas = {} }) {
                 </div>
             )}
             <label className={conFalta('pv-campo pv-adic__valor', faltas.precio_lista_override)}><span>{tipo === 'articulo' ? 'Valor c/u' : 'Valor'}</span>
-                <input type="number" min="0" step="1000" aria-invalid={!!faltas.precio_lista_override} aria-label={`Valor ${etiqueta}`}
-                    value={monto} onChange={e => fijar(e.target.value)} readOnly={Boolean(linea.juego)} title={linea.juego ? 'Lo calcula la lista de precios del conjunto' : undefined} />
+                <CampoPesos aria-invalid={!!faltas.precio_lista_override} aria-label={`Valor ${etiqueta}`} placeholder="$0"
+                    valor={monto} alCambiar={fijar} readOnly={Boolean(linea.juego)} title={linea.juego ? 'Lo calcula la lista de precios del conjunto' : undefined} />
                 <Falta m={faltas.precio_lista_override} />
             </label>
             <button type="button" className="pv-icono" aria-label={`Quitar ${etiqueta}`} onClick={quitar}><FaTimes /></button>

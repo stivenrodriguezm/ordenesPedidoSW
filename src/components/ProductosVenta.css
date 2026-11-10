@@ -115,7 +115,13 @@
 .pv-opcionales button { padding: 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--border-strong, var(--gray-300)); background: var(--surface); color: var(--gray-700); font: inherit; font-size: 0.75rem; cursor: pointer; }
 .pv-opcionales button.is-activo { border-color: var(--pv-acento); background: var(--accent-soft, rgba(164, 141, 102, 0.08)); color: var(--pv-acento); font-weight: 600; }
 .pv-ed__textos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 0.7rem; }
-.pv-extra { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) minmax(0, 1fr) 26px; gap: 0.5rem; align-items: center; }
+/* Recargo y precio especial (2026-11-10): la etiqueta arriba; el texto ocupa el ancho y el valor en
+   pesos va al lado con espacio para «$9.999.999». Antes cuatro columnas dejaban los campos diminutos. */
+.pv-extra { display: grid; grid-template-columns: minmax(0, 1fr) 26px; grid-template-areas: "tipo quitar" "texto texto" "valor valor"; gap: 0.3rem 0.5rem; align-items: center; padding: 0.4rem 0; border-top: 1px dashed var(--pv-borde); }
+.pv-extra .pv-extra__tipo { grid-area: tipo; }
+.pv-extra > input:not(.pv-extra__valor) { grid-area: texto; }
+.pv-extra > .pv-extra__valor { grid-area: valor; max-width: 14rem; text-align: right; font-variant-numeric: tabular-nums; }
+.pv-extra > button { grid-area: quitar; }
 .pv-extra__tipo { color: var(--pv-tenue); font-size: 0.72rem; font-weight: 600; }
 .pv-ed__mas { display: flex; flex-wrap: wrap; gap: 0.9rem; }
 .pv-agregar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem; }
@@ -248,9 +254,7 @@
   .pv-segmento--material { margin-left: 0; }
   .pv-gestion__accion { margin-left: 0; flex: 1 1 100%; justify-content: center; }
   .pv-ed__campos > * { grid-column: auto !important; }
-  .pv-extra { grid-template-columns: 1fr 26px; }
-  .pv-extra__tipo { grid-column: 1 / -1; }
-  .pv-extra input { grid-column: 1; }
+  .pv-extra > .pv-extra__valor { max-width: none; }
   .pv-resumen { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.75rem; width: 100%; margin-left: 0; }
   .pv-resumen div { flex-direction: column; gap: 0; }
   .pv-head > .ds-btn, .pv-acciones > .ds-btn { flex: 1 1 100%; justify-content: center; }
