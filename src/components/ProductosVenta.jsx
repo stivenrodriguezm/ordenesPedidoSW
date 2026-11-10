@@ -80,7 +80,7 @@ const entrada = (l) => ({
     conjunto: l.conjunto || '', conjunto_nombre: l.conjunto ? (l.conjunto_nombre || '') : '', conjunto_cantidad: l.conjunto ? (Number(l.conjunto_cantidad) || 1) : 1,
     // Una venta guardada conserva sus precios; solo con «Actualizar» toma los de la lista actual.
     recalcular: Boolean(l.recalcular),
-    ...(l.tipo === 'bold' ? { bold_recibido: l.bold_recibido || null } : {}),
+    ...(l.tipo === 'bold' ? { bold_cobrado: l.bold_cobrado || null } : {}),
     // Especial por costo: costo total por unidad y consumo del grupo (el precio lo calcula el servidor).
     ...(esEspecialPorCosto(l) ? { costo_especial: l.costo_especial ?? null, metraje_especial: l.grupo_catalogo ? (l.metraje_especial ?? null) : null } : {}),
 });
@@ -793,7 +793,7 @@ function EditorAdicional({ linea, cambiar, quitar, faltas = {} }) {
     const etiqueta = TIPOS_ADICIONAL[tipo];
     if (tipo === 'bold') {
         // Lo recibido por Bold; a la lista se suma su costo (5 %), que calcula también el servidor.
-        const costo = costoBold(linea.bold_recibido);
+        const costo = costoBold(linea.bold_cobrado);
         return (
             <div className={conFalta('pv-adic pv-adic--bold', Object.keys(faltas).length)} aria-label={etiqueta}>
                 <span className="pv-adic__tipo">{etiqueta}</span>
@@ -801,14 +801,15 @@ function EditorAdicional({ linea, cambiar, quitar, faltas = {} }) {
                     <input aria-label={`Descripción ${etiqueta}`} placeholder={PLACEHOLDER_ADICIONAL.bold}
                         value={linea.producto_nombre} onChange={e => cambiar({ producto_nombre: e.target.value })} />
                 </label>
-                <label className={conFalta('pv-campo pv-adic__valor', faltas.bold_recibido)}><span>Recibido por Bold</span>
-                    <input type="number" min="0" step="1000" aria-invalid={!!faltas.bold_recibido} aria-label="Valor recibido por Bold"
-                        value={linea.bold_recibido ?? ''} onChange={e => {
-                            const recibido = e.target.value || null;
+                <label className={conFalta('pv-campo pv-adic__valor', faltas.bold_cobrado)}><span>Recibido por Bold</span>
+                    <input type="number" min="0" step="1" aria-invalid={!!faltas.bold_cobrado} aria-label="Valor recibido por Bold"
+                        value={linea.bold_cobrado ?? ''} onChange={e => {
+                            // Pesos enteros (el servidor no admite centavos en lo cobrado por Bold).
+                            const recibido = e.target.value ? String(Math.round(Number(e.target.value))) : null;
                             const v = recibido ? String(costoBold(recibido)) : null;
-                            cambiar({ bold_recibido: recibido, precio_lista_override: v, precio_lista_unitario: v });
+                            cambiar({ bold_cobrado: recibido, precio_lista_override: v, precio_lista_unitario: v });
                         }} />
-                    <Falta m={faltas.bold_recibido} />
+                    <Falta m={faltas.bold_cobrado} />
                 </label>
                 <span className="pv-adic__bold" aria-live="polite">{costo ? `Suma a la lista ${formatCOP(costo)} (${PORCENTAJE_BOLD} %)` : `Suma el ${PORCENTAJE_BOLD} % a la lista`}</span>
                 <button type="button" className="pv-icono" aria-label={`Quitar ${etiqueta}`} onClick={quitar}><FaTimes /></button>
@@ -854,7 +855,7 @@ function Servicios({ lineas, verPrecios }) {
                 {lineas.map(l => (
                     <li key={l.id}>
                         <span className={`pv-adic__tipo pv-adic__tipo--${l.tipo}`}>{TIPOS_ADICIONAL[l.tipo]}</span>
-                        <span className="pv-servicios__desc">{l.cantidad > 1 ? `${l.cantidad} × ` : ''}{l.producto_nombre}{l.tipo === 'bold' && l.bold_recibido ? ` · recibido ${formatCOP(Number(l.bold_recibido))}` : ''}</span>
+                        <span className="pv-servicios__desc">{l.cantidad > 1 ? `${l.cantidad} × ` : ''}{l.producto_nombre}{l.tipo === 'bold' && l.bold_cobrado ? ` · recibido ${formatCOP(Number(l.bold_cobrado))}` : ''}</span>
                         {verPrecios && <strong className={Number(l.precio_lista_unitario) < 0 ? 'is-resta' : ''}>{conSigno(Number(l.precio_lista_unitario) * l.cantidad)}</strong>}
                     </li>
                 ))}

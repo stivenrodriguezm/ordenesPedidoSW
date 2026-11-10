@@ -581,7 +581,7 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(bold).toHaveTextContent('Suma a la lista $50.000 (5 %)');
         fireEvent.click(screen.getByRole('button', { name: 'Guardar productos' }));
         await screen.findByText(/Productos guardados/);
-        expect(guardados()[0][1].lineas.at(-1)).toMatchObject({ tipo: 'bold', producto_nombre: 'Bold', bold_recibido: '1000000', precio_lista_override: '50000' });
+        expect(guardados()[0][1].lineas.at(-1)).toMatchObject({ tipo: 'bold', producto_nombre: 'Bold', bold_cobrado: '1000000', precio_lista_override: '50000' });
     });
 
     it('Bold sin valor recibido no se guarda', async () => {

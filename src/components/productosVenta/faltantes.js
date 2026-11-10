@@ -31,7 +31,7 @@ export function faltantesDe(l, grupos = []) {
         if (!texto(l.producto_nombre)) f.producto_nombre = 'Escribe qué es.';
         if (l.juego) return f; // costos de un conjunto de la lista: el valor lo calcula el servidor
         if (tipo === 'bold') {
-            if (!(Number(l.bold_recibido) > 0)) f.bold_recibido = 'Indica cuánto se recibió por Bold.';
+            if (!(Number(l.bold_cobrado) > 0)) f.bold_cobrado = 'Indica cuánto se recibió por Bold.';
             return f;
         }
         const valor = Number(l.precio_lista_override);
@@ -83,6 +83,6 @@ const NOMBRES = {
     motivo_precio: 'motivo del precio', precio: 'precio de lista', referencia: 'referencia de compra', tela_modo: 'si lleva tela',
     tela_referencia: 'referencia de la tela', tela_color: 'color de la tela', tela_proveedor: 'proveedor de la tela',
     tela_cantidad: 'cantidad de tela', texto_proveedor: 'texto para el proveedor', texto_cliente: 'texto para el cliente',
-    adicionales: 'recargo', bold_recibido: 'valor recibido por Bold', costo_especial: 'costo', metraje_especial: 'consumo de tela', tela_grupo: 'grupo de la tela', tela_costo: 'costo de la tela', conjunto_nombre: 'nombre del conjunto',
+    adicionales: 'recargo', bold_cobrado: 'valor recibido por Bold', costo_especial: 'costo', metraje_especial: 'consumo de tela', tela_grupo: 'grupo de la tela', tela_costo: 'costo de la tela', conjunto_nombre: 'nombre del conjunto',
 };
 export const nombreCampo = (campo) => NOMBRES[campo] || campo;
