@@ -568,7 +568,7 @@ describe('Productos de la venta (en la misma vista)', () => {
         await waitFor(() => expect(API.post).toHaveBeenCalledWith('/ventas/12/productos/calcular/', expect.objectContaining({
             variante: null, costo_especial: '1000000', metraje_especial: '3', grupo_catalogo: 7, producto_nombre: 'Mueble TV a medida' }), expect.anything()));
         expect(await within(tarjeta).findByText('$2.060.000')).toBeInTheDocument();
-        expect(within(tarjeta).queryByText('+ Recargo o precio especial')).not.toBeInTheDocument();  // sin cargos: van en el costo
+        expect(within(tarjeta).queryByRole('button', { name: '+ Recargo' })).not.toBeInTheDocument();  // sin cargos: van en el costo
         expect(within(tarjeta).getByRole('button', { name: 'Elegir proveedor' })).toBeInTheDocument();
     });
 

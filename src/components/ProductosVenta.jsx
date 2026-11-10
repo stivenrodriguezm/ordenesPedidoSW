@@ -450,7 +450,6 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
     const gruposPrecio = catalogo.data?.grupos || [];
     const [precio, setPrecio] = useState({ estado: 'listo', valor: linea.precio_lista_unitario, error: '' });
     const [verEspecial, setVerEspecial] = useState(Boolean(linea.precio_lista_override));
-    const [verMas, setVerMas] = useState(Boolean(linea.adicionales?.length || linea.precio_lista_override));
     // Abrir un conjunto muestra sus piezas con el mismo editor completo de un producto.
     const [abierto, setAbierto] = useState(!linea.id || enConjunto);
     const especial = !linea.variante;
@@ -627,10 +626,8 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                                     })}
                                 </div>
                             )}
-                            {puedeAjustar && !verMas && !especial && (
-                                <button type="button" className="pv-link" onClick={() => setVerMas(true)}>+ Recargo o precio especial</button>
-                            )}
-                            {puedeAjustar && (verMas || especial) && <>
+                            {/* (2026-11-10) «+ Recargo» y «+ Precio especial» a la vista desde el principio, sin un paso intermedio. */}
+                            {puedeAjustar && <>
                                 {linea.adicionales.map((a, i) => (
                                     <div className="pv-extra" key={i}>
                                         <span className="pv-extra__tipo">Recargo</span>
