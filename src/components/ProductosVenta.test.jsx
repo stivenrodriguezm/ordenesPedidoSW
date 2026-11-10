@@ -281,6 +281,37 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(onActualizada).toHaveBeenCalled();
     });
 
+    it('solo quien tiene «Reabrir la gestión» ve el botón Reabrir (2026-11-10)', async () => {
+        API.get.mockResolvedValue({ data: { ...base, gestion: { estado: 'finalizada', pendientes: [], finalizada_en: '2026-10-08T15:00:00Z', finalizada_por: 'Ana' } } });
+        montar(c => c !== 'REABRIR_GESTION_VENTA');
+        expect(await screen.findByText('Finalizada')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Reabrir' })).not.toBeInTheDocument();
+    });
+
+    it('un opcional como el reclino admite varias unidades hasta su máximo (2026-11-10)', async () => {
+        const sofa = { id: 903, nombre: 'Milán · Sofá 3 puestos', subcategoria_nombre: 'Sofá 3 puestos', referencia: 81, referencia_nombre: 'Milán', tela: false,
+            catalogo_actual: true, seleccionable: true, estado_precio: 'publicado', referencias: [{ id: 81, nombre: 'Milán · Sofá 3 puestos · Fábrica' }],
+            opcionales: [{ id: 61, descripcion: 'Reclino', preseleccionado: false, multiple: true, maximo: 3 }, { id: 62, descripcion: 'Transporte', preseleccionado: false, multiple: false, maximo: 1 }] };
+        API.get.mockImplementation(async url => url === '/productos-venta/catalogo/' ? { data: { results: [sofa], count: 1, grupos: GRUPOS } }
+            : url === '/proveedores-telas/' ? { data: { results: [] } } : { data: { ...structuredClone(base), lineas: [] } });
+        montar();
+        fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
+        fireEvent.click(await screen.findByRole('button', { name: /Milán · Sofá 3 puestos/ }));
+        const tarjeta = await screen.findByRole('article', { name: 'Producto 1' });
+        fireEvent.click(await within(tarjeta).findByRole('button', { name: 'Reclino' }));
+        const mas = within(tarjeta).getByRole('button', { name: 'Agregar una unidad de Reclino' });
+        fireEvent.click(mas);
+        fireEvent.click(mas);
+        expect(within(tarjeta).getByLabelText('Unidades de Reclino')).toHaveTextContent('3');
+        expect(mas).toBeDisabled();
+        await waitFor(() => expect(API.post).toHaveBeenCalledWith('/ventas/12/productos/calcular/', expect.objectContaining({ opcionales: [61, 61, 61] }), expect.anything()));
+        fireEvent.click(within(tarjeta).getByRole('button', { name: 'Quitar una unidad de Reclino' }));
+        expect(within(tarjeta).getByLabelText('Unidades de Reclino')).toHaveTextContent('2');
+        // Transporte es de una sola unidad: sin contador.
+        fireEvent.click(within(tarjeta).getByRole('button', { name: 'Transporte' }));
+        expect(within(tarjeta).queryByRole('button', { name: 'Agregar una unidad de Transporte' })).not.toBeInTheDocument();
+    });
+
     it('no guarda un producto incompleto: dice qué falta y marca cada campo', async () => {
         await editar();
         // El texto para el cliente y la remisión es opcional: vacío no bloquea.
@@ -507,7 +538,7 @@ describe('Productos de la venta (en la misma vista)', () => {
         expect(conjunto).toHaveTextContent('+ $211.200');
     });
 
-    it('«Agregar especial»: el vendedor da el costo, el grupo y el consumo, y el precio lo calcula el servidor', async () => {
+    it('«Producto especial»: el vendedor da el costo, el grupo y el consumo, y el precio lo calcula el servidor', async () => {
         API.get.mockImplementation(async url => url === '/productos-venta/catalogo/' ? { data: { grupos: GRUPOS, results: [] } }
             : url === '/proveedores-telas/' ? { data: { results: [] } } : { data: { ...structuredClone(base), lineas: [] } });
         API.post.mockImplementation(async (url) => (url.endsWith('/calcular/') ? { data: { precio_lista_unitario: '2060000' } } : { data: { ...base, revision: 5 } }));
@@ -515,10 +546,12 @@ describe('Productos de la venta (en la misma vista)', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Agregar productos' }));
         const cerrar = screen.queryByRole('button', { name: 'Cerrar búsqueda' });
         if (cerrar) fireEvent.click(cerrar);
-        expect(screen.queryByRole('button', { name: /Producto especial/ })).not.toBeInTheDocument();  // ese pide permiso de precio
-        fireEvent.click(screen.getByRole('button', { name: /Agregar especial/ }));
+        // Solo dos formas de agregar (2026-11-10): de la lista o especial por costo, sin pedir permiso de precio.
+        const opciones = within(screen.getByRole('group', { name: 'Agregar a la venta' })).getAllByRole('button');
+        expect(opciones.map(b => b.querySelector('strong').textContent)).toEqual(['Agregar de la lista de precios', 'Producto especial']);
+        fireEvent.click(screen.getByRole('button', { name: /Producto especial/ }));
         const tarjeta = await screen.findByRole('article', { name: 'Producto 1' });
-        expect(within(tarjeta).getByText('Especial por costo')).toBeInTheDocument();
+        expect(within(tarjeta).getByText('Producto especial')).toBeInTheDocument();
         fireEvent.change(within(tarjeta).getByLabelText('Nombre del producto 1'), { target: { value: 'Mueble TV a medida' } });
         const costo = within(tarjeta).getByLabelText('Costo por unidad del producto 1');
         fireEvent.change(costo, { target: { value: '1.000.000,50' } });

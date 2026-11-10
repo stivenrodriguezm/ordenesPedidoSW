@@ -28,7 +28,7 @@ export default function AgregarSubcategoria({ grupo: grupoFijo, grupos = [], cat
   const elegido = grupos.find((g) => normalizarBusqueda(g.nombre) === normalizarBusqueda(textoReferencia));
   const grupo = grupoFijo || elegido || null;
   const referencias = grupo?.referencias || [];
-  const visibles = visiblesFijas ?? subcategoriasReferencia(referencias).map((f) => f.id);
+  const visibles = visiblesFijas ?? subcategoriasReferencia(referencias).flatMap((f) => f.ids);
   const [modo, setModo] = useState('nueva');
   const destinoDe = (refs) => (refs.length === 1 ? String(refs[0].id) : '');
   const [destino, setDestino] = useState(destinoDe(referencias));

@@ -211,3 +211,18 @@ div.nr-prod__pick + .rp-inv {
 .rp-tela .nr-input { flex: 1; min-width: 200px; }
 .rp-inv .rp-tela { margin-top: 0.35rem; }
 .rp-inv .rp-tela .nr-input { height: 32px; font-size: var(--fs-sm); }
+
+/* Producto en una línea (Nueva remisión, 2026-11-10): lo que sale en la remisión y «Editar». */
+.rp-fila { display: flex; align-items: center; gap: 0.6rem; min-height: 36px; padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border); }
+.rp-fila.is-off { opacity: 0.55; }
+.rp-fila__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.05rem; }
+.rp-fila__titulo { display: flex; align-items: center; gap: 0.4rem; font-size: var(--fs-sm); font-weight: 600; color: var(--text); min-width: 0; }
+.rp-fila__detalle { font-size: var(--fs-xs); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-fila__extra { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.15rem; }
+.rp-fila__extra .nr-tag { white-space: normal; }
+.rp-fila__cant { flex-shrink: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rp-fila__editar { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.3rem; font-size: var(--fs-xs); }
+.rp-fila__editar svg { font-size: 0.65rem; }
+.rp-list:has(> .rp-fila) { gap: 0; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.rp-list > .rp-fila:last-child { border-bottom: 0; }
+.rp-list > .rp-item + .rp-fila, .rp-list > .rp-fila + .rp-item { border-top: 1px solid var(--border); }

@@ -6,6 +6,7 @@ import { mensajeDeError } from '../../services/errores';
 import { normalizarBusqueda } from '../../utils/consultaPrecios';
 import { Button } from '../../components/ui';
 import { useCategorias, useSubcategorias } from './maestroSubcategorias';
+import { agruparSubcategorias, claveSubcategoria } from '../../utils/subcategorias';
 import './NuevaReferencia.css';
 
 
@@ -21,8 +22,11 @@ export default function SelectorSubcategorias({ elegidas, onCambiar, excluir = [
   const q = normalizarBusqueda(filtro).trim();
   const grupos = useMemo(() => {
     const porCategoria = new Map();
-    for (const s of subcategorias.data || []) {
-      if (excluir.includes(s.id)) continue;
+    // Una opción por nombre (cada referencia tiene las suyas, 2026-11-10); no se ofrecen las que ya tiene.
+    const lista = subcategorias.data || [];
+    const yaTiene = new Set(lista.filter((s) => excluir.includes(s.id)).map(claveSubcategoria));
+    for (const s of agruparSubcategorias(lista, elegidas)) {
+      if (yaTiene.has(claveSubcategoria(s))) continue;
       const cat = nombreCategoria.get(s.categoria) || 'Sin categoría';
       if (q && !normalizarBusqueda(`${cat} ${s.nombre}`).includes(q) && !elegidas.includes(s.id)) continue;
       if (!porCategoria.has(cat)) porCategoria.set(cat, []);

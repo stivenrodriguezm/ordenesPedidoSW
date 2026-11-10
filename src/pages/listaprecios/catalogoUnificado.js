@@ -1,6 +1,8 @@
 import { normalizarBusqueda } from '../../utils/consultaPrecios';
 
-export const claveSubcategoria = v => v.subcategoria != null ? `sub-${v.subcategoria}` : `ficha-${v.id}`;
+// (2026-11-10) Cada proveedor tiene su propia subcategoría: en la consulta se reúnen por nombre
+// (la misma «Silla» de dos proveedores es una sola opción con selector de proveedor).
+export const claveSubcategoria = v => v.subcategoria != null ? `sub-${normalizarBusqueda(v.nombre).trim().replace(/\s+/g, ' ')}` : `ficha-${v.id}`;
 
 export function subcategoriasCatalogo(variantes = []) {
   const filas = new Map();

@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import API from "../services/api";
+import { agruparSubcategorias } from '../utils/subcategorias';
 import { useDialogo } from "../hooks/useDialogo";
 import "./ReferenciasPage.css";
 import { FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaTags, FaTrash, FaSearch, FaTimes, FaSitemap, FaSave } from "react-icons/fa";
@@ -194,8 +195,10 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
     },
   });
 
+  // (2026-11-10) Cada referencia tiene sus propias subcategorías; aquí se ven una vez por nombre y
+  // editar o eliminar desde este catálogo aplica a todas las del mismo nombre.
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => API.put(`/suministros/subcategorias/${id}/`, data),
+    mutationFn: async ({ ids, data }) => { for (const id of ids) await API.put(`/suministros/subcategorias/${id}/`, data); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['productos-all'] });
@@ -212,12 +215,12 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => API.delete(`/suministros/subcategorias/${id}/`),
-    onSuccess: (_data, id) => {
+    mutationFn: async (ids) => { for (const id of ids) await API.delete(`/suministros/subcategorias/${id}/`); },
+    onSuccess: (_data, ids) => {
       queryClient.invalidateQueries({ queryKey: ['suministros-subcategorias'] });
       queryClient.invalidateQueries({ queryKey: ['referencias'] });
       setNotif({ message: 'Subcategoría eliminada.', type: 'success' });
-      if (editingSubcat && String(editingSubcat.id) === String(id)) {
+      if (editingSubcat && ids.includes(editingSubcat.id)) {
         setEditingSubcat(null);
       }
     },
@@ -226,9 +229,10 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
     },
   });
 
+  const agrupadas = agruparSubcategorias(subcategorias);
   const filtered = filterCatId
-    ? subcategorias.filter(s => String(s.categoria) === String(filterCatId))
-    : subcategorias;
+    ? agrupadas.filter(s => String(s.categoria) === String(filterCatId))
+    : agrupadas;
 
   const dialogoRef = useDialogo(isOpen, onClose);
 
@@ -244,7 +248,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
             <span className="subcat-modal__header-icon"><FaSitemap /></span>
             <div>
               <h3 className="subcat-modal__title">Gestionar Subcategorías</h3>
-              <p className="subcat-modal__subtitle">{subcategorias.length} subcategorías registradas</p>
+              <p className="subcat-modal__subtitle">{agrupadas.length} subcategorías registradas</p>
             </div>
           </div>
           <button className="subcat-modal__close" onClick={handleClose} title="Cerrar">×</button>
@@ -261,7 +265,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
 
           {/* ── Nueva Subcategoría form ── */}
           <div className="subcat-section">
-            <p className="subcat-section__label">{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</p>
+            <p className="subcat-section__label">{editingSubcat ? (editingSubcat.ids?.length > 1 ? `Editar subcategoría (cambia en las ${editingSubcat.ids.length} referencias que la tienen)` : 'Editar subcategoría') : 'Nueva subcategoría'}</p>
             <form
               className="subcat-form"
               onSubmit={(e) => {
@@ -269,7 +273,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                 if (!nombre.trim() || !categoriaId) return;
                 const data = { nombre: nombre.trim(), categoria: categoriaId };
                 if (editingSubcat) {
-                  updateMutation.mutate({ id: editingSubcat.id, data });
+                  updateMutation.mutate({ ids: editingSubcat.ids, data });
                 } else {
                   createMutation.mutate(data);
                 }
@@ -364,7 +368,7 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                   return (
                     <li key={sub.id} className="subcat-list__item">
                       <div className="subcat-list__info">
-                        <span className="subcat-list__name">{sub.nombre}</span>
+                        <span className="subcat-list__name">{sub.nombre}{sub.ids.length > 1 && <small style={{ marginLeft: '0.4rem', color: 'var(--text-secondary)', fontWeight: 400 }}>en {sub.ids.length} referencias</small>}</span>
                         <span className="subcat-list__cat">{catName}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -379,8 +383,8 @@ const SubcategoriasModal = ({ isOpen, onClose, categorias }) => {
                         </button>
                         <button
                           onClick={() => {
-                            if (window.confirm(`¿Eliminar la subcategoría "${sub.nombre}"?`))
-                              deleteMutation.mutate(sub.id);
+                            if (window.confirm(sub.ids.length > 1 ? `¿Eliminar la subcategoría "${sub.nombre}" de las ${sub.ids.length} referencias que la tienen?` : `¿Eliminar la subcategoría "${sub.nombre}"?`))
+                              deleteMutation.mutate(sub.ids);
                           }}
                           className="delete-btn"
                           title="Eliminar subcategoría"
@@ -441,11 +445,12 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
     setCategoriasSelected(updated);
   };
 
-  const handleToggleSubcategory = (subId) => {
-    if (subcategoriasSelected.includes(subId)) {
-      setSubcategoriasSelected(subcategoriasSelected.filter(id => id !== subId));
+  // Una opción por nombre (2026-11-10): al guardar, la referencia recibe su propia subcategoría.
+  const handleToggleSubcategory = (sub) => {
+    if (sub.ids.some(id => subcategoriasSelected.includes(id))) {
+      setSubcategoriasSelected(subcategoriasSelected.filter(id => !sub.ids.includes(id)));
     } else {
-      setSubcategoriasSelected([...subcategoriasSelected, subId]);
+      setSubcategoriasSelected([...subcategoriasSelected, sub.id]);
     }
   };
 
@@ -460,9 +465,9 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
     });
   };
 
-  const availableSubcategories = subcategorias.filter(sub =>
+  const availableSubcategories = agruparSubcategorias(subcategorias.filter(sub =>
     categoriasSelected.includes(sub.categoria)
-  );
+  ), subcategoriasSelected);
 
   return (
     <Modal
@@ -529,13 +534,13 @@ const ReferenciaModal = ({ isOpen, onClose, onSave, proveedores, referencia, isL
           ) : (
             <div className="multi-chips-selector">
               {availableSubcategories.map((sub) => {
-                const isSelected = subcategoriasSelected.includes(sub.id);
+                const isSelected = sub.ids.some(id => subcategoriasSelected.includes(id));
                 return (
                   <button
                     type="button"
                     key={sub.id}
                     className={`interactive-chip ${isSelected ? 'interactive-chip--selected' : ''}`}
-                    onClick={() => handleToggleSubcategory(sub.id)}
+                    onClick={() => handleToggleSubcategory(sub)}
                   >
                     {sub.nombre}
                   </button>

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AppContext } from '../AppContext';
 import { FaImage } from 'react-icons/fa';
 import { Modal, Button } from './ui';
 import BotonImprimir from './impresion/BotonImprimir';
@@ -104,6 +105,7 @@ const RemisionPrintModal = ({ open, onClose, remision, closeLabel = 'Cerrar' }) 
     };
 
     // Foto de la misma hoja que se imprime (con su margen), a doble resolución.
+    const { notify } = useContext(AppContext) || {};
     const handleDescargarPng = async () => {
         const doc = frameRef.current?.contentDocument;
         if (!doc?.body || !lista || descargando) return;
@@ -114,7 +116,7 @@ const RemisionPrintModal = ({ open, onClose, remision, closeLabel = 'Cerrar' }) 
             // tiene que estar cargada aquí, no solo en el iframe.
             await document.fonts?.load('22px "Audiowide"').catch(() => {});
             const canvas = await html2canvas(doc.body, {
-                backgroundColor: 'var(--surface)',
+                backgroundColor: '#ffffff', // html2canvas no entiende variables CSS (con 'var(...)' fallaba siempre)
                 scale: 2,
                 useCORS: true,
                 logging: false,
@@ -137,6 +139,7 @@ const RemisionPrintModal = ({ open, onClose, remision, closeLabel = 'Cerrar' }) 
             link.click();
         } catch (err) {
             console.error('Error al generar la imagen de la remisión:', err);
+            notify?.('No se pudo descargar la imagen de la remisión. Intenta de nuevo.', 'error');
         } finally {
             setDescargando(false);
         }

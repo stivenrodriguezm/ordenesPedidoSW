@@ -1511,3 +1511,36 @@ label.nr-prod__pick {
 @media (max-width: 720px) {
   .nr-col-4 { grid-column: span 12; }
 }
+
+/* ── Compacto (2026-11-10): ventas y productos en una línea; menos cajas y textos de ayuda. ── */
+.nr-ventas { list-style: none; margin: 0; padding: 0; gap: 0; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.nr-venta-fila { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+.nr-venta-fila:last-child { border-bottom: 0; }
+.nr-venta-fila__num { flex-shrink: 0; font-size: var(--fs-xs); font-weight: 700; color: var(--accent-texto); font-variant-numeric: tabular-nums; }
+.nr-venta-fila__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.05rem; }
+.nr-venta-fila__cliente { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.nr-venta-fila__meta { font-size: var(--fs-xs); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nr-venta-fila__prev { font-size: var(--fs-xs); color: var(--warning); }
+.nr-venta-fila__saldo { flex-shrink: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.nr-venta-fila__saldo.is-zero { color: var(--success); }
+.nr-otra-venta { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--fs-sm); }
+.nr-otra-venta svg { font-size: 0.7rem; }
+
+.nr-venta-prod { gap: 0.5rem; }
+.nr-venta-prod__title { font-size: var(--fs-sm); }
+.nr-prod-group { gap: 0.25rem; }
+.nr-prod-group__label { margin-bottom: 0; font-size: 0.68rem; }
+.nr-prod-group > .rp-bloque, .nr-juego .rp-bloque { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.nr-prod-group > .rp-bloque + .rp-bloque { margin-top: -1px; }
+.rp-bloque .rp-fila { border-bottom: 0; }
+.rp-bloque.is-nested { margin-left: 1.4rem; }
+.rp-bloque .rp-inv-bloque { padding: 0.4rem 0.6rem 0.55rem; border-top: 1px dashed var(--border); }
+.nr-muted-note { margin: 0; font-size: var(--fs-xs); color: var(--text-secondary); }
+.nr-prod-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1.1rem; }
+.nr-prod-acciones .nr-link { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--fs-sm); }
+.nr-prod-acciones .nr-link svg { font-size: 0.7rem; }
+@media (max-width: 720px) {
+  .nr-venta-fila { flex-wrap: wrap; }
+  .nr-venta-fila__texto { flex-basis: calc(100% - 4rem); }
+  .nr-venta-fila__meta { white-space: normal; }
+}

@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FaTrash, FaUndo } from 'react-icons/fa';
+import { FaPen, FaTrash, FaUndo } from 'react-icons/fa';
 import API from '../services/api';
+import { agruparSubcategorias } from '../utils/subcategorias';
 import './RemisionProductos.css';
 
 /*
@@ -136,8 +137,46 @@ export function DescripcionInventario({ value, original, onChange }) {
  * `onRemove` el botón de quitar (productos a mano) y `original` el enlace para volver
  * al texto del pedido cuando se cambió la descripción.
  */
-export function ProductoEditable({
-    item, catalogo, onChange, incluido = true, onToggle, onRemove, original, aviso, extra, error, autoFocus,
+export function ProductoEditable(props) {
+    // Compacto (Nueva remisión, 2026-11-10): una línea con lo que sale en la remisión y «Editar»
+    // para abrir los campos. Con un error se abre sola para mostrar qué falta.
+    const [abierto, setAbierto] = useState(false);
+    if (props.compacto && !abierto && !props.error) {
+        return <ProductoResumen {...props} onEditar={() => setAbierto(true)} />;
+    }
+    return <ProductoCampos {...props} onCerrar={props.compacto ? () => setAbierto(false) : undefined} />;
+}
+
+/** Primera línea de un texto, para el resumen de un producto. */
+export const primeraLinea = (texto) => String(texto || '').split('\n').map(t => t.trim()).find(Boolean) || '';
+
+function ProductoResumen({ item, catalogo, incluido = true, onToggle, onRemove, aviso, extra, onEditar }) {
+    const sub = catalogo.categorias.flatMap(c => c.subcategorias).find(s => s.id === item.subcategoria)?.nombre;
+    const titulo = [item.referencia, sub].filter(Boolean).join(' · ') || primeraLinea(item.descripcion) || 'Producto sin datos';
+    const detalle = [item.referencia || sub ? primeraLinea(item.descripcion) : '', (item.tela || '').trim() && `Tela: ${item.tela.trim()}`].filter(Boolean).join(' · ');
+    return (
+        <div className={`rp-fila${incluido ? '' : ' is-off'}`}>
+            {onToggle && (
+                <input type="checkbox" className="nr-check" checked={incluido} onChange={onToggle} aria-label={`Incluir ${titulo} en la remisión`} />
+            )}
+            <div className="rp-fila__texto">
+                <span className="rp-fila__titulo">{titulo}</span>
+                {detalle && <span className="rp-fila__detalle" title={item.descripcion}>{detalle}</span>}
+                {(aviso || extra) && incluido && <span className="rp-fila__extra">{aviso}{extra}</span>}
+            </div>
+            <span className="rp-fila__cant" title="Cantidad">{item.cantidad || 1} u.</span>
+            <button type="button" className="nr-link rp-fila__editar" onClick={onEditar} disabled={!incluido} aria-label={`Editar ${titulo}`}>
+                <FaPen /> Editar
+            </button>
+            {onRemove && (
+                <button type="button" className="nr-icon-btn" onClick={onRemove} title="Quitar" aria-label="Quitar producto"><FaTrash /></button>
+            )}
+        </div>
+    );
+}
+
+function ProductoCampos({
+    item, catalogo, onChange, incluido = true, onToggle, onRemove, original, aviso, extra, error, autoFocus, onCerrar,
 }) {
     const descRef = useRef(null);
     const categoriaDeSub = useMemo(() => {
@@ -208,11 +247,12 @@ export function ProductoEditable({
                         aria-label="Subcategoría"
                     >
                         <option value="">Subcategoría</option>
+                        {/* Una opción por nombre (cada referencia tiene las suyas, 2026-11-10); la elegida se conserva. */}
                         {categoria
-                            ? categoria.subcategorias.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)
+                            ? agruparSubcategorias(categoria.subcategorias.map(s => ({ ...s, categoria: categoria.id })), [item.subcategoria]).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)
                             : catalogo.categorias.map(c => (
                                 <optgroup key={c.id} label={c.nombre}>
-                                    {c.subcategorias.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                    {agruparSubcategorias(c.subcategorias.map(s => ({ ...s, categoria: c.id })), [item.subcategoria]).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                 </optgroup>
                             ))}
                     </select>
@@ -250,8 +290,9 @@ export function ProductoEditable({
                     />
                     <TelaProducto value={item.tela} onChange={tela => onChange({ tela })} disabled={apagado} />
                 </div>
-                {(aviso || extra || cambioDescripcion || error) && !apagado && (
+                {(aviso || extra || cambioDescripcion || error || onCerrar) && !apagado && (
                     <div className="rp-item__foot">
+                        {onCerrar && !error && <button type="button" className="nr-link" onClick={onCerrar}>Listo</button>}
                         {error && <span className="rp-error">{error}</span>}
                         {aviso}
                         {extra}

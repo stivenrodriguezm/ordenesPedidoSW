@@ -503,21 +503,24 @@ describe('Una referencia con proveedor independiente por subcategoría', () => {
     expect(screen.queryByText(/Subcategorías eliminadas/)).not.toBeInTheDocument();
   });
 
-  it('permite renombrar desde la fila y actualiza ambos proveedores conservando IDs y costos', async () => {
-    servicio.renombrarSubcategoria.mockResolvedValue({ id: 11, nombre: 'Mesa grande', categoria: 1, referencias_uso: 2 });
-    const client = await montarUnificada();
+  it('renombra solo en el proveedor elegido (subcategorías propias por referencia, 2026-11-10)', async () => {
+    servicio.renombrarSubcategoria.mockResolvedValue({ id: 11, nombre: 'Mesa grande', categoria: 1, separada: false, referencias: [101] });
+    await montarUnificada();
+    // Sin proveedor elegido el nombre no se edita: cada proveedor tiene su propia subcategoría.
+    expect(within(screen.getByRole('listitem', { name: 'Mesa de 6' })).queryByLabelText('Subcategoría')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Proveedor de Mesa de 6'), { target: { value: '101' } });
+    await within(screen.getByRole('listitem', { name: 'Mesa de 6' })).findByLabelText('Costo base');
     const nombre = within(screen.getByRole('listitem', { name: 'Mesa de 6' })).getByLabelText('Subcategoría');
     fireEvent.change(nombre, { target: { value: 'Mesa grande' } }); fireEvent.blur(nombre);
-    await screen.findByRole('listitem', { name: 'Mesa grande' });
-    expect(servicio.renombrarSubcategoria).toHaveBeenCalledWith(11, 'Mesa grande', expect.any(Number));
-    expect(client.getQueryData(['lp-referencias']).map(r => r.linea.variantes[0].nombre)).toEqual(['Mesa grande', 'Mesa grande']);
-    expect(client.getQueryData(['lp-referencias']).map(r => r.linea.variantes[0].costo_base)).toEqual(['100000', '200000']);
+    await waitFor(() => expect(servicio.renombrarSubcategoria).toHaveBeenCalledWith(11, 'Mesa grande', 101));
     expect(servicio.updateVariante).not.toHaveBeenCalled();
   });
 
   it('conserva el nombre escrito si el servidor rechaza un duplicado', async () => {
     servicio.renombrarSubcategoria.mockRejectedValue({ response: { data: { nombre: ['Ya existe otra subcategoría con ese nombre.'] } } });
     await montarUnificada();
+    fireEvent.change(screen.getByLabelText('Proveedor de Mesa de 6'), { target: { value: '101' } });
+    await within(screen.getByRole('listitem', { name: 'Mesa de 6' })).findByLabelText('Costo base');
     const nombre = within(screen.getByRole('listitem', { name: 'Mesa de 6' })).getByLabelText('Subcategoría');
     fireEvent.change(nombre, { target: { value: 'Silla' } }); fireEvent.blur(nombre);
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe otra subcategoría');

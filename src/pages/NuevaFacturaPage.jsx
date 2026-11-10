@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import API from '../services/api';
+import { agruparSubcategorias, idsMismoNombre } from '../utils/subcategorias';
 
 import { AppContext, usePermissions } from '../AppContext';
 import { formatCOP, parseCOP } from '../utils/formatCOP';
@@ -1029,7 +1030,7 @@ export default function NuevaFacturaPage() {
                                             disabled={!newGrupoCategoria}
                                         >
                                             <option value="">Subcategoría (Opcional)...</option>
-                                            {SUBCATEGORIAS.filter(s => String(s.categoria) === String(newGrupoCategoria)).map(s => (
+                                            {agruparSubcategorias(SUBCATEGORIAS.filter(s => String(s.categoria) === String(newGrupoCategoria)), [newGrupoSubcategoria]).map(s => (
                                                 <option key={s.id} value={s.id}>{s.nombre}</option>
                                             ))}
                                         </select>
@@ -1107,12 +1108,14 @@ export default function NuevaFacturaPage() {
                             )}
                             {form.productos.map((row, index) => {
                                 const providerRefs = referencias.filter(r => String(r.proveedor) === String(form.proveedorId));
+                                // Cada referencia tiene sus propias subcategorías (2026-11-10): una opción por nombre.
                                 const subcatsFiltered = row.categoriaId
-                                    ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(row.categoriaId))
+                                    ? agruparSubcategorias(SUBCATEGORIAS.filter(s => String(s.categoria) === String(row.categoriaId)), [row.subcategoriaId])
                                     : [];
+                                const mismasSub = idsMismoNombre(SUBCATEGORIAS, row.subcategoriaId);
                                 const filteredRefs = providerRefs.filter(r => {
                                     if (row.categoriaId && !r.categorias?.map(String).includes(String(row.categoriaId))) return false;
-                                    if (row.subcategoriaId && !r.subcategorias?.map(String).includes(String(row.subcategoriaId))) return false;
+                                    if (row.subcategoriaId && !r.subcategorias?.some(id => mismasSub.has(String(id)))) return false;
                                     return true;
                                 });
 

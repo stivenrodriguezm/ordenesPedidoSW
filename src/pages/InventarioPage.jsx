@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { documentoEtiquetaQR, imprimirEtiquetaQR } from '../utils/printQR';
 import BotonImprimir from '../components/impresion/BotonImprimir';
 import API from '../services/api';
+import { agruparSubcategorias, idsMismoNombre } from '../utils/subcategorias';
 import { mensajeDeError } from '../services/errores';
 import { usePendientesIds } from '../hooks/useSharedData';
 import { formatCOP } from '../utils/formatCOP';
@@ -883,8 +884,10 @@ function InventarioPage() {
         }
         
         if (filterSubcategoria) {
-            const matchItem = String(item.subcat?.id) === filterSubcategoria;
-            const matchGroup = grupoObj && (String(grupoObj.subcategoria) === filterSubcategoria || String(grupoObj.subcategoria_id) === filterSubcategoria);
+            // Cada referencia tiene sus propias subcategorías (2026-11-10): filtra todas las del mismo nombre.
+            const mismas = idsMismoNombre(SUBCATEGORIAS, filterSubcategoria);
+            const matchItem = mismas.has(String(item.subcat?.id));
+            const matchGroup = grupoObj && (mismas.has(String(grupoObj.subcategoria)) || mismas.has(String(grupoObj.subcategoria_id)));
             if (!matchItem && !matchGroup) return false;
         }
 
@@ -964,9 +967,9 @@ function InventarioPage() {
     };
 
     // ── Dropdown helpers ──────────────────────────────────────────────────────
-    const subcatsDropdown = filterCategoria
+    const subcatsDropdown = agruparSubcategorias(filterCategoria
         ? SUBCATEGORIAS.filter(s => String(s.categoria) === filterCategoria)
-        : SUBCATEGORIAS;
+        : SUBCATEGORIAS, [filterSubcategoria]);
 
     
     
@@ -1627,7 +1630,7 @@ function InventarioPage() {
                                                 <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Subcategoría</label>
                                                 <select className="ifg-input" value={newGrupoSubcategoria} onChange={e => setNewGrupoSubcategoria(e.target.value)} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                                     <option value="">Ninguna</option>
-                                                    {(newGrupoCategoria ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(newGrupoCategoria)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                                    {agruparSubcategorias(newGrupoCategoria ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(newGrupoCategoria)) : SUBCATEGORIAS, [newGrupoSubcategoria]).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                                 </select>
                                             </div>
                                             <Button type="button" size="sm" onClick={handleAddGrupo}>
@@ -1649,10 +1652,11 @@ function InventarioPage() {
                                     {form.productos.map((row, index) => {
                                         // Filter references by selected provider
                                         const providerRefs = productos.filter(r => String(r.proveedor) === String(form.proveedorId));
-                                        const subcatsFiltered = row.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(row.categoriaId)) : [];
+                                        const subcatsFiltered = row.categoriaId ? agruparSubcategorias(SUBCATEGORIAS.filter(s => String(s.categoria) === String(row.categoriaId)), [row.subcategoriaId]) : [];
+                                        const mismasSub = idsMismoNombre(SUBCATEGORIAS, row.subcategoriaId);
                                         const filteredRefs = providerRefs.filter(r => {
                                             if (row.categoriaId && !r.categorias?.map(String).includes(String(row.categoriaId))) return false;
-                                            if (row.subcategoriaId && !r.subcategorias?.map(String).includes(String(row.subcategoriaId))) return false;
+                                            if (row.subcategoriaId && !r.subcategorias?.some(id => mismasSub.has(String(id)))) return false;
                                             return true;
                                         });
                                         const noRefsMsg = !form.proveedorId ? 'Elige proveedor' : providerRefs.length === 0 ? 'Sin referencias' : filteredRefs.length === 0 ? 'Sin resultados' : 'Seleccione...';
@@ -1881,7 +1885,7 @@ function InventarioPage() {
                                     value={nuevoGrupoModal.subcategoriaId}
                                     onChange={e => setNuevoGrupoModal(prev => ({ ...prev, subcategoriaId: e.target.value }))}>
                                     <option value="">Ninguna</option>
-                                    {(nuevoGrupoModal.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(nuevoGrupoModal.categoriaId)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                    {agruparSubcategorias(nuevoGrupoModal.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(nuevoGrupoModal.categoriaId)) : SUBCATEGORIAS, [nuevoGrupoModal.subcategoriaId]).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                 </select>
                             </div>
 
@@ -1955,7 +1959,7 @@ function InventarioPage() {
                                     value={grupoEditModal.subcategoriaId || ''}
                                     onChange={e => setGrupoEditModal(prev => ({ ...prev, subcategoriaId: e.target.value }))}>
                                     <option value="">Ninguna</option>
-                                    {(grupoEditModal.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(grupoEditModal.categoriaId)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                    {agruparSubcategorias(grupoEditModal.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(grupoEditModal.categoriaId)) : SUBCATEGORIAS, [grupoEditModal.subcategoriaId]).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                 </select>
                             </div>
 
@@ -2132,7 +2136,7 @@ function InventarioPage() {
                                         <label className="ifg-label" style={{ fontSize: '0.6rem' }}>Subcategoría</label>
                                         <select className="ifg-input" value={itemEditModal.form.subcategoriaId} onChange={e => setItemEditModal(prev => ({ ...prev, form: { ...prev.form, subcategoriaId: e.target.value } }))} style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
                                             <option value="">(De Referencia)</option>
-                                            {(itemEditModal.form.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(itemEditModal.form.categoriaId)) : SUBCATEGORIAS).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                                            {agruparSubcategorias(itemEditModal.form.categoriaId ? SUBCATEGORIAS.filter(s => String(s.categoria) === String(itemEditModal.form.categoriaId)) : SUBCATEGORIAS, [itemEditModal.form.subcategoriaId]).map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                         </select>
                                     </div>
                                     <div className="ifg-group" style={{ gridColumn: 'span 3' }}>

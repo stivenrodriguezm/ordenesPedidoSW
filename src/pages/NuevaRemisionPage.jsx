@@ -13,7 +13,7 @@ import {
 import RemisionPrintModal from '../components/RemisionPrintModal';
 import {
     ProductoEditable, DescripcionInventario, ReferenciasDatalist, useCatalogoRemision, TelaProducto,
-    productoVacio, productoEnBlanco, productoIncompleto, productoAApi,
+    productoVacio, productoEnBlanco, productoIncompleto, productoAApi, primeraLinea,
 } from '../components/RemisionProductos';
 import {
     FaTruck, FaSearch, FaTimes, FaPlus, FaTrash, FaChevronLeft, FaChevronDown, FaChevronUp,
@@ -311,6 +311,39 @@ function metaInventario(i, conVariacion = true) {
     ].filter(Boolean).join('  ·  ');
 }
 
+// Producto de inventario en una línea (2026-11-10): lo que sale en la remisión y «Editar»
+// para cambiar la descripción o la tela solo en esta remisión (el inventario no cambia).
+function FilaInventario({ item: i, seleccion, texto, onTexto, tela, onTela, onQuitar, anidado = false }) {
+    const [abierto, setAbierto] = useState(false);
+    const marcado = seleccion ? seleccion.checked : true;
+    const descripcion = texto ?? descripcionInventario(i);
+    const detalle = [primeraLinea(descripcion), (tela || '').trim() && `Tela: ${tela.trim()}`].filter(Boolean).join(' · ');
+    return (
+        <div className={`rp-bloque${anidado ? ' is-nested' : ''}`}>
+            <div className={`rp-fila${marcado ? '' : ' is-off'}`}>
+                {seleccion && <input type="checkbox" className="nr-check" checked={marcado} onChange={seleccion.onToggle} aria-label={`Incluir ${i.producto_nombre || i.id_referencia} en la remisión`} />}
+                <div className="rp-fila__texto">
+                    <span className="rp-fila__titulo">{i.producto_nombre || 'Producto sin referencia'} <span className="nr-code">{i.id_referencia}</span></span>
+                    {(detalle || metaInventario(i, false)) && <span className="rp-fila__detalle" title={descripcion}>{detalle || metaInventario(i, false)}</span>}
+                    {i.disponibilidad === 'por_reparar' && <span className="rp-fila__extra"><span className="nr-tag nr-tag--warn"><FaExclamationTriangle /> Marcado por reparar</span></span>}
+                </div>
+                {marcado && (
+                    <button type="button" className="nr-link rp-fila__editar" onClick={() => setAbierto(a => !a)} aria-expanded={abierto}>
+                        <FaPen /> {abierto ? 'Listo' : 'Editar'}
+                    </button>
+                )}
+                {onQuitar && <button type="button" className="nr-icon-btn" onClick={onQuitar} title="Quitar" aria-label="Quitar producto"><FaTrash /></button>}
+            </div>
+            {marcado && abierto && (
+                <div className="rp-inv-bloque">
+                    <DescripcionInventario value={texto} original={descripcionInventario(i)} onChange={onTexto} />
+                    <div className="rp-inv"><TelaProducto value={tela} onChange={onTela} /></div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function VentaProductos({
     venta, selInv, onToggleInv, onToggleVarios, textosInv, onEditTextoInv, telasInv, onEditTelaInv,
     pedLineas, onTogglePed, onEditPed, multiVenta, catalogo, marcarErrores,
@@ -344,35 +377,18 @@ function VentaProductos({
     const detallesTodos = pedPendientes.map(p => p.detalle_id);
 
     // Marcado, la descripción se puede cambiar solo para esta remisión.
-    const filaInv = (i, anidado = false) => {
-        const checked = selInv.has(i.id_referencia);
-        return (
-            <div key={i.id_referencia} className={`nr-prod nr-prod--inv${checked ? ' is-checked' : ''}${anidado ? ' is-nested' : ''}`}>
-                <label className="nr-prod__pick">
-                    <input type="checkbox" className="nr-check" checked={checked} onChange={() => onToggleInv(i.id_referencia)} />
-                    <ProductoInfo
-                        titulo={i.producto_nombre || 'Producto sin referencia'}
-                        meta={metaInventario(i, !checked)}
-                        badge={<span className="nr-code">{i.id_referencia}</span>}
-                    >
-                        {i.disponibilidad === 'por_reparar' && (
-                            <span className="nr-tag nr-tag--warn"><FaExclamationTriangle /> Marcado por reparar</span>
-                        )}
-                    </ProductoInfo>
-                </label>
-                {checked && (
-                    <div className="rp-inv-bloque">
-                        <DescripcionInventario
-                            value={textosInv[i.id_referencia]}
-                            original={descripcionInventario(i)}
-                            onChange={t => onEditTextoInv(i.id_referencia, t)}
-                        />
-                        <div className="rp-inv"><TelaProducto value={telasInv[i.id_referencia]} onChange={t => onEditTelaInv(i.id_referencia, t)} /></div>
-                    </div>
-                )}
-            </div>
-        );
-    };
+    const filaInv = (i, anidado = false) => (
+        <FilaInventario
+            key={i.id_referencia}
+            item={i}
+            anidado={anidado}
+            seleccion={{ checked: selInv.has(i.id_referencia), onToggle: () => onToggleInv(i.id_referencia) }}
+            texto={textosInv[i.id_referencia]}
+            onTexto={t => onEditTextoInv(i.id_referencia, t)}
+            tela={telasInv[i.id_referencia]}
+            onTela={t => onEditTelaInv(i.id_referencia, t)}
+        />
+    );
 
     return (
         <div className="nr-venta-prod">
@@ -393,21 +409,12 @@ function VentaProductos({
             </div>
 
             {total === 0 && (
-                <div className="nr-empty-note">
-                    <FaInfoCircle />
-                    <span>
-                        Esta venta no tiene productos pendientes registrados (ni en inventario ni en órdenes de pedido).
-                        Escríbelos abajo en <strong>Otros productos</strong>.
-                    </span>
-                </div>
+                <p className="nr-muted-note">Sin productos pendientes en inventario ni en pedidos: agrégalos a mano abajo.</p>
             )}
 
             {disponibles.length > 0 && (
                 <div className="nr-prod-group">
-                    <div className="nr-prod-group__label"><FaWarehouse /> En bodega · inventario</div>
-                    <p className="nr-prod-group__hint">
-                        La descripción es la que sale en la remisión: ajústala si hace falta. El inventario no cambia.
-                    </p>
+                    <div className="nr-prod-group__label" title="La descripción sale en la remisión; cambiarla aquí no cambia el inventario."><FaWarehouse /> En bodega</div>
                     {bloques.grupos.map(g => {
                         const ids = g.items.map(i => i.id_referencia);
                         const n = ids.filter(id => selInv.has(id)).length;
@@ -434,12 +441,9 @@ function VentaProductos({
 
             {pedPendientes.length > 0 && (
                 <div className="nr-prod-group">
-                    <div className="nr-prod-group__label">
-                        <FaStore /> Pedidos de la venta · aún no están en inventario
+                    <div className="nr-prod-group__label" title="La descripción viene del pedido, escrita para el proveedor: ajústala para el cliente con «Editar».">
+                        <FaStore /> De pedidos · aún no en inventario
                     </div>
-                    <p className="nr-prod-group__hint">
-                        La descripción viene del pedido, escrita para el proveedor: ajústala para el cliente.
-                    </p>
                     <div className="rp-list">
                         {pedPendientes.map(p => {
                             const linea = pedLineas[p.detalle_id];
@@ -448,6 +452,7 @@ function VentaProductos({
                             return (
                                 <ProductoEditable
                                     key={p.detalle_id}
+                                    compacto
                                     item={linea}
                                     catalogo={catalogo}
                                     incluido={linea.incluido}
@@ -458,7 +463,7 @@ function VentaProductos({
                                         ? 'Indica la referencia, la subcategoría o la descripción.' : null}
                                     aviso={sinLlegar && (
                                         <span className="nr-tag nr-tag--warn">
-                                            <FaExclamationTriangle /> El pedido está {p.orden_estado_label.toLowerCase()}: puede que aún no haya llegado
+                                            <FaExclamationTriangle /> Pedido {p.orden_estado_label.toLowerCase()}: puede que no haya llegado
                                         </span>
                                     )}
                                 />
@@ -662,6 +667,7 @@ function NuevaRemisionPage() {
     const [manuales, setManuales] = useState([]);
     const [nuevoKey, setNuevoKey] = useState(null); // producto recién agregado (para enfocarlo)
     const [bodegaAbierta, setBodegaAbierta] = useState(false);
+    const [otraVenta, setOtraVenta] = useState(false);
     const catalogo = useCatalogoRemision();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -994,10 +1000,8 @@ function NuevaRemisionPage() {
                     <Section
                         step={1}
                         done={pasoVentaListo}
-                        title="¿Qué venta vas a entregar?"
-                        subtitle={sinVenta
-                            ? 'Remisión sin venta asociada (exhibición, garantía, traslado…).'
-                            : 'Busca por número de venta, nombre o cédula del cliente. Puedes agregar más de una.'}
+                        title="¿Qué ventas vas a entregar?"
+                        subtitle={sinVenta ? 'Remisión sin venta asociada (exhibición, garantía, traslado…).' : null}
                     >
                         {sinVenta ? (
                             <div className="nr-sinventa">
@@ -1008,59 +1012,57 @@ function NuevaRemisionPage() {
                         ) : (
                             <>
                                 {ventasSel.length > 0 && (
-                                    <div className="nr-ventas">
+                                    <ul className="nr-ventas">
                                         {ventasSel.map((v, idx) => (
-                                            <div key={v.id} className="nr-venta-card">
-                                                <div className="nr-venta-card__main">
-                                                    <div className="nr-venta-card__top">
-                                                        <span className="nr-venta-card__num">Venta #{v.id}</span>
+                                            <li key={v.id} className="nr-venta-fila">
+                                                <span className="nr-venta-fila__num">#{v.id}</span>
+                                                <div className="nr-venta-fila__texto">
+                                                    <span className="nr-venta-fila__cliente">
+                                                        {v.cliente?.nombre}
                                                         {multiVenta && idx === 0 && <span className="nr-tag nr-tag--info">Principal</span>}
-                                                        {v.vendedores_compartidos_nombres && (
-                                                            <span className="nr-tag nr-tag--info"><FaUsers /> Compartida</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="nr-venta-card__cliente">{v.cliente?.nombre}</div>
-                                                    <div className="nr-venta-card__meta">
-                                                        {v.cliente?.cedula && <span>CC {v.cliente.cedula}</span>}
-                                                        <span>Asesor: {v.vendedor_nombre}{v.vendedores_compartidos_nombres ? ` + ${v.vendedores_compartidos_nombres}` : ''}</span>
-                                                        <span>Vendida {formatDateCorta(v.fecha_venta)}</span>
-                                                        {v.fecha_entrega && <span>Entrega pactada {formatDateCorta(v.fecha_entrega)}</span>}
-                                                    </div>
+                                                        {v.vendedores_compartidos_nombres && <span className="nr-tag nr-tag--info"><FaUsers /> Compartida</span>}
+                                                    </span>
+                                                    <span className="nr-venta-fila__meta">
+                                                        {[v.cliente?.cedula && `CC ${v.cliente.cedula}`,
+                                                            `${v.vendedor_nombre}${v.vendedores_compartidos_nombres ? ` + ${v.vendedores_compartidos_nombres}` : ''}`,
+                                                            v.fecha_entrega && `Entrega pactada ${formatDateCorta(v.fecha_entrega)}`].filter(Boolean).join(' · ')}
+                                                    </span>
                                                     {v.remisiones_previas.length > 0 && (
-                                                        <div className="nr-venta-card__prev">
-                                                            <FaInfoCircle /> Esta venta ya tiene{' '}
-                                                            {v.remisiones_previas.map(r => `#${r.id} (${estadoLabel(r.estado)})`).join(', ')}.
-                                                            {' '}Solo se muestran los productos que faltan por entregar.
-                                                        </div>
+                                                        <span className="nr-venta-fila__prev">
+                                                            Ya tiene {v.remisiones_previas.map(r => `#${r.id} (${estadoLabel(r.estado)})`).join(', ')}: solo se muestra lo que falta por entregar.
+                                                        </span>
                                                     )}
                                                 </div>
-                                                <div className="nr-venta-card__side">
-                                                    <span className="nr-venta-card__saldo-label">Saldo</span>
-                                                    <span className={`nr-venta-card__saldo${toInt(v.saldo) <= 0 ? ' is-zero' : ''}`}>
-                                                        {toInt(v.saldo) > 0 ? formatCOP(v.saldo) : 'Pagada'}
-                                                    </span>
-                                                    <button type="button" className="nr-icon-btn" onClick={() => quitarVenta(v.id)} title="Quitar venta" aria-label={`Quitar venta ${v.id}`}>
-                                                        <FaTimes />
-                                                    </button>
-                                                </div>
-                                            </div>
+                                                <span className={`nr-venta-fila__saldo${toInt(v.saldo) <= 0 ? ' is-zero' : ''}`} title="Saldo de la venta">
+                                                    {toInt(v.saldo) > 0 ? `Saldo ${formatCOP(v.saldo)}` : 'Pagada'}
+                                                </span>
+                                                <button type="button" className="nr-icon-btn" onClick={() => quitarVenta(v.id)} title="Quitar venta" aria-label={`Quitar venta ${v.id}`}>
+                                                    <FaTimes />
+                                                </button>
+                                            </li>
                                         ))}
-                                    </div>
+                                    </ul>
                                 )}
 
                                 {cargandoVentaId && (
                                     <div className="nr-loading-line"><FaSpinner className="nr-spin" /> Cargando la venta #{cargandoVentaId}…</div>
                                 )}
 
-                                <VentaPicker
-                                    excluidas={ventaIds}
-                                    onSelect={agregarVenta}
-                                    cargandoId={cargandoVentaId}
-                                    autoFocus={ventasSel.length === 0 && !ventaOrigen}
-                                    placeholder={ventasSel.length === 0
-                                        ? 'Buscar venta: número, cliente o cédula…'
-                                        : '¿Entregas otra venta en el mismo viaje? Búscala aquí…'}
-                                />
+                                {ventasSel.length === 0 || otraVenta ? (
+                                    <VentaPicker
+                                        excluidas={ventaIds}
+                                        onSelect={o => { setOtraVenta(false); agregarVenta(o); }}
+                                        cargandoId={cargandoVentaId}
+                                        autoFocus={otraVenta || (ventasSel.length === 0 && !ventaOrigen)}
+                                        placeholder={ventasSel.length === 0
+                                            ? 'Buscar venta: número, cliente o cédula…'
+                                            : 'Otra venta en el mismo viaje: número, cliente o cédula…'}
+                                    />
+                                ) : (
+                                    <button type="button" className="nr-link nr-otra-venta" onClick={() => setOtraVenta(true)}>
+                                        <FaPlus /> Agregar otra venta en el mismo viaje
+                                    </button>
+                                )}
 
                                 {ventasSel.length === 0 && puedeTodasLasVentas && (
                                     <button type="button" className="nr-link nr-link--muted nr-sinventa-link" onClick={activarSinVenta}>
@@ -1077,110 +1079,9 @@ function NuevaRemisionPage() {
                         )}
                     </Section>
 
-                    {/* 2 · Productos */}
+                    {/* 2 · Cliente y entrega */}
                     <Section
                         step={2}
-                        done={pasoProductosListo}
-                        title="Productos a entregar"
-                        subtitle={ventasSel.length
-                            ? 'Ya marcamos lo pendiente de la venta. Desmarca lo que no va en este viaje.'
-                            : 'Agrega los productos que se entregan.'}
-                        aside={totalProductos > 0 && <span className="nr-pill">{totalProductos} seleccionado{totalProductos !== 1 ? 's' : ''}</span>}
-                    >
-                        {ventasSel.map(v => (
-                            <VentaProductos
-                                key={v.id}
-                                venta={v}
-                                multiVenta={multiVenta}
-                                selInv={selInv}
-                                onToggleInv={toggleInv}
-                                onToggleVarios={toggleVarios}
-                                textosInv={textosInv}
-                                onEditTextoInv={editarTextoInv}
-                                telasInv={telasInv}
-                                onEditTelaInv={editarTelaInv}
-                                pedLineas={pedLineas}
-                                onTogglePed={togglePed}
-                                onEditPed={editarPed}
-                                catalogo={catalogo}
-                                marcarErrores={intentoEnviar}
-                            />
-                        ))}
-
-                        {extras.length > 0 && (
-                            <div className="nr-prod-group">
-                                <div className="nr-prod-group__label"><FaWarehouse /> Agregados desde bodega</div>
-                                {extras.map(i => (
-                                    <div key={i.id_referencia} className="nr-prod nr-prod--inv is-checked">
-                                        <div className="nr-prod__pick">
-                                            <ProductoInfo
-                                                titulo={i.producto_nombre || 'Producto'}
-                                                meta={metaInventario(i, false)}
-                                                badge={<span className="nr-code">{i.id_referencia}</span>}
-                                            />
-                                            <button type="button" className="nr-icon-btn" onClick={() => quitarExtra(i.id_referencia)} title="Quitar" aria-label="Quitar producto">
-                                                <FaTrash />
-                                            </button>
-                                        </div>
-                                        <DescripcionInventario
-                                            value={textosInv[i.id_referencia]}
-                                            original={descripcionInventario(i)}
-                                            onChange={t => editarTextoInv(i.id_referencia, t)}
-                                        />
-                                        <div className="rp-inv"><TelaProducto value={telasInv[i.id_referencia]} onChange={t => editarTelaInv(i.id_referencia, t)} /></div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Otros productos escritos a mano */}
-                        <div className="nr-prod-group">
-                            <div className="nr-prod-group__label"><FaPen /> Otros productos</div>
-                            {manuales.length > 0 && (
-                                <div className="rp-list">
-                                    {manuales.map(m => (
-                                        <ProductoEditable
-                                            key={m.key}
-                                            item={m}
-                                            catalogo={catalogo}
-                                            onChange={patch => editarManual(m.key, patch)}
-                                            onRemove={() => quitarManual(m.key)}
-                                            autoFocus={m.key === nuevoKey}
-                                            error={intentoEnviar && !productoEnBlanco(m) && productoIncompleto(m)
-                                                ? 'Indica la referencia, la subcategoría o la descripción.' : null}
-                                            extra={multiVenta && (
-                                                <select
-                                                    className="nr-input nr-manual__venta"
-                                                    value={m.venta ?? ''}
-                                                    onChange={e => editarManual(m.key, { venta: e.target.value ? Number(e.target.value) : null })}
-                                                    aria-label="Venta del producto"
-                                                >
-                                                    {ventasSel.map(v => <option key={v.id} value={v.id}>Venta #{v.id}</option>)}
-                                                </select>
-                                            )}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                            <button type="button" className="rp-add" onClick={agregarManual}>
-                                <FaPlus /> Agregar un producto escrito a mano
-                            </button>
-                        </div>
-
-                        <ReferenciasDatalist catalogo={catalogo} />
-
-                        <div className="nr-bodega-toggle">
-                            <button type="button" className="nr-link" onClick={() => setBodegaAbierta(o => !o)}>
-                                <FaBoxOpen /> {bodegaAbierta ? 'Ocultar búsqueda en bodega' : 'Agregar un producto de exhibición o escanear QR'}
-                                {bodegaAbierta ? <FaChevronUp /> : <FaChevronDown />}
-                            </button>
-                            {bodegaAbierta && <BuscadorBodega onAgregar={agregarExtra} yaAgregados={selInv} />}
-                        </div>
-                    </Section>
-
-                    {/* 3 · Cliente y entrega */}
-                    <Section
-                        step={3}
                         done={pasoEntregaListo}
                         title="Cliente y entrega"
                         subtitle={ventasSel.length
@@ -1303,9 +1204,9 @@ function NuevaRemisionPage() {
                         </div>
                     </Section>
 
-                    {/* 4 · Pago y notas */}
+                    {/* 3 · Cobro y notas */}
                     <Section
-                        step={4}
+                        step={3}
                         done={form.sinSaldo || (saldoNum > 0 && !!metodoPago)}
                         title="Cobro y notas"
                         subtitle="Lo que el transportador debe cobrar al entregar."
@@ -1414,6 +1315,96 @@ function NuevaRemisionPage() {
                             </div>
                         </div>
                     </Section>
+                    {/* 4 · Productos */}
+                    <Section
+                        step={4}
+                        done={pasoProductosListo}
+                        title="Productos a entregar"
+                        subtitle={ventasSel.length ? 'Ya va marcado lo pendiente. Desmarca lo que no va en este viaje.' : null}
+                        aside={totalProductos > 0 && <span className="nr-pill">{totalProductos} seleccionado{totalProductos !== 1 ? 's' : ''}</span>}
+                    >
+                        {ventasSel.map(v => (
+                            <VentaProductos
+                                key={v.id}
+                                venta={v}
+                                multiVenta={multiVenta}
+                                selInv={selInv}
+                                onToggleInv={toggleInv}
+                                onToggleVarios={toggleVarios}
+                                textosInv={textosInv}
+                                onEditTextoInv={editarTextoInv}
+                                telasInv={telasInv}
+                                onEditTelaInv={editarTelaInv}
+                                pedLineas={pedLineas}
+                                onTogglePed={togglePed}
+                                onEditPed={editarPed}
+                                catalogo={catalogo}
+                                marcarErrores={intentoEnviar}
+                            />
+                        ))}
+
+                        {extras.length > 0 && (
+                            <div className="nr-prod-group">
+                                <div className="nr-prod-group__label"><FaWarehouse /> Agregados desde bodega</div>
+                                {extras.map(i => (
+                                    <FilaInventario
+                                        key={i.id_referencia}
+                                        item={i}
+                                        texto={textosInv[i.id_referencia]}
+                                        onTexto={t => editarTextoInv(i.id_referencia, t)}
+                                        tela={telasInv[i.id_referencia]}
+                                        onTela={t => editarTelaInv(i.id_referencia, t)}
+                                        onQuitar={() => quitarExtra(i.id_referencia)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Otros productos escritos a mano */}
+                        {manuales.length > 0 && (
+                            <div className="nr-prod-group">
+                                <div className="nr-prod-group__label"><FaPen /> Escritos a mano</div>
+                                <div className="rp-list">
+                                    {manuales.map(m => (
+                                        <ProductoEditable
+                                            key={m.key}
+                                            item={m}
+                                            catalogo={catalogo}
+                                            onChange={patch => editarManual(m.key, patch)}
+                                            onRemove={() => quitarManual(m.key)}
+                                            autoFocus={m.key === nuevoKey}
+                                            error={intentoEnviar && !productoEnBlanco(m) && productoIncompleto(m)
+                                                ? 'Indica la referencia, la subcategoría o la descripción.' : null}
+                                            extra={multiVenta && (
+                                                <select
+                                                    className="nr-input nr-manual__venta"
+                                                    value={m.venta ?? ''}
+                                                    onChange={e => editarManual(m.key, { venta: e.target.value ? Number(e.target.value) : null })}
+                                                    aria-label="Venta del producto"
+                                                >
+                                                    {ventasSel.map(v => <option key={v.id} value={v.id}>Venta #{v.id}</option>)}
+                                                </select>
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <ReferenciasDatalist catalogo={catalogo} />
+
+                        <div className="nr-prod-acciones">
+                            <button type="button" className="nr-link" onClick={agregarManual}>
+                                <FaPlus /> Producto escrito a mano
+                            </button>
+                            <button type="button" className="nr-link" onClick={() => setBodegaAbierta(o => !o)} aria-expanded={bodegaAbierta}>
+                                <FaBoxOpen /> {bodegaAbierta ? 'Ocultar bodega' : 'De exhibición o con QR'}
+                                {bodegaAbierta ? <FaChevronUp /> : <FaChevronDown />}
+                            </button>
+                        </div>
+                        {bodegaAbierta && <BuscadorBodega onAgregar={agregarExtra} yaAgregados={selInv} />}
+                    </Section>
+
                 </div>
 
                 {/* Resumen */}

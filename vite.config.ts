@@ -11,7 +11,8 @@ export default defineConfig({
     // el backend sigue escuchando solo en este equipo.
     host: true,
     // Bonjour mantiene este acceso aunque el router cambie la IP del Mac.
-    allowedHosts: ["stivens-macbook-air.local"],
+    // Un nombre por cada Mac de desarrollo (nunca todos los hosts).
+    allowedHosts: ["stivens-macbook-air.local", "macbook-pro-2.local"],
     proxy: {
       "/api": "http://127.0.0.1:8000",
       "/media": "http://127.0.0.1:8000",

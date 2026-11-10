@@ -236,7 +236,7 @@ function CrearPedidoPage() {
             await new Promise((resolve) => setTimeout(resolve, 100));
             const { default: html2canvas } = await import("html2canvas");
             const canvas = await html2canvas(pedidoPreview, {
-              backgroundColor: "var(--surface)",
+              backgroundColor: '#ffffff', // html2canvas no entiende variables CSS (con 'var(...)' fallaba siempre)
               scale: 2,
               useCORS: true,
               logging: false,

@@ -18,42 +18,54 @@ const haceCuanto = iso => {
   return h < 48 ? `última conexión hace ${h} h` : 'sin conexión reciente';
 };
 
+/** La impresora de la oficina a la que se imprime siempre: la Ricoh (o la única configurada). */
+export const impresoraPredeterminada = (lista = []) => lista.find(i => /ricoh/i.test(i.nombre)) || (lista.length === 1 ? lista[0] : null);
+
 /**
- * Botón «Imprimir» de toda la plataforma (2026-10-24). Antes de imprimir pregunta dónde:
- * en esta computadora (diálogo del navegador, como siempre) o en una impresora de la
- * oficina, a la que el documento llega por el servidor desde cualquier lugar.
+ * Botón «Imprimir» de toda la plataforma (2026-10-24). (2026-11-10) Siempre imprime en la
+ * Ricoh de la oficina, sin preguntar: el documento llega por el servidor desde cualquier
+ * lugar y se sigue hasta «Impreso»; desde ahí se puede imprimir en esta computadora.
+ * Solo pregunta si hay varias impresoras de oficina y ninguna es la Ricoh.
  *
  * documento: () => HTML completo, el mismo que se imprime en el navegador.
  * imprimirLocal: imprime aquí (abre el diálogo del navegador).
  * Si no hay impresoras de oficina configuradas, imprime aquí directamente.
  */
 export default function BotonImprimir({ documento, titulo, imprimirLocal, disabled, children = 'Imprimir', variant = 'primary', ...rest }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(null); // null | { directa } | { elegir: true }
+  const [buscando, setBuscando] = useState(false);
 
   useEffect(() => { cargarImpresoras(); }, []);
 
-  const alPulsar = () => {
-    const lista = impresorasEnCache();
-    if (lista && lista.length === 0) imprimirLocal();
-    else setAbierto(true);
+  const alPulsar = async () => {
+    let lista = impresorasEnCache();
+    if (!lista) {
+      setBuscando(true);
+      lista = await cargarImpresoras();
+      setBuscando(false);
+    }
+    if (!lista.length) { imprimirLocal(); return; }
+    const ricoh = impresoraPredeterminada(lista);
+    setAbierto(ricoh ? { directa: ricoh } : { elegir: true });
   };
 
   return (
     <>
-      <Button variant={variant} icon={FaPrint} onClick={alPulsar} disabled={disabled} {...rest}>{children}</Button>
+      <Button variant={variant} icon={FaPrint} onClick={alPulsar} disabled={disabled} loading={buscando} {...rest}>{children}</Button>
       {abierto && (
         <SelectorImpresora
           titulo={titulo}
           documento={documento}
           imprimirLocal={imprimirLocal}
-          onClose={() => setAbierto(false)}
+          directa={abierto.directa}
+          onClose={() => setAbierto(null)}
         />
       )}
     </>
   );
 }
 
-function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
+function SelectorImpresora({ titulo, documento, imprimirLocal, directa, onClose }) {
   const [impresoras, setImpresoras] = useState(impresorasEnCache() || []);
   const [destino, setDestino] = useState(destinoGuardado);
   const [copias, setCopias] = useState('1');
@@ -61,6 +73,7 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
   const [error, setError] = useState('');
   const [trabajo, setTrabajo] = useState(null);
   const vivo = useRef(true);
+  const enviadoDirecto = useRef(false);
 
   useEffect(() => {
     vivo.current = true;
@@ -84,18 +97,11 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
   const nCopias = Number(copias);
   const copiasValidas = Number.isInteger(nCopias) && nCopias >= 1 && nCopias <= 10;
 
-  const imprimir = async () => {
-    guardarDestino(elegido);
-    if (!remota) {
-      onClose();
-      setTimeout(imprimirLocal, 0);
-      return;
-    }
-    if (!copiasValidas) return;
+  const enviar = async (impresora, nCopiasEnvio) => {
     setEnviando(true);
     setError('');
     try {
-      const d = await enviarTrabajo({ impresora: remota.id, titulo, html: documento(), copias: nCopias });
+      const d = await enviarTrabajo({ impresora: impresora.id, titulo, html: documento(), copias: nCopiasEnvio });
       if (vivo.current) setTrabajo({ ...d, desde: Date.now() });
     } catch (e) {
       if (vivo.current) setError(e?.response?.data?.error || 'No se pudo enviar el documento. Revisa tu conexión e inténtalo de nuevo.');
@@ -104,13 +110,58 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
     }
   };
 
+  const imprimir = async () => {
+    guardarDestino(elegido);
+    if (!remota) {
+      onClose();
+      setTimeout(imprimirLocal, 0);
+      return;
+    }
+    if (!copiasValidas) return;
+    await enviar(remota, nCopias);
+  };
+
+  const imprimirAqui = () => {
+    onClose();
+    setTimeout(imprimirLocal, 0);
+  };
+
+  // Siempre a la Ricoh: se envía al abrir, una sola vez (también en el modo estricto de React).
+  useEffect(() => {
+    if (!directa || enviadoDirecto.current) return;
+    enviadoDirecto.current = true;
+    enviar(directa, 1);
+  }, [directa]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (directa && !trabajo) {
+    return (
+      <Modal open onClose={onClose} title="Impresión en la oficina" size="sm" className="bi-modal"
+        footer={<>
+          <Button variant="secondary" onClick={imprimirAqui}>Imprimir en esta computadora</Button>
+          {error ? <Button onClick={() => enviar(directa, 1)} loading={enviando}>Reintentar</Button> : <Button variant="secondary" onClick={onClose}>Cerrar</Button>}
+        </>}>
+        <div className="bi-estado bi-estado--pendiente" role="status" aria-live="polite">
+          {error ? <FaExclamationTriangle aria-hidden /> : <span className="bi-girando" aria-hidden />}
+          <div>
+            <strong>{error ? 'No se envió' : `Enviando a ${directa.nombre}…`}</strong>
+            <p>{titulo}{directa.ubicacion ? ` · ${directa.ubicacion}` : ''}</p>
+          </div>
+        </div>
+        {error && <p className="bi-error" role="alert">{error}</p>}
+      </Modal>
+    );
+  }
+
   if (trabajo) {
     const impresora = impresoras.find(i => i.id === trabajo.impresora) || remota;
     const enCurso = EN_CURSO.includes(trabajo.estado);
     const sinSeguir = enCurso && trabajo.sinSeguir;
     return (
       <Modal open onClose={onClose} title="Impresión en la oficina" size="sm" className="bi-modal"
-        footer={<Button variant={enCurso ? 'secondary' : 'primary'} onClick={onClose}>{enCurso ? 'Cerrar (sigue en cola)' : 'Listo'}</Button>}>
+        footer={<>
+          {(trabajo.estado === 'error' || sinSeguir) && <Button variant="secondary" onClick={imprimirAqui}>Imprimir en esta computadora</Button>}
+          <Button variant={enCurso ? 'secondary' : 'primary'} onClick={onClose}>{enCurso ? 'Cerrar (sigue en cola)' : 'Listo'}</Button>
+        </>}>
         <div className={`bi-estado bi-estado--${trabajo.estado}`} role="status" aria-live="polite">
           {trabajo.estado === 'impreso' ? <FaCheckCircle aria-hidden /> : trabajo.estado === 'error' || sinSeguir ? <FaExclamationTriangle aria-hidden /> : <span className="bi-girando" aria-hidden />}
           <div>
@@ -120,6 +171,7 @@ function SelectorImpresora({ titulo, documento, imprimirLocal, onClose }) {
               {impresora?.ubicacion ? ` (${impresora.ubicacion})` : ''}.
             </p>
             {trabajo.detalle && <p className="bi-detalle">{trabajo.detalle}</p>}
+            {enCurso && impresora?.en_linea && impresora?.impresora_encontrada === false && <p className="bi-detalle">{SIN_IMPRESORA}</p>}
             {trabajo.estado === 'pendiente' && !trabajo.en_linea && (
               <p className="bi-detalle">La computadora de la oficina no está conectada: se imprimirá cuando se conecte (hasta 12 horas).</p>
             )}

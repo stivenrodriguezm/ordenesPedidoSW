@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { FaBoxOpen, FaCheckCircle, FaChevronDown, FaEdit, FaLayerGroup, FaPlus, FaSearch, FaTimes, FaTruck } from 'react-icons/fa';
+import { FaBoxOpen, FaCheckCircle, FaChevronDown, FaEdit, FaLayerGroup, FaMinus, FaPlus, FaSearch, FaTimes, FaTruck } from 'react-icons/fa';
 import API from '../services/api';
 import { buscarProductosVenta } from '../services/productosVentaService';
 import useDebounce from '../hooks/useDebounce';
@@ -394,8 +394,9 @@ function CampoValidado({ valor, leer, mostrar, onCommit, falta, ...props }) {
     </>;
 }
 
-// «Agregar especial» (2026-10-28): costo total por unidad (ya con cargos), grupo y consumo de
-// tela o cuero si aplica. El precio de lista = (costo + consumo × costo del grupo) × multiplicador.
+// «Producto especial» (2026-10-28; desde 2026-11-10 la única forma de agregar uno): costo total por
+// unidad (ya con cargos), grupo y consumo de tela o cuero si aplica. El precio de lista =
+// (costo + consumo × costo del grupo) × multiplicador general: el asesor no escribe precios.
 function CostoEspecial({ linea, n, cambiar, grupos = [], faltas = {} }) {
     const grupo = grupos.find(g => g.id === linea.grupo_catalogo);
     const cuero = grupo?.tipo === 'cuero';
@@ -479,6 +480,11 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
     }, [clave, meta]); // eslint-disable-line react-hooks/exhaustive-deps
     const conPedidos = !!linea.pedidos?.length || !!linea.inventario_origen;
     const cant = Number(linea.cantidad) || 1;
+    // Opcionales con unidades (2026-11-10): como en la consulta de la lista de precios, un id
+    // repetido es otra unidad (p. ej. 2 reclinos en un sofá de 3), hasta el máximo del cargo.
+    const unidadesDe = (id) => linea.opcionales.filter(x => x === id).length;
+    const ponerOpcionales = (ids) => cambiar({ opcionales: [...ids].sort((a, b) => a - b) });
+    const quitarUnaUnidad = (id) => { const k = linea.opcionales.indexOf(id); ponerOpcionales(linea.opcionales.filter((_, j) => j !== k)); };
     const cambiarRecargo = (i, patch) => cambiar({ adicionales: linea.adicionales.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
     const n = numero;
     const nFaltas = Object.keys(faltas).length;
@@ -509,7 +515,7 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                     <div className="pv-card__pasos">
                         <Paso ok={listo.compra} texto="Compra" /><Paso ok={listo.tela} texto="Tela / Cuero" /><Paso ok={listo.textos} texto="Textos" />
                         {meta?.juego && <small className="pv-juego" title="Juego: se vende y se pide como un solo producto">Incluye {meta.juego}</small>}
-                        {especial && <small className="pv-juego">{porCosto ? 'Especial por costo' : 'Producto especial'}</small>}
+                        {especial && <small className="pv-juego" title={porCosto ? 'Precio de lista = costo × multiplicador general' : 'Precio de lista autorizado'}>Producto especial</small>}
                         {nFaltas > 0 && <span className="pv-faltan-chip">Falta{nFaltas === 1 ? '' : 'n'} {nFaltas} dato{nFaltas === 1 ? '' : 's'}</span>}
                     </div>
                 </div>
@@ -593,10 +599,22 @@ function EditorProducto({ ventaId, linea, indice, numero, cambiar, quitar, hasPe
                                 <div className="pv-opcionales" role="group" aria-label="Opcionales">
                                     <span>Opcionales</span>
                                     {meta.opcionales.map(o => {
-                                        const activo = linea.opcionales.includes(o.id);
-                                        return <button type="button" key={o.id} className={activo ? 'is-activo' : ''} aria-pressed={activo}
+                                        const unidades = unidadesDe(o.id), activo = unidades > 0, maximo = o.maximo || 1;
+                                        const chip = <button type="button" key={o.id} className={activo ? 'is-activo' : ''} aria-pressed={activo}
                                             title={o.especial ? 'Especial del juego' : undefined}
-                                            onClick={() => cambiar({ opcionales: activo ? linea.opcionales.filter(id => id !== o.id) : [...linea.opcionales, o.id] })}>{o.especial ? '★ ' : ''}{o.descripcion}</button>;
+                                            onClick={() => ponerOpcionales(activo ? linea.opcionales.filter(id => id !== o.id) : [...linea.opcionales, o.id])}>{o.especial ? '★ ' : ''}{o.descripcion}</button>;
+                                        if (!activo || !o.multiple || maximo < 2) return chip;
+                                        return (
+                                            <div key={o.id} className="pv-opcional-unidades">
+                                                {chip}
+                                                <div role="group" aria-label={`Unidades de ${o.descripcion} del producto ${n}`}>
+                                                    <button type="button" aria-label={`Quitar una unidad de ${o.descripcion}`} onClick={() => quitarUnaUnidad(o.id)}><FaMinus /></button>
+                                                    <output aria-label={`Unidades de ${o.descripcion}`}>{unidades}</output>
+                                                    <button type="button" aria-label={`Agregar una unidad de ${o.descripcion}`} disabled={unidades >= maximo}
+                                                        title={unidades >= maximo ? `Máximo ${maximo}` : undefined} onClick={() => ponerOpcionales([...linea.opcionales, o.id])}><FaPlus /></button>
+                                                </div>
+                                            </div>
+                                        );
                                     })}
                                 </div>
                             )}
@@ -850,7 +868,8 @@ function TelaResumen({ l, corto = false }) {
     );
 }
 
-function Gestion({ gestion, puede, ocupado, finalizar, reabrir }) {
+// Reabrir a mano exige REABRIR_GESTION_VENTA (2026-11-10, solo administradores por defecto).
+function Gestion({ gestion, puede, puedeReabrir, ocupado, finalizar, reabrir }) {
     const [verFaltantes, setVerFaltantes] = useState(false);
     if (!gestion?.estado) return null;
     const [texto, tono] = GESTION[gestion.estado] || [gestion.estado, 'pendiente'];
@@ -866,10 +885,10 @@ function Gestion({ gestion, puede, ocupado, finalizar, reabrir }) {
                     {verFaltantes ? 'Ocultar' : `Falta${faltan.length === 1 ? '' : 'n'} ${faltan.length} cosa${faltan.length === 1 ? '' : 's'} para finalizar`}
                 </button>
             ) : <span className="pv-muted">Todo pedido y con precio de lista.</span>}
-            {puede && (gestion.estado === 'finalizada'
-                ? <button type="button" className="pv-link pv-gestion__accion" disabled={!!ocupado} onClick={reabrir}>Reabrir</button>
-                : <Button size="sm" className="pv-gestion__accion" icon={FaCheckCircle} disabled={faltan.length > 0} loading={ocupado === 'gestion'} onClick={finalizar}
-                    title={faltan.length ? 'Completa lo que falta para finalizar' : 'Ya se pidió todo: solo queda esperar y entregar'}>Finalizar gestión</Button>)}
+            {gestion.estado === 'finalizada'
+                ? puedeReabrir && <button type="button" className="pv-link pv-gestion__accion" disabled={!!ocupado} onClick={reabrir}>Reabrir</button>
+                : puede && <Button size="sm" className="pv-gestion__accion" icon={FaCheckCircle} disabled={faltan.length > 0} loading={ocupado === 'gestion'} onClick={finalizar}
+                    title={faltan.length ? 'Completa lo que falta para finalizar' : 'Ya se pidió todo: solo queda esperar y entregar'}>Finalizar gestión</Button>}
             {verFaltantes && faltan.length > 0 && <ul className="pv-gestion__faltan">{faltan.map(f => <li key={f}>{f}</li>)}</ul>}
         </div>
     );
@@ -1164,7 +1183,7 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                 )}
             </header>
 
-            {!editando && <Gestion gestion={datos.gestion} puede={puedeEditar || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA')} ocupado={ocupado}
+            {!editando && <Gestion gestion={datos.gestion} puede={puedeEditar || hasPermission('EDITAR_ESTADO_PEDIDOS_VENTA')} puedeReabrir={hasPermission('REABRIR_GESTION_VENTA')} ocupado={ocupado}
                 finalizar={() => cambiarGestion('finalizar')} reabrir={() => cambiarGestion('reabrir')} />}
 
             {error && <div className="pv-alerta" role="alert">{error}
@@ -1206,14 +1225,10 @@ export default function ProductosVenta({ ventaId, hasPermission, onActualizada }
                             <button type="button" className="pv-agregar__op" onClick={() => setBuscando(true)}>
                                 <FaPlus aria-hidden="true" /><span><strong>Agregar de la lista de precios</strong><small>Productos y conjuntos con sus precios</small></span>
                             </button>
+                            {/* Un solo «Producto especial» (2026-11-10): se pone el costo y el precio de lista sale del multiplicador general. */}
                             <button type="button" className="pv-agregar__op" onClick={() => setLineas(ls => [...ls, nueva({ clave: crypto.randomUUID(), _por_costo: true, costo_especial: null, metraje_especial: null })])}>
-                                <FaBoxOpen aria-hidden="true" /><span><strong>Agregar especial</strong><small>No está en la lista: das el costo y se calcula el precio</small></span>
+                                <FaBoxOpen aria-hidden="true" /><span><strong>Producto especial</strong><small>No está en la lista: pones el costo y se calcula el precio de lista</small></span>
                             </button>
-                            {hasPermission('AJUSTAR_PRECIO_LISTA_VENTA') && (
-                                <button type="button" className="pv-agregar__op" onClick={() => setLineas(ls => [...ls, nueva({ clave: crypto.randomUUID() })])}>
-                                    <FaEdit aria-hidden="true" /><span><strong>Producto especial</strong><small>Fuera de catálogo, con precio autorizado</small></span>
-                                </button>
-                            )}
                         </div>
                     )}
                     <div className="pv-adicionales">

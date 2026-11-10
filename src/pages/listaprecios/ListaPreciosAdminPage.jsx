@@ -1134,7 +1134,7 @@ function GrupoReferencias({ grupo, modo, busqueda, notify, children }) {
     {/* (2026-10-28) Nueva subcategoría para esta referencia, a la vista sin tener que abrirla. */}
     {puedeAgregar && <button type="button" className="lp-grupo-nueva-sub" onClick={() => setAgregando(true)} aria-label={`Nueva subcategoría en ${grupo.nombre}`}>
       <FaPlus aria-hidden="true" /> Subcategoría</button>}
-    {agregando && <AgregarSubcategoria grupo={grupo} visibles={filasSub.map(f => f.id)} notify={notify} onClose={() => setAgregando(false)} />}
+    {agregando && <AgregarSubcategoria grupo={grupo} visibles={filasSub.flatMap(f => f.ids)} notify={notify} onClose={() => setAgregando(false)} />}
     <button type="button" className="lp-grupo-cabecera" onClick={cambiar} aria-expanded={abierto} aria-label={`${abierto ? 'Contraer' : 'Expandir'} ${modo === 'referencia' ? 'referencia' : 'proveedor'} ${grupo.nombre}`}>
       <FaLayerGroup aria-hidden="true" /><strong>{modo === 'referencia' ? `Referencia · ${grupo.nombre}` : grupo.nombre}</strong>
       <span>{modo === 'referencia' ? `${subcategorias} ${subcategorias === 1 ? 'subcategoría' : 'subcategorías'} · ${proveedores} ${proveedores === 1 ? 'proveedor' : 'proveedores'}` : `${grupo.referencias.length} referencias`}</span>

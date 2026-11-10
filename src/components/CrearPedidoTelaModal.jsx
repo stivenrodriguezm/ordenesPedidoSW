@@ -254,7 +254,7 @@ const CrearPedidoTelaModal = ({ isOpen, onClose, onSuccess, initialOrdenAsociada
                     await new Promise(resolve => setTimeout(resolve, 150));
                     const { default: html2canvas } = await import('html2canvas');
                     const canvas = await html2canvas(previewRef.current, {
-                        backgroundColor: 'var(--surface)',
+                        backgroundColor: '#ffffff', // html2canvas no entiende variables CSS (con 'var(...)' fallaba siempre)
                         scale: 2,
                         useCORS: true,
                         logging: false,

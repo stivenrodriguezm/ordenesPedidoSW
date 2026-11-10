@@ -10,7 +10,7 @@ import AgregarSubcategoria from './AgregarSubcategoria';
 import { usePermissions } from '../../AppContext';
 import VariantesOrdenables from './VariantesOrdenables';
 import { aplicarDisposicionSubcategorias } from './disposicionSubcategorias';
-import { etiquetaProveedor, proveedorInicial, subcategoriasReferencia } from './subcategoriasReferencia';
+import { etiquetaProveedor, idsEnOrden, proveedorInicial, subcategoriasReferencia } from './subcategoriasReferencia';
 import ProveedoresAgrupacion from './ProveedoresAgrupacion';
 
 const pendientes = elemento => elemento?.querySelector('[data-estado="error"], [data-estado="pendiente"], [data-estado="guardando"]');
@@ -57,8 +57,9 @@ export default function ReferenciaUnificada({ grupo, renderVariante, renderOpcio
   });
   const [opciones, setOpciones] = useState(false);
   // Un conjunto no tiene proveedor: su ficha está en un proveedor, pero cada pieza conserva el suyo.
-  const conjuntoDe = fila => fila.referencias.find(r => r.linea?.variantes?.some(v => v.subcategoria === fila.id && (v.es_conjunto || v.componentes?.length)));
-  const seleccion = new Map(filas.map(f => [f.id, conjuntoDe(f)?.id ?? proveedorInicial(f, elegidos[f.id])]));
+  // (2026-11-10) Cada proveedor tiene su propia subcategoría: la de la fila en ese proveedor es fila.subDe.get(ref.id).
+  const conjuntoDe = fila => fila.referencias.find(r => r.linea?.variantes?.some(v => v.subcategoria === fila.subDe.get(r.id) && (v.es_conjunto || v.componentes?.length)));
+  const seleccion = new Map(filas.map(f => [f.clave, conjuntoDe(f)?.id ?? proveedorInicial(f, elegidos[f.clave])]));
   const refs = grupo.referencias.filter(r => [...seleccion.values()].includes(r.id));
   // Las piezas de un conjunto pueden ser de cualquier proveedor: con un conjunto (o al formar
   // uno) se cargan todas las fichas de la referencia; si no, solo las de los proveedores elegidos.
@@ -81,54 +82,55 @@ export default function ReferenciaUnificada({ grupo, renderVariante, renderOpcio
       onConfigurar(ref.id);
     },
   });
-  const configurandoFila = fila => configurar.isPending && configurar.variables?.subcategoria === fila.id;
+  const configurandoFila = fila => configurar.isPending && fila.ids.includes(configurar.variables?.subcategoria);
   const cambiarProveedor = (fila, valor, nodo) => {
     if (pendientes(nodo.closest('.lp-subcategoria-proveedor'))) {
       notify('Confirma o corrige los campos pendientes antes de cambiar el proveedor.', 'warning'); return;
     }
-    const nuevos = { ...elegidos, [fila.id]: valor ? Number(valor) : '' };
+    const nuevos = { ...elegidos, [fila.clave]: valor ? Number(valor) : '' };
     setElegidos(nuevos);
     try { sessionStorage.setItem(clave, JSON.stringify(nuevos)); } catch { /* preferencia de esta vista */ }
   };
   return <div className="lp-referencia-unificada" ref={contenedor}>
     {!filas.length && <p className="lp-section-hint">{todas.length ? "Todas las subcategorías están retiradas de la lista." : "Esta referencia todavía no tiene subcategorías asignadas en Referencias."}</p>}
     <div className="lp-subcategorias-unificadas">
-      <VariantesOrdenables linea={{ nombre: grupo.nombre, variantes: filas }} notify={notify} etiquetaLista={`Subcategorías de ${grupo.nombre}`}
-        onGuardar={orden => guardarDisposicion.mutateAsync({ orden })} puedeOrdenar={puedeCambiar}
+      <VariantesOrdenables linea={{ nombre: grupo.nombre, variantes: filas.map(f => ({ ...f, id: f.clave })) }} notify={notify} etiquetaLista={`Subcategorías de ${grupo.nombre}`}
+        onGuardar={orden => guardarDisposicion.mutateAsync({ orden: idsEnOrden(orden.map(clave => filas.find(f => f.clave === clave))).filter(id => !disposicion.retiradas.includes(id)) })} puedeOrdenar={puedeCambiar}
         acciones={fila => <button type="button" className="lp-quitar-subcategoria" aria-label={`Eliminar ${fila.nombre} de la lista`} title="Eliminar subcategoría de la lista" disabled={guardarDisposicion.isPending} onClick={() => { if (puedeCambiar()) setEliminando(fila); }}><FaTrash aria-hidden="true" /></button>}>
       {fila => {
-        const ref = fila.referencias.find(r => r.id === seleccion.get(fila.id));
+        const ref = fila.referencias.find(r => r.id === seleccion.get(fila.clave));
         const consulta = ref && consultasPorRef.get(ref.id), linea = ref && detalles.get(ref.id);
-        const variante = linea?.variantes.find(v => v.subcategoria === fila.id);
+        const subRef = (ref && fila.subDe.get(ref.id)) ?? fila.ids[0];
+        const variante = linea?.variantes.find(v => v.subcategoria === subRef);
         const control = conjuntoDe(fila) ? <ProveedoresAgrupacion componentes={variante?.componentes} />
           : <label className="lp-proveedor-subcategoria"><span>Proveedor</span>
-          <select aria-label={`Proveedor de ${fila.nombre}`} value={seleccion.get(fila.id)} onChange={e => cambiarProveedor(fila, e.target.value, e.currentTarget)} disabled={configurar.isPending}>
+          <select aria-label={`Proveedor de ${fila.nombre}`} value={seleccion.get(fila.clave)} onChange={e => cambiarProveedor(fila, e.target.value, e.currentTarget)} disabled={configurar.isPending}>
             <option value="">Seleccionar proveedor…</option>{fila.referencias.map(r => <option key={r.id} value={r.id}>{etiquetaProveedor(r, fila.referencias)}</option>)}
           </select>
         </label>;
-        return <div className="lp-subcategoria-proveedor" key={fila.id}>
+        return <div className="lp-subcategoria-proveedor" key={fila.clave}>
           {variante ? renderVariante({ variante, linea, proveedorControl: control, lineasGrupo }) : <div className="lp-subcategoria-sin-costo">
-            <div className="lp-subcategoria-identidad"><NombreSubcategoria subcategoria={fila.id} nombre={fila.nombre} referencia={fila.referencias[0]?.id} /><span>{fila.categoria_nombre}</span></div>{control}
+            <div className="lp-subcategoria-identidad">{ref ? <NombreSubcategoria subcategoria={subRef} nombre={fila.nombre} referencia={ref.id} /> : <strong>{fila.nombre}</strong>}<span>{fila.categoria_nombre}</span></div>{control}
             {!ref ? <span className="lp-section-hint">Elige el proveedor para ver y editar sus costos.</span>
               : consulta?.isPending ? <span role="status">Cargando costos…</span>
                 : consulta?.isError ? <div role="alert">No se pudieron cargar los costos. <button type="button" onClick={() => consulta.refetch()}>Reintentar</button></div>
                   : <Button size="sm" variant="secondary" loading={configurandoFila(fila)} disabled={configurar.isPending && !configurandoFila(fila)}
-                    onClick={() => configurar.mutate({ ref, subcategoria: fila.id })}>Agregar costos</Button>}
+                    onClick={() => configurar.mutate({ ref, subcategoria: subRef })}>Agregar costos</Button>}
           </div>}
-          {configurar.isError && configurar.variables?.subcategoria === fila.id && <p role="alert" className="ds-error-box">{mensajeDeError(configurar.error, 'No se pudo configurar. Conservamos tu selección.')}</p>}
+          {configurar.isError && fila.ids.includes(configurar.variables?.subcategoria) && <p role="alert" className="ds-error-box">{mensajeDeError(configurar.error, 'No se pudo configurar. Conservamos tu selección.')}</p>}
         </div>;
       }}
       </VariantesOrdenables>
       {(hasPermission('EDITAR_LISTA_PRECIOS') || hasPermission('ADMINISTRAR_REFERENCIAS')) && <button type="button" className="lp-agregar-subcategoria" onClick={() => setAgregando(true)}>
         <FaPlus aria-hidden="true" /> Agregar subcategoría</button>}
     </div>
-    {agregando && <AgregarSubcategoria grupo={grupo} visibles={filas.map(f => f.id)} notify={notify} onClose={() => setAgregando(false)} />}
+    {agregando && <AgregarSubcategoria grupo={grupo} visibles={idsEnOrden(filas)} notify={notify} onClose={() => setAgregando(false)} />}
     {grupo.referencias.some(r => r.linea?.variantes.some(v => !v.es_conjunto && !v.componentes?.length)) && <div className="lp-crear-agrupacion">
       <Button size="sm" variant="secondary" icon={FaLayerGroup} onClick={() => { if (puedeCambiar()) onAgrupar(grupo); }}>Crear agrupación</Button>
       <span className="lp-section-hint">Una nueva subcategoría con piezas de cualquier proveedor de {grupo.nombre}.</span>
     </div>}
     <Modal open={!!eliminando} title="Eliminar subcategoría de la lista" onClose={() => !guardarDisposicion.isPending && setEliminando(null)} size="sm" className="lp-admin-page"
-      footer={<><Button variant="secondary" disabled={guardarDisposicion.isPending} onClick={() => setEliminando(null)}>Cancelar</Button><Button loading={guardarDisposicion.isPending} onClick={() => guardarDisposicion.mutate({ retiradas: [...disposicion.retiradas, eliminando.id] })}>Eliminar de la lista</Button></>}>
+      footer={<><Button variant="secondary" disabled={guardarDisposicion.isPending} onClick={() => setEliminando(null)}>Cancelar</Button><Button loading={guardarDisposicion.isPending} onClick={() => guardarDisposicion.mutate({ retiradas: [...new Set([...disposicion.retiradas, ...eliminando.ids])] })}>Eliminar de la lista</Button></>}>
       <p>¿Eliminar <strong>{eliminando?.nombre}</strong> de <strong>{grupo.nombre}</strong>?</p><p>Se retirará de la consulta de precios en todos sus proveedores. Los costos y los datos de Referencias se conservan.</p>
       {guardarDisposicion.isError && <p role="alert" className="ds-error-box">{mensajeDeError(guardarDisposicion.error, 'No se pudo eliminar. Intenta de nuevo.')}</p>}
     </Modal>

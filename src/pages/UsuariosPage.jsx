@@ -176,6 +176,7 @@ const FEATURES_CATALOG = [
       { code: "EDITAR_VENTA", label: "Habilitar edición de ventas (monto, cliente, etc.)" },
       { code: "EDITAR_ESTADO_VENTA", label: "Editar estado de venta (Pendiente, Entregado, Anulada)" },
       { code: "EDITAR_ESTADO_PEDIDOS_VENTA", label: "Editar estado de pedidos" },
+      { code: "REABRIR_GESTION_VENTA", label: "Reabrir la gestión de productos de una venta ya finalizada" },
       { code: "VER_PRECIOS_VENTA", label: "Ver montos y precios de la venta" },
       { code: "MARCAR_VENTA_FACTURADA", label: "Facturación: ver la columna «Facturado» y marcar ventas como facturadas" },
       { code: "VER_MARGENES", label: "Ver márgenes y costos de venta" }

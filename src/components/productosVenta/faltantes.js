@@ -13,8 +13,9 @@ export const TIPOS_ADICIONAL = {
 const texto = (v) => String(v ?? '').trim();
 export const recargoListo = (a) => texto(a.descripcion) && Number(a.importe_lista) > 0;
 
-// «Agregar especial» (2026-10-28): producto fuera de la lista con su costo total; el precio de
+// «Producto especial» (2026-10-28): producto fuera de la lista con su costo total; el precio de
 // lista lo calcula el servidor con el costo, el consumo del grupo y el multiplicador general.
+// Los especiales antiguos con precio autorizado (sin costo) se siguen editando como antes.
 export const esEspecialPorCosto = (l) => !l.variante && (l.tipo || 'producto') === 'producto'
     && Boolean(l._por_costo || l.costo_especial != null || l.metraje_especial != null);
 
