@@ -1,9 +1,10 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt } from 'react-icons/fa';
 import { ventaDeLinea } from '../../services/nominaService';
 import { mensajeDeError } from '../../services/errores';
-import { ESTADO_VENTA, cop, fecha } from '../../utils/nomina';
+import { ESTADO_VENTA, cop, enlaceVenta, fecha } from '../../utils/nomina';
 
 /*
  * Detalle de una venta dentro de la comisión: productos con su precio de lista y precio
@@ -100,11 +101,12 @@ export default function VentaComision({ lineaId }) {
                 <div><dt>Valor venta</dt><dd>{cop(v.valor_total)}</dd></div>
                 <div><dt>Precio de lista</dt><dd>{v.valor_lista ? cop(v.valor_lista) : <span className="nom-falta">Sin precio</span>}</dd></div>
                 <div><dt>Abono · saldo</dt><dd>{cop(v.abono)} · {cop(v.saldo)}</dd></div>
-                <div><dt>Productos</dt><dd>{v.productos_confirmados ? <span className="nom-ok">Confirmados</span> : <span className="nom-falta">Sin confirmar</span>}</dd></div>
+                <div><dt>Productos</dt><dd>{v.productos_confirmados ? <span className="nom-ok">Guardados</span> : <span className="nom-falta">Sin guardar</span>}</dd></div>
             </dl>
+            <Link className="nvc-abrir" to={enlaceVenta(v.id, v.fecha_venta)}>Abrir la venta #{v.id} para revisar o cambiar sus productos <FaExternalLinkAlt aria-hidden="true" /></Link>
 
             {productos.length === 0 ? (
-                <p className="nom-vacio">Esta venta no tiene productos registrados. Agrégalos en Ventas → expandir la venta → Productos.</p>
+                <p className="nom-vacio">Esta venta no tiene productos registrados. Ábrela con el enlace de arriba y agrégalos: al guardarlos, la comisión se calcula sola al recalcular la nómina.</p>
             ) : (
                 <table className="nvc-tabla">
                     <thead>
@@ -123,7 +125,8 @@ export default function VentaComision({ lineaId }) {
                                 <td className="num">{p.cantidad}</td>
                                 <td>{p.tela || '—'}{p.grupo_tela && <small className="nom-sub">{p.grupo_tela}</small>}</td>
                                 <td className="num">{p.precio_lista_unitario ? cop(p.precio_lista_unitario) : <span className="nom-falta">Sin precio</span>}</td>
-                                <td className="num">{p.precio_lista_total ? cop(p.precio_lista_total) : '—'}</td>
+                                <td className="num">{p.precio_lista_total ? cop(p.precio_lista_total) : '—'}
+                                    {p.incluido && <small className="nom-sub">− {cop(p.incluido)} incluido</small>}</td>
                                 <td className="num">{cop(p.precio_venta)}</td>
                             </tr>
                         ))}

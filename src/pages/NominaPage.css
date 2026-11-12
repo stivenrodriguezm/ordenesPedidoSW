@@ -8,6 +8,11 @@
 .nom-muted { color: var(--gray-500); }
 .nom-falta { color: var(--warning); font-size: 0.8rem; }
 .nom-sub { display: block; font-size: 0.72rem; color: var(--gray-500); }
+/* (2026-11-12) Acción directa cuando falta el precio de lista: lleva a la venta. */
+.nom-col-pago small { max-width: 9rem; white-space: normal; }
+.nom-accion { color: var(--primary); font-weight: 600; text-decoration: none; }
+.nom-accion:hover { text-decoration: underline; }
+.nom-accion svg { font-size: 0.6rem; vertical-align: baseline; }
 .nom-error { color: var(--danger); }
 .nom-link { background: none; border: none; padding: 0; color: var(--accent-texto); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
 
@@ -88,6 +93,9 @@
 .nvc--cargando { color: var(--gray-500); }
 .nvc-datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem 1rem; margin: 0 0 0.8rem; }
 .nvc-datos div { min-width: 0; }
+.nvc-abrir { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0 0 0.8rem; color: var(--primary); font-size: 0.82rem; font-weight: 600; text-decoration: none; }
+.nvc-abrir:hover { text-decoration: underline; }
+.nvc-abrir svg { font-size: 0.65rem; }
 .nvc-datos dt { color: var(--gray-500); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 .nvc-datos dd { margin: 1px 0 0; color: var(--gray-900); font-weight: 600; }
 .nvc-datos dd small { font-weight: 400; color: var(--gray-500); }

@@ -6,6 +6,20 @@ export const fecha = (v) => (v ? new Date(`${String(v).slice(0, 10)}T12:00:00`).
 
 export const ESTADO_VENTA = { pendiente: 'Pendiente', entregado: 'Entregada', anulada: 'Anulada' };
 
+// Abre la venta en Ventas (buscada por número en su propio día) para revisar o guardar sus productos.
+export const enlaceVenta = (id, fechaVenta) => {
+    const dia = String(fechaVenta || '').slice(0, 10);
+    return dia ? `/ventas?q=${id}&modo=range&desde=${dia}&hasta=${dia}` : `/ventas?q=${id}`;
+};
+
+// Una comisión sin precio de lista solo se paga con un importe escrito a mano y su nota.
+export const faltaParaPagar = (l) => {
+    if (l.tipo !== 'comision' || l.precio_lista || l.pagar) return '';
+    if (!Number(l.valor)) return 'Sin lista: escribe la comisión y una nota';
+    if (!String(l.nota || '').trim()) return 'Falta una nota que la justifique';
+    return '';
+};
+
 const filaVenta = (l) => ({
     Venta: l.venta, Fecha: fecha(l.fecha_venta), Cliente: l.cliente, Estado: ESTADO_VENTA[l.estado_venta] || l.estado_venta,
     'Precio lista': Number(l.precio_lista || 0) || '', 'Precio venta': Number(l.valor_venta), 'Descuento %': Number(l.descuento_pct || 0),

@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { FaChevronDown, FaChevronRight, FaLock, FaPrint } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaChevronDown, FaChevronRight, FaExternalLinkAlt, FaLock, FaPrint } from 'react-icons/fa';
 import { Badge, Button } from '../ui';
 import CampoEditable from './CampoEditable';
 import NominaImpresionModal from './NominaImpresionModal';
 import VentaComision from './VentaComision';
-import { ESTADO_VENTA, cop, fecha, pct } from '../../utils/nomina';
+import { ESTADO_VENTA, cop, enlaceVenta, faltaParaPagar, fecha, pct } from '../../utils/nomina';
+
+const ORIGEN = {
+    productos: (l) => `Productos de la venta · revisión ${l.revision_productos}`,
+    manual_historico: () => 'Precio manual histórico',
+    ajuste_manual: () => 'Ajuste manual',
+};
 
 function Resumen({ asesor, cierre }) {
     const t = asesor.totales;
@@ -23,9 +30,25 @@ function Resumen({ asesor, cierre }) {
 
 function Pagar({ linea, editable, guardar }) {
     if (!editable) return linea.pagar ? <span className="nom-ok">Sí</span> : <span className="nom-muted">No</span>;
+    const falta = faltaParaPagar(linea);
     return (
-        <input type="checkbox" checked={linea.pagar} aria-label={`Pagar venta ${linea.venta || linea.cliente}`}
-            onChange={e => guardar(linea.id, { pagar: e.target.checked })} />
+        <>
+            <input type="checkbox" checked={linea.pagar} disabled={!!falta} title={falta || undefined}
+                aria-label={`Pagar venta ${linea.venta || linea.cliente}`}
+                onChange={e => guardar(linea.id, { pagar: e.target.checked })} />
+            {falta && <small className="nom-sub">{falta}</small>}
+        </>
+    );
+}
+
+// Sin precio de lista: se llega a la venta en un clic para guardar sus productos.
+function PrecioOrigen({ linea: l }) {
+    if (ORIGEN[l.origen_precio]) return <small className="nom-sub">{ORIGEN[l.origen_precio](l)}</small>;
+    if (l.precio_lista || !l.venta) return null;
+    return (
+        <Link className="nom-sub nom-accion" to={enlaceVenta(l.venta, l.fecha_venta)}>
+            {l.revision_productos ? 'Guardar los productos en la venta' : 'Agregar los productos en la venta'} <FaExternalLinkAlt aria-hidden="true" />
+        </Link>
     );
 }
 
@@ -67,7 +90,7 @@ function Comisiones({ lineas, editable, guardar }) {
                                         <CampoEditable valor={l.precio_lista} formato={v => (v ? cop(v) : <span className="nom-falta">Sin precio de lista</span>)}
                                             editable={editable && !l.revision_productos} etiqueta={`Precio de lista venta ${l.venta}`} ancho="8.5rem"
                                             onGuardar={v => guardar(l.id, { precio_lista: v })} />
-                                        <small className="nom-sub">{l.origen_precio === 'productos' ? `Productos confirmados · revisión ${l.revision_productos}` : l.origen_precio === 'sin_confirmar' ? 'Confirmar productos en Ventas' : l.origen_precio === 'manual_historico' ? 'Precio manual histórico' : l.origen_precio === 'ajuste_manual' ? 'Ajuste manual' : ''}</small>
+                                        <PrecioOrigen linea={l} />
                                     </td>
                                     <td className="num">{cop(l.valor_venta)}{l.participantes > 1 && <small className="nom-sub">Base {cop(l.base)}</small>}</td>
                                     <td className="num">{pct(l.descuento_pct)}</td>
@@ -81,7 +104,7 @@ function Comisiones({ lineas, editable, guardar }) {
                                     </td>
                                     <td>{ESTADO_VENTA[l.estado_venta] || l.estado_venta}</td>
                                     <td className="num">{pct(l.abono_pct)}</td>
-                                    <td className="nom-col-pago"><Pagar linea={l} editable={editable} guardar={guardar} />{!l.pagar && l.motivo_pendiente && <small className="nom-sub">{l.motivo_pendiente}</small>}</td>
+                                    <td className="nom-col-pago"><Pagar linea={l} editable={editable} guardar={guardar} />{!l.pagar && l.motivo_pendiente && !faltaParaPagar(l) && <small className="nom-sub">{l.motivo_pendiente}</small>}</td>
                                     <td>
                                         <CampoEditable valor={l.nota} formato={v => v || ''} editable={editable} tipo="text" etiqueta={`Nota venta ${l.venta}`} ancho="9rem"
                                             onGuardar={v => guardar(l.id, { nota: v || '' })} />

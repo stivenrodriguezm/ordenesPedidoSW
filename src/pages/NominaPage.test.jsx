@@ -25,7 +25,7 @@ const cierre = (estado = 'borrador') => ({
         estado: estado === 'cerrado' ? 'cerrado' : 'abierto', cerrado_por: estado === 'cerrado' ? 'Admin' : null, cerrado_en: null,
         lineas: [
             { id: 11, tipo: 'comision', venta: 501, cliente: 'Cliente ficticio', fecha_venta: '2026-09-10', estado_venta: 'pendiente', valor_venta: '900000', participantes: 1, base: '900000', precio_lista: '1000000', descuento_pct: '10', porcentaje: '3.6', valor: '32400', abono_pct: '33.3', pagar: true, motivo_pendiente: '', editada: false, nota: '' },
-            { id: 12, tipo: 'comision', venta: 502, cliente: 'Otro ficticio', fecha_venta: '2026-09-12', estado_venta: 'pendiente', valor_venta: '200000', participantes: 1, base: '200000', precio_lista: null, descuento_pct: '0', porcentaje: '4', valor: '8000', abono_pct: '20', pagar: false, motivo_pendiente: 'Abono menor al 30 %', editada: false, nota: '' },
+            { id: 12, tipo: 'comision', venta: 502, cliente: 'Otro ficticio', fecha_venta: '2026-09-12', estado_venta: 'pendiente', valor_venta: '200000', participantes: 1, base: '200000', precio_lista: null, descuento_pct: '0', porcentaje: '4', valor: '8000', abono_pct: '20', pagar: false, motivo_pendiente: 'Abono menor al 30 %', editada: false, nota: 'Revisada con gerencia' },
         ],
     }],
 });
@@ -90,6 +90,22 @@ describe('Nómina', () => {
         await user.type(screen.getByLabelText('Valor del ajuste'), '100000');
         await user.click(screen.getByRole('button', { name: 'Restar' }));
         await waitFor(() => expect(servicio.agregarAjuste).toHaveBeenCalledWith(7, { descripcion: 'Adelanto del 15', valor: -100000 }));
+    });
+
+    it('sin precio de lista lleva a la venta en un clic y explica qué falta para pagar', async () => {
+        // (2026-11-12) Antes decía «Confirmar productos en Ventas» sin forma de hacerlo.
+        const user = userEvent.setup();
+        const datos = cierre();
+        Object.assign(datos.asesores[0].lineas[1], { revision_productos: 3, origen_precio: 'sin_confirmar', porcentaje: null, valor: '0', nota: '',
+            motivo_pendiente: 'Completar y confirmar productos / precio de lista' });
+        servicio.obtenerCierre.mockResolvedValue(datos);
+        montar(['VER_NOMINA', 'GESTIONAR_NOMINA']);
+        await user.click(within(await screen.findByRole('navigation', { name: 'Vistas del cierre' })).getByRole('button', { name: 'Ana Ficticia' }));
+        const enlace = await screen.findByRole('link', { name: /Guardar los productos en la venta/ });
+        expect(enlace).toHaveAttribute('href', '/ventas?q=502&modo=range&desde=2026-09-12&hasta=2026-09-12');
+        expect(screen.getByLabelText('Pagar venta 502')).toBeDisabled();
+        expect(screen.getByText('Sin lista: escribe la comisión y una nota')).toBeInTheDocument();
+        expect(screen.queryByText('Confirmar productos en Ventas')).not.toBeInTheDocument();
     });
 
     it('el cierre es por asesor: se cierra en su pestaña y se reabre sin justificación', async () => {

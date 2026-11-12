@@ -686,6 +686,18 @@ const Ventas = () => {
         }
     };
 
+    // (2026-11-12) Al llegar con el número de una venta (p. ej. desde Nómina), se abre sola
+    // una vez para revisar o guardar sus productos sin buscarla en la tabla.
+    const ventaPorAbrir = useRef(/^\d+$/.test(paramsIniciales.get('q') || '') ? Number(paramsIniciales.get('q')) : null);
+    useEffect(() => {
+        if (ventaPorAbrir.current && ventas.some(v => v.id === ventaPorAbrir.current)) {
+            const id = ventaPorAbrir.current;
+            ventaPorAbrir.current = null;
+            handleExpandVenta(id);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ventas]);
+
 
     const refreshProductos = async (ventaId) => {
         const response = await API.get(`/ventas/${ventaId}/`);

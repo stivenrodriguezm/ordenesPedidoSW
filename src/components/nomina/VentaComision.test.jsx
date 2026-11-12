@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import VentaComision from './VentaComision';
 import { TelaProducto } from '../RemisionProductos';
 
 vi.mock('../../services/nominaService', () => ({
     ventaDeLinea: vi.fn().mockResolvedValue({
-        venta: { id: 7, cliente: 'Ana', direccion: 'Calle 10 # 5-20', barrio: 'El Prado', ciudad: 'Barranquilla', vendedor: 'Luis', compartida_con: [], sede: 'Lottus 1', estado: 'pendiente', valor_total: '414.00',
+        venta: { id: 7, fecha_venta: '2026-10-01', cliente: 'Ana', direccion: 'Calle 10 # 5-20', barrio: 'El Prado', ciudad: 'Barranquilla', vendedor: 'Luis', compartida_con: [], sede: 'Lottus 1', estado: 'pendiente', valor_total: '414.00',
             valor_lista: '460.00', abono: '200.00', saldo: '214.00', productos_confirmados: true },
         productos: [{ id: 1, tipo: 'producto', nombre: 'Sofá · Tres puestos', categoria: 'Sala', referencia: 'Alaska', proveedor: 'Fábrica', cantidad: 2,
-            grupo_tela: 'Grupo 1', tela: 'Tela Lino · color Arena', precio_lista_unitario: '230.00', precio_lista_total: '460.00', precio_venta: '414.00', descuento: '46.00' }],
+            grupo_tela: 'Grupo 1', tela: 'Tela Lino · color Arena', precio_lista_unitario: '230.00', precio_lista_total: '460.00', precio_venta: '414.00', descuento: '46.00', incluido: '60.00' }],
         totales: { precio_lista: '460.00', precio_venta: '414.00', productos_sin_precio_lista: 0, lista_cuadra: true, venta_cuadra: true },
         pagos: [{ recibo: 12, fecha: '2026-10-01', metodo: 'Efectivo', valor: '200.00', estado: 'Confirmado' },
             { recibo: 13, fecha: '2026-10-02', metodo: 'Davivienda', valor: '100.00', estado: 'Pendiente' }],
@@ -23,7 +24,7 @@ vi.mock('../../services/nominaService', () => ({
 
 describe('Validar una comisión contra la venta', () => {
     it('muestra productos con precio de lista, cuadres y pagos', async () => {
-        render(<QueryClientProvider client={new QueryClient()}><VentaComision lineaId={5} /></QueryClientProvider>);
+        render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><VentaComision lineaId={5} /></QueryClientProvider></MemoryRouter>);
         expect(await screen.findByText('Sofá · Tres puestos')).toBeInTheDocument();
         expect(screen.getByText('Tela Lino · color Arena')).toBeInTheDocument();
         expect(screen.getByText('Precio de lista cuadra con la venta')).toBeInTheDocument();
@@ -39,6 +40,9 @@ describe('Validar una comisión contra la venta', () => {
         expect(tela).toHaveClass('is-anulado');
         expect(screen.getByText('RC 13').closest('tr')).toHaveTextContent('Pendiente');
         expect(screen.getByText(/\+ \$\s?100 pendiente/)).toBeInTheDocument();
+        // (2026-11-12) Lo incluido (cojines, transporte compartido) se ve y la venta se abre en un clic.
+        expect(screen.getByText(/− \$\s?60 incluido/)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Abrir la venta #7/ })).toHaveAttribute('href', '/ventas?q=7&modo=range&desde=2026-10-01&hasta=2026-10-01');
     });
 });
 
