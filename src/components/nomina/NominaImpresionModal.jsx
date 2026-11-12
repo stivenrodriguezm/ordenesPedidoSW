@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FaDesktop } from 'react-icons/fa';
 import { Button, Modal } from '../ui';
 import BotonImprimir from '../impresion/BotonImprimir';
 import { hojaNomina } from '../../utils/nominaImpresion';
@@ -54,7 +55,9 @@ export default function NominaImpresionModal({ cierre, asesor, onClose }) {
                     <span className="rpm-paper">Carta · {hojas} hoja{hojas === 1 ? '' : 's'}</span>
                 </div>
                 <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-                <BotonImprimir documento={() => html} titulo={`Nómina · ${asesor.nombre}`} imprimirLocal={imprimir} disabled={!lista} />
+                {/* (2026-11-12) La nómina también se imprime aquí, sin pasar por la Ricoh. */}
+                <Button variant="secondary" icon={FaDesktop} onClick={imprimir} disabled={!lista}>Imprimir en esta computadora</Button>
+                <BotonImprimir documento={() => html} titulo={`Nómina · ${asesor.nombre}`} imprimirLocal={imprimir} disabled={!lista}>Imprimir en la oficina</BotonImprimir>
             </>}>
             <div className="rpm-visor" ref={visor}>
                 <div className={`rpm-hoja${lista ? '' : ' is-cargando'}${zoom === 'hoja' ? ' is-reducida' : ''}`}
